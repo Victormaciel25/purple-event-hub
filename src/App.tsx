@@ -1,4 +1,5 @@
 
+import React from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -17,9 +18,10 @@ import NotFound from "./pages/NotFound";
 import EventSpaceDetails from "./pages/EventSpaceDetails";
 import RegisterSpace from "./pages/RegisterSpace";
 
+// Create a QueryClient instance outside of the component
 const queryClient = new QueryClient();
 
-const App = () => {
+const App: React.FC = () => {
   const [session, setSession] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
