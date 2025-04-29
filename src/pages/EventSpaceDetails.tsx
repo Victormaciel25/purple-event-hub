@@ -2,7 +2,7 @@
 import React from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, Phone, Wifi, ParkingMeter, Speaker, AirVent, Utensils, Pool, Users } from "lucide-react";
+import { ChevronLeft, Phone, Wifi, ParkingMeter, Speaker, AirVent, Utensils, Waves, Users } from "lucide-react";
 import {
   Carousel,
   CarouselContent,
@@ -203,7 +203,7 @@ const EventSpaceDetails: React.FC = () => {
             <span>{eventSpace.amenities.kitchen ? 'Cozinha' : 'Sem cozinha'}</span>
           </div>
           <div className={`flex items-center ${eventSpace.amenities.pool ? 'text-foreground' : 'text-muted-foreground/50'}`}>
-            <Pool size={18} className="mr-2" />
+            <Waves size={18} className="mr-2" />
             <span>{eventSpace.amenities.pool ? 'Piscina' : 'Sem piscina'}</span>
           </div>
         </div>
