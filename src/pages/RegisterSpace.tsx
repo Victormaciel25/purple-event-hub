@@ -85,8 +85,14 @@ const RegisterSpace = () => {
         setSubmitting(true);
         const finalData = { ...formData, ...data };
         
-        // Get current user
-        const { data: sessionData } = await supabase.auth.getSession();
+        // Get current user session
+        const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+        if (sessionError) {
+          console.error("Error getting session:", sessionError);
+          toast.error("Erro ao verificar autenticação");
+          return;
+        }
+        
         if (!sessionData.session) {
           toast.error("Você precisa estar logado para cadastrar um espaço");
           navigate("/");
@@ -94,8 +100,9 @@ const RegisterSpace = () => {
         }
         
         const userId = sessionData.session.user.id;
+        console.log("Registering space for user:", userId);
         
-        // Insert space data
+        // Insert space data - avoiding any calls that might trigger user_roles policies
         const { data: spaceData, error: spaceError } = await supabase
           .from("spaces")
           .insert({
@@ -122,11 +129,16 @@ const RegisterSpace = () => {
           .select()
           .single();
 
-        if (spaceError) throw spaceError;
+        if (spaceError) {
+          console.error("Error submitting space:", spaceError);
+          throw spaceError;
+        }
 
         // Upload photos if any
-        if (selectedFiles.length > 0) {
-          await Promise.all(selectedFiles.map(async (file, index) => {
+        if (selectedFiles.length > 0 && spaceData) {
+          console.log(`Uploading ${selectedFiles.length} photos for space ${spaceData.id}`);
+          
+          const uploadPromises = selectedFiles.map(async (file, index) => {
             const fileExtension = file.name.split('.').pop();
             const filePath = `${userId}/${spaceData.id}/${index + 1}.${fileExtension}`;
             
@@ -135,7 +147,10 @@ const RegisterSpace = () => {
               .from('spaces')
               .upload(filePath, file);
 
-            if (uploadError) throw uploadError;
+            if (uploadError) {
+              console.error(`Error uploading file ${index + 1}:`, uploadError);
+              throw uploadError;
+            }
 
             // Insert reference in space_photos table
             const { error: photoError } = await supabase
@@ -145,15 +160,22 @@ const RegisterSpace = () => {
                 storage_path: filePath
               });
 
-            if (photoError) throw photoError;
-          }));
+            if (photoError) {
+              console.error(`Error inserting photo reference ${index + 1}:`, photoError);
+              throw photoError;
+            }
+            
+            console.log(`Successfully uploaded photo ${index + 1} for space ${spaceData.id}`);
+          });
+
+          await Promise.all(uploadPromises);
         }
 
         toast.success("Espaço cadastrado com sucesso! Aguardando aprovação.");
         navigate("/profile");
       } catch (error: any) {
-        toast.error(`Erro ao cadastrar espaço: ${error.message}`);
         console.error("Error submitting space:", error);
+        toast.error(`Erro ao cadastrar espaço: ${error.message}`);
       } finally {
         setSubmitting(false);
       }
