@@ -6,6 +6,7 @@ import { GoogleMap, useJsApiLoader, Marker } from "@react-google-maps/api";
 interface LocationMapProps {
   onLocationSelected?: (lat: number, lng: number) => void;
   initialLocation?: { lat: number, lng: number } | null;
+  viewOnly?: boolean; // Add viewOnly prop
 }
 
 const mapContainerStyle = {
@@ -21,11 +22,11 @@ const defaultCenter = {
 
 const GOOGLE_MAPS_API_KEY = "AIzaSyDmquKmV6OtKkJCG2eEe4NIPE8MzcrkUyw";
 
-const LocationMap = ({ onLocationSelected, initialLocation }: LocationMapProps) => {
+const LocationMap = ({ onLocationSelected, initialLocation, viewOnly = false }: LocationMapProps) => {
   const [position, setPosition] = useState<{ lat: number, lng: number } | null>(
     initialLocation || null
   );
-  const [hasRequestedLocation, setHasRequestedLocation] = useState(false);
+  const [hasRequestedLocation, setHasRequestedLocation] = useState(viewOnly); // If viewOnly, skip request screen
   const mapRef = useRef<google.maps.Map | null>(null);
 
   const { isLoaded, loadError } = useJsApiLoader({
@@ -43,7 +44,7 @@ const LocationMap = ({ onLocationSelected, initialLocation }: LocationMapProps) 
             lng: position.coords.longitude
           };
           setPosition(newPosition);
-          if (onLocationSelected) {
+          if (onLocationSelected && !viewOnly) {
             onLocationSelected(newPosition.lat, newPosition.lng);
           }
         },
@@ -59,31 +60,40 @@ const LocationMap = ({ onLocationSelected, initialLocation }: LocationMapProps) 
     }
   };
 
+  // Load initial position automatically when in viewOnly mode
+  useEffect(() => {
+    if (viewOnly && !position) {
+      requestUserLocation();
+    }
+  }, [viewOnly, position]);
+
   const handleMapClick = (event: google.maps.MapMouseEvent) => {
-    if (event.latLng) {
-      const newPosition = {
-        lat: event.latLng.lat(),
-        lng: event.latLng.lng()
-      };
-      setPosition(newPosition);
-      
-      if (onLocationSelected) {
-        onLocationSelected(newPosition.lat, newPosition.lng);
-      }
+    // Only allow pin positioning if not in viewOnly mode
+    if (viewOnly || !event.latLng) return;
+    
+    const newPosition = {
+      lat: event.latLng.lat(),
+      lng: event.latLng.lng()
+    };
+    setPosition(newPosition);
+    
+    if (onLocationSelected) {
+      onLocationSelected(newPosition.lat, newPosition.lng);
     }
   };
 
   const onMarkerDragEnd = (event: google.maps.MapMouseEvent) => {
-    if (event.latLng) {
-      const newPosition = {
-        lat: event.latLng.lat(),
-        lng: event.latLng.lng()
-      };
-      setPosition(newPosition);
-      
-      if (onLocationSelected) {
-        onLocationSelected(newPosition.lat, newPosition.lng);
-      }
+    // Only allow pin positioning if not in viewOnly mode
+    if (viewOnly || !event.latLng) return;
+    
+    const newPosition = {
+      lat: event.latLng.lat(),
+      lng: event.latLng.lng()
+    };
+    setPosition(newPosition);
+    
+    if (onLocationSelected) {
+      onLocationSelected(newPosition.lat, newPosition.lng);
     }
   };
 
@@ -150,7 +160,7 @@ const LocationMap = ({ onLocationSelected, initialLocation }: LocationMapProps) 
             {position && (
               <Marker
                 position={position}
-                draggable={true}
+                draggable={!viewOnly} // Only allow dragging when not in viewOnly mode
                 onDragEnd={onMarkerDragEnd}
                 icon={{
                   path: google.maps.SymbolPath.CIRCLE,
@@ -164,7 +174,7 @@ const LocationMap = ({ onLocationSelected, initialLocation }: LocationMapProps) 
             )}
           </GoogleMap>
           
-          {position && (
+          {position && !viewOnly && (
             <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 bg-white p-2 rounded shadow-lg z-10 text-sm text-center">
               <p>Clique ou arraste o marcador para ajustar a posição exata do seu espaço</p>
               <p className="text-xs text-muted-foreground mt-1">

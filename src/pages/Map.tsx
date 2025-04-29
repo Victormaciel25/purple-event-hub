@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Search } from "lucide-react";
@@ -7,9 +6,9 @@ import LocationMap from "@/components/LocationMap";
 const Map = () => {
   const [location, setLocation] = useState<{ lat: number, lng: number } | null>(null);
 
+  // We'll keep this function for consistency but won't allow users to change location
   const handleLocationSelected = (lat: number, lng: number) => {
-    setLocation({ lat, lng });
-    console.log("Localização selecionada:", { lat, lng });
+    console.log("Localização visualizada:", { lat, lng });
   };
 
   return (
@@ -25,7 +24,11 @@ const Map = () => {
       </div>
 
       <div className="bg-gray-200 rounded-xl h-[calc(100vh-200px)] flex items-center justify-center">
-        <LocationMap onLocationSelected={handleLocationSelected} initialLocation={location} />
+        <LocationMap 
+          onLocationSelected={handleLocationSelected} 
+          initialLocation={location} 
+          viewOnly={true} // Add viewOnly prop to disable pin positioning
+        />
       </div>
     </div>
   );
