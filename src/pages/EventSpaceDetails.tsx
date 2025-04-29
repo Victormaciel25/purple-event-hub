@@ -1,8 +1,7 @@
-
 import React from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, Phone, Wifi, ParkingMeter, Speaker, AirVent, Utensils, Waves, Users } from "lucide-react";
+import { ChevronLeft, Phone, Wifi, ParkingMeter, Speaker, AirVent, Utensils, Waves, Users, Heart } from "lucide-react";
 import {
   Carousel,
   CarouselContent,
@@ -11,6 +10,7 @@ import {
   CarouselNext,
 } from "@/components/ui/carousel";
 import { Badge } from "@/components/ui/badge";
+import { useEventSpaceFavorites } from "../hooks/useEventSpaceFavorites";
 
 // Dados de exemplo para os espaços de eventos
 const eventSpaces = [
@@ -107,6 +107,7 @@ const eventSpaces = [
 const EventSpaceDetails: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { isFavorite, toggleFavorite } = useEventSpaceFavorites();
   
   const eventSpace = eventSpaces.find(space => space.id === id);
   
@@ -132,11 +133,24 @@ const EventSpaceDetails: React.FC = () => {
   
   return (
     <div className="container px-4 py-6 pb-20 mx-auto">
-      <div className="flex items-center mb-4">
-        <Button variant="ghost" size="sm" onClick={() => navigate(-1)} className="mr-2">
-          <ChevronLeft size={20} />
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center">
+          <Button variant="ghost" size="sm" onClick={() => navigate(-1)} className="mr-2">
+            <ChevronLeft size={20} />
+          </Button>
+          <h1 className="text-xl font-bold truncate">{eventSpace.name}</h1>
+        </div>
+        <Button 
+          variant="ghost" 
+          size="sm" 
+          onClick={() => toggleFavorite(eventSpace.id)}
+          className="p-2 rounded-full hover:bg-gray-100"
+        >
+          <Heart 
+            size={24} 
+            className={isFavorite(eventSpace.id) ? "fill-red-500 text-red-500" : "text-gray-500"} 
+          />
         </Button>
-        <h1 className="text-xl font-bold truncate">{eventSpace.name}</h1>
       </div>
       
       {/* Carrossel de imagens */}

@@ -1,8 +1,9 @@
 
-import React from "react";
+import React, { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
-import { MapPin } from "lucide-react";
+import { MapPin, Heart } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { useEventSpaceFavorites } from "../hooks/useEventSpaceFavorites";
 
 interface EventSpaceProps {
   id: string;
@@ -20,16 +21,33 @@ const EventSpaceCard: React.FC<EventSpaceProps> = ({
   image,
 }) => {
   const navigate = useNavigate();
+  const { isFavorite, toggleFavorite } = useEventSpaceFavorites();
   
   const handleCardClick = () => {
     navigate(`/event-space/${id}`);
   };
+
+  const handleFavoriteClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    toggleFavorite(id);
+  };
   
   return (
     <Card 
-      className="event-card border-0 overflow-hidden cursor-pointer transition-transform hover:scale-[1.02]"
+      className="event-card border-0 overflow-hidden cursor-pointer transition-transform hover:scale-[1.02] relative"
       onClick={handleCardClick}
     >
+      <div className="absolute top-2 right-2 z-10">
+        <button 
+          onClick={handleFavoriteClick}
+          className="bg-white/70 hover:bg-white p-2 rounded-full transition-colors"
+        >
+          <Heart 
+            size={20} 
+            className={isFavorite(id) ? "fill-red-500 text-red-500" : "text-gray-500"} 
+          />
+        </button>
+      </div>
       <div className="relative h-48 overflow-hidden">
         <img
           src={image}
