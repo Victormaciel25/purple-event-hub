@@ -12,6 +12,7 @@ import Map from "./pages/Map";
 import Messages from "./pages/Messages";
 import Profile from "./pages/Profile";
 import NotFound from "./pages/NotFound";
+import EventSpaceDetails from "./pages/EventSpaceDetails";
 
 const queryClient = new QueryClient();
 
@@ -32,6 +33,7 @@ const App = () => (
             <Route path="/map" element={<Map />} />
             <Route path="/messages" element={<Messages />} />
             <Route path="/profile" element={<Profile />} />
+            <Route path="/event-space/:id" element={<EventSpaceDetails />} />
           </Route>
           
           {/* Catch-all route */}

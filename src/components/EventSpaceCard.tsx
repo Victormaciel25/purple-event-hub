@@ -2,6 +2,7 @@
 import React from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { MapPin } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 interface EventSpaceProps {
   id: string;
@@ -18,8 +19,17 @@ const EventSpaceCard: React.FC<EventSpaceProps> = ({
   price,
   image,
 }) => {
+  const navigate = useNavigate();
+  
+  const handleCardClick = () => {
+    navigate(`/event-space/${id}`);
+  };
+  
   return (
-    <Card className="event-card border-0 overflow-hidden">
+    <Card 
+      className="event-card border-0 overflow-hidden cursor-pointer transition-transform hover:scale-[1.02]"
+      onClick={handleCardClick}
+    >
       <div className="relative h-48 overflow-hidden">
         <img
           src={image}
