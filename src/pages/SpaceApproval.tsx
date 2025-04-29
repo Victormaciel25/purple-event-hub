@@ -176,7 +176,8 @@ const SpaceApproval = () => {
         throw error;
       }
 
-      setSelectedSpace(data as SpaceDetailsType);
+      // Type assertion to ensure the data matches our SpaceDetailsType
+      setSelectedSpace(data as unknown as SpaceDetailsType);
       setSheetOpen(true);
     } catch (error) {
       console.error("Error fetching space details:", error);

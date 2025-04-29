@@ -1,84 +1,128 @@
 
 import React, { useState } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ShieldCheck } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+
+// Define the form schema using Zod
+const formSchema = z.object({
+  email: z.string().email({ message: "Email inválido" }),
+});
+
+type FormValues = z.infer<typeof formSchema>;
 
 interface AddAdminFormProps {
   onAdminAdded: () => void;
 }
 
 const AddAdminForm = ({ onAdminAdded }: AddAdminFormProps) => {
-  const [email, setEmail] = useState("");
-  const [addingAdmin, setAddingAdmin] = useState(false);
+  const [loading, setLoading] = useState(false);
+  
+  const form = useForm<FormValues>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      email: "",
+    },
+  });
 
-  const addAdmin = async () => {
-    if (!email.trim()) {
-      toast.error("Por favor, insira um email");
-      return;
-    }
-
+  const onSubmit = async (data: FormValues) => {
     try {
-      setAddingAdmin(true);
-
-      // First, check if the user exists in auth.users
-      const { data: userData, error: userError } = await supabase
-        .rpc("get_user_id_by_email", { email_input: email });
-
-      if (userError || !userData) {
+      setLoading(true);
+      
+      // Call the function to get the user ID by email
+      const { data: userData, error: userError } = await supabase.rpc(
+        "get_user_id_by_email",
+        { email_input: data.email }
+      );
+      
+      if (userError) throw userError;
+      if (!userData) {
         toast.error("Usuário não encontrado");
         return;
       }
-
-      // Then add the admin role
-      const { error } = await supabase
+      
+      // Check if user already has admin role
+      const { data: existingRole, error: roleError } = await supabase
         .from("user_roles")
-        .insert([
-          { user_id: userData, role: "admin" }
-        ]);
-
-      if (error) {
-        if (error.code === "23505") { // Unique violation
-          toast.error("Este usuário já é um administrador");
-        } else {
-          throw error;
-        }
-      } else {
-        toast.success("Administrador adicionado com sucesso");
-        setEmail("");
-        onAdminAdded();
+        .select("id")
+        .eq("user_id", userData)
+        .eq("role", "admin")
+        .single();
+        
+      if (roleError && !roleError.message.includes("No rows found")) {
+        throw roleError;
       }
-    } catch (error) {
+      
+      if (existingRole) {
+        toast.error("Usuário já é um administrador");
+        return;
+      }
+      
+      // Add admin role
+      const { error: insertError } = await supabase
+        .from("user_roles")
+        .insert({
+          user_id: userData,
+          role: "admin"
+        });
+        
+      if (insertError) throw insertError;
+      
+      toast.success("Administrador adicionado com sucesso");
+      form.reset();
+      onAdminAdded();
+    } catch (error: any) {
       console.error("Error adding admin:", error);
-      toast.error("Erro ao adicionar administrador");
+      toast.error(`Erro ao adicionar administrador: ${error.message}`);
     } finally {
-      setAddingAdmin(false);
+      setLoading(false);
     }
   };
 
   return (
     <div className="bg-white rounded-lg shadow p-6 mb-6">
-      <h2 className="text-lg font-medium mb-4 flex items-center">
-        <ShieldCheck className="mr-2 text-iparty" size={24} />
-        Adicionar Administrador
-      </h2>
-      
-      <div className="flex space-x-2">
-        <Input
-          placeholder="Email do usuário"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          type="email"
-        />
-        <Button
-          onClick={addAdmin}
-          disabled={addingAdmin || !email.trim()}
-        >
-          {addingAdmin ? "Adicionando..." : "Adicionar"}
-        </Button>
-      </div>
+      <h2 className="text-lg font-medium mb-4">Adicionar Administrador</h2>
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+          <FormField
+            control={form.control}
+            name="email"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Email do Usuário</FormLabel>
+                <FormControl>
+                  <Input 
+                    placeholder="email@exemplo.com" 
+                    type="email" 
+                    {...field} 
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          
+          <Button 
+            type="submit" 
+            className="bg-iparty" 
+            disabled={loading}
+          >
+            {loading ? "Adicionando..." : "Adicionar Admin"}
+          </Button>
+        </form>
+      </Form>
     </div>
   );
 };
