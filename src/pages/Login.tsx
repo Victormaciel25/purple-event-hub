@@ -3,10 +3,11 @@ import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Check, LogIn, User } from "lucide-react";
+import { LogIn, Check } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 const Login = () => {
   const [isLogin, setIsLogin] = useState(true);
@@ -91,8 +92,12 @@ const Login = () => {
       <div className="w-full max-w-md space-y-8 animate-fade-in">
         <div className="text-center">
           <div className="flex justify-center mb-4">
-            <div className="h-20 w-20 rounded-full bg-iparty flex items-center justify-center">
-              <User size={40} className="text-white" />
+            <div className="h-32 w-32">
+              <img 
+                src="/lovable-uploads/290803b3-bebd-4c82-aa40-6a909967638d.png" 
+                alt="iParty Balloons" 
+                className="w-full h-full"
+              />
             </div>
           </div>
           <h1 className="text-3xl font-bold text-foreground">iParty</h1>
