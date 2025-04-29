@@ -55,3 +55,23 @@ CREATE POLICY "Super admins can delete user roles"
 ON public.user_roles
 FOR DELETE
 USING (public.check_user_role(auth.uid(), 'super_admin'));
+
+-- Create a function to get user ID by email
+CREATE OR REPLACE FUNCTION public.get_user_id_by_email(email_input TEXT)
+RETURNS UUID
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+DECLARE
+  user_id UUID;
+BEGIN
+  SELECT id INTO user_id
+  FROM auth.users
+  WHERE email = email_input;
+  
+  RETURN user_id;
+END;
+$$;
+
+-- Add function to config.toml to make it accessible via RPC
