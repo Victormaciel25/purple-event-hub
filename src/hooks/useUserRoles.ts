@@ -23,35 +23,33 @@ export function useUserRoles() {
 
         console.log("Checking roles for user:", data.session.user.email);
         
-        // Instead of using has_role function which might be having issues,
-        // directly query the user_roles table with explicit column references
+        // Direct database query without using RLS functions to avoid recursion
+        // Query for admin role
         const { data: adminRoles, error: adminError } = await supabase
           .from('user_roles')
           .select('id')
           .eq('user_id', data.session.user.id)
-          .eq('role', 'admin')
-          .single();
+          .eq('role', 'admin');
 
-        if (adminError && adminError.code !== 'PGRST116') { // PGRST116 is "no rows returned"
+        if (adminError) {
           console.error("Error checking admin role:", adminError);
         } else {
-          const hasAdminRole = !!adminRoles;
+          const hasAdminRole = adminRoles && adminRoles.length > 0;
           console.log("Admin role check result:", hasAdminRole);
           setIsAdmin(hasAdminRole);
         }
 
-        // Check for super_admin role directly in the table
+        // Query for super_admin role
         const { data: superAdminRoles, error: superAdminError } = await supabase
           .from('user_roles')
           .select('id')
           .eq('user_id', data.session.user.id)
-          .eq('role', 'super_admin')
-          .single();
+          .eq('role', 'super_admin');
 
-        if (superAdminError && superAdminError.code !== 'PGRST116') {
-          console.error("Error checking super admin role:", superAdminError);
+        if (superAdminError) {
+          console.error("Error checking super_admin role:", superAdminError);
         } else {
-          const hasSuperAdminRole = !!superAdminRoles;
+          const hasSuperAdminRole = superAdminRoles && superAdminRoles.length > 0;
           console.log("Super admin role check result:", hasSuperAdminRole);
           setIsSuperAdmin(hasSuperAdminRole);
         }
