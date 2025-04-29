@@ -1,42 +1,37 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import { MapPin } from "lucide-react";
-import mapboxgl from "mapbox-gl";
-import "mapbox-gl/dist/mapbox-gl.css";
+import { GoogleMap, useJsApiLoader, Marker } from "@react-google-maps/api";
 
 interface LocationMapProps {
   onLocationSelected?: (lat: number, lng: number) => void;
   initialLocation?: { lat: number, lng: number } | null;
 }
 
+const mapContainerStyle = {
+  width: '100%',
+  height: '100%',
+  borderRadius: '0.5rem'
+};
+
+const defaultCenter = {
+  lat: -23.5505,  // São Paulo, Brazil
+  lng: -46.6333
+};
+
+const GOOGLE_MAPS_API_KEY = "AIzaSyDmquKmV6OtKkJCG2eEe4NIPE8MzcrkUyw";
+
 const LocationMap = ({ onLocationSelected, initialLocation }: LocationMapProps) => {
-  const mapContainer = useRef<HTMLDivElement>(null);
-  const map = useRef<mapboxgl.Map | null>(null);
-  const marker = useRef<mapboxgl.Marker | null>(null);
   const [position, setPosition] = useState<{ lat: number, lng: number } | null>(
     initialLocation || null
   );
   const [hasRequestedLocation, setHasRequestedLocation] = useState(false);
-  const [mapboxToken, setMapboxToken] = useState<string>("");
+  const mapRef = useRef<google.maps.Map | null>(null);
 
-  // Temporary function to request mapbox token input from user
-  const requestMapboxToken = () => {
-    const token = prompt("Digite seu token público do Mapbox para visualizar o mapa:");
-    if (token) {
-      setMapboxToken(token);
-      localStorage.setItem("mapbox-token", token);
-      return token;
-    }
-    return null;
-  };
-
-  useEffect(() => {
-    // Try to get token from localStorage
-    const savedToken = localStorage.getItem("mapbox-token");
-    if (savedToken) {
-      setMapboxToken(savedToken);
-    }
-  }, []);
+  const { isLoaded, loadError } = useJsApiLoader({
+    id: 'google-map-script',
+    googleMapsApiKey: GOOGLE_MAPS_API_KEY
+  });
 
   const requestUserLocation = () => {
     setHasRequestedLocation(true);
@@ -51,105 +46,57 @@ const LocationMap = ({ onLocationSelected, initialLocation }: LocationMapProps) 
           if (onLocationSelected) {
             onLocationSelected(newPosition.lat, newPosition.lng);
           }
-          
-          // Initialize map after getting location
-          initializeMap(newPosition.lat, newPosition.lng);
         },
         (error) => {
           console.error("Erro ao obter localização:", error);
-          // Initialize map with default location on error
-          initializeMap(-23.5505, -46.6333); // São Paulo as default
+          // Use default position on error
+          setPosition(defaultCenter);
         }
       );
     } else {
       console.error("Geolocalização não é suportada pelo seu navegador");
-      // Initialize map with default location if geolocation not supported
-      initializeMap(-23.5505, -46.6333); // São Paulo as default
+      setPosition(defaultCenter);
     }
   };
 
-  const initializeMap = (lat: number, lng: number) => {
-    if (!mapContainer.current) return;
-    
-    let token = mapboxToken;
-    if (!token) {
-      token = requestMapboxToken();
-      if (!token) return; // User cancelled token input
-    }
-
-    mapboxgl.accessToken = token;
-    
-    if (map.current) return; // Map already initialized
-    
-    // Create the map
-    map.current = new mapboxgl.Map({
-      container: mapContainer.current,
-      style: "mapbox://styles/mapbox/streets-v11",
-      center: [lng, lat],
-      zoom: 15
-    });
-
-    // Add navigation controls
-    map.current.addControl(
-      new mapboxgl.NavigationControl(),
-      "top-right"
-    );
-
-    // Add marker
-    marker.current = new mapboxgl.Marker({ color: "#FF4136" })
-      .setLngLat([lng, lat])
-      .addTo(map.current);
-
-    // Add click event to the map
-    map.current.on("click", (event) => {
-      const { lng, lat } = event.lngLat;
-      
-      if (marker.current) {
-        marker.current.setLngLat([lng, lat]);
-      }
-      
-      const newPosition = { lat, lng };
+  const handleMapClick = (event: google.maps.MapMouseEvent) => {
+    if (event.latLng) {
+      const newPosition = {
+        lat: event.latLng.lat(),
+        lng: event.latLng.lng()
+      };
       setPosition(newPosition);
       
       if (onLocationSelected) {
-        onLocationSelected(lat, lng);
+        onLocationSelected(newPosition.lat, newPosition.lng);
       }
-    });
+    }
   };
 
-  // Initialize map if we already have position and token
-  useEffect(() => {
-    if (position && mapboxToken && hasRequestedLocation) {
-      initializeMap(position.lat, position.lng);
-    }
-  }, [position, mapboxToken, hasRequestedLocation]);
+  const onMapLoad = (map: google.maps.Map) => {
+    mapRef.current = map;
+  };
 
-  // Update marker position when initialLocation changes
+  // Effect to center the map on initialLocation when it changes
   useEffect(() => {
-    if (initialLocation && marker.current && map.current) {
-      marker.current.setLngLat([initialLocation.lng, initialLocation.lat]);
-      map.current.flyTo({
-        center: [initialLocation.lng, initialLocation.lat],
-        zoom: 15,
-        essential: true
-      });
+    if (initialLocation && mapRef.current) {
+      mapRef.current.panTo({ lat: initialLocation.lat, lng: initialLocation.lng });
+      mapRef.current.setZoom(15);
     }
   }, [initialLocation]);
 
-  // Cleanup
-  useEffect(() => {
-    return () => {
-      if (map.current) {
-        map.current.remove();
-        map.current = null;
-      }
-    };
-  }, []);
+  if (loadError) {
+    return (
+      <div className="flex items-center justify-center h-full bg-gray-200 rounded-lg">
+        <div className="bg-white p-4 rounded-lg shadow-lg text-center">
+          <p className="text-red-600">Erro ao carregar o mapa. Por favor, tente novamente mais tarde.</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div 
-      className="relative w-full h-full rounded-lg overflow-hidden"
-    >
+    <div className="relative w-full h-full rounded-lg overflow-hidden">
       {!hasRequestedLocation ? (
         <div className="absolute inset-0 flex items-center justify-center bg-gray-200">
           <div className="bg-white p-4 rounded-lg shadow-lg max-w-xs text-center z-10">
@@ -167,25 +114,39 @@ const LocationMap = ({ onLocationSelected, initialLocation }: LocationMapProps) 
             </button>
           </div>
         </div>
+      ) : !isLoaded ? (
+        <div className="absolute inset-0 flex items-center justify-center bg-gray-200">
+          <p>Carregando mapa...</p>
+        </div>
       ) : (
         <>
-          <div ref={mapContainer} className="absolute inset-0" />
-          
-          {position && !mapboxToken && (
-            <div className="absolute inset-0 flex items-center justify-center bg-gray-200">
-              <div className="bg-white p-4 rounded-lg shadow-lg max-w-xs text-center z-10">
-                <p className="text-sm mb-4">
-                  Para visualizar o mapa, precisamos de um token do Mapbox.
-                </p>
-                <button 
-                  className="bg-iparty hover:bg-iparty-dark text-white px-4 py-2 rounded-md transition-colors"
-                  onClick={() => requestMapboxToken()}
-                >
-                  Fornecer token
-                </button>
-              </div>
-            </div>
-          )}
+          <GoogleMap
+            mapContainerStyle={mapContainerStyle}
+            center={position || defaultCenter}
+            zoom={15}
+            onClick={handleMapClick}
+            options={{
+              fullscreenControl: false,
+              streetViewControl: false,
+              mapTypeControl: false,
+              zoomControl: true
+            }}
+            onLoad={onMapLoad}
+          >
+            {position && (
+              <Marker
+                position={position}
+                icon={{
+                  path: google.maps.SymbolPath.CIRCLE,
+                  scale: 8,
+                  fillColor: "#FF4136",
+                  fillOpacity: 1,
+                  strokeWeight: 2,
+                  strokeColor: "#FFFFFF",
+                }}
+              />
+            )}
+          </GoogleMap>
           
           {position && (
             <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 bg-white p-2 rounded shadow-lg z-10 text-sm text-center">
