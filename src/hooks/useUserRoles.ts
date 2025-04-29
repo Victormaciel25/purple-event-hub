@@ -19,30 +19,28 @@ export function useUserRoles() {
           return;
         }
 
-        // Check for admin role
-        const { data: adminData, error: adminError } = await supabase
-          .from("user_roles")
-          .select("role")
-          .eq("user_id", data.session.user.id)
-          .eq("role", "admin");
+        // Check for admin role using has_role function
+        const { data: isAdminResult, error: adminError } = await supabase.rpc(
+          "has_role",
+          { requested_role: "admin" }
+        );
 
         if (adminError) {
           console.error("Error checking admin role:", adminError);
         } else {
-          setIsAdmin(adminData && adminData.length > 0);
+          setIsAdmin(!!isAdminResult);
         }
 
-        // Check for super_admin role
-        const { data: superAdminData, error: superAdminError } = await supabase
-          .from("user_roles")
-          .select("role")
-          .eq("user_id", data.session.user.id)
-          .eq("role", "super_admin");
+        // Check for super_admin role using has_role function
+        const { data: isSuperAdminResult, error: superAdminError } = await supabase.rpc(
+          "has_role",
+          { requested_role: "super_admin" }
+        );
 
         if (superAdminError) {
           console.error("Error checking super admin role:", superAdminError);
         } else {
-          setIsSuperAdmin(superAdminData && superAdminData.length > 0);
+          setIsSuperAdmin(!!isSuperAdminResult);
         }
       } catch (error) {
         console.error("Error in useUserRoles:", error);

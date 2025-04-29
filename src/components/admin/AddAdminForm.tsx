@@ -42,13 +42,13 @@ const AddAdminForm = ({ onAdminAdded }: AddAdminFormProps) => {
       setLoading(true);
       
       // Call the function to get the user ID by email
-      const { data: userData, error: userError } = await supabase.rpc(
+      const { data: userId, error: userError } = await supabase.rpc(
         "get_user_id_by_email",
         { email_input: data.email }
       );
       
       if (userError) throw userError;
-      if (!userData) {
+      if (!userId) {
         toast.error("Usuário não encontrado");
         return;
       }
@@ -57,7 +57,7 @@ const AddAdminForm = ({ onAdminAdded }: AddAdminFormProps) => {
       const { data: existingRole, error: roleError } = await supabase
         .from("user_roles")
         .select("id")
-        .eq("user_id", userData)
+        .eq("user_id", userId)
         .eq("role", "admin")
         .single();
         
@@ -74,7 +74,7 @@ const AddAdminForm = ({ onAdminAdded }: AddAdminFormProps) => {
       const { error: insertError } = await supabase
         .from("user_roles")
         .insert({
-          user_id: userData,
+          user_id: userId,
           role: "admin"
         });
         
