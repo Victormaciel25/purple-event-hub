@@ -3,7 +3,7 @@ import React from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { LogOut, Settings, User, Heart, Calendar, HelpCircle } from "lucide-react";
+import { LogOut, Settings, User, Heart, Calendar, HelpCircle, Plus, Home, Star } from "lucide-react";
 
 const Profile = () => {
   return (
@@ -22,6 +22,32 @@ const Profile = () => {
         </Button>
       </div>
 
+      {/* Novas opções */}
+      <Card className="mb-6">
+        <CardContent className="p-0">
+          <div className="p-4 flex items-center">
+            <Plus size={20} className="text-iparty mr-3" />
+            <span>Cadastrar espaço</span>
+          </div>
+          <Separator />
+          <div className="p-4 flex items-center">
+            <Plus size={20} className="text-iparty mr-3" />
+            <span>Cadastrar fornecedor</span>
+          </div>
+          <Separator />
+          <div className="p-4 flex items-center">
+            <Home size={20} className="text-iparty mr-3" />
+            <span>Meus espaços</span>
+          </div>
+          <Separator />
+          <div className="p-4 flex items-center">
+            <Star size={20} className="text-iparty mr-3" />
+            <span>Promover Espaço</span>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Opções existentes */}
       <Card className="mb-6">
         <CardContent className="p-0">
           <div className="p-4 flex items-center">
