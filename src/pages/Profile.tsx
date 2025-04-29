@@ -5,9 +5,11 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { LogOut, Settings, User, Heart, Calendar, HelpCircle, Plus, Home, Star } from "lucide-react";
 import FavoriteSpaces from "../components/FavoriteSpaces";
+import { Link, useNavigate } from "react-router-dom";
 
 const Profile = () => {
   const [showFavorites, setShowFavorites] = useState(false);
+  const navigate = useNavigate();
 
   return (
     <div className="container px-4 py-6 max-w-4xl mx-auto">
@@ -40,7 +42,10 @@ const Profile = () => {
           {/* Novas opções */}
           <Card className="mb-6">
             <CardContent className="p-0">
-              <div className="p-4 flex items-center">
+              <div 
+                className="p-4 flex items-center cursor-pointer hover:bg-gray-50"
+                onClick={() => navigate("/register-space")}
+              >
                 <Plus size={20} className="text-iparty mr-3" />
                 <span>Cadastrar espaço</span>
               </div>

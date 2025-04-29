@@ -13,6 +13,7 @@ import Messages from "./pages/Messages";
 import Profile from "./pages/Profile";
 import NotFound from "./pages/NotFound";
 import EventSpaceDetails from "./pages/EventSpaceDetails";
+import RegisterSpace from "./pages/RegisterSpace";
 
 const queryClient = new QueryClient();
 
@@ -34,6 +35,7 @@ const App = () => (
             <Route path="/messages" element={<Messages />} />
             <Route path="/profile" element={<Profile />} />
             <Route path="/event-space/:id" element={<EventSpaceDetails />} />
+            <Route path="/register-space" element={<RegisterSpace />} />
           </Route>
           
           {/* Catch-all route */}
