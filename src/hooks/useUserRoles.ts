@@ -16,8 +16,12 @@ export function useUserRoles() {
         if (!data.session) {
           setIsAdmin(false);
           setIsSuperAdmin(false);
+          console.log("No session found, user is not authenticated");
+          setLoading(false);
           return;
         }
+
+        console.log("Checking roles for user:", data.session.user.email);
 
         // Check for admin role using has_role function
         const { data: isAdminResult, error: adminError } = await supabase.rpc(
@@ -28,6 +32,7 @@ export function useUserRoles() {
         if (adminError) {
           console.error("Error checking admin role:", adminError);
         } else {
+          console.log("Admin role check result:", isAdminResult);
           setIsAdmin(!!isAdminResult);
         }
 
@@ -40,7 +45,20 @@ export function useUserRoles() {
         if (superAdminError) {
           console.error("Error checking super admin role:", superAdminError);
         } else {
+          console.log("Super admin role check result:", isSuperAdminResult);
           setIsSuperAdmin(!!isSuperAdminResult);
+        }
+        
+        // Also check directly in the user_roles table for debugging
+        const { data: roleData, error: roleError } = await supabase
+          .from('user_roles')
+          .select('role')
+          .eq('user_id', data.session.user.id);
+          
+        if (roleError) {
+          console.error("Error checking roles table directly:", roleError);
+        } else {
+          console.log("User roles from database:", roleData);
         }
       } catch (error) {
         console.error("Error in useUserRoles:", error);

@@ -17,7 +17,7 @@ const Profile = () => {
   const [session, setSession] = useState<any>(null);
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { isAdmin, isSuperAdmin } = useUserRoles();
+  const { isAdmin, isSuperAdmin, loading: roleLoading } = useUserRoles();
 
   useEffect(() => {
     // Check authentication and fetch profile data
@@ -32,6 +32,7 @@ const Profile = () => {
       }
       
       setSession(sessionData.session);
+      console.log("Session user email:", sessionData.session?.user?.email);
       
       // Fetch profile data
       const { data: profileData, error } = await supabase
@@ -67,6 +68,39 @@ const Profile = () => {
     };
   }, [navigate]);
 
+  // Added debug logging for role values
+  useEffect(() => {
+    if (!roleLoading) {
+      console.log("User roles:", { isAdmin, isSuperAdmin });
+      
+      // Check user roles directly from database for debugging
+      const checkRolesDirectly = async () => {
+        try {
+          const { data: adminRoleData, error: adminError } = await supabase.rpc(
+            "has_role",
+            { requested_role: "admin" }
+          );
+          
+          const { data: superAdminRoleData, error: superAdminError } = await supabase.rpc(
+            "has_role",
+            { requested_role: "super_admin" }
+          );
+          
+          console.log("Direct role check:", { 
+            admin: adminRoleData, 
+            superAdmin: superAdminRoleData,
+            adminError,
+            superAdminError
+          });
+        } catch (error) {
+          console.error("Error checking roles directly:", error);
+        }
+      };
+      
+      checkRolesDirectly();
+    }
+  }, [isAdmin, isSuperAdmin, roleLoading]);
+
   const handleSignOut = async () => {
     setLoading(true);
     try {
@@ -90,7 +124,7 @@ const Profile = () => {
     }
   };
 
-  if (loading) {
+  if (loading || roleLoading) {
     return (
       <div className="container px-4 py-6 max-w-4xl mx-auto flex items-center justify-center h-[80vh]">
         <p>Carregando...</p>
@@ -156,8 +190,8 @@ const Profile = () => {
             </CardContent>
           </Card>
 
-          {/* Admin options */}
-          {isAdmin && (
+          {/* Admin options - with debugging info */}
+          {isAdmin ? (
             <Card className="mb-6">
               <CardContent className="p-0">
                 <div 
@@ -181,6 +215,11 @@ const Profile = () => {
                 )}
               </CardContent>
             </Card>
+          ) : (
+            <div className="mb-6 p-4 bg-gray-50 rounded-lg text-sm text-center">
+              <p>Você não tem permissões de administrador.</p>
+              <p className="text-muted-foreground">Email atual: {session?.user?.email}</p>
+            </div>
           )}
 
           {/* Opções existentes */}
