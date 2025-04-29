@@ -23,8 +23,10 @@ export function useUserRoles() {
 
         console.log("Checking roles for user:", data.session.user.email);
         
-        // Direct database query without using RLS functions to avoid recursion
-        // Query for admin role
+        // Use a direct query approach to avoid RLS recursion issues
+        // Don't use RPC functions or policies that might trigger recursion
+        
+        // First check if the user has admin role
         const { data: adminRoles, error: adminError } = await supabase
           .from('user_roles')
           .select('id')
@@ -33,13 +35,15 @@ export function useUserRoles() {
 
         if (adminError) {
           console.error("Error checking admin role:", adminError);
+          setIsAdmin(false);
         } else {
+          // Check if we got any results back
           const hasAdminRole = adminRoles && adminRoles.length > 0;
-          console.log("Admin role check result:", hasAdminRole);
+          console.log("Admin role check result:", hasAdminRole, adminRoles);
           setIsAdmin(hasAdminRole);
         }
 
-        // Query for super_admin role
+        // Now check if user has super_admin role
         const { data: superAdminRoles, error: superAdminError } = await supabase
           .from('user_roles')
           .select('id')
@@ -48,13 +52,15 @@ export function useUserRoles() {
 
         if (superAdminError) {
           console.error("Error checking super_admin role:", superAdminError);
+          setIsSuperAdmin(false);
         } else {
+          // Check if we got any results back
           const hasSuperAdminRole = superAdminRoles && superAdminRoles.length > 0;
-          console.log("Super admin role check result:", hasSuperAdminRole);
+          console.log("Super admin role check result:", hasSuperAdminRole, superAdminRoles);
           setIsSuperAdmin(hasSuperAdminRole);
         }
         
-        // Log all roles for debugging
+        // Log all user roles for debugging
         const { data: allRoles, error: rolesError } = await supabase
           .from('user_roles')
           .select('role')
@@ -67,6 +73,8 @@ export function useUserRoles() {
         }
       } catch (error) {
         console.error("Error in useUserRoles:", error);
+        setIsAdmin(false);
+        setIsSuperAdmin(false);
       } finally {
         setLoading(false);
       }
