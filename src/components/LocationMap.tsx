@@ -73,6 +73,20 @@ const LocationMap = ({ onLocationSelected, initialLocation }: LocationMapProps) 
     }
   };
 
+  const onMarkerDragEnd = (event: google.maps.MapMouseEvent) => {
+    if (event.latLng) {
+      const newPosition = {
+        lat: event.latLng.lat(),
+        lng: event.latLng.lng()
+      };
+      setPosition(newPosition);
+      
+      if (onLocationSelected) {
+        onLocationSelected(newPosition.lat, newPosition.lng);
+      }
+    }
+  };
+
   const onMapLoad = (map: google.maps.Map) => {
     mapRef.current = map;
   };
@@ -136,6 +150,8 @@ const LocationMap = ({ onLocationSelected, initialLocation }: LocationMapProps) 
             {position && (
               <Marker
                 position={position}
+                draggable={true}
+                onDragEnd={onMarkerDragEnd}
                 icon={{
                   path: google.maps.SymbolPath.CIRCLE,
                   scale: 8,
@@ -150,7 +166,7 @@ const LocationMap = ({ onLocationSelected, initialLocation }: LocationMapProps) 
           
           {position && (
             <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 bg-white p-2 rounded shadow-lg z-10 text-sm text-center">
-              <p>Clique no mapa para ajustar a posição exata do seu espaço</p>
+              <p>Clique ou arraste o marcador para ajustar a posição exata do seu espaço</p>
               <p className="text-xs text-muted-foreground mt-1">
                 Coordenadas: {position.lat.toFixed(6)}, {position.lng.toFixed(6)}
               </p>
