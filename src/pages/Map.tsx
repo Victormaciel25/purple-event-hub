@@ -1,9 +1,17 @@
 
-import React from "react";
+import React, { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Search } from "lucide-react";
+import LocationMap from "@/components/LocationMap";
 
 const Map = () => {
+  const [location, setLocation] = useState<{ lat: number, lng: number } | null>(null);
+
+  const handleLocationSelected = (lat: number, lng: number) => {
+    setLocation({ lat, lng });
+    console.log("Localização selecionada:", { lat, lng });
+  };
+
   return (
     <div className="container px-4 py-6 max-w-4xl mx-auto h-full">
       <h1 className="text-2xl font-bold mb-6">Mapa de Espaços</h1>
@@ -17,19 +25,7 @@ const Map = () => {
       </div>
 
       <div className="bg-gray-200 rounded-xl h-[calc(100vh-200px)] flex items-center justify-center">
-        <div className="text-center p-8">
-          <div className="bg-white p-6 rounded-xl shadow-md">
-            <h2 className="text-lg font-medium mb-2">Mapa de Localização</h2>
-            <p className="text-muted-foreground">
-              Encontre espaços de eventos próximos a você
-            </p>
-            <div className="mt-4 flex justify-center">
-              <button className="bg-iparty hover:bg-iparty-dark text-white px-4 py-2 rounded-md transition-colors">
-                Permitir localização
-              </button>
-            </div>
-          </div>
-        </div>
+        <LocationMap onLocationSelected={handleLocationSelected} initialLocation={location} />
       </div>
     </div>
   );

@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useNavigate } from "react-router-dom";
+import LocationMap from "@/components/LocationMap";
 import {
   Form,
   FormControl,
@@ -46,6 +47,7 @@ type FormValues = z.infer<typeof formSchema>;
 const RegisterSpace = () => {
   const [currentStep, setCurrentStep] = useState(1);
   const [formData, setFormData] = useState<Partial<FormValues>>({});
+  const [location, setLocation] = useState<{ lat: number, lng: number } | null>(null);
   const navigate = useNavigate();
 
   const form = useForm<FormValues>({
@@ -74,11 +76,16 @@ const RegisterSpace = () => {
       setFormData({ ...formData, ...data });
       setCurrentStep(currentStep + 1);
     } else {
-      const finalData = { ...formData, ...data };
+      const finalData = { ...formData, ...data, location };
       console.log("Form submitted:", finalData);
       // Here you would typically save the data to a backend
       navigate("/profile"); // Redirect back to profile after submission
     }
+  };
+
+  const handleLocationSelected = (lat: number, lng: number) => {
+    setLocation({ lat, lng });
+    console.log("Localização selecionada:", { lat, lng });
   };
 
   const goBack = () => {
@@ -418,17 +425,10 @@ const RegisterSpace = () => {
               </div>
               
               <div className="bg-gray-200 rounded-xl h-[400px] flex items-center justify-center">
-                <div className="text-center p-8">
-                  <div className="bg-white p-6 rounded-xl shadow-md">
-                    <h3 className="text-lg font-medium mb-2">Mapa de Localização</h3>
-                    <p className="text-muted-foreground mb-4">
-                      Posicione um alfinete para indicar a localização exata do espaço
-                    </p>
-                    <Button>
-                      Permitir localização
-                    </Button>
-                  </div>
-                </div>
+                <LocationMap 
+                  onLocationSelected={handleLocationSelected}
+                  initialLocation={location}
+                />
               </div>
               
               <p className="text-sm text-muted-foreground">
