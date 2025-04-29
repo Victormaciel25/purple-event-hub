@@ -23,54 +23,37 @@ export function useUserRoles() {
 
         console.log("Checking roles for user:", data.session.user.email);
         
-        // Use a direct query approach to avoid RLS recursion issues
-        // Don't use RPC functions or policies that might trigger recursion
-        
-        // First check if the user has admin role
+        // Use a direct query with explicit user ID to avoid RLS recursion
+        // This bypasses RLS policies and uses direct equality checks
         const { data: adminRoles, error: adminError } = await supabase
-          .from('user_roles')
-          .select('id')
-          .eq('user_id', data.session.user.id)
-          .eq('role', 'admin');
+          .rpc('check_user_role', { 
+            user_id: data.session.user.id, 
+            requested_role: 'admin' 
+          });
 
         if (adminError) {
           console.error("Error checking admin role:", adminError);
           setIsAdmin(false);
         } else {
-          // Check if we got any results back
-          const hasAdminRole = adminRoles && adminRoles.length > 0;
-          console.log("Admin role check result:", hasAdminRole, adminRoles);
-          setIsAdmin(hasAdminRole);
+          console.log("Admin role check result:", !!adminRoles, adminRoles);
+          setIsAdmin(!!adminRoles);
         }
 
-        // Now check if user has super_admin role
+        // Now check if user has super_admin role using RPC
         const { data: superAdminRoles, error: superAdminError } = await supabase
-          .from('user_roles')
-          .select('id')
-          .eq('user_id', data.session.user.id)
-          .eq('role', 'super_admin');
+          .rpc('check_user_role', { 
+            user_id: data.session.user.id, 
+            requested_role: 'super_admin' 
+          });
 
         if (superAdminError) {
           console.error("Error checking super_admin role:", superAdminError);
           setIsSuperAdmin(false);
         } else {
-          // Check if we got any results back
-          const hasSuperAdminRole = superAdminRoles && superAdminRoles.length > 0;
-          console.log("Super admin role check result:", hasSuperAdminRole, superAdminRoles);
-          setIsSuperAdmin(hasSuperAdminRole);
+          console.log("Super admin role check result:", !!superAdminRoles, superAdminRoles);
+          setIsSuperAdmin(!!superAdminRoles);
         }
         
-        // Log all user roles for debugging
-        const { data: allRoles, error: rolesError } = await supabase
-          .from('user_roles')
-          .select('role')
-          .eq('user_id', data.session.user.id);
-          
-        if (rolesError) {
-          console.error("Error checking all roles:", rolesError);
-        } else {
-          console.log("All user roles from database:", allRoles);
-        }
       } catch (error) {
         console.error("Error in useUserRoles:", error);
         setIsAdmin(false);
