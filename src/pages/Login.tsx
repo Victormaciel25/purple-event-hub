@@ -1,18 +1,89 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Check, LogIn, User } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/components/ui/use-toast";
 
 const Login = () => {
   const [isLogin, setIsLogin] = useState(true);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const { toast } = useToast();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  useEffect(() => {
+    // Check if user is already logged in
+    const checkUser = async () => {
+      const { data } = await supabase.auth.getSession();
+      if (data.session) {
+        navigate("/explore");
+      }
+    };
+    
+    checkUser();
+  }, [navigate]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    navigate("/explore");
+    setLoading(true);
+
+    try {
+      if (isLogin) {
+        // Handle login
+        const { error } = await supabase.auth.signInWithPassword({
+          email,
+          password,
+        });
+
+        if (error) throw error;
+
+        toast({
+          title: "Login bem-sucedido",
+          description: "Bem-vindo de volta!",
+        });
+        
+        navigate("/explore");
+      } else {
+        // Handle signup
+        if (password !== confirmPassword) {
+          toast({
+            title: "Erro",
+            description: "As senhas não coincidem",
+            variant: "destructive",
+          });
+          return;
+        }
+
+        const { error } = await supabase.auth.signUp({
+          email,
+          password,
+        });
+
+        if (error) throw error;
+
+        toast({
+          title: "Cadastro realizado",
+          description: "Sua conta foi criada com sucesso!",
+        });
+        
+        // Automatically switch to login view after successful signup
+        setIsLogin(true);
+      }
+    } catch (error: any) {
+      toast({
+        title: "Erro",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -40,6 +111,7 @@ const Login = () => {
                     : "bg-transparent text-foreground"
                 }`}
                 onClick={() => setIsLogin(true)}
+                type="button"
               >
                 Entrar
               </button>
@@ -50,6 +122,7 @@ const Login = () => {
                     : "bg-transparent text-foreground"
                 }`}
                 onClick={() => setIsLogin(false)}
+                type="button"
               >
                 Cadastrar
               </button>
@@ -64,6 +137,8 @@ const Login = () => {
                 type="email"
                 placeholder="seu@email.com"
                 required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
               />
             </div>
             <div className="space-y-2">
@@ -73,6 +148,8 @@ const Login = () => {
                 type="password"
                 placeholder="••••••••"
                 required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
               />
             </div>
             {!isLogin && (
@@ -83,19 +160,22 @@ const Login = () => {
                   type="password"
                   placeholder="••••••••"
                   required={!isLogin}
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
                 />
               </div>
             )}
             <Button
               type="submit"
               className="w-full bg-iparty hover:bg-iparty-dark text-white"
+              disabled={loading}
             >
               {isLogin ? (
                 <LogIn className="mr-2 h-4 w-4" />
               ) : (
                 <Check className="mr-2 h-4 w-4" />
               )}
-              {isLogin ? "Entrar" : "Cadastrar"}
+              {loading ? "Processando..." : isLogin ? "Entrar" : "Cadastrar"}
             </Button>
           </form>
         </div>
