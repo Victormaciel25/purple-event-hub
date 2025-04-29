@@ -45,14 +45,24 @@ type SpaceWithProfileInfo = {
   status: 'pending' | 'approved' | 'rejected';
   user_id: string;
   profiles?: {
-    first_name: string;
-    last_name: string;
-    email?: string;
-  };
+    first_name: string | null;
+    last_name: string | null;
+    email?: string | null;
+  } | null;
   photo_count?: number;
 };
 
-type SpaceDetailsType = SpaceWithProfileInfo & {
+type SpaceDetailsType = {
+  id: string;
+  name: string;
+  created_at: string;
+  status: 'pending' | 'approved' | 'rejected';
+  user_id: string;
+  profiles?: {
+    first_name: string | null;
+    last_name: string | null;
+    email?: string | null;
+  } | null;
   phone: string;
   description: string;
   address: string;
@@ -109,7 +119,7 @@ const SpaceApproval = () => {
           created_at,
           status,
           user_id,
-          profiles:user_id (
+          profiles:profiles!user_id (
             first_name, 
             last_name
           )
@@ -122,7 +132,7 @@ const SpaceApproval = () => {
 
       // Count photos for each space
       const spacesWithCounts = await Promise.all(
-        (data || []).map(async (space) => {
+        (data || []).map(async (space: any) => {
           const { count } = await supabase
             .from("space_photos")
             .select("id", { count: "exact" })
@@ -135,7 +145,7 @@ const SpaceApproval = () => {
         })
       );
 
-      setSpaces(spacesWithCounts);
+      setSpaces(spacesWithCounts as SpaceWithProfileInfo[]);
     } catch (error) {
       console.error("Error fetching spaces:", error);
       toast.error("Erro ao buscar espaços");
@@ -150,7 +160,7 @@ const SpaceApproval = () => {
         .from("spaces")
         .select(`
           *,
-          profiles:user_id (
+          profiles:profiles!user_id (
             first_name, 
             last_name
           ),
@@ -166,7 +176,7 @@ const SpaceApproval = () => {
         throw error;
       }
 
-      setSelectedSpace(data);
+      setSelectedSpace(data as SpaceDetailsType);
       setSheetOpen(true);
     } catch (error) {
       console.error("Error fetching space details:", error);
@@ -463,7 +473,7 @@ const SpaceApproval = () => {
                       width="100%"
                       height="100%"
                       frameBorder="0"
-                      src={`https://www.google.com/maps/embed/v1/place?key=${GOOGLE_MAPS_API_KEY}&q=${selectedSpace.latitude},${selectedSpace.longitude}`}
+                      src={`https://www.google.com/maps/embed/v1/place?key=AIzaSyDmquKmV6OtKkJCG2eEe4NIPE8MzcrkUyw&q=${selectedSpace.latitude},${selectedSpace.longitude}`}
                       allowFullScreen
                     ></iframe>
                   </div>

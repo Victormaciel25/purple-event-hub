@@ -51,10 +51,12 @@ const AdminManagement = () => {
           id,
           role,
           created_at,
-          users:user_id (
+          user_id,
+          profiles:profiles!user_id(
             id,
-            email,
-            raw_user_meta_data
+            email:id,
+            first_name,
+            last_name
           )
         `)
         .eq("role", "admin");
@@ -63,12 +65,12 @@ const AdminManagement = () => {
 
       // Transform the data into a more usable format
       const adminData: AdminUser[] = data.map((item: any) => ({
-        id: item.users.id,
-        email: item.users.email,
+        id: item.user_id,
+        email: item.profiles.email || "N/A",
         role: item.role,
         created_at: item.created_at,
-        first_name: item.users.raw_user_meta_data?.first_name || null,
-        last_name: item.users.raw_user_meta_data?.last_name || null,
+        first_name: item.profiles.first_name || null,
+        last_name: item.profiles.last_name || null,
       }));
 
       setAdminUsers(adminData);
@@ -89,12 +91,10 @@ const AdminManagement = () => {
     try {
       setAddingAdmin(true);
 
-      // First, check if the user exists
+      // First, check if the user exists in auth.users
+      // We can't query auth.users directly, so we'll look for a profile with matching auth_id
       const { data: userData, error: userError } = await supabase
-        .from("auth.users")
-        .select("id")
-        .eq("email", email)
-        .single();
+        .rpc("get_user_id_by_email", { email_input: email });
 
       if (userError || !userData) {
         toast.error("Usuário não encontrado");
@@ -105,7 +105,7 @@ const AdminManagement = () => {
       const { error } = await supabase
         .from("user_roles")
         .insert([
-          { user_id: userData.id, role: "admin" }
+          { user_id: userData, role: "admin" }
         ]);
 
       if (error) {
