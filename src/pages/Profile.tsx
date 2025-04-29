@@ -103,7 +103,7 @@ const Profile = () => {
       <h1 className="text-2xl font-bold mb-6">Perfil</h1>
 
       <div className="flex flex-col items-center mb-8">
-        <div className="h-24 w-24 bg-iparty rounded-full flex items-center justify-center mb-4">
+        <div className="h-24 w-24 bg-purple-400 rounded-full flex items-center justify-center mb-4">
           <User size={50} className="text-white" />
         </div>
         <h2 className="text-xl font-medium">
@@ -135,22 +135,22 @@ const Profile = () => {
                 className="p-4 flex items-center cursor-pointer hover:bg-gray-50"
                 onClick={() => navigate("/register-space")}
               >
-                <Plus size={20} className="text-iparty mr-3" />
+                <Plus size={20} className="text-purple-500 mr-3" />
                 <span>Cadastrar espaço</span>
               </div>
               <Separator />
               <div className="p-4 flex items-center">
-                <Plus size={20} className="text-iparty mr-3" />
+                <Plus size={20} className="text-purple-500 mr-3" />
                 <span>Cadastrar fornecedor</span>
               </div>
               <Separator />
               <div className="p-4 flex items-center">
-                <Home size={20} className="text-iparty mr-3" />
+                <Home size={20} className="text-purple-500 mr-3" />
                 <span>Meus espaços</span>
               </div>
               <Separator />
               <div className="p-4 flex items-center">
-                <Shield size={20} className="text-iparty mr-3" />
+                <Shield size={20} className="text-purple-500 mr-3" />
                 <span>Promover Espaço</span>
               </div>
             </CardContent>
@@ -164,7 +164,7 @@ const Profile = () => {
                   className="p-4 flex items-center cursor-pointer hover:bg-gray-50"
                   onClick={() => navigate("/space-approval")}
                 >
-                  <CheckSquare size={20} className="text-red-600 mr-3" />
+                  <CheckSquare size={20} className="text-purple-500 mr-3" />
                   <span className="font-medium">Aprovar Espaços</span>
                 </div>
                 {isSuperAdmin && (
@@ -174,7 +174,7 @@ const Profile = () => {
                       className="p-4 flex items-center cursor-pointer hover:bg-gray-50"
                       onClick={() => navigate("/admin-management")}
                     >
-                      <Users size={20} className="text-red-600 mr-3" />
+                      <Users size={20} className="text-purple-500 mr-3" />
                       <span className="font-medium">Administradores</span>
                     </div>
                   </>
@@ -190,17 +190,17 @@ const Profile = () => {
                 className="p-4 flex items-center cursor-pointer hover:bg-gray-50"
                 onClick={() => setShowFavorites(true)}
               >
-                <Heart size={20} className="text-iparty mr-3" />
+                <Heart size={20} className="text-purple-500 mr-3" />
                 <span>Favoritos</span>
               </div>
               <Separator />
               <div className="p-4 flex items-center">
-                <Calendar size={20} className="text-iparty mr-3" />
+                <Calendar size={20} className="text-purple-500 mr-3" />
                 <span>Meus Eventos</span>
               </div>
               <Separator />
               <div className="p-4 flex items-center">
-                <HelpCircle size={20} className="text-iparty mr-3" />
+                <HelpCircle size={20} className="text-purple-500 mr-3" />
                 <span>Ajuda e Suporte</span>
               </div>
             </CardContent>
@@ -208,7 +208,7 @@ const Profile = () => {
 
           <Button 
             variant="outline" 
-            className="w-full flex items-center justify-center text-destructive"
+            className="w-full flex items-center justify-center text-red-500"
             onClick={handleSignOut}
             disabled={loading}
           >
