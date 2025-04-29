@@ -4,7 +4,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { 
-  Home, Phone, MapPin, Info, DollarSign, Users, List, Check, ChevronRight, ArrowLeft
+  Home, Phone, MapPin, Info, DollarSign, Users, List, Check, ChevronRight, ArrowLeft, Image
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,6 +12,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useNavigate } from "react-router-dom";
 import LocationMap from "@/components/LocationMap";
+import ImageUpload from "@/components/ImageUpload";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 import {
   Form,
   FormControl,
@@ -48,6 +51,8 @@ const RegisterSpace = () => {
   const [currentStep, setCurrentStep] = useState(1);
   const [formData, setFormData] = useState<Partial<FormValues>>({});
   const [location, setLocation] = useState<{ lat: number, lng: number } | null>(null);
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [submitting, setSubmitting] = useState(false);
   const navigate = useNavigate();
 
   const form = useForm<FormValues>({
@@ -71,21 +76,96 @@ const RegisterSpace = () => {
     },
   });
 
-  const onSubmit = (data: FormValues) => {
-    if (currentStep < 3) {
+  const onSubmit = async (data: FormValues) => {
+    if (currentStep < 4) {
       setFormData({ ...formData, ...data });
       setCurrentStep(currentStep + 1);
     } else {
-      const finalData = { ...formData, ...data, location };
-      console.log("Form submitted:", finalData);
-      // Here you would typically save the data to a backend
-      navigate("/profile"); // Redirect back to profile after submission
+      try {
+        setSubmitting(true);
+        const finalData = { ...formData, ...data };
+        
+        // Get current user
+        const { data: sessionData } = await supabase.auth.getSession();
+        if (!sessionData.session) {
+          toast.error("Você precisa estar logado para cadastrar um espaço");
+          navigate("/");
+          return;
+        }
+        
+        const userId = sessionData.session.user.id;
+        
+        // Insert space data
+        const { data: spaceData, error: spaceError } = await supabase
+          .from("spaces")
+          .insert({
+            name: finalData.name,
+            phone: finalData.phone,
+            state: finalData.state,
+            address: finalData.address,
+            zip_code: finalData.zipCode,
+            number: finalData.number,
+            description: finalData.description,
+            price: finalData.price,
+            capacity: finalData.capacity,
+            parking: finalData.parking,
+            wifi: finalData.wifi,
+            sound_system: finalData.soundSystem,
+            air_conditioning: finalData.airConditioning,
+            kitchen: finalData.kitchen,
+            pool: finalData.pool,
+            latitude: location?.lat || null,
+            longitude: location?.lng || null,
+            user_id: userId,
+            status: 'pending'
+          })
+          .select()
+          .single();
+
+        if (spaceError) throw spaceError;
+
+        // Upload photos if any
+        if (selectedFiles.length > 0) {
+          await Promise.all(selectedFiles.map(async (file, index) => {
+            const fileExtension = file.name.split('.').pop();
+            const filePath = `${userId}/${spaceData.id}/${index + 1}.${fileExtension}`;
+            
+            // Upload the file to storage
+            const { error: uploadError } = await supabase.storage
+              .from('spaces')
+              .upload(filePath, file);
+
+            if (uploadError) throw uploadError;
+
+            // Insert reference in space_photos table
+            const { error: photoError } = await supabase
+              .from('space_photos')
+              .insert({
+                space_id: spaceData.id,
+                storage_path: filePath
+              });
+
+            if (photoError) throw photoError;
+          }));
+        }
+
+        toast.success("Espaço cadastrado com sucesso! Aguardando aprovação.");
+        navigate("/profile");
+      } catch (error: any) {
+        toast.error(`Erro ao cadastrar espaço: ${error.message}`);
+        console.error("Error submitting space:", error);
+      } finally {
+        setSubmitting(false);
+      }
     }
   };
 
   const handleLocationSelected = (lat: number, lng: number) => {
     setLocation({ lat, lng });
-    console.log("Localização selecionada:", { lat, lng });
+  };
+
+  const handleFilesChange = (files: File[]) => {
+    setSelectedFiles(files);
   };
 
   const goBack = () => {
@@ -107,7 +187,7 @@ const RegisterSpace = () => {
 
       <div className="mb-8">
         <div className="flex justify-between mb-2">
-          {[1, 2, 3].map((step) => (
+          {[1, 2, 3, 4].map((step) => (
             <div 
               key={step} 
               className={`flex items-center ${
@@ -130,7 +210,9 @@ const RegisterSpace = () => {
                 {step < currentStep ? <Check size={16} /> : step}
               </div>
               <span className="hidden md:inline">
-                {step === 1 ? "Informações Básicas" : step === 2 ? "Comodidades" : "Localização"}
+                {step === 1 ? "Informações Básicas" : 
+                 step === 2 ? "Comodidades" : 
+                 step === 3 ? "Localização" : "Fotos"}
               </span>
             </div>
           ))}
@@ -138,7 +220,7 @@ const RegisterSpace = () => {
         <div className="w-full h-2 bg-gray-200 rounded-full">
           <div 
             className="h-full bg-iparty rounded-full transition-all" 
-            style={{ width: `${((currentStep - 1) / 2) * 100}%` }} 
+            style={{ width: `${((currentStep - 1) / 3) * 100}%` }} 
           />
         </div>
       </div>
@@ -437,10 +519,42 @@ const RegisterSpace = () => {
             </div>
           )}
 
+          {currentStep === 4 && (
+            <div className="space-y-6">
+              <div className="flex items-center mb-4">
+                <Image size={24} className="text-iparty mr-3" />
+                <h2 className="text-xl font-medium">Fotos do Espaço</h2>
+              </div>
+              
+              <div className="border rounded-lg p-6">
+                <ImageUpload 
+                  onImagesChange={handleFilesChange} 
+                  maxImages={5}
+                />
+              </div>
+              
+              <p className="text-sm text-muted-foreground">
+                Adicione fotos de boa qualidade do seu espaço para aumentar as chances de aprovação.
+              </p>
+            </div>
+          )}
+
           <div className="flex justify-end">
-            <Button type="submit" className="bg-iparty">
-              {currentStep < 3 ? "Próximo" : "Finalizar"}
-              {currentStep < 3 && <ChevronRight size={16} />}
+            <Button 
+              type="submit" 
+              className="bg-iparty"
+              disabled={submitting}
+            >
+              {currentStep < 4 ? (
+                <>
+                  Próximo
+                  <ChevronRight size={16} />
+                </>
+              ) : submitting ? (
+                "Enviando..."
+              ) : (
+                "Finalizar"
+              )}
             </Button>
           </div>
         </form>

@@ -17,6 +17,8 @@ import Profile from "./pages/Profile";
 import NotFound from "./pages/NotFound";
 import EventSpaceDetails from "./pages/EventSpaceDetails";
 import RegisterSpace from "./pages/RegisterSpace";
+import SpaceApproval from "./pages/SpaceApproval";
+import AdminManagement from "./pages/AdminManagement";
 
 // Create a QueryClient instance outside of the component
 const queryClient = new QueryClient();
@@ -81,6 +83,8 @@ const App: React.FC = () => {
               <Route path="/profile" element={<Profile />} />
               <Route path="/event-space/:id" element={<EventSpaceDetails />} />
               <Route path="/register-space" element={<RegisterSpace />} />
+              <Route path="/space-approval" element={<SpaceApproval />} />
+              <Route path="/admin-management" element={<AdminManagement />} />
             </Route>
             
             {/* Catch-all route */}

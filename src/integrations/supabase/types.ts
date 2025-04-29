@@ -36,15 +36,143 @@ export type Database = {
         }
         Relationships: []
       }
+      space_photos: {
+        Row: {
+          created_at: string | null
+          id: string
+          space_id: string
+          storage_path: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          space_id: string
+          storage_path: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          space_id?: string
+          storage_path?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "space_photos_space_id_fkey"
+            columns: ["space_id"]
+            isOneToOne: false
+            referencedRelation: "spaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      spaces: {
+        Row: {
+          address: string
+          air_conditioning: boolean | null
+          capacity: string
+          created_at: string | null
+          description: string
+          id: string
+          kitchen: boolean | null
+          latitude: number | null
+          longitude: number | null
+          name: string
+          number: string
+          parking: boolean | null
+          phone: string
+          pool: boolean | null
+          price: string
+          rejection_reason: string | null
+          sound_system: boolean | null
+          state: string
+          status: Database["public"]["Enums"]["space_approval_status"] | null
+          user_id: string
+          wifi: boolean | null
+          zip_code: string
+        }
+        Insert: {
+          address: string
+          air_conditioning?: boolean | null
+          capacity: string
+          created_at?: string | null
+          description: string
+          id?: string
+          kitchen?: boolean | null
+          latitude?: number | null
+          longitude?: number | null
+          name: string
+          number: string
+          parking?: boolean | null
+          phone: string
+          pool?: boolean | null
+          price: string
+          rejection_reason?: string | null
+          sound_system?: boolean | null
+          state: string
+          status?: Database["public"]["Enums"]["space_approval_status"] | null
+          user_id: string
+          wifi?: boolean | null
+          zip_code: string
+        }
+        Update: {
+          address?: string
+          air_conditioning?: boolean | null
+          capacity?: string
+          created_at?: string | null
+          description?: string
+          id?: string
+          kitchen?: boolean | null
+          latitude?: number | null
+          longitude?: number | null
+          name?: string
+          number?: string
+          parking?: boolean | null
+          phone?: string
+          pool?: boolean | null
+          price?: string
+          rejection_reason?: string | null
+          sound_system?: boolean | null
+          state?: string
+          status?: Database["public"]["Enums"]["space_approval_status"] | null
+          user_id?: string
+          wifi?: boolean | null
+          zip_code?: string
+        }
+        Relationships: []
+      }
+      user_roles: {
+        Row: {
+          created_at: string | null
+          id: string
+          role: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          role: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          role?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      has_role: {
+        Args: { requested_role: string }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      space_approval_status: "pending" | "approved" | "rejected"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -159,6 +287,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      space_approval_status: ["pending", "approved", "rejected"],
+    },
   },
 } as const

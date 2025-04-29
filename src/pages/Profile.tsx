@@ -3,11 +3,12 @@ import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { LogOut, Settings, User, Heart, Calendar, HelpCircle, Plus, Home, Shield } from "lucide-react";
+import { LogOut, Settings, User, Heart, Calendar, HelpCircle, Plus, Home, Shield, CheckSquare, Users } from "lucide-react";
 import FavoriteSpaces from "../components/FavoriteSpaces";
 import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
+import { useUserRoles } from "@/hooks/useUserRoles";
 
 const Profile = () => {
   const [showFavorites, setShowFavorites] = useState(false);
@@ -16,6 +17,7 @@ const Profile = () => {
   const [session, setSession] = useState<any>(null);
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { isAdmin, isSuperAdmin } = useUserRoles();
 
   useEffect(() => {
     // Check authentication and fetch profile data
@@ -153,6 +155,33 @@ const Profile = () => {
               </div>
             </CardContent>
           </Card>
+
+          {/* Admin options */}
+          {isAdmin && (
+            <Card className="mb-6">
+              <CardContent className="p-0">
+                <div 
+                  className="p-4 flex items-center cursor-pointer hover:bg-gray-50"
+                  onClick={() => navigate("/space-approval")}
+                >
+                  <CheckSquare size={20} className="text-red-600 mr-3" />
+                  <span className="font-medium">Aprovar Espaços</span>
+                </div>
+                {isSuperAdmin && (
+                  <>
+                    <Separator />
+                    <div 
+                      className="p-4 flex items-center cursor-pointer hover:bg-gray-50"
+                      onClick={() => navigate("/admin-management")}
+                    >
+                      <Users size={20} className="text-red-600 mr-3" />
+                      <span className="font-medium">Administradores</span>
+                    </div>
+                  </>
+                )}
+              </CardContent>
+            </Card>
+          )}
 
           {/* Opções existentes */}
           <Card className="mb-6">
