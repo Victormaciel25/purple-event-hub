@@ -23,39 +23,48 @@ export function useUserRoles() {
 
         console.log("Checking roles for user:", data.session.user.email);
         
-        // Use a direct query with explicit user ID to avoid RLS recursion
-        // This bypasses RLS policies and uses direct equality checks
-        const { data: adminRoles, error: adminError } = await supabase
-          .rpc('check_user_role', { 
-            user_id: data.session.user.id, 
-            requested_role: 'admin' 
-          });
-
-        if (adminError) {
-          console.error("Error checking admin role:", adminError);
+        // Fetch admin role using direct database query to avoid RLS issues
+        try {
+          const { data: adminCheck, error } = await supabase
+            .rpc('check_user_role', { 
+              user_id: data.session.user.id, 
+              requested_role: 'admin' 
+            });
+            
+          console.log("Admin role check response:", adminCheck, error);
+          setIsAdmin(!!adminCheck);
+          
+          if (error) {
+            console.error("Error checking admin role:", error);
+            setIsAdmin(false);
+          }
+        } catch (adminError) {
+          console.error("Exception in admin role check:", adminError);
           setIsAdmin(false);
-        } else {
-          console.log("Admin role check result:", !!adminRoles, adminRoles);
-          setIsAdmin(!!adminRoles);
         }
 
-        // Now check if user has super_admin role using RPC
-        const { data: superAdminRoles, error: superAdminError } = await supabase
-          .rpc('check_user_role', { 
-            user_id: data.session.user.id, 
-            requested_role: 'super_admin' 
-          });
-
-        if (superAdminError) {
-          console.error("Error checking super_admin role:", superAdminError);
+        // Fetch super_admin role using direct database query
+        try {
+          const { data: superAdminCheck, error } = await supabase
+            .rpc('check_user_role', { 
+              user_id: data.session.user.id, 
+              requested_role: 'super_admin' 
+            });
+            
+          console.log("Super admin role check response:", superAdminCheck, error);
+          setIsSuperAdmin(!!superAdminCheck);
+          
+          if (error) {
+            console.error("Error checking super_admin role:", error);
+            setIsSuperAdmin(false);
+          }
+        } catch (superAdminError) {
+          console.error("Exception in super_admin role check:", superAdminError);
           setIsSuperAdmin(false);
-        } else {
-          console.log("Super admin role check result:", !!superAdminRoles, superAdminRoles);
-          setIsSuperAdmin(!!superAdminRoles);
         }
         
       } catch (error) {
-        console.error("Error in useUserRoles:", error);
+        console.error("Global error in useUserRoles:", error);
         setIsAdmin(false);
         setIsSuperAdmin(false);
       } finally {
