@@ -22,20 +22,23 @@ export function useUserRoles() {
         }
 
         console.log("Checking roles for user:", data.session.user.email);
+        const userId = data.session.user.id;
         
-        // Fetch admin role using direct database query to avoid RLS issues
+        // Usar uma consulta direta à tabela user_roles para evitar problemas de recursão RLS
+        // Esta consulta evita o uso de políticas RLS que dependem de verificações recursivas
         try {
-          const { data: adminCheck, error } = await supabase
-            .rpc('check_user_role', { 
-              user_id: data.session.user.id, 
-              requested_role: 'admin' 
-            });
-            
-          console.log("Admin role check response:", adminCheck, error);
-          setIsAdmin(!!adminCheck);
+          const { data: adminRole, error: adminError } = await supabase
+            .from('user_roles')
+            .select('role')
+            .eq('user_id', userId)
+            .eq('role', 'admin')
+            .maybeSingle();
           
-          if (error) {
-            console.error("Error checking admin role:", error);
+          console.log("Admin role direct check:", adminRole, adminError);
+          setIsAdmin(!!adminRole);
+          
+          if (adminError) {
+            console.error("Error in admin role direct check:", adminError);
             setIsAdmin(false);
           }
         } catch (adminError) {
@@ -43,19 +46,20 @@ export function useUserRoles() {
           setIsAdmin(false);
         }
 
-        // Fetch super_admin role using direct database query
+        // Verificar o papel super_admin diretamente
         try {
-          const { data: superAdminCheck, error } = await supabase
-            .rpc('check_user_role', { 
-              user_id: data.session.user.id, 
-              requested_role: 'super_admin' 
-            });
-            
-          console.log("Super admin role check response:", superAdminCheck, error);
-          setIsSuperAdmin(!!superAdminCheck);
+          const { data: superAdminRole, error: superAdminError } = await supabase
+            .from('user_roles')
+            .select('role')
+            .eq('user_id', userId)
+            .eq('role', 'super_admin')
+            .maybeSingle();
           
-          if (error) {
-            console.error("Error checking super_admin role:", error);
+          console.log("Super admin role direct check:", superAdminRole, superAdminError);
+          setIsSuperAdmin(!!superAdminRole);
+          
+          if (superAdminError) {
+            console.error("Error in super_admin role direct check:", superAdminError);
             setIsSuperAdmin(false);
           }
         } catch (superAdminError) {
@@ -74,7 +78,7 @@ export function useUserRoles() {
 
     checkUserRoles();
 
-    // Listen for auth changes
+    // Monitorar mudanças na autenticação
     const { data: authListener } = supabase.auth.onAuthStateChange(() => {
       checkUserRoles();
     });

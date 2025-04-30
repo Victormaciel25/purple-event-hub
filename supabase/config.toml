@@ -6,3 +6,9 @@ verify_jwt = true
 
 [functions.get_user_id_by_email]
 verify_jwt = true
+
+[functions.check_user_role]
+verify_jwt = true
+
+[functions.has_role]
+verify_jwt = true
