@@ -1,6 +1,7 @@
 
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 export function useUserRoles() {
   const [isAdmin, setIsAdmin] = useState<boolean>(false);
@@ -24,45 +25,29 @@ export function useUserRoles() {
         console.log("Session user email:", data.session.user.email);
         const userId = data.session.user.id;
         
-        // Simple direct queries without RLS complications
-        try {
-          // Query for admin role
-          const { data: adminRole, error: adminError } = await supabase
-            .from('user_roles')
-            .select('role')
-            .eq('user_id', userId)
-            .eq('role', 'admin')
-            .maybeSingle();
-          
-          console.log("Admin role check response:", !!adminRole, adminError);
-          setIsAdmin(!!adminRole);
-        } catch (adminError) {
-          console.error("Exception in admin role check:", adminError);
-          setIsAdmin(false);
-        }
-
-        try {
-          // Query for super_admin role
-          const { data: superAdminRole, error: superAdminError } = await supabase
-            .from('user_roles')
-            .select('role')
-            .eq('user_id', userId)
-            .eq('role', 'super_admin')
-            .maybeSingle();
-          
-          console.log("Super admin role check response:", !!superAdminRole, superAdminError);
-          setIsSuperAdmin(!!superAdminRole);
-        } catch (superAdminError) {
-          console.error("Exception in super_admin role check:", superAdminError);
-          setIsSuperAdmin(false);
-        }
-
-        // Log final role states for debugging
-        console.log("User roles:", {
-          isAdmin,
-          isSuperAdmin
-        });
+        // Now we can directly query the user_roles table without recursion thanks to our new policy
+        const { data: roles, error } = await supabase
+          .from('user_roles')
+          .select('role')
+          .eq('user_id', userId);
         
+        if (error) {
+          console.error("Error fetching user roles:", error);
+          toast.error("Error checking user permissions");
+          setIsAdmin(false);
+          setIsSuperAdmin(false);
+          setLoading(false);
+          return;
+        }
+        
+        // Check roles from the retrieved data
+        const hasAdminRole = roles?.some(role => role.role === 'admin') || false;
+        const hasSuperAdminRole = roles?.some(role => role.role === 'super_admin') || false;
+        
+        console.log("User roles retrieved:", { roles, hasAdminRole, hasSuperAdminRole });
+        
+        setIsAdmin(hasAdminRole);
+        setIsSuperAdmin(hasSuperAdminRole);
       } catch (error) {
         console.error("Global error in useUserRoles:", error);
         setIsAdmin(false);
