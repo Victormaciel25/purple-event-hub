@@ -9,6 +9,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
 import { useUserRoles } from "@/hooks/useUserRoles";
+import { toast } from "sonner";
 
 const Profile = () => {
   const [showFavorites, setShowFavorites] = useState(false);
@@ -16,8 +17,8 @@ const Profile = () => {
   const [profile, setProfile] = useState<any>(null);
   const [session, setSession] = useState<any>(null);
   const navigate = useNavigate();
-  const { toast } = useToast();
-  const { isAdmin, isSuperAdmin, loading: roleLoading } = useUserRoles();
+  const { toast: toastUI } = useToast();
+  const { isAdmin, isSuperAdmin, loading: roleLoading, userId } = useUserRoles();
 
   useEffect(() => {
     // Check authentication and fetch profile data
@@ -33,6 +34,7 @@ const Profile = () => {
       
       setSession(sessionData.session);
       console.log("Session user email:", sessionData.session?.user?.email);
+      console.log("Session user ID:", sessionData.session?.user?.id);
       
       // Fetch profile data
       const { data: profileData, error } = await supabase
@@ -71,35 +73,53 @@ const Profile = () => {
   // Added debug logging for role values
   useEffect(() => {
     if (!roleLoading) {
-      console.log("User roles:", { isAdmin, isSuperAdmin });
+      console.log("User roles from hook:", { 
+        isAdmin, 
+        isSuperAdmin, 
+        userId 
+      });
       
-      // Check user roles directly from database for debugging
+      // Verificação direta para debugging
       const checkRolesDirectly = async () => {
         try {
-          const { data: adminRoleData, error: adminError } = await supabase.rpc(
-            "has_role",
-            { requested_role: "admin" }
-          );
-          
-          const { data: superAdminRoleData, error: superAdminError } = await supabase.rpc(
-            "has_role",
-            { requested_role: "super_admin" }
-          );
-          
-          console.log("Direct role check:", { 
-            admin: adminRoleData, 
-            superAdmin: superAdminRoleData,
-            adminError,
-            superAdminError
+          // Verificar roles diretamente na tabela
+          const { data: directRoles, error } = await supabase
+            .from('user_roles')
+            .select('role')
+            .eq('user_id', userId || '');
+            
+          console.log("Direct DB roles check:", { 
+            directRoles,
+            error,
+            userId
           });
+          
+          if (directRoles && directRoles.length > 0) {
+            const hasAdmin = directRoles.some(r => r.role === 'admin');
+            const hasSuperAdmin = directRoles.some(r => r.role === 'super_admin');
+            
+            console.log("Role verification:", {
+              directHasAdmin: hasAdmin,
+              directHasSuperAdmin: hasSuperAdmin,
+              hookIsAdmin: isAdmin,
+              hookIsSuperAdmin: isSuperAdmin
+            });
+            
+            // Avisar se houver inconsistências
+            if ((hasAdmin !== isAdmin) || (hasSuperAdmin !== isSuperAdmin)) {
+              console.warn("⚠️ Inconsistência detectada entre hook e verificação direta!");
+            }
+          }
         } catch (error) {
           console.error("Error checking roles directly:", error);
         }
       };
       
-      checkRolesDirectly();
+      if (userId) {
+        checkRolesDirectly();
+      }
     }
-  }, [isAdmin, isSuperAdmin, roleLoading]);
+  }, [isAdmin, isSuperAdmin, roleLoading, userId]);
 
   const handleSignOut = async () => {
     setLoading(true);
@@ -107,14 +127,14 @@ const Profile = () => {
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
       
-      toast({
+      toastUI({
         title: "Desconectado",
         description: "Você saiu da sua conta com sucesso",
       });
       
       navigate("/");
     } catch (error: any) {
-      toast({
+      toastUI({
         title: "Erro ao sair",
         description: error.message,
         variant: "destructive",
@@ -122,6 +142,24 @@ const Profile = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleAdminAccess = () => {
+    if (!isAdmin && !isSuperAdmin) {
+      toast.error("Você não tem permissões de administrador");
+      return;
+    }
+    
+    navigate("/space-approval");
+  };
+  
+  const handleSuperAdminAccess = () => {
+    if (!isSuperAdmin) {
+      toast.error("Você não tem permissões de super administrador");
+      return;
+    }
+    
+    navigate("/admin-management");
   };
 
   if (loading || roleLoading) {
@@ -191,12 +229,12 @@ const Profile = () => {
           </Card>
 
           {/* Admin options - with debugging info */}
-          {isAdmin ? (
+          {(isAdmin || isSuperAdmin) ? (
             <Card className="mb-6">
               <CardContent className="p-0">
                 <div 
                   className="p-4 flex items-center cursor-pointer hover:bg-gray-50"
-                  onClick={() => navigate("/space-approval")}
+                  onClick={handleAdminAccess}
                 >
                   <CheckSquare size={20} className="text-red-600 mr-3" />
                   <span className="font-medium">Aprovar Espaços</span>
@@ -206,7 +244,7 @@ const Profile = () => {
                     <Separator />
                     <div 
                       className="p-4 flex items-center cursor-pointer hover:bg-gray-50"
-                      onClick={() => navigate("/admin-management")}
+                      onClick={handleSuperAdminAccess}
                     >
                       <Users size={20} className="text-red-600 mr-3" />
                       <span className="font-medium">Administradores</span>
@@ -216,9 +254,10 @@ const Profile = () => {
               </CardContent>
             </Card>
           ) : (
-            <div className="mb-6 p-4 bg-gray-50 rounded-lg text-sm text-center">
-              <p>Você não tem permissões de administrador.</p>
-              <p className="text-muted-foreground">Email atual: {session?.user?.email}</p>
+            <div className="mb-6 p-4 bg-gray-50 rounded-lg text-sm">
+              <p className="text-center">Você não tem permissões de administrador.</p>
+              <p className="text-center text-muted-foreground">Email atual: {session?.user?.email}</p>
+              <p className="text-center text-muted-foreground">User ID: {session?.user?.id}</p>
             </div>
           )}
 

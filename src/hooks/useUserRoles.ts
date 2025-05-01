@@ -7,6 +7,7 @@ export function useUserRoles() {
   const [isAdmin, setIsAdmin] = useState<boolean>(false);
   const [isSuperAdmin, setIsSuperAdmin] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(true);
+  const [userId, setUserId] = useState<string | null>(null);
 
   useEffect(() => {
     const checkUserRoles = async () => {
@@ -17,20 +18,21 @@ export function useUserRoles() {
         if (!data.session) {
           setIsAdmin(false);
           setIsSuperAdmin(false);
+          setUserId(null);
           console.log("No session found, user is not authenticated");
           setLoading(false);
           return;
         }
 
         console.log("Session user email:", data.session.user.email);
-        const userId = data.session.user.id;
+        const currentUserId = data.session.user.id;
+        setUserId(currentUserId);
         
         // Diretamente consulte a tabela user_roles sem usar a função RPC
-        // que estava causando o problema de recursão
         const { data: roles, error } = await supabase
           .from('user_roles')
           .select('role')
-          .eq('user_id', userId);
+          .eq('user_id', currentUserId);
         
         if (error) {
           console.error("Error fetching user roles:", error);
@@ -45,9 +47,14 @@ export function useUserRoles() {
         const hasAdminRole = roles?.some(role => role.role === 'admin') || false;
         const hasSuperAdminRole = roles?.some(role => role.role === 'super_admin') || false;
         
-        console.log("User roles retrieved:", { roles, hasAdminRole, hasSuperAdminRole });
+        console.log("User roles retrieved:", { 
+          roles, 
+          hasAdminRole, 
+          hasSuperAdmin: hasSuperAdminRole,
+          userId: currentUserId 
+        });
         
-        setIsAdmin(hasAdminRole);
+        setIsAdmin(hasAdminRole || hasSuperAdminRole); // Super admin também tem permissões de admin
         setIsSuperAdmin(hasSuperAdminRole);
       } catch (error) {
         console.error("Global error in useUserRoles:", error);
@@ -70,5 +77,5 @@ export function useUserRoles() {
     };
   }, []);
 
-  return { isAdmin, isSuperAdmin, loading };
+  return { isAdmin, isSuperAdmin, loading, userId };
 }
