@@ -14,9 +14,9 @@ export function useUserRoles() {
     const checkUserRoles = async () => {
       try {
         setLoading(true);
-        const { data } = await supabase.auth.getSession();
+        const { data: sessionData } = await supabase.auth.getSession();
         
-        if (!data.session) {
+        if (!sessionData.session) {
           setIsAdmin(false);
           setIsSuperAdmin(false);
           setUserId(null);
@@ -25,8 +25,8 @@ export function useUserRoles() {
           return;
         }
 
-        console.log("Session user email:", data.session.user.email);
-        const currentUserId = data.session.user.id;
+        console.log("Session user email:", sessionData.session.user.email);
+        const currentUserId = sessionData.session.user.id;
         setUserId(currentUserId);
 
         // Usar função RPC para evitar recursão infinita na política RLS
@@ -75,7 +75,7 @@ export function useUserRoles() {
           } catch (directError) {
             console.error("Direct query also failed:", directError);
             // Se estamos no terceiro retry, definir manualmente baseado no e-mail para não bloquear o usuário
-            if (retryCount >= 2 && data.session.user.email === "vcr0091@gmail.com") {
+            if (retryCount >= 2 && sessionData.session.user.email === "vcr0091@gmail.com") {
               console.log("Setting admin privileges manually for known admin user");
               setIsAdmin(true);
               setIsSuperAdmin(true);
@@ -103,7 +103,8 @@ export function useUserRoles() {
       } catch (error) {
         console.error("Global error in useUserRoles:", error);
         // Se estamos no terceiro retry, definir manualmente baseado no e-mail para não bloquear o usuário
-        if (retryCount >= 2 && data?.session?.user?.email === "vcr0091@gmail.com") {
+        const { data: sessionData } = await supabase.auth.getSession();
+        if (retryCount >= 2 && sessionData?.session?.user?.email === "vcr0091@gmail.com") {
           console.log("Setting admin privileges manually for known admin user after error");
           setIsAdmin(true);
           setIsSuperAdmin(true);

@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -19,8 +20,6 @@ const Profile = () => {
   const { toast: toastUI } = useToast();
   const { isAdmin, isSuperAdmin, loading: roleLoading, userId } = useUserRoles();
 
-  console.log("Profile render - role values:", { isAdmin, isSuperAdmin, userId });
-
   useEffect(() => {
     // Check authentication and fetch profile data
     const fetchProfile = async () => {
@@ -34,8 +33,6 @@ const Profile = () => {
       }
       
       setSession(sessionData.session);
-      console.log("Session user email:", sessionData.session?.user?.email);
-      console.log("Session user ID:", sessionData.session?.user?.id);
       
       // Fetch profile data
       const { data: profileData, error } = await supabase
@@ -71,17 +68,6 @@ const Profile = () => {
     };
   }, [navigate]);
 
-  // Added debug logging for role values
-  useEffect(() => {
-    if (!roleLoading) {
-      console.log("User roles from hook:", { 
-        isAdmin, 
-        isSuperAdmin, 
-        userId 
-      });
-    }
-  }, [isAdmin, isSuperAdmin, roleLoading, userId]);
-
   const handleSignOut = async () => {
     setLoading(true);
     try {
@@ -106,7 +92,6 @@ const Profile = () => {
   };
 
   const handleAdminAccess = () => {
-    console.log("Admin access attempt:", { isAdmin, isSuperAdmin });
     if (!isAdmin && !isSuperAdmin) {
       toast.error("Você não tem permissões de administrador");
       return;
@@ -116,7 +101,6 @@ const Profile = () => {
   };
   
   const handleSuperAdminAccess = () => {
-    console.log("Super admin access attempt:", { isSuperAdmin });
     if (!isSuperAdmin) {
       toast.error("Você não tem permissões de super administrador");
       return;
@@ -125,20 +109,11 @@ const Profile = () => {
     navigate("/admin-management");
   };
 
-  // Renderizar debug info quando estiver carregando
+  // Renderizar loading quando estiver carregando
   if (loading || roleLoading) {
     return (
       <div className="container px-4 py-6 max-w-4xl mx-auto flex flex-col items-center justify-center h-[80vh]">
         <p className="mb-4">Carregando...</p>
-        <div className="p-4 bg-gray-50 rounded-lg max-w-md w-full">
-          <h3 className="text-sm font-medium mb-1">Status:</h3>
-          <ul className="text-xs text-gray-600">
-            <li>Profile loading: {loading ? "sim" : "não"}</li>
-            <li>Roles loading: {roleLoading ? "sim" : "não"}</li>
-            <li>User ID: {userId || "não disponível"}</li>
-            <li>Email: {session?.user?.email || "não disponível"}</li>
-          </ul>
-        </div>
       </div>
     );
   }
@@ -204,8 +179,8 @@ const Profile = () => {
             </CardContent>
           </Card>
 
-          {/* Admin options - com verificação de força para email específico */}
-          {(isAdmin || isSuperAdmin || isDebugUser) ? (
+          {/* Admin options */}
+          {(isAdmin || isSuperAdmin || isDebugUser) && (
             <Card className="mb-6">
               <CardContent className="p-0">
                 <div 
@@ -229,12 +204,6 @@ const Profile = () => {
                 )}
               </CardContent>
             </Card>
-          ) : (
-            <div className="mb-6 p-4 bg-gray-50 rounded-lg text-sm">
-              <p className="text-center">Você não tem permissões de administrador.</p>
-              <p className="text-center text-muted-foreground">Email atual: {session?.user?.email}</p>
-              <p className="text-center text-muted-foreground">User ID: {session?.user?.id}</p>
-            </div>
           )}
 
           {/* Opções existentes */}
@@ -269,16 +238,6 @@ const Profile = () => {
             <LogOut size={16} className="mr-2" />
             {loading ? "Processando..." : "Sair"}
           </Button>
-          
-          {/* Informações de debugging */}
-          <div className="mt-8 p-4 bg-gray-50 rounded-lg text-xs">
-            <h3 className="font-medium mb-1">Informações de debugging:</h3>
-            <p>isAdmin: {isAdmin ? "sim" : "não"}</p>
-            <p>isSuperAdmin: {isSuperAdmin ? "sim" : "não"}</p>
-            <p>userId: {userId || "não disponível"}</p>
-            <p>email: {session?.user?.email || "não disponível"}</p>
-            <p>isDebugUser: {isDebugUser ? "sim" : "não"}</p>
-          </div>
         </>
       )}
     </div>
