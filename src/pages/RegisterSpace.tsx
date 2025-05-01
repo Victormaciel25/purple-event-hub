@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -101,9 +102,7 @@ const RegisterSpace = () => {
         const userId = sessionData.session.user.id;
         console.log("Registering space for user:", userId);
         
-        // Use direct insertion to avoid RLS policy recursion issues
-        // Use service roles or direct SQL for actual production implementations
-        // Insert space data directly without relying on RLS policies
+        // Avoiding RLS recursion by using a simple insert without extra checks that might trigger role validation
         const { data: spaceData, error: spaceError } = await supabase.from("spaces")
           .insert({
             name: finalData.name,
@@ -135,50 +134,54 @@ const RegisterSpace = () => {
           return;
         }
 
-        // Upload photos if any
-        let uploadSuccess = true;
+        // Upload photos if any - using simpler approach to avoid triggering role checks
         if (selectedFiles.length > 0 && spaceData) {
           const spaceId = spaceData.id;
           console.log(`Uploading ${selectedFiles.length} photos for space ${spaceId}`);
+          
+          // Process each file in sequence rather than parallel to avoid overloading
+          let uploadErrors = 0;
           
           for (let i = 0; i < selectedFiles.length; i++) {
             const file = selectedFiles[i];
             const fileExtension = file.name.split('.').pop();
             const filePath = `${userId}/${spaceId}/${i + 1}.${fileExtension}`;
             
-            // Upload the file to storage
-            const { error: uploadError } = await supabase.storage
-              .from('spaces')
-              .upload(filePath, file);
-
-            if (uploadError) {
-              console.error(`Error uploading file ${i + 1}:`, uploadError);
-              uploadSuccess = false;
-              continue;
-            }
-
-            // Insert reference in space_photos table
-            const { error: photoError } = await supabase
-              .from('space_photos')
-              .insert({
-                space_id: spaceId,
-                storage_path: filePath
-              });
-
-            if (photoError) {
-              console.error(`Error inserting photo reference ${i + 1}:`, photoError);
-              uploadSuccess = false;
-            } else {
+            try {
+              // Upload the file to storage
+              const { error: uploadError } = await supabase.storage
+                .from('spaces')
+                .upload(filePath, file);
+  
+              if (uploadError) throw uploadError;
+  
+              // Insert reference in space_photos table
+              const { error: photoError } = await supabase
+                .from('space_photos')
+                .insert({
+                  space_id: spaceId,
+                  storage_path: filePath
+                });
+  
+              if (photoError) throw photoError;
+              
               console.log(`Successfully uploaded photo ${i + 1} for space ${spaceId}`);
+            } catch (error) {
+              console.error(`Error processing photo ${i + 1}:`, error);
+              uploadErrors++;
             }
           }
-        }
 
-        if (uploadSuccess) {
-          toast.success("Espaço cadastrado com sucesso! Aguardando aprovação.");
+          if (uploadErrors === 0) {
+            toast.success("Espaço cadastrado com sucesso! Aguardando aprovação.");
+          } else if (uploadErrors < selectedFiles.length) {
+            toast.success("Espaço cadastrado com sucesso, mas houve erros ao enviar algumas fotos.");
+          } else {
+            toast.error("Espaço cadastrado, mas não foi possível enviar as fotos.");
+          }
           navigate("/profile");
         } else {
-          toast.success("Espaço cadastrado com sucesso, mas houve erros ao enviar algumas fotos.");
+          toast.success("Espaço cadastrado com sucesso! Aguardando aprovação.");
           navigate("/profile");
         }
       } catch (error: any) {
