@@ -25,7 +25,8 @@ export function useUserRoles() {
         console.log("Session user email:", data.session.user.email);
         const userId = data.session.user.id;
         
-        // Now we can directly query the user_roles table without recursion thanks to our new policy
+        // Diretamente consulte a tabela user_roles sem usar a função RPC
+        // que estava causando o problema de recursão
         const { data: roles, error } = await supabase
           .from('user_roles')
           .select('role')
@@ -33,14 +34,14 @@ export function useUserRoles() {
         
         if (error) {
           console.error("Error fetching user roles:", error);
-          toast.error("Error checking user permissions");
+          toast.error("Erro ao verificar permissões do usuário");
           setIsAdmin(false);
           setIsSuperAdmin(false);
           setLoading(false);
           return;
         }
         
-        // Check roles from the retrieved data
+        // Verifique funções a partir dos dados recuperados
         const hasAdminRole = roles?.some(role => role.role === 'admin') || false;
         const hasSuperAdminRole = roles?.some(role => role.role === 'super_admin') || false;
         
