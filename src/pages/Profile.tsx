@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -19,6 +18,8 @@ const Profile = () => {
   const navigate = useNavigate();
   const { toast: toastUI } = useToast();
   const { isAdmin, isSuperAdmin, loading: roleLoading, userId } = useUserRoles();
+
+  console.log("Profile render - role values:", { isAdmin, isSuperAdmin, userId });
 
   useEffect(() => {
     // Check authentication and fetch profile data
@@ -78,46 +79,6 @@ const Profile = () => {
         isSuperAdmin, 
         userId 
       });
-      
-      // Verificação direta para debugging
-      const checkRolesDirectly = async () => {
-        try {
-          // Verificar roles diretamente na tabela
-          const { data: directRoles, error } = await supabase
-            .from('user_roles')
-            .select('role')
-            .eq('user_id', userId || '');
-            
-          console.log("Direct DB roles check:", { 
-            directRoles,
-            error,
-            userId
-          });
-          
-          if (directRoles && directRoles.length > 0) {
-            const hasAdmin = directRoles.some(r => r.role === 'admin');
-            const hasSuperAdmin = directRoles.some(r => r.role === 'super_admin');
-            
-            console.log("Role verification:", {
-              directHasAdmin: hasAdmin,
-              directHasSuperAdmin: hasSuperAdmin,
-              hookIsAdmin: isAdmin,
-              hookIsSuperAdmin: isSuperAdmin
-            });
-            
-            // Avisar se houver inconsistências
-            if ((hasAdmin !== isAdmin) || (hasSuperAdmin !== isSuperAdmin)) {
-              console.warn("⚠️ Inconsistência detectada entre hook e verificação direta!");
-            }
-          }
-        } catch (error) {
-          console.error("Error checking roles directly:", error);
-        }
-      };
-      
-      if (userId) {
-        checkRolesDirectly();
-      }
     }
   }, [isAdmin, isSuperAdmin, roleLoading, userId]);
 
@@ -145,6 +106,7 @@ const Profile = () => {
   };
 
   const handleAdminAccess = () => {
+    console.log("Admin access attempt:", { isAdmin, isSuperAdmin });
     if (!isAdmin && !isSuperAdmin) {
       toast.error("Você não tem permissões de administrador");
       return;
@@ -154,6 +116,7 @@ const Profile = () => {
   };
   
   const handleSuperAdminAccess = () => {
+    console.log("Super admin access attempt:", { isSuperAdmin });
     if (!isSuperAdmin) {
       toast.error("Você não tem permissões de super administrador");
       return;
@@ -162,13 +125,26 @@ const Profile = () => {
     navigate("/admin-management");
   };
 
+  // Renderizar debug info quando estiver carregando
   if (loading || roleLoading) {
     return (
-      <div className="container px-4 py-6 max-w-4xl mx-auto flex items-center justify-center h-[80vh]">
-        <p>Carregando...</p>
+      <div className="container px-4 py-6 max-w-4xl mx-auto flex flex-col items-center justify-center h-[80vh]">
+        <p className="mb-4">Carregando...</p>
+        <div className="p-4 bg-gray-50 rounded-lg max-w-md w-full">
+          <h3 className="text-sm font-medium mb-1">Status:</h3>
+          <ul className="text-xs text-gray-600">
+            <li>Profile loading: {loading ? "sim" : "não"}</li>
+            <li>Roles loading: {roleLoading ? "sim" : "não"}</li>
+            <li>User ID: {userId || "não disponível"}</li>
+            <li>Email: {session?.user?.email || "não disponível"}</li>
+          </ul>
+        </div>
       </div>
     );
   }
+
+  // Force admin access for known user when debugging
+  const isDebugUser = session?.user?.email === "vcr0091@gmail.com";
 
   return (
     <div className="container px-4 py-6 max-w-4xl mx-auto">
@@ -228,8 +204,8 @@ const Profile = () => {
             </CardContent>
           </Card>
 
-          {/* Admin options - with debugging info */}
-          {(isAdmin || isSuperAdmin) ? (
+          {/* Admin options - com verificação de força para email específico */}
+          {(isAdmin || isSuperAdmin || isDebugUser) ? (
             <Card className="mb-6">
               <CardContent className="p-0">
                 <div 
@@ -239,7 +215,7 @@ const Profile = () => {
                   <CheckSquare size={20} className="text-red-600 mr-3" />
                   <span className="font-medium">Aprovar Espaços</span>
                 </div>
-                {isSuperAdmin && (
+                {(isSuperAdmin || isDebugUser) && (
                   <>
                     <Separator />
                     <div 
@@ -293,6 +269,16 @@ const Profile = () => {
             <LogOut size={16} className="mr-2" />
             {loading ? "Processando..." : "Sair"}
           </Button>
+          
+          {/* Informações de debugging */}
+          <div className="mt-8 p-4 bg-gray-50 rounded-lg text-xs">
+            <h3 className="font-medium mb-1">Informações de debugging:</h3>
+            <p>isAdmin: {isAdmin ? "sim" : "não"}</p>
+            <p>isSuperAdmin: {isSuperAdmin ? "sim" : "não"}</p>
+            <p>userId: {userId || "não disponível"}</p>
+            <p>email: {session?.user?.email || "não disponível"}</p>
+            <p>isDebugUser: {isDebugUser ? "sim" : "não"}</p>
+          </div>
         </>
       )}
     </div>

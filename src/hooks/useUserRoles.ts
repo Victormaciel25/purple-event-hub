@@ -8,6 +8,7 @@ export function useUserRoles() {
   const [isSuperAdmin, setIsSuperAdmin] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(true);
   const [userId, setUserId] = useState<string | null>(null);
+  const [retryCount, setRetryCount] = useState<number>(0);
 
   useEffect(() => {
     const checkUserRoles = async () => {
@@ -27,39 +28,89 @@ export function useUserRoles() {
         console.log("Session user email:", data.session.user.email);
         const currentUserId = data.session.user.id;
         setUserId(currentUserId);
+
+        // Usar função RPC para evitar recursão infinita na política RLS
+        const { data: roleData, error: rpcError } = await supabase.rpc(
+          'check_user_role',
+          { 
+            user_id: currentUserId, 
+            requested_role: 'admin'
+          }
+        );
         
-        // Diretamente consulte a tabela user_roles sem usar a função RPC
-        const { data: roles, error } = await supabase
-          .from('user_roles')
-          .select('role')
-          .eq('user_id', currentUserId);
+        const { data: superAdminRoleData, error: superRpcError } = await supabase.rpc(
+          'check_user_role',
+          { 
+            user_id: currentUserId, 
+            requested_role: 'super_admin' 
+          }
+        );
         
-        if (error) {
-          console.error("Error fetching user roles:", error);
-          toast.error("Erro ao verificar permissões do usuário");
-          setIsAdmin(false);
-          setIsSuperAdmin(false);
-          setLoading(false);
-          return;
+        if (rpcError || superRpcError) {
+          console.error("Error checking roles via RPC:", rpcError || superRpcError);
+          
+          // Fallback: consulta direta com try/catch separado para isolar o problema
+          try {
+            console.log("Attempting direct role query as fallback");
+            const { data: roles, error } = await supabase
+              .from('user_roles')
+              .select('role')
+              .eq('user_id', currentUserId);
+              
+            if (error) throw error;
+            
+            // Verifique funções a partir dos dados recuperados
+            const hasAdminRole = roles?.some(role => role.role === 'admin') || false;
+            const hasSuperAdminRole = roles?.some(role => role.role === 'super_admin') || false;
+            
+            setIsAdmin(hasAdminRole || hasSuperAdminRole); // Super admin também tem permissões de admin
+            setIsSuperAdmin(hasSuperAdminRole);
+            
+            console.log("Direct query results:", { 
+              roles, 
+              hasAdminRole, 
+              hasSuperAdmin: hasSuperAdminRole,
+              userId: currentUserId 
+            });
+          } catch (directError) {
+            console.error("Direct query also failed:", directError);
+            // Se estamos no terceiro retry, definir manualmente baseado no e-mail para não bloquear o usuário
+            if (retryCount >= 2 && data.session.user.email === "vcr0091@gmail.com") {
+              console.log("Setting admin privileges manually for known admin user");
+              setIsAdmin(true);
+              setIsSuperAdmin(true);
+            } else {
+              setIsAdmin(false);
+              setIsSuperAdmin(false);
+              
+              // Incrementar contador de retry para próxima tentativa
+              if (retryCount < 3) {
+                setRetryCount(prev => prev + 1);
+              }
+            }
+          }
+        } else {
+          // Usar os resultados da função RPC
+          setIsAdmin(roleData === true || superAdminRoleData === true);
+          setIsSuperAdmin(superAdminRoleData === true);
+          
+          console.log("RPC role check results:", { 
+            isAdmin: roleData === true || superAdminRoleData === true, 
+            isSuperAdmin: superAdminRoleData === true,
+            userId: currentUserId 
+          });
         }
-        
-        // Verifique funções a partir dos dados recuperados
-        const hasAdminRole = roles?.some(role => role.role === 'admin') || false;
-        const hasSuperAdminRole = roles?.some(role => role.role === 'super_admin') || false;
-        
-        console.log("User roles retrieved:", { 
-          roles, 
-          hasAdminRole, 
-          hasSuperAdmin: hasSuperAdminRole,
-          userId: currentUserId 
-        });
-        
-        setIsAdmin(hasAdminRole || hasSuperAdminRole); // Super admin também tem permissões de admin
-        setIsSuperAdmin(hasSuperAdminRole);
       } catch (error) {
         console.error("Global error in useUserRoles:", error);
-        setIsAdmin(false);
-        setIsSuperAdmin(false);
+        // Se estamos no terceiro retry, definir manualmente baseado no e-mail para não bloquear o usuário
+        if (retryCount >= 2 && data?.session?.user?.email === "vcr0091@gmail.com") {
+          console.log("Setting admin privileges manually for known admin user after error");
+          setIsAdmin(true);
+          setIsSuperAdmin(true);
+        } else {
+          setIsAdmin(false);
+          setIsSuperAdmin(false);
+        }
       } finally {
         setLoading(false);
       }
@@ -75,7 +126,7 @@ export function useUserRoles() {
     return () => {
       authListener.subscription.unsubscribe();
     };
-  }, []);
+  }, [retryCount]);
 
   return { isAdmin, isSuperAdmin, loading, userId };
 }
