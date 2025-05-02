@@ -11,6 +11,7 @@ import {
   TableRow 
 } from "@/components/ui/table";
 import { Card } from "@/components/ui/card";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { ChevronLeft, Edit, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -137,8 +138,77 @@ const UserSpaces: React.FC = () => {
     }
   };
   
+  // Function to render responsive table for desktop or cards for mobile
+  const renderSpacesContent = () => {
+    if (spaces.length === 0) {
+      return (
+        <Card className="p-6 text-center">
+          <p className="mb-4">Você ainda não cadastrou nenhum espaço.</p>
+          <Button onClick={() => navigate("/register-space")} className="bg-iparty">
+            Cadastrar Primeiro Espaço
+          </Button>
+        </Card>
+      );
+    }
+    
+    // For larger screens, show the table inside a ScrollArea
+    return (
+      <ScrollArea className="h-[calc(100vh-220px)] w-full rounded-md border">
+        <div className="w-full p-1">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Nome</TableHead>
+                <TableHead>Endereço</TableHead>
+                <TableHead>Preço</TableHead>
+                <TableHead className="whitespace-nowrap">Data de Criação</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Ações</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {spaces.map((space) => (
+                <TableRow key={space.id}>
+                  <TableCell className="font-medium max-w-[150px] truncate" title={space.name}>
+                    {space.name}
+                  </TableCell>
+                  <TableCell className="max-w-[200px] truncate" title={`${space.address}, ${space.state}`}>
+                    {space.address}, {space.state}
+                  </TableCell>
+                  <TableCell>{formatPrice(space.price)}</TableCell>
+                  <TableCell>{formatDate(space.created_at)}</TableCell>
+                  <TableCell>{getStatusBadge(space.status, space.rejection_reason)}</TableCell>
+                  <TableCell>
+                    <div className="flex space-x-2">
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        onClick={() => handleEdit(space.id)}
+                      >
+                        <Edit size={16} className="mr-2" />
+                        <span className="hidden sm:inline">Editar</span>
+                      </Button>
+                      <Button 
+                        variant="destructive" 
+                        size="sm"
+                        onClick={() => handleDelete(space.id)}
+                      >
+                        <Trash2 size={16} className="mr-2" />
+                        <span className="hidden sm:inline">Excluir</span>
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      </ScrollArea>
+    );
+  };
+  
   return (
-    <div className="container px-4 py-6 max-w-4xl mx-auto">
+    <div className="container px-4 py-6 max-w-5xl mx-auto">
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center">
           <Button variant="ghost" size="sm" onClick={() => navigate("/profile")} className="mr-2">
@@ -155,55 +225,8 @@ const UserSpaces: React.FC = () => {
         <div className="flex justify-center items-center py-12">
           <p>Carregando seus espaços...</p>
         </div>
-      ) : spaces.length === 0 ? (
-        <Card className="p-6 text-center">
-          <p className="mb-4">Você ainda não cadastrou nenhum espaço.</p>
-          <Button onClick={() => navigate("/register-space")} className="bg-iparty">
-            Cadastrar Primeiro Espaço
-          </Button>
-        </Card>
       ) : (
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Nome</TableHead>
-              <TableHead>Endereço</TableHead>
-              <TableHead>Preço</TableHead>
-              <TableHead>Data de Criação</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Ações</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {spaces.map((space) => (
-              <TableRow key={space.id}>
-                <TableCell className="font-medium">{space.name}</TableCell>
-                <TableCell>{space.address}, {space.state}</TableCell>
-                <TableCell>{formatPrice(space.price)}</TableCell>
-                <TableCell>{formatDate(space.created_at)}</TableCell>
-                <TableCell>{getStatusBadge(space.status, space.rejection_reason)}</TableCell>
-                <TableCell>
-                  <div className="flex space-x-2">
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      onClick={() => handleEdit(space.id)}
-                    >
-                      <Edit size={16} />
-                    </Button>
-                    <Button 
-                      variant="destructive" 
-                      size="sm"
-                      onClick={() => handleDelete(space.id)}
-                    >
-                      <Trash2 size={16} />
-                    </Button>
-                  </div>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+        renderSpacesContent()
       )}
     </div>
   );

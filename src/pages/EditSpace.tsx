@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -7,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ChevronLeft, Loader2 } from "lucide-react";
+import { ChevronLeft, Plus, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import ImageUpload from "@/components/ImageUpload";
@@ -504,9 +503,8 @@ const EditSpace: React.FC = () => {
             {/* Upload de novas fotos */}
             <div>
               <h3 className="text-sm font-medium mb-2">Adicionar Novas Fotos</h3>
-              <ImageUpload 
+              <ImageUpload
                 onImagesChange={handleNewPhotosChange}
-                maxFiles={5}
               />
             </div>
           </CardContent>
