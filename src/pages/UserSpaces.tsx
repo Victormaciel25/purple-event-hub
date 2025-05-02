@@ -2,19 +2,12 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableHead, 
-  TableHeader, 
-  TableRow 
-} from "@/components/ui/table";
-import { Card } from "@/components/ui/card";
+import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { ChevronLeft, Edit, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { Badge } from "@/components/ui/badge";
 
 type UserSpace = {
   id: string;
@@ -40,7 +33,6 @@ const UserSpaces: React.FC = () => {
     try {
       setLoading(true);
       
-      // Obter a sessão do usuário atual
       const { data: sessionData } = await supabase.auth.getSession();
       
       if (!sessionData.session) {
@@ -51,7 +43,6 @@ const UserSpaces: React.FC = () => {
       
       const userId = sessionData.session.user.id;
       
-      // Buscar os espaços do usuário atual
       const { data, error } = await supabase
         .from("spaces")
         .select("id, name, address, state, price, created_at, status, rejection_reason")
@@ -70,7 +61,6 @@ const UserSpaces: React.FC = () => {
   };
   
   const handleEdit = (spaceId: string) => {
-    // Navegar para a página de edição com o ID do espaço
     navigate(`/edit-space/${spaceId}`);
   };
   
@@ -82,7 +72,6 @@ const UserSpaces: React.FC = () => {
     try {
       setLoading(true);
       
-      // Primeiro excluir as fotos relacionadas ao espaço
       const { error: photosError } = await supabase
         .from("space_photos")
         .delete()
@@ -90,7 +79,6 @@ const UserSpaces: React.FC = () => {
       
       if (photosError) throw photosError;
       
-      // Depois excluir o espaço
       const { error: spaceError } = await supabase
         .from("spaces")
         .delete()
@@ -100,7 +88,6 @@ const UserSpaces: React.FC = () => {
       
       toast.success("Espaço excluído com sucesso");
       
-      // Atualizar a lista de espaços
       setSpaces(spaces.filter(space => space.id !== spaceId));
     } catch (error) {
       console.error("Erro ao excluir espaço:", error);
@@ -122,90 +109,91 @@ const UserSpaces: React.FC = () => {
     });
   };
   
-  const getStatusBadge = (status: 'pending' | 'approved' | 'rejected', reason?: string | null) => {
+  const getStatusBadge = (status: 'pending' | 'approved' | 'rejected') => {
     switch (status) {
       case 'pending':
-        return <span className="px-2 py-1 bg-yellow-100 text-yellow-800 rounded-full text-xs">Pendente</span>;
+        return <Badge variant="outline" className="bg-yellow-100 text-yellow-800 hover:bg-yellow-100">Pendente</Badge>;
       case 'approved':
-        return <span className="px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs">Aprovado</span>;
+        return <Badge variant="outline" className="bg-green-100 text-green-800 hover:bg-green-100">Aprovado</Badge>;
       case 'rejected':
-        return (
-          <div className="flex flex-col">
-            <span className="px-2 py-1 bg-red-100 text-red-800 rounded-full text-xs">Rejeitado</span>
-            {reason && <span className="text-xs text-red-600 mt-1">{reason}</span>}
-          </div>
-        );
+        return <Badge variant="outline" className="bg-red-100 text-red-800 hover:bg-red-100">Rejeitado</Badge>;
     }
   };
-  
-  // Function to render responsive table for desktop or cards for mobile
-  const renderSpacesContent = () => {
-    if (spaces.length === 0) {
-      return (
-        <Card className="p-6 text-center">
-          <p className="mb-4">Você ainda não cadastrou nenhum espaço.</p>
-          <Button onClick={() => navigate("/register-space")} className="bg-iparty">
-            Cadastrar Primeiro Espaço
-          </Button>
-        </Card>
-      );
-    }
-    
-    // For larger screens, show the table inside a ScrollArea
-    return (
-      <ScrollArea className="h-[calc(100vh-220px)] w-full rounded-md border">
-        <div className="w-full p-1">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Nome</TableHead>
-                <TableHead>Endereço</TableHead>
-                <TableHead>Preço</TableHead>
-                <TableHead className="whitespace-nowrap">Data de Criação</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Ações</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {spaces.map((space) => (
-                <TableRow key={space.id}>
-                  <TableCell className="font-medium max-w-[150px] truncate" title={space.name}>
-                    {space.name}
-                  </TableCell>
-                  <TableCell className="max-w-[200px] truncate" title={`${space.address}, ${space.state}`}>
-                    {space.address}, {space.state}
-                  </TableCell>
-                  <TableCell>{formatPrice(space.price)}</TableCell>
-                  <TableCell>{formatDate(space.created_at)}</TableCell>
-                  <TableCell>{getStatusBadge(space.status, space.rejection_reason)}</TableCell>
-                  <TableCell>
-                    <div className="flex space-x-2">
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
-                        onClick={() => handleEdit(space.id)}
-                      >
-                        <Edit size={16} className="mr-2" />
-                        <span className="hidden sm:inline">Editar</span>
-                      </Button>
-                      <Button 
-                        variant="destructive" 
-                        size="sm"
-                        onClick={() => handleDelete(space.id)}
-                      >
-                        <Trash2 size={16} className="mr-2" />
-                        <span className="hidden sm:inline">Excluir</span>
-                      </Button>
+
+  const renderEmptyState = () => (
+    <Card className="p-6 text-center">
+      <p className="mb-4">Você ainda não cadastrou nenhum espaço.</p>
+      <Button onClick={() => navigate("/register-space")} className="bg-iparty">
+        Cadastrar Primeiro Espaço
+      </Button>
+    </Card>
+  );
+
+  const renderSpaceCards = () => (
+    <ScrollArea className="h-[calc(100vh-220px)]">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-1">
+        {spaces.map((space) => (
+          <Card key={space.id} className="border shadow-sm">
+            <CardContent className="p-4">
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <h3 className="font-medium text-lg">{space.name}</h3>
+                  {getStatusBadge(space.status)}
+                </div>
+                
+                <div className="grid grid-cols-2 gap-2 text-sm">
+                  <div>
+                    <p className="text-muted-foreground">Endereço:</p>
+                    <p className="truncate" title={`${space.address}, ${space.state}`}>
+                      {space.address}, {space.state}
+                    </p>
+                  </div>
+                  
+                  <div>
+                    <p className="text-muted-foreground">Preço:</p>
+                    <p className="font-medium">{formatPrice(space.price)}</p>
+                  </div>
+                  
+                  <div>
+                    <p className="text-muted-foreground">Cadastrado em:</p>
+                    <p>{formatDate(space.created_at)}</p>
+                  </div>
+                  
+                  {space.status === 'rejected' && space.rejection_reason && (
+                    <div className="col-span-2">
+                      <p className="text-muted-foreground">Motivo da rejeição:</p>
+                      <p className="text-red-600">{space.rejection_reason}</p>
                     </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
-      </ScrollArea>
-    );
-  };
+                  )}
+                </div>
+              </div>
+            </CardContent>
+            
+            <CardFooter className="p-4 pt-0 flex justify-end gap-2">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => handleEdit(space.id)}
+                className="flex items-center"
+              >
+                <Edit size={16} className="mr-1" />
+                Editar
+              </Button>
+              <Button 
+                variant="destructive" 
+                size="sm"
+                onClick={() => handleDelete(space.id)}
+                className="flex items-center"
+              >
+                <Trash2 size={16} className="mr-1" />
+                Excluir
+              </Button>
+            </CardFooter>
+          </Card>
+        ))}
+      </div>
+    </ScrollArea>
+  );
   
   return (
     <div className="container px-4 py-6 max-w-5xl mx-auto">
@@ -225,8 +213,10 @@ const UserSpaces: React.FC = () => {
         <div className="flex justify-center items-center py-12">
           <p>Carregando seus espaços...</p>
         </div>
+      ) : spaces.length === 0 ? (
+        renderEmptyState()
       ) : (
-        renderSpacesContent()
+        renderSpaceCards()
       )}
     </div>
   );
