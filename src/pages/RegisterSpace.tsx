@@ -102,7 +102,7 @@ const RegisterSpace = () => {
         const userId = sessionData.session.user.id;
         console.log("Registering space for user:", userId);
         
-        // Avoiding RLS recursion by using a simple insert without extra checks that might trigger role validation
+        // Simplificando para evitar qualquer problema com RLS
         const { data: spaceData, error: spaceError } = await supabase.from("spaces")
           .insert({
             name: finalData.name,

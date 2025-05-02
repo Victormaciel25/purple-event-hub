@@ -1,3 +1,4 @@
+
 -- Create a security definer function to check if a user has a specific role
 -- This prevents infinite recursion in RLS policies
 CREATE OR REPLACE FUNCTION public.check_user_role(user_id UUID, requested_role TEXT)
