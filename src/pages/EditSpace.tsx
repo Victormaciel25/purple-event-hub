@@ -28,6 +28,7 @@ type SpaceData = {
   air_conditioning: boolean;
   kitchen: boolean;
   pool: boolean;
+  categories?: string[];
 };
 
 const EditSpace: React.FC = () => {
@@ -54,7 +55,8 @@ const EditSpace: React.FC = () => {
     sound_system: false,
     air_conditioning: false,
     kitchen: false,
-    pool: false
+    pool: false,
+    categories: []
   });
   
   useEffect(() => {
@@ -108,7 +110,8 @@ const EditSpace: React.FC = () => {
         sound_system: spaceData.sound_system || false,
         air_conditioning: spaceData.air_conditioning || false,
         kitchen: spaceData.kitchen || false,
-        pool: spaceData.pool || false
+        pool: spaceData.pool || false,
+        categories: spaceData.categories || []
       });
       
       // Buscar fotos do espaço
@@ -149,6 +152,18 @@ const EditSpace: React.FC = () => {
   
   const handleCheckboxChange = (name: string, checked: boolean) => {
     setFormData(prev => ({ ...prev, [name]: checked }));
+  };
+
+  const handleCategoryChange = (category: string, checked: boolean) => {
+    setFormData(prev => {
+      const currentCategories = prev.categories || [];
+      if (checked && !currentCategories.includes(category)) {
+        return { ...prev, categories: [...currentCategories, category] };
+      } else if (!checked && currentCategories.includes(category)) {
+        return { ...prev, categories: currentCategories.filter(c => c !== category) };
+      }
+      return prev;
+    });
   };
   
   const handleNewPhotosChange = (files: File[]) => {
@@ -463,6 +478,68 @@ const EditSpace: React.FC = () => {
                   className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
                 >
                   Piscina
+                </label>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        
+        <Card className="mb-6">
+          <CardHeader>
+            <CardTitle className="text-xl">Categorias de Eventos</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="flex items-center space-x-2">
+                <Checkbox 
+                  id="category_weddings" 
+                  checked={formData.categories?.includes("weddings") || false} 
+                  onCheckedChange={(checked) => handleCategoryChange("weddings", !!checked)} 
+                />
+                <label 
+                  htmlFor="category_weddings"
+                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                >
+                  Casamentos
+                </label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Checkbox 
+                  id="category_corporate" 
+                  checked={formData.categories?.includes("corporate") || false} 
+                  onCheckedChange={(checked) => handleCategoryChange("corporate", !!checked)} 
+                />
+                <label 
+                  htmlFor="category_corporate"
+                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                >
+                  Corporativo
+                </label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Checkbox 
+                  id="category_birthdays" 
+                  checked={formData.categories?.includes("birthdays") || false} 
+                  onCheckedChange={(checked) => handleCategoryChange("birthdays", !!checked)} 
+                />
+                <label 
+                  htmlFor="category_birthdays"
+                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                >
+                  Aniversários
+                </label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Checkbox 
+                  id="category_graduations" 
+                  checked={formData.categories?.includes("graduations") || false} 
+                  onCheckedChange={(checked) => handleCategoryChange("graduations", !!checked)} 
+                />
+                <label 
+                  htmlFor="category_graduations"
+                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                >
+                  Formaturas
                 </label>
               </div>
             </div>

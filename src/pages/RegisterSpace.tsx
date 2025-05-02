@@ -43,6 +43,11 @@ const formSchema = z.object({
   airConditioning: z.boolean().default(false),
   kitchen: z.boolean().default(false),
   pool: z.boolean().default(false),
+  // Categorias
+  categoryWeddings: z.boolean().default(false),
+  categoryCorporate: z.boolean().default(false),
+  categoryBirthdays: z.boolean().default(false),
+  categoryGraduations: z.boolean().default(false),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -73,6 +78,10 @@ const RegisterSpace = () => {
       airConditioning: false,
       kitchen: false,
       pool: false,
+      categoryWeddings: false,
+      categoryCorporate: false,
+      categoryBirthdays: false,
+      categoryGraduations: false,
     },
   });
 
@@ -102,6 +111,13 @@ const RegisterSpace = () => {
         const userId = sessionData.session.user.id;
         console.log("Registering space for user:", userId);
         
+        // Create categories array
+        const categories = [];
+        if (finalData.categoryWeddings) categories.push("weddings");
+        if (finalData.categoryCorporate) categories.push("corporate");
+        if (finalData.categoryBirthdays) categories.push("birthdays");
+        if (finalData.categoryGraduations) categories.push("graduations");
+        
         // Acesso direto à tabela agora que o RLS está desativado
         const { data: spaceData, error: spaceError } = await supabase.from("spaces")
           .insert({
@@ -120,6 +136,7 @@ const RegisterSpace = () => {
             air_conditioning: finalData.airConditioning,
             kitchen: finalData.kitchen,
             pool: finalData.pool,
+            categories: categories,
             latitude: location?.lat || null,
             longitude: location?.lng || null,
             user_id: userId,
@@ -528,6 +545,79 @@ const RegisterSpace = () => {
                     </FormItem>
                   )}
                 />
+              </div>
+
+              <div className="mt-8">
+                <h3 className="text-lg font-medium mb-4">Categorias de Eventos</h3>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Selecione as categorias de eventos que seu espaço atende:
+                </p>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <FormField
+                    control={form.control}
+                    name="categoryWeddings"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-row items-center space-x-3 space-y-0">
+                        <FormControl>
+                          <Checkbox 
+                            checked={field.value}
+                            onCheckedChange={field.onChange} 
+                          />
+                        </FormControl>
+                        <FormLabel className="font-normal cursor-pointer">Casamentos</FormLabel>
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="categoryCorporate"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-row items-center space-x-3 space-y-0">
+                        <FormControl>
+                          <Checkbox 
+                            checked={field.value}
+                            onCheckedChange={field.onChange} 
+                          />
+                        </FormControl>
+                        <FormLabel className="font-normal cursor-pointer">Corporativo</FormLabel>
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="categoryBirthdays"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-row items-center space-x-3 space-y-0">
+                        <FormControl>
+                          <Checkbox 
+                            checked={field.value}
+                            onCheckedChange={field.onChange} 
+                          />
+                        </FormControl>
+                        <FormLabel className="font-normal cursor-pointer">Aniversários</FormLabel>
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="categoryGraduations"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-row items-center space-x-3 space-y-0">
+                        <FormControl>
+                          <Checkbox 
+                            checked={field.value}
+                            onCheckedChange={field.onChange} 
+                          />
+                        </FormControl>
+                        <FormLabel className="font-normal cursor-pointer">Formaturas</FormLabel>
+                      </FormItem>
+                    )}
+                  />
+                </div>
               </div>
             </div>
           )}

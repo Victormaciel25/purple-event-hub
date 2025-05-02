@@ -14,6 +14,8 @@ type EventSpace = {
   number: string;
   state: string;
   photo_url?: string;
+  description: string;
+  categories?: string[];
 };
 
 const Explore = () => {
@@ -38,6 +40,8 @@ const Explore = () => {
           number,
           state,
           price,
+          description,
+          categories,
           space_photos(storage_path)
         `)
         .eq("status", "approved");
@@ -68,6 +72,8 @@ const Explore = () => {
           number: space.number,
           state: space.state,
           price: space.price,
+          description: space.description,
+          categories: space.categories || [],
           photo_url: photoUrl
         };
       }));
@@ -81,11 +87,26 @@ const Explore = () => {
     }
   };
   
-  // Filtra espaços com base no termo de busca
-  const filteredSpaces = spaces.filter(space => 
-    space.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    space.address.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  // Filtra espaços com base no termo de busca em múltiplos campos
+  const filteredSpaces = spaces.filter(space => {
+    // Primeiro filtra por categoria se não for "all"
+    if (activeCategory !== "all" && 
+        (!space.categories || !space.categories.includes(activeCategory))) {
+      return false;
+    }
+    
+    // Depois filtra por termo de busca em vários campos
+    if (searchTerm === "") return true;
+    
+    const term = searchTerm.toLowerCase();
+    return (
+      space.name.toLowerCase().includes(term) ||
+      space.address.toLowerCase().includes(term) ||
+      space.description.toLowerCase().includes(term) ||
+      space.state.toLowerCase().includes(term) ||
+      space.price.toLowerCase().includes(term)
+    );
+  });
 
   return (
     <div className="container px-4 py-6 max-w-4xl mx-auto">

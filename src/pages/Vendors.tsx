@@ -1,5 +1,5 @@
 
-import React from "react";
+import React, { useState } from "react";
 import VendorCard from "@/components/VendorCard";
 import { Input } from "@/components/ui/input";
 import { Search } from "lucide-react";
@@ -41,6 +41,14 @@ const vendors = [
 ];
 
 const Vendors = () => {
+  const [searchTerm, setSearchTerm] = useState("");
+
+  const filteredVendors = vendors.filter(vendor => 
+    vendor.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    vendor.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    vendor.contactNumber.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
   return (
     <div className="container px-4 py-6 max-w-4xl mx-auto">
       <h1 className="text-2xl font-bold mb-6">Fornecedores</h1>
@@ -50,6 +58,8 @@ const Vendors = () => {
         <Input 
           placeholder="Buscar fornecedores..." 
           className="pl-10"
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
         />
       </div>
 
@@ -63,7 +73,7 @@ const Vendors = () => {
         
         <TabsContent value="all" className="mt-4">
           <div className="space-y-4">
-            {vendors.map((vendor) => (
+            {filteredVendors.map((vendor) => (
               <VendorCard key={vendor.id} {...vendor} />
             ))}
           </div>
@@ -71,7 +81,7 @@ const Vendors = () => {
         
         <TabsContent value="buffet" className="mt-4">
           <div className="space-y-4">
-            {vendors
+            {filteredVendors
               .filter((vendor) => vendor.category === "Buffet")
               .map((vendor) => (
                 <VendorCard key={vendor.id} {...vendor} />
@@ -81,7 +91,7 @@ const Vendors = () => {
 
         <TabsContent value="dj" className="mt-4">
           <div className="space-y-4">
-            {vendors
+            {filteredVendors
               .filter((vendor) => vendor.category === "DJ")
               .map((vendor) => (
                 <VendorCard key={vendor.id} {...vendor} />
@@ -91,7 +101,7 @@ const Vendors = () => {
 
         <TabsContent value="decoration" className="mt-4">
           <div className="space-y-4">
-            {vendors
+            {filteredVendors
               .filter((vendor) => vendor.category === "Decoração")
               .map((vendor) => (
                 <VendorCard key={vendor.id} {...vendor} />
