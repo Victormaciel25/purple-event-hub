@@ -102,7 +102,7 @@ const RegisterSpace = () => {
         const userId = sessionData.session.user.id;
         console.log("Registering space for user:", userId);
         
-        // Simplificando para evitar qualquer problema com RLS
+        // Acesso direto à tabela agora que o RLS está desativado
         const { data: spaceData, error: spaceError } = await supabase.from("spaces")
           .insert({
             name: finalData.name,

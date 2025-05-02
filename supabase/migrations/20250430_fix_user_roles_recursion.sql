@@ -46,4 +46,5 @@ BEGIN
 END;
 $$;
 
--- Add function to config.toml to make it accessible via RPC
+-- Note: Row Level Security (RLS) has been disabled on the user_roles table
+-- ALTER TABLE public.user_roles DISABLE ROW LEVEL SECURITY;

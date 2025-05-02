@@ -27,8 +27,7 @@ export function useUserRoles() {
         const currentUserId = sessionData.session.user.id;
         setUserId(currentUserId);
         
-        // Com a política que permite SELECT para todos os usuários autenticados,
-        // podemos consultar diretamente a tabela user_roles sem causar recursão
+        // Com RLS desativado, podemos consultar diretamente a tabela user_roles sem preocupações
         const { data: roles, error } = await supabase
           .from('user_roles')
           .select('role')
