@@ -15,6 +15,7 @@ import { useUserRoles } from "@/hooks/useUserRoles";
 import { toast } from "sonner";
 import SpaceList from "@/components/approval/SpaceList";
 import SpaceDetails, { SpaceDetailsType } from "@/components/approval/SpaceDetails";
+import { Card } from "@/components/ui/card";
 
 type SpaceWithProfileInfo = {
   id: string;
@@ -216,13 +217,13 @@ const SpaceApproval = () => {
         <h1 className="text-2xl font-bold">Aprovação de Espaços</h1>
       </div>
 
-      <div className="bg-white rounded-lg shadow">
+      <Card className="border shadow-sm overflow-hidden">
         <SpaceList 
           spaces={spaces} 
           loading={loading} 
           onViewDetails={fetchSpaceDetails} 
         />
-      </div>
+      </Card>
 
       {selectedSpace && (
         <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>

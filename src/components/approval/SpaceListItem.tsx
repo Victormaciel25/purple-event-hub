@@ -2,6 +2,7 @@
 import React from "react";
 import { Button } from "@/components/ui/button";
 import { TableCell, TableRow } from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
 
 type SpaceWithProfileInfo = {
   id: string;
@@ -30,18 +31,20 @@ const SpaceListItem: React.FC<SpaceListItemProps> = ({ space, onViewDetails }) =
   const getStatusBadge = (status: 'pending' | 'approved' | 'rejected') => {
     switch (status) {
       case 'pending':
-        return <span className="px-2 py-1 bg-yellow-100 text-yellow-800 rounded-full text-xs">Pendente</span>;
+        return <Badge variant="outline" className="bg-yellow-100 text-yellow-800 hover:bg-yellow-100">Pendente</Badge>;
       case 'approved':
-        return <span className="px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs">Aprovado</span>;
+        return <Badge variant="outline" className="bg-green-100 text-green-800 hover:bg-green-100">Aprovado</Badge>;
       case 'rejected':
-        return <span className="px-2 py-1 bg-red-100 text-red-800 rounded-full text-xs">Rejeitado</span>;
+        return <Badge variant="outline" className="bg-red-100 text-red-800 hover:bg-red-100">Rejeitado</Badge>;
     }
   };
 
   return (
     <TableRow>
-      <TableCell>{space.name}</TableCell>
-      <TableCell>
+      <TableCell className="font-medium truncate max-w-[150px]" title={space.name}>
+        {space.name}
+      </TableCell>
+      <TableCell className="truncate max-w-[150px]" title={`${space.profiles?.first_name || ''} ${space.profiles?.last_name || ''}`}>
         {space.profiles?.first_name} {space.profiles?.last_name}
       </TableCell>
       <TableCell>{formatDate(space.created_at)}</TableCell>
