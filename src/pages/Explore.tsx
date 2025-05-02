@@ -1,41 +1,90 @@
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import EventSpaceCard from "@/components/EventSpaceCard";
 import { Input } from "@/components/ui/input";
 import { Search } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
-const eventSpaces = [
-  {
-    id: "1",
-    name: "Espaço Vila Garden",
-    address: "Rua das Flores, 123 - São Paulo",
-    price: 3500,
-    image: "https://source.unsplash.com/photo-1473177104440-ffee2f376098",
-  },
-  {
-    id: "2",
-    name: "Salão Golden Hall",
-    address: "Av. Paulista, 1000 - São Paulo",
-    price: 5000,
-    image: "https://source.unsplash.com/photo-1487958449943-2429e8be8625",
-  },
-  {
-    id: "3",
-    name: "Alameda Jardins",
-    address: "Alameda Santos, 500 - São Paulo",
-    price: 4200,
-    image: "https://source.unsplash.com/photo-1496307653780-42ee777d4833",
-  },
-  {
-    id: "4",
-    name: "Casa de Festas Luminária",
-    address: "Rua Augusta, 789 - São Paulo",
-    price: 3800,
-    image: "https://source.unsplash.com/photo-1721322800607-8c38375eef04",
-  },
-];
+type EventSpace = {
+  id: string;
+  name: string;
+  address: string;
+  price: string;
+  number: string;
+  state: string;
+  photo_url?: string;
+};
 
 const Explore = () => {
+  const [spaces, setSpaces] = useState<EventSpace[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [activeCategory, setActiveCategory] = useState("all");
+  
+  useEffect(() => {
+    fetchApprovedSpaces();
+  }, []);
+  
+  const fetchApprovedSpaces = async () => {
+    try {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from("spaces")
+        .select(`
+          id,
+          name,
+          address,
+          number,
+          state,
+          price,
+          space_photos(storage_path)
+        `)
+        .eq("status", "approved");
+        
+      if (error) {
+        throw error;
+      }
+      
+      // Process data to match our component's format
+      const processedSpaces = await Promise.all((data || []).map(async (space) => {
+        let photoUrl = "https://source.unsplash.com/random/600x400?event";
+        
+        // If there are photos, get the URL for the first one
+        if (space.space_photos && space.space_photos.length > 0) {
+          const { data: urlData } = await supabase.storage
+            .from('spaces')
+            .createSignedUrl(space.space_photos[0].storage_path, 3600);
+            
+          if (urlData) {
+            photoUrl = urlData.signedUrl;
+          }
+        }
+        
+        return {
+          id: space.id,
+          name: space.name,
+          address: `${space.address}, ${space.number} - ${space.state}`,
+          price: space.price,
+          photo_url: photoUrl
+        };
+      }));
+      
+      setSpaces(processedSpaces);
+    } catch (error) {
+      console.error("Error fetching spaces:", error);
+      toast.error("Erro ao carregar espaços");
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  // Filtra espaços com base no termo de busca
+  const filteredSpaces = spaces.filter(space => 
+    space.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    space.address.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
   return (
     <div className="container px-4 py-6 max-w-4xl mx-auto">
       <h1 className="text-2xl font-bold mb-6">Explorar Espaços</h1>
@@ -45,35 +94,69 @@ const Explore = () => {
         <Input 
           placeholder="Buscar espaços de eventos..." 
           className="pl-10"
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
         />
       </div>
 
       <div className="space-y-4 mb-6">
         <h2 className="text-lg font-medium">Categorias</h2>
         <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-none">
-          <button className="bg-iparty text-white rounded-full px-4 py-1.5 text-sm whitespace-nowrap">
+          <button 
+            className={`${activeCategory === 'all' ? 'bg-iparty text-white' : 'bg-secondary text-foreground'} rounded-full px-4 py-1.5 text-sm whitespace-nowrap`}
+            onClick={() => setActiveCategory('all')}
+          >
             Todos
           </button>
-          <button className="bg-secondary text-foreground rounded-full px-4 py-1.5 text-sm whitespace-nowrap">
+          <button 
+            className={`${activeCategory === 'weddings' ? 'bg-iparty text-white' : 'bg-secondary text-foreground'} rounded-full px-4 py-1.5 text-sm whitespace-nowrap`}
+            onClick={() => setActiveCategory('weddings')}
+          >
             Casamentos
           </button>
-          <button className="bg-secondary text-foreground rounded-full px-4 py-1.5 text-sm whitespace-nowrap">
+          <button 
+            className={`${activeCategory === 'corporate' ? 'bg-iparty text-white' : 'bg-secondary text-foreground'} rounded-full px-4 py-1.5 text-sm whitespace-nowrap`}
+            onClick={() => setActiveCategory('corporate')}
+          >
             Corporativo
           </button>
-          <button className="bg-secondary text-foreground rounded-full px-4 py-1.5 text-sm whitespace-nowrap">
+          <button 
+            className={`${activeCategory === 'birthdays' ? 'bg-iparty text-white' : 'bg-secondary text-foreground'} rounded-full px-4 py-1.5 text-sm whitespace-nowrap`}
+            onClick={() => setActiveCategory('birthdays')}
+          >
             Aniversários
           </button>
-          <button className="bg-secondary text-foreground rounded-full px-4 py-1.5 text-sm whitespace-nowrap">
+          <button 
+            className={`${activeCategory === 'graduations' ? 'bg-iparty text-white' : 'bg-secondary text-foreground'} rounded-full px-4 py-1.5 text-sm whitespace-nowrap`}
+            onClick={() => setActiveCategory('graduations')}
+          >
             Formaturas
           </button>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        {eventSpaces.map((space) => (
-          <EventSpaceCard key={space.id} {...space} />
-        ))}
-      </div>
+      {loading ? (
+        <div className="py-12 text-center">
+          <p className="text-gray-500">Carregando espaços...</p>
+        </div>
+      ) : filteredSpaces.length === 0 ? (
+        <div className="py-12 text-center">
+          <p className="text-gray-500">Nenhum espaço encontrado.</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {filteredSpaces.map((space) => (
+            <EventSpaceCard 
+              key={space.id} 
+              id={space.id}
+              name={space.name}
+              address={space.address}
+              price={parseFloat(space.price)}
+              image={space.photo_url || "https://source.unsplash.com/random/600x400?event"}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 };
