@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
@@ -15,7 +14,6 @@ import { useUserRoles } from "@/hooks/useUserRoles";
 import { toast } from "sonner";
 import SpaceList from "@/components/approval/SpaceList";
 import SpaceDetails, { SpaceDetailsType } from "@/components/approval/SpaceDetails";
-import { Card } from "@/components/ui/card";
 
 type SpaceWithProfileInfo = {
   id: string;
@@ -209,7 +207,7 @@ const SpaceApproval = () => {
   }
 
   return (
-    <div className="container px-4 py-6 max-w-4xl mx-auto">
+    <div className="container px-4 py-6 max-w-5xl mx-auto">
       <div className="flex items-center mb-6">
         <Button variant="ghost" onClick={() => navigate("/profile")} className="mr-2 p-0 h-auto">
           <ArrowLeft size={24} />
@@ -217,13 +215,11 @@ const SpaceApproval = () => {
         <h1 className="text-2xl font-bold">Aprovação de Espaços</h1>
       </div>
 
-      <Card className="border shadow-sm overflow-hidden">
-        <SpaceList 
-          spaces={spaces} 
-          loading={loading} 
-          onViewDetails={fetchSpaceDetails} 
-        />
-      </Card>
+      <SpaceList 
+        spaces={spaces} 
+        loading={loading} 
+        onViewDetails={fetchSpaceDetails} 
+      />
 
       {selectedSpace && (
         <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>

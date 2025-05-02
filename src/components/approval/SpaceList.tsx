@@ -1,14 +1,7 @@
 
 import React from "react";
-import { 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableHead, 
-  TableHeader, 
-  TableRow 
-} from "@/components/ui/table";
 import SpaceListItem from "./SpaceListItem";
+import { Card } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
 type SpaceWithProfileInfo = {
@@ -45,33 +38,17 @@ const SpaceList: React.FC<SpaceListProps> = ({ spaces, loading, onViewDetails })
   }
 
   return (
-    <div className="overflow-hidden">
-      <ScrollArea className="h-[calc(100vh-220px)]">
-        <div className="p-1">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Nome</TableHead>
-                <TableHead>Proprietário</TableHead>
-                <TableHead>Data</TableHead>
-                <TableHead>Fotos</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Ações</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {spaces.map((space) => (
-                <SpaceListItem 
-                  key={space.id} 
-                  space={space} 
-                  onViewDetails={onViewDetails} 
-                />
-              ))}
-            </TableBody>
-          </Table>
-        </div>
-      </ScrollArea>
-    </div>
+    <ScrollArea className="h-[calc(100vh-220px)]">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 p-4">
+        {spaces.map((space) => (
+          <SpaceListItem 
+            key={space.id} 
+            space={space} 
+            onViewDetails={onViewDetails} 
+          />
+        ))}
+      </div>
+    </ScrollArea>
   );
 };
 
