@@ -153,9 +153,10 @@ const EventSpaceDetails: React.FC = () => {
   const handleWhatsAppContact = () => {
     if (space) {
       const message = `Olá, estou interessado no espaço ${space.name} para um evento`;
-      // Clean the phone number to ensure it's in the correct format
+      // Clean the phone number to ensure it's in the correct format and add +55 prefix
       const cleanPhone = space.phone.replace(/\D/g, "");
-      const whatsappUrl = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`;
+      const phoneWithPrefix = `+55${cleanPhone}`;
+      const whatsappUrl = `https://wa.me/${phoneWithPrefix}?text=${encodeURIComponent(message)}`;
       window.open(whatsappUrl, '_blank');
     }
   };
