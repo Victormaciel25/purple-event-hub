@@ -1,9 +1,11 @@
+
 import React, { useState, useEffect } from "react";
 import EventSpaceCard from "@/components/EventSpaceCard";
 import { Input } from "@/components/ui/input";
-import { Search } from "lucide-react";
+import { Search, Circle, Heart, Briefcase, Cake, GraduationCap, ChevronLeft, ChevronRight } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 type EventSpace = {
   id: string;
@@ -22,6 +24,7 @@ const Explore = () => {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [activeCategory, setActiveCategory] = useState("all");
+  const scrollContainerRef = React.useRef<HTMLDivElement>(null);
   
   useEffect(() => {
     fetchApprovedSpaces();
@@ -107,6 +110,18 @@ const Explore = () => {
     );
   });
 
+  const handleScrollLeft = () => {
+    if (scrollContainerRef.current) {
+      scrollContainerRef.current.scrollBy({ left: -200, behavior: 'smooth' });
+    }
+  };
+
+  const handleScrollRight = () => {
+    if (scrollContainerRef.current) {
+      scrollContainerRef.current.scrollBy({ left: 200, behavior: 'smooth' });
+    }
+  };
+
   return (
     <div className="container px-4 py-6 max-w-4xl mx-auto">
       <div className="relative mb-6">
@@ -119,38 +134,74 @@ const Explore = () => {
         />
       </div>
 
-      <div className="space-y-4 mb-6">
+      <div className="space-y-2 mb-6">
         <h2 className="text-lg font-medium">Categorias</h2>
-        <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-none">
+        <div className="relative">
           <button 
-            className={`${activeCategory === 'all' ? 'bg-iparty text-white' : 'bg-secondary text-foreground'} rounded-full px-4 py-1.5 text-sm whitespace-nowrap`}
-            onClick={() => setActiveCategory('all')}
+            onClick={handleScrollLeft} 
+            className="absolute left-0 top-1/2 transform -translate-y-1/2 bg-white rounded-full shadow-md p-1 z-10"
           >
-            Todos
+            <ChevronLeft size={20} />
           </button>
+          
+          <div className="overflow-hidden mx-6">
+            <div 
+              ref={scrollContainerRef} 
+              className="flex gap-3 overflow-x-auto pb-2 scrollbar-none"
+              style={{ scrollbarWidth: 'none' }}
+            >
+              <button 
+                className={`${activeCategory === 'all' ? 'bg-iparty text-white' : 'bg-secondary text-foreground'} 
+                  rounded-lg px-3 py-1 text-xs flex flex-col items-center min-w-[70px] transition-all`}
+                onClick={() => setActiveCategory('all')}
+              >
+                <Circle className="mb-1" size={20} />
+                <span>Todos</span>
+              </button>
+              
+              <button 
+                className={`${activeCategory === 'weddings' ? 'bg-iparty text-white' : 'bg-secondary text-foreground'} 
+                  rounded-lg px-3 py-1 text-xs flex flex-col items-center min-w-[70px] transition-all`}
+                onClick={() => setActiveCategory('weddings')}
+              >
+                <Heart className="mb-1" size={20} />
+                <span>Casamentos</span>
+              </button>
+              
+              <button 
+                className={`${activeCategory === 'corporate' ? 'bg-iparty text-white' : 'bg-secondary text-foreground'} 
+                  rounded-lg px-3 py-1 text-xs flex flex-col items-center min-w-[70px] transition-all`}
+                onClick={() => setActiveCategory('corporate')}
+              >
+                <Briefcase className="mb-1" size={20} />
+                <span>Corporativo</span>
+              </button>
+              
+              <button 
+                className={`${activeCategory === 'birthdays' ? 'bg-iparty text-white' : 'bg-secondary text-foreground'} 
+                  rounded-lg px-3 py-1 text-xs flex flex-col items-center min-w-[70px] transition-all`}
+                onClick={() => setActiveCategory('birthdays')}
+              >
+                <Cake className="mb-1" size={20} />
+                <span>Aniversários</span>
+              </button>
+              
+              <button 
+                className={`${activeCategory === 'graduations' ? 'bg-iparty text-white' : 'bg-secondary text-foreground'} 
+                  rounded-lg px-3 py-1 text-xs flex flex-col items-center min-w-[70px] transition-all`}
+                onClick={() => setActiveCategory('graduations')}
+              >
+                <GraduationCap className="mb-1" size={20} />
+                <span>Formaturas</span>
+              </button>
+            </div>
+          </div>
+          
           <button 
-            className={`${activeCategory === 'weddings' ? 'bg-iparty text-white' : 'bg-secondary text-foreground'} rounded-full px-4 py-1.5 text-sm whitespace-nowrap`}
-            onClick={() => setActiveCategory('weddings')}
+            onClick={handleScrollRight} 
+            className="absolute right-0 top-1/2 transform -translate-y-1/2 bg-white rounded-full shadow-md p-1 z-10"
           >
-            Casamentos
-          </button>
-          <button 
-            className={`${activeCategory === 'corporate' ? 'bg-iparty text-white' : 'bg-secondary text-foreground'} rounded-full px-4 py-1.5 text-sm whitespace-nowrap`}
-            onClick={() => setActiveCategory('corporate')}
-          >
-            Corporativo
-          </button>
-          <button 
-            className={`${activeCategory === 'birthdays' ? 'bg-iparty text-white' : 'bg-secondary text-foreground'} rounded-full px-4 py-1.5 text-sm whitespace-nowrap`}
-            onClick={() => setActiveCategory('birthdays')}
-          >
-            Aniversários
-          </button>
-          <button 
-            className={`${activeCategory === 'graduations' ? 'bg-iparty text-white' : 'bg-secondary text-foreground'} rounded-full px-4 py-1.5 text-sm whitespace-nowrap`}
-            onClick={() => setActiveCategory('graduations')}
-          >
-            Formaturas
+            <ChevronRight size={20} />
           </button>
         </div>
       </div>
