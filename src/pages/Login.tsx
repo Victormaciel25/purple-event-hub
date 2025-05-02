@@ -11,7 +11,8 @@ import { useToast } from "@/components/ui/use-toast";
 const Login = () => {
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState("");
-  const [fullName, setFullName] = useState("");
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -62,17 +63,14 @@ const Login = () => {
           return;
         }
 
-        // Split full name into first and last name
-        const nameParts = fullName.trim().split(' ');
-        const firstName = nameParts[0] || '';
-        const lastName = nameParts.length > 1 ? nameParts.slice(1).join(' ') : '';
-
+        // Using first and last name separately
         const { error, data } = await supabase.auth.signUp({
           email,
           password,
           options: {
             data: {
-              full_name: fullName,
+              first_name: firstName,
+              last_name: lastName,
               phone: phone,
             }
           }
@@ -177,16 +175,29 @@ const Login = () => {
             
             {!isLogin && (
               <>
-                <div className="space-y-2">
-                  <Label htmlFor="fullName">Nome Completo</Label>
-                  <Input
-                    id="fullName"
-                    type="text"
-                    placeholder="Seu nome completo"
-                    required={!isLogin}
-                    value={fullName}
-                    onChange={(e) => setFullName(e.target.value)}
-                  />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="firstName">Nome</Label>
+                    <Input
+                      id="firstName"
+                      type="text"
+                      placeholder="Seu nome"
+                      required={!isLogin}
+                      value={firstName}
+                      onChange={(e) => setFirstName(e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="lastName">Sobrenome</Label>
+                    <Input
+                      id="lastName"
+                      type="text"
+                      placeholder="Seu sobrenome"
+                      required={!isLogin}
+                      value={lastName}
+                      onChange={(e) => setLastName(e.target.value)}
+                    />
+                  </div>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="phone">Telefone</Label>
