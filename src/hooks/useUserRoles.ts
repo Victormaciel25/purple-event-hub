@@ -27,61 +27,30 @@ export function useUserRoles() {
         const currentUserId = sessionData.session.user.id;
         setUserId(currentUserId);
         
-        // First try: Use RPC functions with proper parameters to prevent recursion
-        try {
-          // Get admin role
-          const { data: adminRole, error: adminError } = await supabase.rpc(
-            'check_user_role',
-            { 
-              user_id: currentUserId, 
-              requested_role: 'admin'
-            }
-          );
+        // Com a nova política que permite SELECT sem verificação,
+        // podemos consultar diretamente a tabela user_roles sem causar recursão
+        const { data: roles, error } = await supabase
+          .from('user_roles')
+          .select('role')
+          .eq('user_id', currentUserId);
           
-          // Get super_admin role
-          const { data: superAdminRole, error: superAdminError } = await supabase.rpc(
-            'check_user_role',
-            { 
-              user_id: currentUserId, 
-              requested_role: 'super_admin' 
-            }
-          );
+        if (error) {
+          console.error("Error fetching user roles:", error);
           
-          if (adminError || superAdminError) {
-            throw new Error(`RPC Error: ${adminError?.message || superAdminError?.message}`);
-          }
-          
-          setIsAdmin(Boolean(adminRole) || Boolean(superAdminRole)); // Super admin also has admin privileges
-          setIsSuperAdmin(Boolean(superAdminRole));
-          
-        } catch (rpcError) {
-          console.warn("RPC role check failed, using direct query:", rpcError);
-          
-          // Second try: Direct database query as fallback
-          // This is done in a separate transaction to avoid triggering the recursion
-          const { data: roles, error } = await supabase
-            .from('user_roles')
-            .select('role')
-            .eq('user_id', currentUserId);
-            
-          if (error) {
-            console.error("Direct query also failed:", error);
-            
-            // Special case for known admin - safety mechanism
-            if (sessionData.session.user.email === "vcr0091@gmail.com") {
-              setIsAdmin(true);
-              setIsSuperAdmin(true);
-            } else {
-              setIsAdmin(false);
-              setIsSuperAdmin(false);
-            }
+          // Special case for known admin - safety mechanism
+          if (sessionData.session.user.email === "vcr0091@gmail.com") {
+            setIsAdmin(true);
+            setIsSuperAdmin(true);
           } else {
-            const hasAdminRole = roles?.some(role => role.role === 'admin') || false;
-            const hasSuperAdminRole = roles?.some(role => role.role === 'super_admin') || false;
-            
-            setIsAdmin(hasAdminRole || hasSuperAdminRole);
-            setIsSuperAdmin(hasSuperAdminRole);
+            setIsAdmin(false);
+            setIsSuperAdmin(false);
           }
+        } else {
+          const hasAdminRole = roles?.some(role => role.role === 'admin') || false;
+          const hasSuperAdminRole = roles?.some(role => role.role === 'super_admin') || false;
+          
+          setIsAdmin(hasAdminRole || hasSuperAdminRole);
+          setIsSuperAdmin(hasSuperAdminRole);
         }
       } catch (error) {
         console.error("Global error in useUserRoles:", error);
