@@ -1,7 +1,20 @@
-import React from "react";
+
+import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, Phone, Wifi, ParkingMeter, Speaker, AirVent, Utensils, Waves, Users, Heart } from "lucide-react";
+import { 
+  ChevronLeft, 
+  Phone, 
+  Wifi, 
+  ParkingMeter, 
+  Speaker, 
+  AirVent, 
+  Utensils, 
+  Waves, 
+  Users, 
+  Heart, 
+  Loader2 
+} from "lucide-react";
 import {
   Carousel,
   CarouselContent,
@@ -11,107 +24,161 @@ import {
 } from "@/components/ui/carousel";
 import { Badge } from "@/components/ui/badge";
 import { useEventSpaceFavorites } from "../hooks/useEventSpaceFavorites";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
-// Dados de exemplo para os espaços de eventos
-const eventSpaces = [
-  {
-    id: "1",
-    name: "Espaço Vila Garden",
-    address: "Rua das Flores, 123 - São Paulo",
-    price: 3500,
-    whatsapp: "5511999999999",
-    description: "Um lindo espaço para eventos ao ar livre com jardins bem cuidados e ampla área para celebrações.",
-    capacity: 250,
-    images: [
-      "https://source.unsplash.com/photo-1473177104440-ffee2f376098",
-      "https://source.unsplash.com/photo-1487958449943-2429e8be8625",
-      "https://source.unsplash.com/photo-1496307653780-42ee777d4833",
-    ],
-    amenities: {
-      parking: true,
-      wifi: true,
-      soundSystem: true,
-      airConditioning: true,
-      kitchen: true,
-      pool: false,
-    }
-  },
-  {
-    id: "2",
-    name: "Salão Golden Hall",
-    address: "Av. Paulista, 1000 - São Paulo",
-    price: 5000,
-    whatsapp: "5511888888888",
-    description: "Salão elegante e sofisticado, ideal para casamentos e eventos corporativos de grande porte.",
-    capacity: 400,
-    images: [
-      "https://source.unsplash.com/photo-1487958449943-2429e8be8625",
-      "https://source.unsplash.com/photo-1473177104440-ffee2f376098",
-      "https://source.unsplash.com/photo-1721322800607-8c38375eef04",
-    ],
-    amenities: {
-      parking: true,
-      wifi: true,
-      soundSystem: true,
-      airConditioning: true,
-      kitchen: true,
-      pool: false,
-    }
-  },
-  {
-    id: "3",
-    name: "Alameda Jardins",
-    address: "Alameda Santos, 500 - São Paulo",
-    price: 4200,
-    whatsapp: "5511777777777",
-    description: "Espaço contemporâneo com ambientes internos e externos, perfeito para eventos sociais e corporativos.",
-    capacity: 300,
-    images: [
-      "https://source.unsplash.com/photo-1496307653780-42ee777d4833",
-      "https://source.unsplash.com/photo-1487958449943-2429e8be8625",
-      "https://source.unsplash.com/photo-1473177104440-ffee2f376098",
-    ],
-    amenities: {
-      parking: true,
-      wifi: true,
-      soundSystem: true,
-      airConditioning: true,
-      kitchen: false,
-      pool: true,
-    }
-  },
-  {
-    id: "4",
-    name: "Casa de Festas Luminária",
-    address: "Rua Augusta, 789 - São Paulo",
-    price: 3800,
-    whatsapp: "5511666666666",
-    description: "Ambiente acolhedor e bem iluminado, ideal para festas de aniversário e pequenas celebrações.",
-    capacity: 150,
-    images: [
-      "https://source.unsplash.com/photo-1721322800607-8c38375eef04",
-      "https://source.unsplash.com/photo-1496307653780-42ee777d4833",
-      "https://source.unsplash.com/photo-1487958449943-2429e8be8625",
-    ],
-    amenities: {
-      parking: false,
-      wifi: true,
-      soundSystem: true,
-      airConditioning: false,
-      kitchen: true,
-      pool: false,
-    }
-  },
-];
+// Define a type for the space details with all the fields
+type SpaceDetails = {
+  id: string;
+  name: string;
+  address: string;
+  number: string;
+  state: string;
+  zip_code: string;
+  description: string;
+  price: string;
+  capacity: string;
+  phone: string;
+  parking: boolean;
+  wifi: boolean;
+  sound_system: boolean;
+  air_conditioning: boolean;
+  kitchen: boolean;
+  pool: boolean;
+  images: string[];
+  latitude?: number;
+  longitude?: number;
+};
 
 const EventSpaceDetails: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { isFavorite, toggleFavorite } = useEventSpaceFavorites();
+  const [space, setSpace] = useState<SpaceDetails | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [imageUrls, setImageUrls] = useState<string[]>([]);
   
-  const eventSpace = eventSpaces.find(space => space.id === id);
+  useEffect(() => {
+    if (id) {
+      fetchSpaceDetails(id);
+    }
+  }, [id]);
   
-  if (!eventSpace) {
+  const fetchSpaceDetails = async (spaceId: string) => {
+    try {
+      setLoading(true);
+      
+      // Fetch space details
+      const { data: spaceData, error: spaceError } = await supabase
+        .from("spaces")
+        .select("*")
+        .eq("id", spaceId)
+        .single();
+      
+      if (spaceError) {
+        throw spaceError;
+      }
+      
+      if (!spaceData) {
+        toast.error("Espaço não encontrado");
+        navigate("/explore");
+        return;
+      }
+      
+      // Fetch photos related to this space
+      const { data: photoData, error: photoError } = await supabase
+        .from("space_photos")
+        .select("storage_path")
+        .eq("space_id", spaceId);
+      
+      if (photoError) {
+        throw photoError;
+      }
+      
+      // Get signed URLs for all photos
+      const photos = photoData || [];
+      const urls: string[] = [];
+      
+      if (photos.length > 0) {
+        for (const photo of photos) {
+          const { data: urlData } = await supabase.storage
+            .from('spaces')
+            .createSignedUrl(photo.storage_path, 3600);
+            
+          if (urlData) {
+            urls.push(urlData.signedUrl);
+          }
+        }
+      } 
+      
+      // Use default image if no images were found
+      if (urls.length === 0) {
+        urls.push("https://source.unsplash.com/random/600x400?event");
+      }
+      
+      // Create the space details object
+      const spaceDetails: SpaceDetails = {
+        id: spaceData.id,
+        name: spaceData.name,
+        address: spaceData.address,
+        number: spaceData.number,
+        state: spaceData.state,
+        zip_code: spaceData.zip_code,
+        description: spaceData.description,
+        price: spaceData.price,
+        capacity: spaceData.capacity,
+        phone: spaceData.phone,
+        parking: spaceData.parking || false,
+        wifi: spaceData.wifi || false,
+        sound_system: spaceData.sound_system || false,
+        air_conditioning: spaceData.air_conditioning || false,
+        kitchen: spaceData.kitchen || false,
+        pool: spaceData.pool || false,
+        images: urls,
+        latitude: spaceData.latitude,
+        longitude: spaceData.longitude
+      };
+      
+      setSpace(spaceDetails);
+      setImageUrls(urls);
+      
+    } catch (error) {
+      console.error("Error fetching space details:", error);
+      toast.error("Erro ao carregar detalhes do espaço");
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  const handleWhatsAppContact = () => {
+    if (space) {
+      const message = `Olá, estou interessado no espaço ${space.name} para um evento`;
+      // Clean the phone number to ensure it's in the correct format
+      const cleanPhone = space.phone.replace(/\D/g, "");
+      const whatsappUrl = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`;
+      window.open(whatsappUrl, '_blank');
+    }
+  };
+  
+  // Format price as Brazilian currency
+  const formatPrice = (value: string) => {
+    const numValue = parseFloat(value);
+    return numValue.toLocaleString('pt-BR', {
+      style: 'currency',
+      currency: 'BRL',
+    });
+  };
+  
+  if (loading) {
+    return (
+      <div className="container px-4 py-6 flex flex-col items-center justify-center h-[70vh]">
+        <Loader2 className="h-8 w-8 animate-spin text-iparty" />
+        <p className="mt-4 text-muted-foreground">Carregando detalhes do espaço...</p>
+      </div>
+    );
+  }
+  
+  if (!space) {
     return (
       <div className="container px-4 py-6 max-w-4xl mx-auto">
         <div className="flex items-center mb-6">
@@ -125,12 +192,6 @@ const EventSpaceDetails: React.FC = () => {
     );
   }
   
-  const handleWhatsAppContact = () => {
-    const message = `Olá, estou interessado no espaço ${eventSpace.name} para um evento`;
-    const whatsappUrl = `https://wa.me/${eventSpace.whatsapp}?text=${encodeURIComponent(message)}`;
-    window.open(whatsappUrl, '_blank');
-  };
-  
   return (
     <div className="container px-4 py-6 pb-20 mx-auto">
       <div className="flex items-center justify-between mb-4">
@@ -138,17 +199,17 @@ const EventSpaceDetails: React.FC = () => {
           <Button variant="ghost" size="sm" onClick={() => navigate(-1)} className="mr-2">
             <ChevronLeft size={20} />
           </Button>
-          <h1 className="text-xl font-bold truncate">{eventSpace.name}</h1>
+          <h1 className="text-xl font-bold truncate">{space.name}</h1>
         </div>
         <Button 
           variant="ghost" 
           size="sm" 
-          onClick={() => toggleFavorite(eventSpace.id)}
+          onClick={() => toggleFavorite(space.id)}
           className="p-2 rounded-full hover:bg-gray-100"
         >
           <Heart 
             size={24} 
-            className={isFavorite(eventSpace.id) ? "fill-red-500 text-red-500" : "text-gray-500"} 
+            className={isFavorite(space.id) ? "fill-red-500 text-red-500" : "text-gray-500"} 
           />
         </Button>
       </div>
@@ -157,12 +218,12 @@ const EventSpaceDetails: React.FC = () => {
       <div className="mb-6">
         <Carousel className="w-full">
           <CarouselContent>
-            {eventSpace.images.map((image, index) => (
+            {space.images.map((image, index) => (
               <CarouselItem key={index} className="md:basis-auto">
                 <div className="h-64 md:h-80 w-full rounded-lg overflow-hidden">
                   <img 
                     src={image} 
-                    alt={`${eventSpace.name} - Imagem ${index + 1}`} 
+                    alt={`${space.name} - Imagem ${index + 1}`} 
                     className="w-full h-full object-cover"
                   />
                 </div>
@@ -177,48 +238,49 @@ const EventSpaceDetails: React.FC = () => {
       {/* Preço e endereço */}
       <div className="mb-6">
         <div className="flex justify-between items-center mb-2">
-          <h2 className="text-2xl font-bold">R$ {eventSpace.price}</h2>
+          <h2 className="text-2xl font-bold">{formatPrice(space.price)}</h2>
           <Badge variant="secondary">
             <Users size={14} className="mr-1" />
-            Até {eventSpace.capacity} pessoas
+            Até {space.capacity} pessoas
           </Badge>
         </div>
-        <p className="text-muted-foreground">{eventSpace.address}</p>
+        <p className="text-muted-foreground">{space.address}, {space.number} - {space.state}</p>
+        <p className="text-muted-foreground">CEP: {space.zip_code}</p>
       </div>
       
       {/* Descrição */}
       <div className="mb-6">
         <h3 className="text-lg font-semibold mb-2">Sobre o espaço</h3>
-        <p className="text-muted-foreground">{eventSpace.description}</p>
+        <p className="text-muted-foreground">{space.description}</p>
       </div>
       
       {/* Comodidades */}
       <div className="mb-8">
         <h3 className="text-lg font-semibold mb-3">Comodidades</h3>
         <div className="grid grid-cols-2 gap-4">
-          <div className={`flex items-center ${eventSpace.amenities.parking ? 'text-foreground' : 'text-muted-foreground/50'}`}>
+          <div className={`flex items-center ${space.parking ? 'text-foreground' : 'text-muted-foreground/50'}`}>
             <ParkingMeter size={18} className="mr-2" />
-            <span>{eventSpace.amenities.parking ? 'Estacionamento' : 'Sem estacionamento'}</span>
+            <span>{space.parking ? 'Estacionamento' : 'Sem estacionamento'}</span>
           </div>
-          <div className={`flex items-center ${eventSpace.amenities.wifi ? 'text-foreground' : 'text-muted-foreground/50'}`}>
+          <div className={`flex items-center ${space.wifi ? 'text-foreground' : 'text-muted-foreground/50'}`}>
             <Wifi size={18} className="mr-2" />
-            <span>{eventSpace.amenities.wifi ? 'Wi-Fi' : 'Sem Wi-Fi'}</span>
+            <span>{space.wifi ? 'Wi-Fi' : 'Sem Wi-Fi'}</span>
           </div>
-          <div className={`flex items-center ${eventSpace.amenities.soundSystem ? 'text-foreground' : 'text-muted-foreground/50'}`}>
+          <div className={`flex items-center ${space.sound_system ? 'text-foreground' : 'text-muted-foreground/50'}`}>
             <Speaker size={18} className="mr-2" />
-            <span>{eventSpace.amenities.soundSystem ? 'Sistema de som' : 'Sem sistema de som'}</span>
+            <span>{space.sound_system ? 'Sistema de som' : 'Sem sistema de som'}</span>
           </div>
-          <div className={`flex items-center ${eventSpace.amenities.airConditioning ? 'text-foreground' : 'text-muted-foreground/50'}`}>
+          <div className={`flex items-center ${space.air_conditioning ? 'text-foreground' : 'text-muted-foreground/50'}`}>
             <AirVent size={18} className="mr-2" />
-            <span>{eventSpace.amenities.airConditioning ? 'Ar condicionado' : 'Sem ar condicionado'}</span>
+            <span>{space.air_conditioning ? 'Ar condicionado' : 'Sem ar condicionado'}</span>
           </div>
-          <div className={`flex items-center ${eventSpace.amenities.kitchen ? 'text-foreground' : 'text-muted-foreground/50'}`}>
+          <div className={`flex items-center ${space.kitchen ? 'text-foreground' : 'text-muted-foreground/50'}`}>
             <Utensils size={18} className="mr-2" />
-            <span>{eventSpace.amenities.kitchen ? 'Cozinha' : 'Sem cozinha'}</span>
+            <span>{space.kitchen ? 'Cozinha' : 'Sem cozinha'}</span>
           </div>
-          <div className={`flex items-center ${eventSpace.amenities.pool ? 'text-foreground' : 'text-muted-foreground/50'}`}>
+          <div className={`flex items-center ${space.pool ? 'text-foreground' : 'text-muted-foreground/50'}`}>
             <Waves size={18} className="mr-2" />
-            <span>{eventSpace.amenities.pool ? 'Piscina' : 'Sem piscina'}</span>
+            <span>{space.pool ? 'Piscina' : 'Sem piscina'}</span>
           </div>
         </div>
       </div>

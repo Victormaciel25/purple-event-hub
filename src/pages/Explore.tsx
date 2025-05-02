@@ -64,7 +64,9 @@ const Explore = () => {
         return {
           id: space.id,
           name: space.name,
-          address: `${space.address}, ${space.number} - ${space.state}`,
+          address: space.address,
+          number: space.number,
+          state: space.state,
           price: space.price,
           photo_url: photoUrl
         };
@@ -150,7 +152,7 @@ const Explore = () => {
               key={space.id} 
               id={space.id}
               name={space.name}
-              address={space.address}
+              address={`${space.address}, ${space.number} - ${space.state}`}
               price={parseFloat(space.price)}
               image={space.photo_url || "https://source.unsplash.com/random/600x400?event"}
             />
