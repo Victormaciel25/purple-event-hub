@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -19,6 +18,8 @@ import EventSpaceDetails from "./pages/EventSpaceDetails";
 import RegisterSpace from "./pages/RegisterSpace";
 import SpaceApproval from "./pages/SpaceApproval";
 import AdminManagement from "./pages/AdminManagement";
+import UserSpaces from "./pages/UserSpaces";
+import EditSpace from "./pages/EditSpace";
 
 // Create a QueryClient instance outside of the component
 const queryClient = new QueryClient();
@@ -85,6 +86,8 @@ const App: React.FC = () => {
               <Route path="/register-space" element={<RegisterSpace />} />
               <Route path="/space-approval" element={<SpaceApproval />} />
               <Route path="/admin-management" element={<AdminManagement />} />
+              <Route path="/user-spaces" element={<UserSpaces />} />
+              <Route path="/edit-space/:id" element={<EditSpace />} />
             </Route>
             
             {/* Catch-all route */}

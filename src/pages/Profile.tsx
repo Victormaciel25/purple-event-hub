@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -167,7 +166,10 @@ const Profile = () => {
                 <span>Cadastrar fornecedor</span>
               </div>
               <Separator />
-              <div className="p-4 flex items-center">
+              <div 
+                className="p-4 flex items-center cursor-pointer hover:bg-gray-50"
+                onClick={() => navigate("/user-spaces")}
+              >
                 <Home size={20} className="text-iparty mr-3" />
                 <span>Meus espaços</span>
               </div>
