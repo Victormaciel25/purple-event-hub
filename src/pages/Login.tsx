@@ -7,11 +7,12 @@ import { LogIn, Check } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 const Login = () => {
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState("");
+  const [fullName, setFullName] = useState("");
+  const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -61,12 +62,39 @@ const Login = () => {
           return;
         }
 
-        const { error } = await supabase.auth.signUp({
+        // Split full name into first and last name
+        const nameParts = fullName.trim().split(' ');
+        const firstName = nameParts[0] || '';
+        const lastName = nameParts.length > 1 ? nameParts.slice(1).join(' ') : '';
+
+        const { error, data } = await supabase.auth.signUp({
           email,
           password,
+          options: {
+            data: {
+              full_name: fullName,
+              phone: phone,
+            }
+          }
         });
 
         if (error) throw error;
+
+        // Update profile with additional information
+        if (data.user) {
+          const { error: profileError } = await supabase
+            .from('profiles')
+            .upsert({
+              id: data.user.id,
+              first_name: firstName,
+              last_name: lastName,
+              phone: phone,
+            });
+
+          if (profileError) {
+            console.error("Error updating profile:", profileError);
+          }
+        }
 
         toast({
           title: "Cadastro realizado",
@@ -146,6 +174,34 @@ const Login = () => {
                 onChange={(e) => setEmail(e.target.value)}
               />
             </div>
+            
+            {!isLogin && (
+              <>
+                <div className="space-y-2">
+                  <Label htmlFor="fullName">Nome Completo</Label>
+                  <Input
+                    id="fullName"
+                    type="text"
+                    placeholder="Seu nome completo"
+                    required={!isLogin}
+                    value={fullName}
+                    onChange={(e) => setFullName(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="phone">Telefone</Label>
+                  <Input
+                    id="phone"
+                    type="tel"
+                    placeholder="(00) 00000-0000"
+                    required={!isLogin}
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                  />
+                </div>
+              </>
+            )}
+            
             <div className="space-y-2">
               <Label htmlFor="password">Senha</Label>
               <Input

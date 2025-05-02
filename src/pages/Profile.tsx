@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -9,12 +10,14 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
 import { useUserRoles } from "@/hooks/useUserRoles";
 import { toast } from "sonner";
+import EditProfileDialog from "@/components/EditProfileDialog";
 
 const Profile = () => {
   const [showFavorites, setShowFavorites] = useState(false);
   const [loading, setLoading] = useState(true);
   const [profile, setProfile] = useState<any>(null);
   const [session, setSession] = useState<any>(null);
+  const [showEditProfile, setShowEditProfile] = useState(false);
   const navigate = useNavigate();
   const { toast: toastUI } = useToast();
   const { isAdmin, isSuperAdmin, loading: roleLoading, userId } = useUserRoles();
@@ -108,6 +111,28 @@ const Profile = () => {
     navigate("/admin-management");
   };
 
+  const refreshProfile = async () => {
+    if (!session?.user?.id) return;
+    
+    try {
+      // Fetch updated profile data
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("id", session.user.id)
+        .single();
+      
+      if (error) throw error;
+      setProfile(data);
+    } catch (error) {
+      console.error("Error refreshing profile:", error);
+    }
+  };
+
+  const displayName = profile ? 
+    `${profile.first_name || ''} ${profile.last_name || ''}`.trim() : 
+    session?.user?.email?.split('@')[0] || "Usuário";
+
   // Renderizar loading quando estiver carregando
   if (loading || roleLoading) {
     return (
@@ -127,10 +152,14 @@ const Profile = () => {
           <User size={50} className="text-white" />
         </div>
         <h2 className="text-xl font-medium">
-          {session?.user?.email || "Usuário"}
+          {displayName}
         </h2>
         <p className="text-muted-foreground">{session?.user?.email}</p>
-        <Button variant="outline" className="mt-4 text-sm">
+        <Button 
+          variant="outline" 
+          className="mt-4 text-sm"
+          onClick={() => setShowEditProfile(true)}
+        >
           <Settings size={16} className="mr-2" />
           Editar Perfil
         </Button>
@@ -240,6 +269,14 @@ const Profile = () => {
           </Button>
         </>
       )}
+
+      {/* Edit Profile Dialog */}
+      <EditProfileDialog
+        open={showEditProfile}
+        onOpenChange={setShowEditProfile}
+        userId={userId}
+        onProfileUpdated={refreshProfile}
+      />
     </div>
   );
 };
