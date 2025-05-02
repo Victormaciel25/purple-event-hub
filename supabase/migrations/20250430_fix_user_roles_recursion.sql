@@ -1,4 +1,3 @@
-
 -- Create a security definer function to check if a user has a specific role
 -- This prevents infinite recursion in RLS policies
 CREATE OR REPLACE FUNCTION public.check_user_role(user_id UUID, requested_role TEXT)
@@ -28,34 +27,6 @@ BEGIN
 END;
 $$;
 
--- Reset the RLS policies on user_roles table
-ALTER TABLE public.user_roles DISABLE ROW LEVEL SECURITY;
-ALTER TABLE public.user_roles ENABLE ROW LEVEL SECURITY;
-
--- Create policy for selecting user_roles
-CREATE POLICY "Users can view their own roles"
-ON public.user_roles
-FOR SELECT
-USING (auth.uid() = user_id OR public.check_user_role(auth.uid(), 'super_admin'));
-
--- Create policy for inserting user_roles
-CREATE POLICY "Super admins can insert user roles"
-ON public.user_roles
-FOR INSERT
-WITH CHECK (public.check_user_role(auth.uid(), 'super_admin'));
-
--- Create policy for updating user_roles
-CREATE POLICY "Super admins can update user roles"
-ON public.user_roles
-FOR UPDATE
-USING (public.check_user_role(auth.uid(), 'super_admin'));
-
--- Create policy for deleting user_roles
-CREATE POLICY "Super admins can delete user roles"
-ON public.user_roles
-FOR DELETE
-USING (public.check_user_role(auth.uid(), 'super_admin'));
-
 -- Create a function to get user ID by email
 CREATE OR REPLACE FUNCTION public.get_user_id_by_email(email_input TEXT)
 RETURNS UUID
@@ -75,4 +46,3 @@ END;
 $$;
 
 -- Add function to config.toml to make it accessible via RPC
-

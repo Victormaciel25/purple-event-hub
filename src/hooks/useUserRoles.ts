@@ -27,8 +27,8 @@ export function useUserRoles() {
         const currentUserId = sessionData.session.user.id;
         setUserId(currentUserId);
         
-        // Com a nova política que permite SELECT sem verificação,
-        // podemos consultar diretamente a tabela user_roles sem causar recursão
+        // Agora com a política que permite SELECT para todos, podemos
+        // consultar diretamente a tabela user_roles sem causar recursão
         const { data: roles, error } = await supabase
           .from('user_roles')
           .select('role')
