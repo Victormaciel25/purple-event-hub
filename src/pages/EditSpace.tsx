@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -28,7 +27,7 @@ type SpaceData = {
   air_conditioning: boolean;
   kitchen: boolean;
   pool: boolean;
-  categories?: string[];
+  categories: string[];
 };
 
 const EditSpace: React.FC = () => {

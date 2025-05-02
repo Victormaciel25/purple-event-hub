@@ -87,15 +87,15 @@ const Explore = () => {
     }
   };
   
-  // Filtra espaços com base no termo de busca em múltiplos campos
+  // Filter spaces based on search term across multiple fields and by category
   const filteredSpaces = spaces.filter(space => {
-    // Primeiro filtra por categoria se não for "all"
+    // First filter by category if not "all"
     if (activeCategory !== "all" && 
         (!space.categories || !space.categories.includes(activeCategory))) {
       return false;
     }
     
-    // Depois filtra por termo de busca em vários campos
+    // Then filter by search term across multiple fields
     if (searchTerm === "") return true;
     
     const term = searchTerm.toLowerCase();

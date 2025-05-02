@@ -70,6 +70,7 @@ export type Database = {
           address: string
           air_conditioning: boolean | null
           capacity: string
+          categories: string[] | null
           created_at: string | null
           description: string
           id: string
@@ -94,6 +95,7 @@ export type Database = {
           address: string
           air_conditioning?: boolean | null
           capacity: string
+          categories?: string[] | null
           created_at?: string | null
           description: string
           id?: string
@@ -118,6 +120,7 @@ export type Database = {
           address?: string
           air_conditioning?: boolean | null
           capacity?: string
+          categories?: string[] | null
           created_at?: string | null
           description?: string
           id?: string
