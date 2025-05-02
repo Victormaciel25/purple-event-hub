@@ -75,3 +75,4 @@ END;
 $$;
 
 -- Add function to config.toml to make it accessible via RPC
+
