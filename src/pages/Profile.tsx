@@ -122,8 +122,6 @@ const Profile = () => {
 
   return (
     <div className="container px-4 py-6 max-w-4xl mx-auto">
-      <h1 className="text-2xl font-bold mb-6">Perfil</h1>
-
       <div className="flex flex-col items-center mb-8">
         <div className="h-24 w-24 bg-iparty rounded-full flex items-center justify-center mb-4">
           <User size={50} className="text-white" />

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import EventSpaceCard from "@/components/EventSpaceCard";
 import { Input } from "@/components/ui/input";
@@ -110,8 +109,6 @@ const Explore = () => {
 
   return (
     <div className="container px-4 py-6 max-w-4xl mx-auto">
-      <h1 className="text-2xl font-bold mb-6">Explorar Espaços</h1>
-
       <div className="relative mb-6">
         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" size={18} />
         <Input 

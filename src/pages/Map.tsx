@@ -13,8 +13,6 @@ const Map = () => {
 
   return (
     <div className="container px-4 py-6 max-w-4xl mx-auto h-full">
-      <h1 className="text-2xl font-bold mb-6">Mapa de Espaços</h1>
-
       <div className="relative mb-6">
         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" size={18} />
         <Input 
