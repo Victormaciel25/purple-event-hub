@@ -1,17 +1,16 @@
 
 import React, { useState, useEffect } from "react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
-import { LogOut, Settings, User, Heart, Calendar, HelpCircle, Plus, Home, Shield, CheckSquare, Users } from "lucide-react";
-import FavoriteSpaces from "../components/FavoriteSpaces";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
+import { Heart, Calendar, HelpCircle, Plus, Home, Shield, CheckSquare, Users } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
 import { useUserRoles } from "@/hooks/useUserRoles";
 import { toast } from "sonner";
+import FavoriteSpaces from "../components/FavoriteSpaces";
 import EditProfileDialog from "@/components/EditProfileDialog";
-import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import ProfileHeader from "@/components/profile/ProfileHeader";
+import MenuCard from "@/components/profile/MenuCard";
+import SignOutButton from "@/components/profile/SignOutButton";
 
 const Profile = () => {
   const [showFavorites, setShowFavorites] = useState(false);
@@ -134,12 +133,7 @@ const Profile = () => {
 
   const firstName = profile?.first_name || session?.user?.user_metadata?.first_name || '';
   const lastName = profile?.last_name || session?.user?.user_metadata?.last_name || '';
-  const fullName = `${firstName} ${lastName}`.trim();
-  
-  // Get avatar URL from either profile data or user metadata
   const avatarUrl = profile?.avatar_url || session?.user?.user_metadata?.avatar_url || null;
-
-  console.log("Avatar URL:", avatarUrl);
 
   // Renderizar loading quando estiver carregando
   if (loading || roleLoading) {
@@ -153,141 +147,100 @@ const Profile = () => {
   // Force admin access for known user when debugging
   const isDebugUser = session?.user?.email === "vcr0091@gmail.com";
 
+  // Define menu items for each card
+  const spaceManagementItems = [
+    { 
+      icon: Plus, 
+      label: "Cadastrar espaço", 
+      onClick: () => navigate("/register-space") 
+    },
+    { 
+      icon: Plus, 
+      label: "Cadastrar fornecedor" 
+    },
+    { 
+      icon: Home, 
+      label: "Meus espaços", 
+      onClick: () => navigate("/user-spaces") 
+    },
+    { 
+      icon: Shield, 
+      label: "Promover Espaço" 
+    }
+  ];
+
+  const adminItems = [];
+  if (isAdmin || isSuperAdmin || isDebugUser) {
+    adminItems.push({
+      icon: CheckSquare,
+      label: "Aprovar Espaços",
+      onClick: handleAdminAccess,
+      iconClassName: "text-red-600"
+    });
+    
+    if (isSuperAdmin || isDebugUser) {
+      adminItems.push({
+        icon: Users,
+        label: "Administradores",
+        onClick: handleSuperAdminAccess,
+        iconClassName: "text-red-600"
+      });
+    }
+  }
+
+  const userItems = [
+    { 
+      icon: Heart, 
+      label: "Favoritos", 
+      onClick: () => setShowFavorites(true) 
+    },
+    { 
+      icon: Calendar, 
+      label: "Meus Eventos" 
+    },
+    { 
+      icon: HelpCircle, 
+      label: "Ajuda e Suporte" 
+    }
+  ];
+
   return (
     <div className="container px-4 py-6 max-w-4xl mx-auto">
-      <div className="flex flex-col items-center mb-8">
-        <Avatar className="h-24 w-24 mb-4">
-          {avatarUrl ? (
-            <AvatarImage src={avatarUrl} alt="Foto de perfil" />
-          ) : (
-            <AvatarFallback className="bg-iparty">
-              <User size={50} className="text-white" />
-            </AvatarFallback>
-          )}
-        </Avatar>
-        {/* Add user's name in bold */}
-        {fullName && (
-          <h2 className="text-xl font-bold mb-1">
-            {fullName}
-          </h2>
-        )}
-        <p className="text-muted-foreground">{session?.user?.email}</p>
-        <Button 
-          variant="outline" 
-          className="mt-4 text-sm"
-          onClick={() => setShowEditProfile(true)}
-        >
-          <Settings size={16} className="mr-2" />
-          Editar Perfil
-        </Button>
-      </div>
+      <ProfileHeader 
+        firstName={firstName}
+        lastName={lastName}
+        email={session?.user?.email}
+        avatarUrl={avatarUrl}
+        onEditProfile={() => setShowEditProfile(true)}
+      />
 
       {showFavorites ? (
         <>
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-xl font-medium">Meus Favoritos</h2>
-            <Button variant="outline" size="sm" onClick={() => setShowFavorites(false)}>
+            <button 
+              className="px-4 py-2 border rounded-md text-sm"
+              onClick={() => setShowFavorites(false)}
+            >
               Voltar
-            </Button>
+            </button>
           </div>
           <FavoriteSpaces />
         </>
       ) : (
         <>
-          {/* Novas opções */}
-          <Card className="mb-6">
-            <CardContent className="p-0">
-              <div 
-                className="p-4 flex items-center cursor-pointer hover:bg-gray-50"
-                onClick={() => navigate("/register-space")}
-              >
-                <Plus size={20} className="text-iparty mr-3" />
-                <span>Cadastrar espaço</span>
-              </div>
-              <Separator />
-              <div className="p-4 flex items-center">
-                <Plus size={20} className="text-iparty mr-3" />
-                <span>Cadastrar fornecedor</span>
-              </div>
-              <Separator />
-              <div 
-                className="p-4 flex items-center cursor-pointer hover:bg-gray-50"
-                onClick={() => navigate("/user-spaces")}
-              >
-                <Home size={20} className="text-iparty mr-3" />
-                <span>Meus espaços</span>
-              </div>
-              <Separator />
-              <div className="p-4 flex items-center">
-                <Shield size={20} className="text-iparty mr-3" />
-                <span>Promover Espaço</span>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Admin options */}
-          {(isAdmin || isSuperAdmin || isDebugUser) && (
-            <Card className="mb-6">
-              <CardContent className="p-0">
-                <div 
-                  className="p-4 flex items-center cursor-pointer hover:bg-gray-50"
-                  onClick={handleAdminAccess}
-                >
-                  <CheckSquare size={20} className="text-red-600 mr-3" />
-                  <span className="font-medium">Aprovar Espaços</span>
-                </div>
-                {(isSuperAdmin || isDebugUser) && (
-                  <>
-                    <Separator />
-                    <div 
-                      className="p-4 flex items-center cursor-pointer hover:bg-gray-50"
-                      onClick={handleSuperAdminAccess}
-                    >
-                      <Users size={20} className="text-red-600 mr-3" />
-                      <span className="font-medium">Administradores</span>
-                    </div>
-                  </>
-                )}
-              </CardContent>
-            </Card>
+          <MenuCard items={spaceManagementItems} />
+          
+          {adminItems.length > 0 && (
+            <MenuCard items={adminItems} />
           )}
-
-          {/* Opções existentes */}
-          <Card className="mb-6">
-            <CardContent className="p-0">
-              <div 
-                className="p-4 flex items-center cursor-pointer hover:bg-gray-50"
-                onClick={() => setShowFavorites(true)}
-              >
-                <Heart size={20} className="text-iparty mr-3" />
-                <span>Favoritos</span>
-              </div>
-              <Separator />
-              <div className="p-4 flex items-center">
-                <Calendar size={20} className="text-iparty mr-3" />
-                <span>Meus Eventos</span>
-              </div>
-              <Separator />
-              <div className="p-4 flex items-center">
-                <HelpCircle size={20} className="text-iparty mr-3" />
-                <span>Ajuda e Suporte</span>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Button 
-            variant="outline" 
-            className="w-full flex items-center justify-center text-destructive"
-            onClick={handleSignOut}
-            disabled={loading}
-          >
-            <LogOut size={16} className="mr-2" />
-            {loading ? "Processando..." : "Sair"}
-          </Button>
+          
+          <MenuCard items={userItems} />
+          
+          <SignOutButton onSignOut={handleSignOut} loading={loading} />
         </>
       )}
 
-      {/* Edit Profile Dialog */}
       <EditProfileDialog
         open={showEditProfile}
         onOpenChange={setShowEditProfile}
