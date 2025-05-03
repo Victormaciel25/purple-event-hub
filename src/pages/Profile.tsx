@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -10,6 +11,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { useUserRoles } from "@/hooks/useUserRoles";
 import { toast } from "sonner";
 import EditProfileDialog from "@/components/EditProfileDialog";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 
 const Profile = () => {
   const [showFavorites, setShowFavorites] = useState(false);
@@ -135,6 +137,9 @@ const Profile = () => {
   const firstName = profile?.first_name || session?.user?.user_metadata?.first_name || '';
   const lastName = profile?.last_name || session?.user?.user_metadata?.last_name || '';
   const fullName = `${firstName} ${lastName}`.trim();
+  
+  // Get avatar URL from either profile data or user metadata
+  const avatarUrl = profile?.avatar_url || session?.user?.user_metadata?.avatar_url || null;
 
   // Renderizar loading quando estiver carregando
   if (loading || roleLoading) {
@@ -151,9 +156,15 @@ const Profile = () => {
   return (
     <div className="container px-4 py-6 max-w-4xl mx-auto">
       <div className="flex flex-col items-center mb-8">
-        <div className="h-24 w-24 bg-iparty rounded-full flex items-center justify-center mb-4">
-          <User size={50} className="text-white" />
-        </div>
+        <Avatar className="h-24 w-24 mb-4">
+          {avatarUrl ? (
+            <AvatarImage src={avatarUrl} alt="Foto de perfil" />
+          ) : (
+            <AvatarFallback className="bg-iparty">
+              <User size={50} className="text-white" />
+            </AvatarFallback>
+          )}
+        </Avatar>
         {/* Add user's name in bold */}
         {fullName && (
           <h2 className="text-xl font-bold mb-1">

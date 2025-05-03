@@ -13,7 +13,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
-import { Pencil, Loader2 } from "lucide-react";
+import { Pencil, Loader2, ImagePlus, User } from "lucide-react";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 
 interface EditProfileDialogProps {
   open: boolean;
@@ -34,6 +35,9 @@ const EditProfileDialog = ({
   const [phone, setPhone] = useState("");
   const [loading, setLoading] = useState(false);
   const [fetchLoading, setFetchLoading] = useState(true);
+  const [profileImage, setProfileImage] = useState<string | null>(null);
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [uploadLoading, setUploadLoading] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -81,11 +85,66 @@ const EditProfileDialog = ({
         if (profileData.first_name) setFirstName(profileData.first_name);
         if (profileData.last_name) setLastName(profileData.last_name);
         if (profileData.phone) setPhone(profileData.phone);
+        if (profileData.avatar_url) setProfileImage(profileData.avatar_url);
       }
     } catch (error) {
       console.error("Error fetching user data:", error);
     } finally {
       setFetchLoading(false);
+    }
+  };
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files || e.target.files.length === 0) {
+      return;
+    }
+    
+    const file = e.target.files[0];
+    setImageFile(file);
+    
+    // Create a preview URL for the selected image
+    const previewUrl = URL.createObjectURL(file);
+    setProfileImage(previewUrl);
+  };
+
+  const uploadImage = async (): Promise<string | null> => {
+    if (!imageFile || !userId) return null;
+    
+    setUploadLoading(true);
+    
+    try {
+      // Create a unique file name for the image
+      const fileExt = imageFile.name.split('.').pop();
+      const fileName = `${userId}-${Date.now()}.${fileExt}`;
+      const filePath = `avatars/${fileName}`;
+      
+      // Upload the image to Supabase storage
+      const { error: uploadError } = await supabase.storage
+        .from('avatars')
+        .upload(filePath, imageFile, { 
+          upsert: true 
+        });
+      
+      if (uploadError) {
+        throw uploadError;
+      }
+      
+      // Get the public URL of the uploaded image
+      const { data } = supabase.storage
+        .from('avatars')
+        .getPublicUrl(filePath);
+      
+      return data.publicUrl;
+    } catch (error) {
+      console.error('Error uploading image:', error);
+      toast({
+        title: "Erro",
+        description: "Falha ao fazer upload da imagem",
+        variant: "destructive",
+      });
+      return null;
+    } finally {
+      setUploadLoading(false);
     }
   };
 
@@ -97,12 +156,19 @@ const EditProfileDialog = ({
     setLoading(true);
     
     try {
+      // Upload image if a new one was selected
+      let avatarUrl = profileImage;
+      if (imageFile) {
+        avatarUrl = await uploadImage();
+      }
+      
       // Update user metadata
       const { error: metadataError } = await supabase.auth.updateUser({
         data: {
           first_name: firstName,
           last_name: lastName,
           phone: phone,
+          avatar_url: avatarUrl,
         }
       });
       
@@ -118,6 +184,7 @@ const EditProfileDialog = ({
           first_name: firstName,
           last_name: lastName,
           phone: phone,
+          avatar_url: avatarUrl,
           updated_at: new Date().toISOString(),
         });
       
@@ -159,6 +226,33 @@ const EditProfileDialog = ({
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-4 py-4">
+            <div className="flex justify-center mb-2">
+              <div className="relative">
+                <Avatar className="h-24 w-24 border-2 border-gray-200">
+                  {profileImage ? (
+                    <AvatarImage src={profileImage} alt="Foto de perfil" />
+                  ) : (
+                    <AvatarFallback className="bg-iparty text-white">
+                      <User size={40} />
+                    </AvatarFallback>
+                  )}
+                </Avatar>
+                <Label
+                  htmlFor="picture"
+                  className="absolute bottom-0 right-0 bg-iparty text-white p-1 rounded-full cursor-pointer"
+                >
+                  <ImagePlus size={16} />
+                </Label>
+                <Input
+                  id="picture"
+                  type="file"
+                  accept="image/*"
+                  onChange={handleImageChange}
+                  className="hidden"
+                />
+              </div>
+            </div>
+            
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
               <Input
@@ -210,16 +304,16 @@ const EditProfileDialog = ({
                 type="button"
                 variant="outline"
                 onClick={() => onOpenChange(false)}
-                disabled={loading}
+                disabled={loading || uploadLoading}
               >
                 Cancelar
               </Button>
               <Button 
                 type="submit" 
-                disabled={loading}
+                disabled={loading || uploadLoading}
                 className="bg-iparty hover:bg-iparty-dark"
               >
-                {loading ? (
+                {(loading || uploadLoading) ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" /> 
                     Salvando...
