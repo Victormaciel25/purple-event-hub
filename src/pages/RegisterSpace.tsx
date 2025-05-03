@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -652,7 +651,7 @@ const RegisterSpace = () => {
               <div className="border rounded-lg p-6">
                 <ImageUpload 
                   onImagesChange={handleFilesChange} 
-                  maxImages={5}
+                  maxImages={20}
                 />
               </div>
               
