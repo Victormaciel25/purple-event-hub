@@ -11,6 +11,7 @@ export type SpaceWithProfileInfo = {
     email?: string | null;
   } | null;
   photo_count?: number;
+  price?: string;
 };
 
 export type SpacePhotoType = {

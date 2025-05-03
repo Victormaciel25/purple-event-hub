@@ -28,6 +28,7 @@ type SpaceWithProfileInfo = {
     email?: string | null;
   } | null;
   photo_count?: number;
+  price?: string;
 };
 
 const SpaceApproval = () => {
@@ -66,6 +67,7 @@ const SpaceApproval = () => {
           created_at,
           status,
           user_id,
+          price,
           profiles:profiles!user_id (
             first_name, 
             last_name

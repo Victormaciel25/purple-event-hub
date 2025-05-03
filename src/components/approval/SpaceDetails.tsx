@@ -13,7 +13,8 @@ import {
   Home,
   User,
   Phone,
-  Image
+  Image,
+  DollarSign
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -110,6 +111,16 @@ const SpaceDetails: React.FC<SpaceDetailsProps> = ({
               </div>
             </Card>
           </div>
+
+          <Card className="p-4">
+            <div className="flex items-center">
+              <DollarSign className="text-gray-400 mr-3" size={18} />
+              <div>
+                <p className="text-sm font-medium text-gray-500">Valor</p>
+                <p className="text-sm">R$ {selectedSpace.price}</p>
+              </div>
+            </div>
+          </Card>
 
           <Card className="p-4">
             <div className="flex items-center">

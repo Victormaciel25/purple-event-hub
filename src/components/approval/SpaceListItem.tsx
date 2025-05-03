@@ -3,7 +3,7 @@ import React from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Eye } from "lucide-react";
+import { Eye, DollarSign } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 type SpaceWithProfileInfo = {
@@ -18,6 +18,7 @@ type SpaceWithProfileInfo = {
     email?: string | null;
   } | null;
   photo_count?: number;
+  price?: string;
 };
 
 type SpaceListItemProps = {
@@ -83,6 +84,14 @@ const SpaceListItem: React.FC<SpaceListItemProps> = ({ space, onViewDetails }) =
         <div>
           <p className="text-muted-foreground">Fotos:</p>
           <p>{space.photo_count || 0}</p>
+        </div>
+
+        <div>
+          <p className="text-muted-foreground">Valor:</p>
+          <div className="flex items-center">
+            <DollarSign size={12} className="text-gray-500 mr-1" />
+            <p>{space.price ? `R$ ${space.price}` : "Não informado"}</p>
+          </div>
         </div>
       </div>
       
