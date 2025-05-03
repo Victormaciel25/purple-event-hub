@@ -60,6 +60,7 @@ const Login = () => {
             description: "As senhas não coincidem",
             variant: "destructive",
           });
+          setLoading(false);
           return;
         }
 
@@ -78,19 +79,28 @@ const Login = () => {
 
         if (error) throw error;
 
-        // Update profile with additional information
+        // Adicionando o código solicitado para criar o perfil do usuário
         if (data.user) {
-          const { error: profileError } = await supabase
+          const userId = data.user.id;
+          const { data: newProfile, error: profileError } = await supabase
             .from('profiles')
-            .upsert({
-              id: data.user.id,
+            .insert({
+              id: userId,
               first_name: firstName,
               last_name: lastName,
               phone: phone,
-            });
+            })
+            .select()
+            .single();
 
           if (profileError) {
-            console.error("Error updating profile:", profileError);
+            console.error("Erro ao criar perfil:", profileError);
+            toast({
+              title: "Erro ao completar cadastro",
+              description: profileError.message,
+              variant: "destructive",
+            });
+            return;  // não continua
           }
         }
 
