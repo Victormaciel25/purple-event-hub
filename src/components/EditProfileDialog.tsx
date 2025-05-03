@@ -6,6 +6,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogFooter,
+  DialogDescription,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -120,6 +121,9 @@ const EditProfileDialog = ({
           <DialogTitle className="flex items-center gap-2">
             <Pencil className="h-5 w-5" /> Editar Perfil
           </DialogTitle>
+          <DialogDescription>
+            Preencha suas informações pessoais abaixo
+          </DialogDescription>
         </DialogHeader>
         
         {fetchLoading ? (
@@ -148,6 +152,7 @@ const EditProfileDialog = ({
                 value={firstName}
                 onChange={(e) => setFirstName(e.target.value)}
                 placeholder="Seu nome"
+                required
               />
             </div>
             
@@ -158,6 +163,7 @@ const EditProfileDialog = ({
                 value={lastName}
                 onChange={(e) => setLastName(e.target.value)}
                 placeholder="Seu sobrenome"
+                required
               />
             </div>
             
@@ -168,6 +174,7 @@ const EditProfileDialog = ({
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
                 placeholder="(00) 00000-0000"
+                required
               />
             </div>
             
