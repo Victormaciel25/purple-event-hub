@@ -28,9 +28,9 @@ const EditProfileDialog = ({
   userId,
   onProfileUpdated,
 }: EditProfileDialogProps) => {
+  const [email, setEmail] = useState("");
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
-  const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [loading, setLoading] = useState(false);
   const [fetchLoading, setFetchLoading] = useState(true);
