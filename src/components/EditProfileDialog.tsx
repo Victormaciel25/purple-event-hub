@@ -50,8 +50,21 @@ const EditProfileDialog = ({
     try {
       // Get user email from auth
       const { data: userData } = await supabase.auth.getUser();
-      if (userData.user) {
+      
+      if (userData?.user) {
         setEmail(userData.user.email || "");
+        
+        // Check if metadata contains user info
+        const metadata = userData.user.user_metadata;
+        if (metadata && metadata.first_name) {
+          setFirstName(metadata.first_name || "");
+        }
+        if (metadata && metadata.last_name) {
+          setLastName(metadata.last_name || "");
+        }
+        if (metadata && metadata.phone) {
+          setPhone(metadata.phone || "");
+        }
       }
       
       // Get profile data
@@ -64,9 +77,10 @@ const EditProfileDialog = ({
       if (profileError) {
         console.error("Error fetching profile:", profileError);
       } else if (profileData) {
-        setFirstName(profileData.first_name || "");
-        setLastName(profileData.last_name || "");
-        setPhone(profileData.phone || "");
+        // Only set values if they exist in profileData
+        if (profileData.first_name) setFirstName(profileData.first_name);
+        if (profileData.last_name) setLastName(profileData.last_name);
+        if (profileData.phone) setPhone(profileData.phone);
       }
     } catch (error) {
       console.error("Error fetching user data:", error);
@@ -83,16 +97,29 @@ const EditProfileDialog = ({
     setLoading(true);
     
     try {
+      // Update user metadata
+      const { error: metadataError } = await supabase.auth.updateUser({
+        data: {
+          first_name: firstName,
+          last_name: lastName,
+          phone: phone,
+        }
+      });
+      
+      if (metadataError) {
+        console.error("Error updating user metadata:", metadataError);
+      }
+      
       // Update profile in database
       const { error: profileError } = await supabase
         .from("profiles")
-        .update({
+        .upsert({
+          id: userId,
           first_name: firstName,
           last_name: lastName,
           phone: phone,
           updated_at: new Date().toISOString(),
-        })
-        .eq("id", userId);
+        });
       
       if (profileError) throw profileError;
       

@@ -79,28 +79,53 @@ const Login = () => {
 
         if (error) throw error;
 
-        // Adicionando o código solicitado para criar o perfil do usuário
+        // Create profile only after successful signup
         if (data.user) {
           const userId = data.user.id;
-          const { data: newProfile, error: profileError } = await supabase
-            .from('profiles')
-            .insert({
-              id: userId,
-              first_name: firstName,
-              last_name: lastName,
-              phone: phone,
-            })
-            .select()
-            .single();
-
-          if (profileError) {
+          
+          try {
+            // First attempt with user's own auth
+            const { error: profileError } = await supabase
+              .from('profiles')
+              .insert({
+                id: userId,
+                first_name: firstName,
+                last_name: lastName,
+                phone: phone,
+                updated_at: new Date().toISOString(),
+              });
+              
+            if (profileError) {
+              console.error("Erro ao criar perfil (tentativa 1):", profileError);
+              
+              // Segunda tentativa: fazer login após o signup para obter novas credenciais
+              await supabase.auth.signInWithPassword({
+                email,
+                password,
+              });
+              
+              // Tentar novamente com as novas credenciais
+              const { error: retryError } = await supabase
+                .from('profiles')
+                .insert({
+                  id: userId,
+                  first_name: firstName,
+                  last_name: lastName,
+                  phone: phone,
+                  updated_at: new Date().toISOString(),
+                });
+                
+              if (retryError) {
+                console.error("Erro ao criar perfil (tentativa 2):", retryError);
+                toast({
+                  title: "Aviso",
+                  description: "Cadastro realizado, mas houve um erro ao salvar seu perfil. Você pode completar seu perfil mais tarde.",
+                  variant: "destructive",
+                });
+              }
+            }
+          } catch (profileError: any) {
             console.error("Erro ao criar perfil:", profileError);
-            toast({
-              title: "Erro ao completar cadastro",
-              description: profileError.message,
-              variant: "destructive",
-            });
-            return;  // não continua
           }
         }
 
