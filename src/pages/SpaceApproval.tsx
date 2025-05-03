@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
@@ -132,17 +133,26 @@ const SpaceApproval = () => {
 
   const fetchPhotoUrls = async (photos: { id: string; storage_path: string }[]) => {
     try {
+      console.log("Fetching photo URLs for photos:", photos);
+      
       const urls = await Promise.all(
         photos.map(async (photo) => {
+          // Ensure we're using the correct storage path format
           const { data, error } = await supabase.storage
             .from('spaces')
             .createSignedUrl(photo.storage_path, 3600);
           
-          if (error) throw error;
+          if (error) {
+            console.error("Error creating signed URL for path:", photo.storage_path, error);
+            throw error;
+          }
+          
+          console.log("Created signed URL for photo:", photo.id, data.signedUrl);
           return data.signedUrl;
         })
       );
       
+      console.log("Final photo URLs:", urls);
       setPhotoUrls(urls);
     } catch (error) {
       console.error("Error fetching photo URLs:", error);
