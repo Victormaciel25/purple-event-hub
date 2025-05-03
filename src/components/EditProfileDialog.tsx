@@ -15,6 +15,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
 import { Pencil, Loader2, ImagePlus, User } from "lucide-react";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { toast } from "sonner";
 
 interface EditProfileDialogProps {
   open: boolean;
@@ -38,7 +39,7 @@ const EditProfileDialog = ({
   const [profileImage, setProfileImage] = useState<string | null>(null);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [uploadLoading, setUploadLoading] = useState(false);
-  const { toast } = useToast();
+  const { toast: toastUI } = useToast();
 
   useEffect(() => {
     if (open && userId) {
@@ -68,6 +69,9 @@ const EditProfileDialog = ({
         }
         if (metadata && metadata.phone) {
           setPhone(metadata.phone || "");
+        }
+        if (metadata && metadata.avatar_url) {
+          setProfileImage(metadata.avatar_url);
         }
       }
       
@@ -116,10 +120,12 @@ const EditProfileDialog = ({
       // Create a unique file name for the image
       const fileExt = imageFile.name.split('.').pop();
       const fileName = `${userId}-${Date.now()}.${fileExt}`;
-      const filePath = `avatars/${fileName}`;
+      const filePath = `${userId}/${fileName}`;
+      
+      console.log("Uploading image to path:", filePath);
       
       // Upload the image to Supabase storage
-      const { error: uploadError } = await supabase.storage
+      const { error: uploadError, data } = await supabase.storage
         .from('avatars')
         .upload(filePath, imageFile, { 
           upsert: true 
@@ -129,19 +135,18 @@ const EditProfileDialog = ({
         throw uploadError;
       }
       
+      console.log("Upload successful:", data);
+      
       // Get the public URL of the uploaded image
-      const { data } = supabase.storage
+      const { data: urlData } = supabase.storage
         .from('avatars')
         .getPublicUrl(filePath);
       
-      return data.publicUrl;
+      console.log("Public URL:", urlData.publicUrl);
+      return urlData.publicUrl;
     } catch (error) {
       console.error('Error uploading image:', error);
-      toast({
-        title: "Erro",
-        description: "Falha ao fazer upload da imagem",
-        variant: "destructive",
-      });
+      toast.error("Falha ao fazer upload da imagem");
       return null;
     } finally {
       setUploadLoading(false);
@@ -159,7 +164,12 @@ const EditProfileDialog = ({
       // Upload image if a new one was selected
       let avatarUrl = profileImage;
       if (imageFile) {
+        console.log("Uploading new image file");
         avatarUrl = await uploadImage();
+      }
+      
+      if (avatarUrl) {
+        console.log("Avatar URL to save:", avatarUrl);
       }
       
       // Update user metadata
@@ -174,7 +184,10 @@ const EditProfileDialog = ({
       
       if (metadataError) {
         console.error("Error updating user metadata:", metadataError);
+        throw metadataError;
       }
+      
+      console.log("User metadata updated successfully");
       
       // Update profile in database
       const { error: profileError } = await supabase
@@ -188,21 +201,19 @@ const EditProfileDialog = ({
           updated_at: new Date().toISOString(),
         });
       
-      if (profileError) throw profileError;
+      if (profileError) {
+        console.error("Error updating profile in database:", profileError);
+        throw profileError;
+      }
       
-      toast({
-        title: "Perfil atualizado",
-        description: "Suas informações foram atualizadas com sucesso",
-      });
+      console.log("Profile updated successfully in database");
       
+      toast.success("Perfil atualizado com sucesso");
       onProfileUpdated();
       onOpenChange(false);
     } catch (error: any) {
-      toast({
-        title: "Erro",
-        description: error.message || "Erro ao atualizar perfil",
-        variant: "destructive",
-      });
+      console.error("Error in handleSubmit:", error);
+      toast.error(error.message || "Erro ao atualizar perfil");
     } finally {
       setLoading(false);
     }

@@ -48,6 +48,7 @@ const Profile = () => {
         console.error("Error fetching profile:", error);
       } else {
         setProfile(profileData);
+        console.log("Profile data loaded:", profileData);
       }
       
       setLoading(false);
@@ -125,14 +126,11 @@ const Profile = () => {
       
       if (error) throw error;
       setProfile(data);
+      console.log("Profile refreshed:", data);
     } catch (error) {
       console.error("Error refreshing profile:", error);
     }
   };
-
-  const displayName = profile ? 
-    `${profile.first_name || ''} ${profile.last_name || ''}`.trim() : 
-    session?.user?.email?.split('@')[0] || "Usuário";
 
   const firstName = profile?.first_name || session?.user?.user_metadata?.first_name || '';
   const lastName = profile?.last_name || session?.user?.user_metadata?.last_name || '';
@@ -140,6 +138,8 @@ const Profile = () => {
   
   // Get avatar URL from either profile data or user metadata
   const avatarUrl = profile?.avatar_url || session?.user?.user_metadata?.avatar_url || null;
+
+  console.log("Avatar URL:", avatarUrl);
 
   // Renderizar loading quando estiver carregando
   if (loading || roleLoading) {
