@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -133,6 +132,10 @@ const Profile = () => {
     `${profile.first_name || ''} ${profile.last_name || ''}`.trim() : 
     session?.user?.email?.split('@')[0] || "Usuário";
 
+  const firstName = profile?.first_name || session?.user?.user_metadata?.first_name || '';
+  const lastName = profile?.last_name || session?.user?.user_metadata?.last_name || '';
+  const fullName = `${firstName} ${lastName}`.trim();
+
   // Renderizar loading quando estiver carregando
   if (loading || roleLoading) {
     return (
@@ -151,9 +154,12 @@ const Profile = () => {
         <div className="h-24 w-24 bg-iparty rounded-full flex items-center justify-center mb-4">
           <User size={50} className="text-white" />
         </div>
-        <h2 className="text-xl font-medium">
-          {displayName}
-        </h2>
+        {/* Add user's name in bold */}
+        {fullName && (
+          <h2 className="text-xl font-bold mb-1">
+            {fullName}
+          </h2>
+        )}
         <p className="text-muted-foreground">{session?.user?.email}</p>
         <Button 
           variant="outline" 
