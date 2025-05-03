@@ -14,7 +14,7 @@ interface ImageUploadProps {
 
 const ImageUpload: React.FC<ImageUploadProps> = ({
   onImagesChange,
-  maxImages = 5,
+  maxImages = 20,
   previewUrls = [],
   onRemovePreview,
 }) => {
