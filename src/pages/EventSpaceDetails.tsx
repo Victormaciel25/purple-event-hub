@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -13,7 +12,9 @@ import {
   Waves, 
   Users, 
   Heart, 
-  Loader2 
+  Loader2,
+  X,
+  Maximize2
 } from "lucide-react";
 import {
   Carousel,
@@ -26,6 +27,11 @@ import { Badge } from "@/components/ui/badge";
 import { useEventSpaceFavorites } from "../hooks/useEventSpaceFavorites";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import {
+  Dialog,
+  DialogContent,
+  DialogClose
+} from "@/components/ui/dialog";
 
 // Define a type for the space details with all the fields
 type SpaceDetails = {
@@ -57,6 +63,8 @@ const EventSpaceDetails: React.FC = () => {
   const [space, setSpace] = useState<SpaceDetails | null>(null);
   const [loading, setLoading] = useState(true);
   const [imageUrls, setImageUrls] = useState<string[]>([]);
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [isImageDialogOpen, setIsImageDialogOpen] = useState(false);
   
   useEffect(() => {
     if (id) {
@@ -170,6 +178,11 @@ const EventSpaceDetails: React.FC = () => {
     });
   };
   
+  const handleImageClick = (imageUrl: string) => {
+    setSelectedImage(imageUrl);
+    setIsImageDialogOpen(true);
+  };
+  
   if (loading) {
     return (
       <div className="container px-4 py-6 flex flex-col items-center justify-center h-[70vh]">
@@ -221,12 +234,24 @@ const EventSpaceDetails: React.FC = () => {
           <CarouselContent>
             {space.images.map((image, index) => (
               <CarouselItem key={index} className="md:basis-auto">
-                <div className="h-64 md:h-80 w-full rounded-lg overflow-hidden">
+                <div className="h-64 md:h-80 w-full rounded-lg overflow-hidden relative group">
                   <img 
                     src={image} 
                     alt={`${space.name} - Imagem ${index + 1}`} 
-                    className="w-full h-full object-cover"
+                    className="w-full h-full object-cover cursor-pointer"
+                    onClick={() => handleImageClick(image)}
                   />
+                  <div className="absolute bottom-2 right-2 flex gap-2">
+                    <span className="bg-black/70 text-white text-xs px-2 py-1 rounded">
+                      {index + 1}/{space.images.length}
+                    </span>
+                    <button 
+                      className="bg-black/70 text-white p-1 rounded opacity-0 group-hover:opacity-100 transition-opacity"
+                      onClick={() => handleImageClick(image)}
+                    >
+                      <Maximize2 size={16} />
+                    </button>
+                  </div>
                 </div>
               </CarouselItem>
             ))}
@@ -235,6 +260,22 @@ const EventSpaceDetails: React.FC = () => {
           <CarouselNext className="right-2 bg-white/70" />
         </Carousel>
       </div>
+      
+      {/* Dialog para visualizar imagem ampliada */}
+      <Dialog open={isImageDialogOpen} onOpenChange={setIsImageDialogOpen}>
+        <DialogContent className="max-w-screen-lg w-[95vw] h-[90vh] p-0 bg-black/95 border-none">
+          <div className="flex items-center justify-center w-full h-full relative">
+            <img 
+              src={selectedImage || ''} 
+              alt="Visualização ampliada" 
+              className="max-w-full max-h-full object-contain"
+            />
+            <DialogClose className="absolute top-4 right-4 bg-black/50 rounded-full p-1 hover:bg-black/70">
+              <X className="h-6 w-6 text-white" />
+            </DialogClose>
+          </div>
+        </DialogContent>
+      </Dialog>
       
       {/* Preço e endereço */}
       <div className="mb-6">
