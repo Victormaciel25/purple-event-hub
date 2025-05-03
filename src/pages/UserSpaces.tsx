@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -72,38 +71,49 @@ const UserSpaces: React.FC = () => {
     try {
       setLoading(true);
       
-      // First, delete all photos associated with the space
-      // Get all photos for this space
-      const { data: photosData, error: fetchPhotosError } = await supabase
+      // First, get all photos associated with this space
+      const { data: photosData, error: photosError } = await supabase
         .from("space_photos")
         .select("id, storage_path")
         .eq("space_id", spaceId);
-      
-      if (fetchPhotosError) throw fetchPhotosError;
-      
-      // Delete each photo from storage
-      for (const photo of (photosData || [])) {
-        // Remove file from storage
-        await supabase.storage
-          .from('spaces')
-          .remove([photo.storage_path]);
+        
+      if (photosError) {
+        throw photosError;
       }
       
-      // Delete all photo records from database
-      const { error: photosDeleteError } = await supabase
-        .from("space_photos")
-        .delete()
-        .eq("space_id", spaceId);
+      if (photosData && photosData.length > 0) {
+        // Create a transaction-like approach by using a single operation to delete all photo records
+        const photoIds = photosData.map(photo => photo.id);
+        
+        // Delete photo records from the database first
+        const { error: deletePhotosError } = await supabase
+          .from("space_photos")
+          .delete()
+          .in("id", photoIds);
+          
+        if (deletePhotosError) {
+          throw deletePhotosError;
+        }
+        
+        // Then remove files from storage
+        for (const photo of photosData) {
+          if (photo.storage_path) {
+            await supabase.storage
+              .from('spaces')
+              .remove([photo.storage_path]);
+          }
+        }
+      }
       
-      if (photosDeleteError) throw photosDeleteError;
-      
-      // Now it's safe to delete the space
-      const { error: spaceError } = await supabase
+      // Now that photos are deleted, delete the space
+      const { error: spaceDeleteError } = await supabase
         .from("spaces")
         .delete()
         .eq("id", spaceId);
-      
-      if (spaceError) throw spaceError;
+        
+      if (spaceDeleteError) {
+        throw spaceDeleteError;
+      }
       
       toast.success("Espaço excluído com sucesso");
       
@@ -243,4 +253,3 @@ const UserSpaces: React.FC = () => {
 };
 
 export default UserSpaces;
-
