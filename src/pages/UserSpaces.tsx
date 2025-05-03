@@ -72,13 +72,32 @@ const UserSpaces: React.FC = () => {
     try {
       setLoading(true);
       
-      const { error: photosError } = await supabase
+      // First, delete all photos associated with the space
+      // Get all photos for this space
+      const { data: photosData, error: fetchPhotosError } = await supabase
+        .from("space_photos")
+        .select("id, storage_path")
+        .eq("space_id", spaceId);
+      
+      if (fetchPhotosError) throw fetchPhotosError;
+      
+      // Delete each photo from storage
+      for (const photo of (photosData || [])) {
+        // Remove file from storage
+        await supabase.storage
+          .from('spaces')
+          .remove([photo.storage_path]);
+      }
+      
+      // Delete all photo records from database
+      const { error: photosDeleteError } = await supabase
         .from("space_photos")
         .delete()
         .eq("space_id", spaceId);
       
-      if (photosError) throw photosError;
+      if (photosDeleteError) throw photosDeleteError;
       
+      // Now it's safe to delete the space
       const { error: spaceError } = await supabase
         .from("spaces")
         .delete()
@@ -88,6 +107,7 @@ const UserSpaces: React.FC = () => {
       
       toast.success("Espaço excluído com sucesso");
       
+      // Update local state to remove the deleted space
       setSpaces(spaces.filter(space => space.id !== spaceId));
     } catch (error) {
       console.error("Erro ao excluir espaço:", error);
@@ -223,3 +243,4 @@ const UserSpaces: React.FC = () => {
 };
 
 export default UserSpaces;
+
