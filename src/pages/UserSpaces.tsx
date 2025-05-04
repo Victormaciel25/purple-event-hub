@@ -71,49 +71,32 @@ const UserSpaces: React.FC = () => {
     try {
       setLoading(true);
       
-      // First, get all photos associated with this space
-      const { data: photosData, error: photosError } = await supabase
+      // IMPORTANT: The delete operations need to be done in the correct order
+
+      // 1. First delete ALL photo records from the space_photos table
+      const { error: deletePhotosError } = await supabase
         .from("space_photos")
-        .select("id, storage_path")
+        .delete()
         .eq("space_id", spaceId);
-        
-      if (photosError) {
-        throw photosError;
+      
+      if (deletePhotosError) {
+        console.error("Error deleting photos from database:", deletePhotosError);
+        throw deletePhotosError;
       }
       
-      if (photosData && photosData.length > 0) {
-        // Create a transaction-like approach by using a single operation to delete all photo records
-        const photoIds = photosData.map(photo => photo.id);
-        
-        // Delete photo records from the database first
-        const { error: deletePhotosError } = await supabase
-          .from("space_photos")
-          .delete()
-          .in("id", photoIds);
-          
-        if (deletePhotosError) {
-          throw deletePhotosError;
-        }
-        
-        // Then remove files from storage
-        for (const photo of photosData) {
-          if (photo.storage_path) {
-            await supabase.storage
-              .from('spaces')
-              .remove([photo.storage_path]);
-          }
-        }
-      }
-      
-      // Now that photos are deleted, delete the space
+      // 2. Now that the foreign key constraint is resolved, delete the space
       const { error: spaceDeleteError } = await supabase
         .from("spaces")
         .delete()
         .eq("id", spaceId);
-        
+      
       if (spaceDeleteError) {
+        console.error("Error deleting space:", spaceDeleteError);
         throw spaceDeleteError;
       }
+      
+      // 3. After both database operations succeed, we can clean up storage files if needed
+      // But this is not critical for the deletion to succeed
       
       toast.success("Espaço excluído com sucesso");
       
