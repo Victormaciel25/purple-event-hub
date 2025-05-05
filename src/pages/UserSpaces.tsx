@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -7,6 +8,7 @@ import { ChevronLeft, Edit, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 type UserSpace = {
   id: string;
@@ -22,6 +24,7 @@ type UserSpace = {
 const UserSpaces: React.FC = () => {
   const [spaces, setSpaces] = useState<UserSpace[]>([]);
   const [loading, setLoading] = useState(true);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
   const navigate = useNavigate();
   
   useEffect(() => {
@@ -70,40 +73,52 @@ const UserSpaces: React.FC = () => {
     
     try {
       setLoading(true);
+      setDeleteError(null);
       
-      // IMPORTANT: The delete operations need to be done in the correct order
-
-      // 1. First delete ALL photo records from the space_photos table
-      const { error: deletePhotosError } = await supabase
+      // First get all photos for this space
+      const { data: photoData, error: photoFetchError } = await supabase
         .from("space_photos")
-        .delete()
+        .select("id")
         .eq("space_id", spaceId);
       
-      if (deletePhotosError) {
-        console.error("Error deleting photos from database:", deletePhotosError);
-        throw deletePhotosError;
+      if (photoFetchError) {
+        console.error("Erro ao buscar fotos:", photoFetchError);
+        throw photoFetchError;
       }
       
-      // 2. Now that the foreign key constraint is resolved, delete the space
+      // Delete all photo records one by one to ensure they're all deleted
+      if (photoData && photoData.length > 0) {
+        for (const photo of photoData) {
+          const { error: deletePhotoError } = await supabase
+            .from("space_photos")
+            .delete()
+            .eq("id", photo.id);
+          
+          if (deletePhotoError) {
+            console.error(`Erro ao excluir foto ${photo.id}:`, deletePhotoError);
+            throw deletePhotoError;
+          }
+        }
+      }
+      
+      // Now that all photos are deleted, delete the space
       const { error: spaceDeleteError } = await supabase
         .from("spaces")
         .delete()
         .eq("id", spaceId);
       
       if (spaceDeleteError) {
-        console.error("Error deleting space:", spaceDeleteError);
+        console.error("Erro ao excluir espaço:", spaceDeleteError);
         throw spaceDeleteError;
       }
-      
-      // 3. After both database operations succeed, we can clean up storage files if needed
-      // But this is not critical for the deletion to succeed
       
       toast.success("Espaço excluído com sucesso");
       
       // Update local state to remove the deleted space
       setSpaces(spaces.filter(space => space.id !== spaceId));
-    } catch (error) {
+    } catch (error: any) {
       console.error("Erro ao excluir espaço:", error);
+      setDeleteError(error.message || "Erro ao excluir espaço");
       toast.error("Erro ao excluir espaço");
     } finally {
       setLoading(false);
@@ -144,6 +159,13 @@ const UserSpaces: React.FC = () => {
 
   const renderSpaceCards = () => (
     <ScrollArea className="h-[calc(100vh-220px)]">
+      {deleteError && (
+        <Alert variant="destructive" className="mb-4">
+          <AlertDescription>
+            {deleteError}
+          </AlertDescription>
+        </Alert>
+      )}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-1">
         {spaces.map((space) => (
           <Card key={space.id} className="border shadow-sm">
@@ -197,6 +219,7 @@ const UserSpaces: React.FC = () => {
                 size="sm"
                 onClick={() => handleDelete(space.id)}
                 className="flex items-center"
+                disabled={loading}
               >
                 <Trash2 size={16} className="mr-1" />
                 Excluir
