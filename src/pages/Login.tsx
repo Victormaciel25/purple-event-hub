@@ -155,7 +155,7 @@ const Login = () => {
           <div className="flex justify-center mb-4">
             <div className="h-32 w-32">
               <img 
-                src="/lovable-uploads/290803b3-bebd-4c82-aa40-6a909967638d.png" 
+                src="/lovable-uploads/b59e9ab5-1380-47bb-b7f4-95ecfc1fe03c.png" 
                 alt="iParty Balloons" 
                 className="w-full h-full"
               />
