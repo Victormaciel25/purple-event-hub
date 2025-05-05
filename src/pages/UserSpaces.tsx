@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -78,8 +79,8 @@ const UserSpaces: React.FC = () => {
       
       // Usando uma RPC (Remote Procedure Call) para executar a exclusão no lado do servidor
       // Isso garante que todas as fotos sejam excluídas antes do espaço ser removido
-      const { error } = await supabase.rpc('delete_space_with_photos', {
-        space_id_param: spaceId
+      const { error } = await supabase.functions.invoke("delete_space_with_photos", {
+        body: { space_id: spaceId }
       });
       
       if (error) {

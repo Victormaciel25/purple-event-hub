@@ -181,6 +181,10 @@ export type Database = {
         Args: { user_id: string; requested_role: string }
         Returns: boolean
       }
+      delete_space_with_photos: {
+        Args: { space_id_param: string }
+        Returns: undefined
+      }
       get_user_id_by_email: {
         Args: { email_input: string }
         Returns: string
