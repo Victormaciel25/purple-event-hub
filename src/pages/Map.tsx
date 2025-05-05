@@ -1,7 +1,7 @@
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Input } from "@/components/ui/input";
-import { Search } from "lucide-react";
+import { Search, Loader2 } from "lucide-react";
 import LocationMap from "@/components/LocationMap";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
@@ -18,11 +18,21 @@ type Space = {
   zipCode?: string;
 };
 
+type GeocodingResult = {
+  lat: number;
+  lng: number;
+  locationName: string;
+};
+
 const Map = () => {
   const [spaces, setSpaces] = useState<Space[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [searchValue, setSearchValue] = useState<string>("");
   const [filteredSpaces, setFilteredSpaces] = useState<Space[]>([]);
+  const [mapCenter, setMapCenter] = useState<{lat: number, lng: number} | null>(null);
+  const [searchLoading, setSearchLoading] = useState<boolean>(false);
+  const [searchError, setSearchError] = useState<string | null>(null);
+  const mapRef = useRef<any>(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -103,17 +113,94 @@ const Map = () => {
     navigate(`/event-space/${spaceId}`);
   };
 
+  const handleSearch = async () => {
+    if (!searchValue.trim()) return;
+    
+    setSearchLoading(true);
+    setSearchError(null);
+    
+    try {
+      const geocodingResult = await geocodeAddress(searchValue);
+      
+      if (geocodingResult) {
+        setMapCenter({ lat: geocodingResult.lat, lng: geocodingResult.lng });
+        
+        // Save the map reference when it loads
+        if (mapRef.current) {
+          mapRef.current.panTo({ lat: geocodingResult.lat, lng: geocodingResult.lng });
+          mapRef.current.setZoom(14); // Zoom para um nível adequado
+        }
+      } else {
+        setSearchError("Localização não encontrada");
+      }
+    } catch (error) {
+      console.error("Erro na pesquisa de localização:", error);
+      setSearchError("Erro ao buscar localização");
+    } finally {
+      setSearchLoading(false);
+    }
+  };
+
+  const geocodeAddress = async (address: string): Promise<GeocodingResult | null> => {
+    try {
+      // Usar a API de Geocoding do Google
+      const response = await fetch(
+        `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(
+          address
+        )}&key=AIzaSyDmquKmV6OtKkJCG2eEe4NIPE8MzcrkUyw`
+      );
+
+      const data = await response.json();
+
+      if (data.status === "OK" && data.results && data.results.length > 0) {
+        const result = data.results[0];
+        const location = result.geometry.location;
+        
+        return {
+          lat: location.lat,
+          lng: location.lng,
+          locationName: result.formatted_address
+        };
+      }
+      
+      return null;
+    } catch (error) {
+      console.error("Erro na geocodificação:", error);
+      return null;
+    }
+  };
+
+  const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      handleSearch();
+    }
+  };
+
   return (
     <div className="container px-4 py-6 max-w-4xl mx-auto h-full">
       <div className="relative mb-6">
-        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" size={18} />
+        <Search 
+          className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground cursor-pointer" 
+          size={18} 
+          onClick={handleSearch}
+        />
         <Input 
-          placeholder="Buscar por nome, endereço ou CEP..." 
-          className="pl-10"
+          placeholder="Buscar por nome, endereço, CEP ou localidade..." 
+          className="pl-10 pr-10"
           value={searchValue}
           onChange={(e) => setSearchValue(e.target.value)}
+          onKeyDown={handleKeyPress}
         />
+        {searchLoading && (
+          <Loader2 className="absolute right-3 top-1/2 transform -translate-y-1/2 w-5 h-5 animate-spin text-iparty" />
+        )}
       </div>
+
+      {searchError && (
+        <div className="mb-2 p-2 bg-red-100 text-red-700 rounded-md text-sm">
+          {searchError}
+        </div>
+      )}
 
       <div className="bg-gray-200 rounded-xl h-[calc(100vh-200px)] flex items-center justify-center">
         <LocationMap 
@@ -122,6 +209,8 @@ const Map = () => {
           spaces={filteredSpaces}
           onSpaceClick={handleSpaceClick}
           isLoading={loading}
+          initialLocation={mapCenter}
+          onMapLoad={(map) => { mapRef.current = map; }}
         />
       </div>
     </div>

@@ -22,6 +22,7 @@ interface LocationMapProps {
   spaces?: Space[];
   onSpaceClick?: (spaceId: string) => void;
   isLoading?: boolean;
+  onMapLoad?: (map: google.maps.Map) => void;
 }
 
 const mapContainerStyle = {
@@ -46,7 +47,8 @@ const LocationMap = ({
   viewOnly = false, 
   spaces = [],
   onSpaceClick,
-  isLoading = false
+  isLoading = false,
+  onMapLoad
 }: LocationMapProps) => {
   const [position, setPosition] = useState<{ lat: number, lng: number } | null>(
     initialLocation || null
@@ -66,6 +68,13 @@ const LocationMap = ({
   useEffect(() => {
     setShowPins(currentZoom >= PIN_VISIBILITY_ZOOM_THRESHOLD);
   }, [currentZoom]);
+
+  // Update position when initialLocation changes
+  useEffect(() => {
+    if (initialLocation) {
+      setPosition(initialLocation);
+    }
+  }, [initialLocation]);
 
   const requestUserLocation = () => {
     setHasRequestedLocation(true);
@@ -130,7 +139,7 @@ const LocationMap = ({
     }
   };
 
-  const onMapLoad = (map: google.maps.Map) => {
+  const handleMapLoad = (map: google.maps.Map) => {
     mapRef.current = map;
     setCurrentZoom(map.getZoom() || 12);
     
@@ -138,6 +147,11 @@ const LocationMap = ({
     map.addListener('zoom_changed', () => {
       setCurrentZoom(map.getZoom() || 12);
     });
+    
+    // Call the onMapLoad callback if provided
+    if (onMapLoad) {
+      onMapLoad(map);
+    }
   };
 
   // Effect to center the map on initialLocation when it changes
@@ -150,7 +164,7 @@ const LocationMap = ({
 
   // Effect to fit all markers in view if there are spaces
   useEffect(() => {
-    if (spaces && spaces.length > 0 && mapRef.current) {
+    if (spaces && spaces.length > 0 && mapRef.current && !initialLocation) {
       const bounds = new google.maps.LatLngBounds();
       spaces.forEach(space => {
         bounds.extend(new google.maps.LatLng(space.latitude, space.longitude));
@@ -162,7 +176,7 @@ const LocationMap = ({
         mapRef.current.setZoom(15);
       }
     }
-  }, [spaces, isLoaded]);
+  }, [spaces, isLoaded, initialLocation]);
 
   const handleMarkerClick = (space: Space) => {
     setSelectedSpace(space);
