@@ -232,12 +232,11 @@ const LocationMap = ({
                 position={{ lat: space.latitude, lng: space.longitude }}
                 onClick={() => handleMarkerClick(space)}
                 icon={{
-                  path: google.maps.SymbolPath.BACKWARD_CLOSED_ARROW,
-                  scale: 6,
-                  fillColor: "#7C3AED", // Cor do iParty (roxo)
-                  fillOpacity: 1,
-                  strokeWeight: 2,
-                  strokeColor: "#FFFFFF",
+                  url: `data:image/svg+xml;utf8,${encodeURIComponent(
+                    '<svg xmlns="http://www.w3.org/2000/svg" width="36" height="42" viewBox="0 0 24 24" fill="none" stroke="#9b87f5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"></path><circle cx="12" cy="10" r="3" fill="white"></circle></svg>'
+                  )}`,
+                  scaledSize: new google.maps.Size(36, 42),
+                  anchor: new google.maps.Point(18, 42),
                 }}
               />
             ))}
@@ -247,26 +246,37 @@ const LocationMap = ({
               <InfoWindow
                 position={{ lat: selectedSpace.latitude, lng: selectedSpace.longitude }}
                 onCloseClick={handleInfoWindowClose}
+                options={{
+                  pixelOffset: new google.maps.Size(0, -42),
+                  maxWidth: 320
+                }}
               >
                 <div 
-                  className="space-info-window max-w-[260px]"
+                  className="space-info-window max-w-[300px] cursor-pointer"
                   onClick={handleSpaceClick}
-                  style={{ cursor: 'pointer' }}
                 >
-                  {selectedSpace.imageUrl && (
-                    <div className="mb-2 h-32 overflow-hidden rounded">
-                      <img 
-                        src={selectedSpace.imageUrl} 
-                        alt={selectedSpace.name} 
-                        className="w-full h-full object-cover" 
-                      />
+                  <div className="bg-white rounded-lg overflow-hidden shadow-lg">
+                    {selectedSpace.imageUrl && (
+                      <div className="h-40 overflow-hidden">
+                        <img 
+                          src={selectedSpace.imageUrl} 
+                          alt={selectedSpace.name} 
+                          className="w-full h-full object-cover" 
+                        />
+                      </div>
+                    )}
+                    <div className="p-3">
+                      <h3 className="font-bold text-base text-iparty">{selectedSpace.name}</h3>
+                      <p className="text-sm text-gray-600 mt-1">
+                        {selectedSpace.address}, {selectedSpace.number} - {selectedSpace.state}
+                      </p>
+                      <div className="mt-2 flex justify-end">
+                        <div className="text-xs bg-iparty/10 text-iparty px-2 py-1 rounded-full">
+                          Ver detalhes →
+                        </div>
+                      </div>
                     </div>
-                  )}
-                  <h3 className="font-bold text-base">{selectedSpace.name}</h3>
-                  <p className="text-sm text-gray-600 truncate">
-                    {selectedSpace.address}, {selectedSpace.number} - {selectedSpace.state}
-                  </p>
-                  <p className="text-xs text-purple-600 mt-1">Clique para ver detalhes</p>
+                  </div>
                 </div>
               </InfoWindow>
             )}
