@@ -49,7 +49,7 @@ const LocationMap = ({
   onSpaceClick,
   isLoading = false,
   onMapLoad,
-  keepPinsVisible = false // Default to false for backward compatibility
+  keepPinsVisible = false
 }: LocationMapProps) => {
   const [position, setPosition] = useState<{ lat: number, lng: number } | null>(
     initialLocation || null
@@ -279,21 +279,21 @@ const LocationMap = ({
               />
             ))}
             
-            {/* Show info window for selected space */}
+            {/* Show info window for selected space with reduced margins */}
             {selectedSpace && (
               <InfoWindow
                 position={{ lat: selectedSpace.latitude, lng: selectedSpace.longitude }}
                 onCloseClick={handleInfoWindowClose}
                 options={{
                   pixelOffset: new google.maps.Size(0, -46),
-                  maxWidth: 320
+                  maxWidth: 300
                 }}
               >
                 <div 
                   className="space-info-window max-w-[300px] cursor-pointer"
                   onClick={handleSpaceClick}
                 >
-                  <div className="bg-white rounded-lg overflow-hidden shadow-lg">
+                  <div className="bg-white rounded-lg overflow-hidden shadow-md">
                     {selectedSpace.imageUrl && (
                       <div className="h-40 overflow-hidden">
                         <img 
@@ -303,7 +303,7 @@ const LocationMap = ({
                         />
                       </div>
                     )}
-                    <div className="p-3">
+                    <div className="p-2">
                       <h3 className="font-bold text-base text-iparty">{selectedSpace.name}</h3>
                       <p className="text-sm text-gray-600 mt-1">
                         {selectedSpace.address}, {selectedSpace.number} - {selectedSpace.state}
@@ -313,7 +313,7 @@ const LocationMap = ({
                           CEP: {selectedSpace.zipCode}
                         </p>
                       )}
-                      <div className="mt-2 flex justify-end">
+                      <div className="mt-1 flex justify-end">
                         <div className="text-xs bg-iparty/10 text-iparty px-2 py-1 rounded-full">
                           Ver detalhes →
                         </div>
