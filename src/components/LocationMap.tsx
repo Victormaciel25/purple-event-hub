@@ -12,6 +12,7 @@ interface Space {
   latitude: number;
   longitude: number;
   imageUrl?: string;
+  zipCode?: string;
 }
 
 interface LocationMapProps {
@@ -34,6 +35,9 @@ const defaultCenter = {
   lng: -46.6333
 };
 
+// Zoom level threshold for showing/hiding pins
+const PIN_VISIBILITY_ZOOM_THRESHOLD = 9;
+
 const GOOGLE_MAPS_API_KEY = "AIzaSyDmquKmV6OtKkJCG2eEe4NIPE8MzcrkUyw";
 
 const LocationMap = ({ 
@@ -49,12 +53,19 @@ const LocationMap = ({
   );
   const [hasRequestedLocation, setHasRequestedLocation] = useState(viewOnly);
   const [selectedSpace, setSelectedSpace] = useState<Space | null>(null);
+  const [currentZoom, setCurrentZoom] = useState<number>(12);
+  const [showPins, setShowPins] = useState<boolean>(true);
   const mapRef = useRef<google.maps.Map | null>(null);
 
   const { isLoaded, loadError } = useJsApiLoader({
     id: 'google-map-script',
     googleMapsApiKey: GOOGLE_MAPS_API_KEY
   });
+
+  // Handle zoom changes to control pin visibility
+  useEffect(() => {
+    setShowPins(currentZoom >= PIN_VISIBILITY_ZOOM_THRESHOLD);
+  }, [currentZoom]);
 
   const requestUserLocation = () => {
     setHasRequestedLocation(true);
@@ -121,6 +132,12 @@ const LocationMap = ({
 
   const onMapLoad = (map: google.maps.Map) => {
     mapRef.current = map;
+    setCurrentZoom(map.getZoom() || 12);
+    
+    // Add zoom change listener
+    map.addListener('zoom_changed', () => {
+      setCurrentZoom(map.getZoom() || 12);
+    });
   };
 
   // Effect to center the map on initialLocation when it changes
@@ -225,20 +242,20 @@ const LocationMap = ({
               />
             )}
             
-            {/* Render all space markers if provided */}
-            {spaces.map((space) => (
+            {/* Render all space markers if provided and zoom level is appropriate */}
+            {showPins && spaces.map((space) => (
               <Marker
                 key={space.id}
                 position={{ lat: space.latitude, lng: space.longitude }}
                 onClick={() => handleMarkerClick(space)}
+                animation={google.maps.Animation.DROP}
                 icon={{
                   url: `data:image/svg+xml;utf8,${encodeURIComponent(
-                    '<svg xmlns="http://www.w3.org/2000/svg" width="36" height="42" viewBox="0 0 24 24" fill="#9b87f5" stroke="#6e61b8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"></path><circle cx="12" cy="10" r="3" fill="white"></circle></svg>'
+                    '<svg xmlns="http://www.w3.org/2000/svg" width="40" height="46" viewBox="0 0 24 24" fill="#9b87f5" stroke="#6e61b8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"></path><circle cx="12" cy="10" r="3" fill="white"></circle></svg>'
                   )}`,
-                  scaledSize: new google.maps.Size(36, 42),
-                  anchor: new google.maps.Point(18, 42),
+                  scaledSize: new google.maps.Size(40, 46),
+                  anchor: new google.maps.Point(20, 46),
                 }}
-                animation={google.maps.Animation.DROP}
               />
             ))}
             
@@ -248,7 +265,7 @@ const LocationMap = ({
                 position={{ lat: selectedSpace.latitude, lng: selectedSpace.longitude }}
                 onCloseClick={handleInfoWindowClose}
                 options={{
-                  pixelOffset: new google.maps.Size(0, -42),
+                  pixelOffset: new google.maps.Size(0, -46),
                   maxWidth: 320
                 }}
               >
@@ -271,6 +288,11 @@ const LocationMap = ({
                       <p className="text-sm text-gray-600 mt-1">
                         {selectedSpace.address}, {selectedSpace.number} - {selectedSpace.state}
                       </p>
+                      {selectedSpace.zipCode && (
+                        <p className="text-sm text-gray-600">
+                          CEP: {selectedSpace.zipCode}
+                        </p>
+                      )}
                       <div className="mt-2 flex justify-end">
                         <div className="text-xs bg-iparty/10 text-iparty px-2 py-1 rounded-full">
                           Ver detalhes →
@@ -297,6 +319,19 @@ const LocationMap = ({
               <p>Clique ou arraste o marcador para ajustar a posição exata do seu espaço</p>
               <p className="text-xs text-muted-foreground mt-1">
                 Coordenadas: {position.lat.toFixed(6)}, {position.lng.toFixed(6)}
+              </p>
+            </div>
+          )}
+          
+          {viewOnly && (
+            <div className="absolute bottom-4 right-4 bg-white p-2 rounded shadow-lg z-10 text-xs">
+              {!showPins && (
+                <p className="text-gray-600">
+                  Aproxime o mapa para ver os espaços
+                </p>
+              )}
+              <p className="text-gray-600">
+                Zoom: {currentZoom.toFixed(1)}
               </p>
             </div>
           )}

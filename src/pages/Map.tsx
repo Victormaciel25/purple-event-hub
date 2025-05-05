@@ -15,6 +15,7 @@ type Space = {
   latitude: number;
   longitude: number;
   imageUrl?: string;
+  zipCode?: string;
 };
 
 const Map = () => {
@@ -35,7 +36,8 @@ const Map = () => {
       const lowercaseSearch = searchValue.toLowerCase();
       const filtered = spaces.filter(space => 
         space.name.toLowerCase().includes(lowercaseSearch) || 
-        `${space.address}, ${space.number} - ${space.state}`.toLowerCase().includes(lowercaseSearch)
+        `${space.address}, ${space.number} - ${space.state}`.toLowerCase().includes(lowercaseSearch) ||
+        (space.zipCode && space.zipCode.toLowerCase().includes(lowercaseSearch))
       );
       setFilteredSpaces(filtered);
     }
@@ -47,7 +49,7 @@ const Map = () => {
       // Buscar apenas espaços aprovados com latitude e longitude válidos
       const { data: spacesData, error } = await supabase
         .from("spaces")
-        .select("id, name, address, number, state, latitude, longitude, space_photos(storage_path)")
+        .select("id, name, address, number, state, latitude, longitude, zip_code, space_photos(storage_path)")
         .eq("status", "approved")
         .not("latitude", "is", null)
         .not("longitude", "is", null);
@@ -80,6 +82,7 @@ const Map = () => {
               state: space.state,
               latitude: Number(space.latitude),
               longitude: Number(space.longitude),
+              zipCode: space.zip_code || "",
               imageUrl: imageUrl
             };
           })
@@ -105,7 +108,7 @@ const Map = () => {
       <div className="relative mb-6">
         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" size={18} />
         <Input 
-          placeholder="Buscar por localização..." 
+          placeholder="Buscar por nome, endereço ou CEP..." 
           className="pl-10"
           value={searchValue}
           onChange={(e) => setSearchValue(e.target.value)}
