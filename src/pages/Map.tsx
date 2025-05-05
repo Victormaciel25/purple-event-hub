@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from "react";
 import { Input } from "@/components/ui/input";
 import { Search, Loader2 } from "lucide-react";
@@ -128,7 +127,10 @@ const Map = () => {
         // Save the map reference when it loads
         if (mapRef.current) {
           mapRef.current.panTo({ lat: geocodingResult.lat, lng: geocodingResult.lng });
-          mapRef.current.setZoom(14); // Zoom para um nível adequado
+          mapRef.current.setZoom(14); // Zoom to an appropriate level
+          
+          // Important: Keep pins visible when searching for a location
+          // We're not updating the filtered spaces, so all pins stay visible
         }
       } else {
         setSearchError("Localização não encontrada");
@@ -211,6 +213,7 @@ const Map = () => {
           isLoading={loading}
           initialLocation={mapCenter}
           onMapLoad={(map) => { mapRef.current = map; }}
+          keepPinsVisible={true} // Add this new prop to control pin visibility
         />
       </div>
     </div>

@@ -1,4 +1,3 @@
-
 import React, { useEffect, useRef, useState } from "react";
 import { MapPin, Loader2 } from "lucide-react";
 import { GoogleMap, useJsApiLoader, Marker, InfoWindow } from "@react-google-maps/api";
@@ -23,6 +22,7 @@ interface LocationMapProps {
   onSpaceClick?: (spaceId: string) => void;
   isLoading?: boolean;
   onMapLoad?: (map: google.maps.Map) => void;
+  keepPinsVisible?: boolean; // New prop to control pin visibility regardless of zoom
 }
 
 const mapContainerStyle = {
@@ -48,7 +48,8 @@ const LocationMap = ({
   spaces = [],
   onSpaceClick,
   isLoading = false,
-  onMapLoad
+  onMapLoad,
+  keepPinsVisible = false // Default to false for backward compatibility
 }: LocationMapProps) => {
   const [position, setPosition] = useState<{ lat: number, lng: number } | null>(
     initialLocation || null
@@ -66,8 +67,13 @@ const LocationMap = ({
 
   // Handle zoom changes to control pin visibility
   useEffect(() => {
-    setShowPins(currentZoom >= PIN_VISIBILITY_ZOOM_THRESHOLD);
-  }, [currentZoom]);
+    // Only hide pins based on zoom if keepPinsVisible is false
+    if (keepPinsVisible) {
+      setShowPins(true);
+    } else {
+      setShowPins(currentZoom >= PIN_VISIBILITY_ZOOM_THRESHOLD);
+    }
+  }, [currentZoom, keepPinsVisible]);
 
   // Update position when initialLocation changes
   useEffect(() => {
@@ -238,7 +244,7 @@ const LocationMap = ({
               mapTypeControl: false,
               zoomControl: true
             }}
-            onLoad={onMapLoad}
+            onLoad={handleMapLoad}
           >
             {position && !viewOnly && (
               <Marker
@@ -256,7 +262,7 @@ const LocationMap = ({
               />
             )}
             
-            {/* Render all space markers if provided and zoom level is appropriate */}
+            {/* Render all space markers if provided and zoom level is appropriate or keepPinsVisible is true */}
             {showPins && spaces.map((space) => (
               <Marker
                 key={space.id}
@@ -339,7 +345,7 @@ const LocationMap = ({
           
           {viewOnly && (
             <div className="absolute bottom-4 right-4 bg-white p-2 rounded shadow-lg z-10 text-xs">
-              {!showPins && (
+              {!showPins && !keepPinsVisible && (
                 <p className="text-gray-600">
                   Aproxime o mapa para ver os espaços
                 </p>
