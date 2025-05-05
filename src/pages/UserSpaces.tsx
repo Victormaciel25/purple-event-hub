@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -75,41 +74,17 @@ const UserSpaces: React.FC = () => {
       setLoading(true);
       setDeleteError(null);
       
-      // First get all photos for this space
-      const { data: photoData, error: photoFetchError } = await supabase
-        .from("space_photos")
-        .select("id")
-        .eq("space_id", spaceId);
+      console.log(`Iniciando processo de exclusão para espaço: ${spaceId}`);
       
-      if (photoFetchError) {
-        console.error("Erro ao buscar fotos:", photoFetchError);
-        throw photoFetchError;
-      }
+      // Usando uma RPC (Remote Procedure Call) para executar a exclusão no lado do servidor
+      // Isso garante que todas as fotos sejam excluídas antes do espaço ser removido
+      const { error } = await supabase.rpc('delete_space_with_photos', {
+        space_id_param: spaceId
+      });
       
-      // Delete all photo records one by one to ensure they're all deleted
-      if (photoData && photoData.length > 0) {
-        for (const photo of photoData) {
-          const { error: deletePhotoError } = await supabase
-            .from("space_photos")
-            .delete()
-            .eq("id", photo.id);
-          
-          if (deletePhotoError) {
-            console.error(`Erro ao excluir foto ${photo.id}:`, deletePhotoError);
-            throw deletePhotoError;
-          }
-        }
-      }
-      
-      // Now that all photos are deleted, delete the space
-      const { error: spaceDeleteError } = await supabase
-        .from("spaces")
-        .delete()
-        .eq("id", spaceId);
-      
-      if (spaceDeleteError) {
-        console.error("Erro ao excluir espaço:", spaceDeleteError);
-        throw spaceDeleteError;
+      if (error) {
+        console.error("Erro ao excluir espaço:", error);
+        throw error;
       }
       
       toast.success("Espaço excluído com sucesso");
