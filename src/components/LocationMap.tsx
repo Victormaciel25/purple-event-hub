@@ -36,7 +36,7 @@ const defaultCenter = {
   lng: -46.6333
 };
 
-// Zoom level threshold for showing/hiding pins - changed to 10.0
+// Zoom level threshold for showing/hiding pins
 const PIN_VISIBILITY_ZOOM_THRESHOLD = 10.0;
 
 const GOOGLE_MAPS_API_KEY = "AIzaSyDmquKmV6OtKkJCG2eEe4NIPE8MzcrkUyw";
@@ -71,6 +71,7 @@ const LocationMap = ({
     if (keepPinsVisible) {
       setShowPins(true);
     } else {
+      // Check if zoom is strictly greater than the threshold
       setShowPins(currentZoom > PIN_VISIBILITY_ZOOM_THRESHOLD);
     }
   }, [currentZoom, keepPinsVisible]);
@@ -147,11 +148,15 @@ const LocationMap = ({
 
   const handleMapLoad = (map: google.maps.Map) => {
     mapRef.current = map;
-    setCurrentZoom(map.getZoom() || 12);
+    // Set initial zoom value
+    const initialZoom = map.getZoom() || 12;
+    setCurrentZoom(initialZoom);
     
     // Add zoom change listener
     map.addListener('zoom_changed', () => {
-      setCurrentZoom(map.getZoom() || 12);
+      const newZoom = map.getZoom() || 12;
+      setCurrentZoom(newZoom);
+      console.log("Zoom changed to:", newZoom, "Pins visible:", newZoom > PIN_VISIBILITY_ZOOM_THRESHOLD);
     });
     
     // Call the onMapLoad callback if provided
@@ -262,7 +267,7 @@ const LocationMap = ({
               />
             )}
             
-            {/* Render all space markers if provided and zoom level is appropriate or keepPinsVisible is true */}
+            {/* Only render markers if showPins is true */}
             {showPins && spaces.map((space) => (
               <Marker
                 key={space.id}
@@ -279,7 +284,7 @@ const LocationMap = ({
               />
             ))}
             
-            {/* Show info window for selected space with reduced margins */}
+            {/* Show info window for selected space */}
             {selectedSpace && (
               <InfoWindow
                 position={{ lat: selectedSpace.latitude, lng: selectedSpace.longitude }}
@@ -325,6 +330,7 @@ const LocationMap = ({
             )}
           </GoogleMap>
           
+          {/* Loading overlay */}
           {isLoading && (
             <div className="absolute inset-0 bg-gray-200/70 flex items-center justify-center">
               <div className="flex items-center gap-2 bg-white p-3 rounded-lg shadow">
@@ -334,6 +340,7 @@ const LocationMap = ({
             </div>
           )}
           
+          {/* Position text */}
           {position && !viewOnly && (
             <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 bg-white p-2 rounded shadow-lg z-10 text-sm text-center">
               <p>Clique ou arraste o marcador para ajustar a posição exata do seu espaço</p>
@@ -343,6 +350,7 @@ const LocationMap = ({
             </div>
           )}
           
+          {/* View-only mode zoom text */}
           {viewOnly && (
             <div className="absolute bottom-4 right-4 bg-white p-2 rounded shadow-lg z-10 text-xs">
               {!showPins && !keepPinsVisible && (
