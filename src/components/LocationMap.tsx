@@ -36,8 +36,8 @@ const defaultCenter = {
   lng: -46.6333
 };
 
-// Zoom level threshold for showing/hiding pins
-const PIN_VISIBILITY_ZOOM_THRESHOLD = 9;
+// Zoom level threshold for showing/hiding pins - changed to 10.0
+const PIN_VISIBILITY_ZOOM_THRESHOLD = 10.0;
 
 const GOOGLE_MAPS_API_KEY = "AIzaSyDmquKmV6OtKkJCG2eEe4NIPE8MzcrkUyw";
 
@@ -71,7 +71,7 @@ const LocationMap = ({
     if (keepPinsVisible) {
       setShowPins(true);
     } else {
-      setShowPins(currentZoom >= PIN_VISIBILITY_ZOOM_THRESHOLD);
+      setShowPins(currentZoom > PIN_VISIBILITY_ZOOM_THRESHOLD);
     }
   }, [currentZoom, keepPinsVisible]);
 
