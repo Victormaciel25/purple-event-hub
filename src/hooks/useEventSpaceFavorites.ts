@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -13,50 +13,61 @@ export type FavoriteSpace = {
   state?: string;
 };
 
+// Criamos uma variável global para armazenar o estado dos favoritos
+// Isso garante que todas as instâncias do hook compartilhem o mesmo estado
+let globalFavorites: string[] = [];
+
 export const useEventSpaceFavorites = () => {
+  // Usamos o estado global como valor inicial
   const [favorites, setFavorites] = useState<string[]>(() => {
+    // Se já temos favoritos no estado global, usamos eles
+    if (globalFavorites.length > 0) {
+      return [...globalFavorites];
+    }
+    
+    // Caso contrário, carregamos do localStorage
     const savedFavorites = localStorage.getItem('eventSpaceFavorites');
-    return savedFavorites ? JSON.parse(savedFavorites) : [];
+    const parsedFavorites = savedFavorites ? JSON.parse(savedFavorites) : [];
+    
+    // Atualizamos o estado global
+    globalFavorites = parsedFavorites;
+    return parsedFavorites;
   });
   
   const [favoriteSpaces, setFavoriteSpaces] = useState<FavoriteSpace[]>([]);
   const [loading, setLoading] = useState(false);
 
+  // Memorize os IDs válidos para evitar consultas desnecessárias
+  const validFavoriteIds = useMemo(() => {
+    return favorites.filter(id => {
+      const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      return uuidPattern.test(id);
+    });
+  }, [favorites]);
+
+  // Salva os favoritos no localStorage e atualiza o estado global sempre que mudar
   useEffect(() => {
     localStorage.setItem('eventSpaceFavorites', JSON.stringify(favorites));
+    globalFavorites = [...favorites]; // Atualiza o estado global
     
-    // When favorites change, fetch the full space data for each favorite ID
-    if (favorites.length > 0) {
+    if (validFavoriteIds.length > 0) {
       fetchFavoriteSpaces();
     } else {
       setFavoriteSpaces([]);
     }
-  }, [favorites]);
+  }, [validFavoriteIds]);
   
   const fetchFavoriteSpaces = async () => {
-    if (favorites.length === 0) return;
+    if (validFavoriteIds.length === 0) return;
     
     setLoading(true);
     
     try {
-      // Filter out favorites that aren't valid UUIDs to prevent database errors
-      const validUuids = favorites.filter(id => {
-        // UUID validation regex pattern
-        const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-        return uuidPattern.test(id);
-      });
-
-      if (validUuids.length === 0) {
-        setFavoriteSpaces([]);
-        setLoading(false);
-        return;
-      }
-      
       // Fetch spaces from Supabase using only valid UUIDs
       const { data, error } = await supabase
         .from("spaces")
         .select("id, name, address, number, state, price, space_photos(storage_path)")
-        .in("id", validUuids);
+        .in("id", validFavoriteIds);
       
       if (error) {
         throw error;
@@ -97,8 +108,12 @@ export const useEventSpaceFavorites = () => {
     }
   };
 
-  const isFavorite = (id: string) => favorites.includes(id);
+  // Função para verificar se um espaço está favoritado
+  const isFavorite = (id: string): boolean => {
+    return favorites.includes(id);
+  };
 
+  // Função para alternar o status de favorito de um espaço
   const toggleFavorite = (id: string) => {
     // Validate the ID is a UUID before adding to favorites
     const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -108,11 +123,19 @@ export const useEventSpaceFavorites = () => {
       return;
     }
     
-    setFavorites(prev => 
-      prev.includes(id) 
-        ? prev.filter(favoriteId => favoriteId !== id) 
-        : [...prev, id]
-    );
+    // Atualiza o estado local
+    const newFavorites = favorites.includes(id) 
+      ? favorites.filter(favoriteId => favoriteId !== id)
+      : [...favorites, id];
+      
+    setFavorites(newFavorites);
+    
+    // Fornecer feedback ao usuário
+    if (newFavorites.includes(id)) {
+      toast.success("Espaço adicionado aos favoritos");
+    } else {
+      toast.success("Espaço removido dos favoritos");
+    }
   };
 
   return { favorites, favoriteSpaces, loading, isFavorite, toggleFavorite };

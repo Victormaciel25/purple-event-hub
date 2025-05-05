@@ -40,6 +40,9 @@ const EventSpaceCard: React.FC<EventSpaceProps> = ({
     });
   };
   
+  // Verificar explicitamente se o espaço está nos favoritos
+  const isSpaceFavorite = isFavorite(id);
+  
   return (
     <Card 
       className="event-card border-0 overflow-hidden cursor-pointer transition-transform hover:scale-[1.02] relative"
@@ -49,10 +52,12 @@ const EventSpaceCard: React.FC<EventSpaceProps> = ({
         <button 
           onClick={handleFavoriteClick}
           className="bg-white/70 hover:bg-white p-2 rounded-full transition-colors"
+          aria-label={isSpaceFavorite ? "Remover dos favoritos" : "Adicionar aos favoritos"}
         >
           <Heart 
             size={20} 
-            className={isFavorite(id) ? "fill-red-500 text-red-500" : "text-gray-500"} 
+            className={isSpaceFavorite ? "fill-red-500 text-red-500" : "text-gray-500"} 
+            data-favorite={isSpaceFavorite}
           />
         </button>
       </div>

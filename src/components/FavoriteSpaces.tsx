@@ -1,11 +1,26 @@
 
-import React from "react";
+import React, { useEffect } from "react";
 import { useEventSpaceFavorites } from "../hooks/useEventSpaceFavorites";
 import EventSpaceCard from "./EventSpaceCard";
-import { Loader2 } from "lucide-react";
+import { Loader2, RefreshCw } from "lucide-react";
+import { Button } from "./ui/button";
+import { toast } from "sonner";
 
 const FavoriteSpaces: React.FC = () => {
   const { favoriteSpaces, loading, favorites } = useEventSpaceFavorites();
+  
+  useEffect(() => {
+    // Verificamos se há inconsistência entre os favoritos e os espaços carregados
+    if (!loading && favorites.length > 0 && favoriteSpaces.length === 0) {
+      console.log("Detectada inconsistência entre favoritos e espaços carregados:", 
+                  { favoritesCount: favorites.length, spacesCount: favoriteSpaces.length });
+    }
+  }, [loading, favorites, favoriteSpaces]);
+  
+  const handleRefresh = () => {
+    window.location.reload();
+    toast.info("Atualizando favoritos...");
+  };
   
   if (loading) {
     return (
@@ -18,8 +33,16 @@ const FavoriteSpaces: React.FC = () => {
 
   if (favorites.length > 0 && favoriteSpaces.length === 0) {
     return (
-      <div className="text-center py-8">
+      <div className="text-center py-8 space-y-4">
         <p className="text-muted-foreground">Não foi possível carregar seus espaços favoritos. Verifique sua conexão ou tente novamente mais tarde.</p>
+        <Button 
+          variant="outline" 
+          onClick={handleRefresh} 
+          className="flex items-center gap-2"
+        >
+          <RefreshCw size={16} />
+          <span>Tentar novamente</span>
+        </Button>
       </div>
     );
   }
