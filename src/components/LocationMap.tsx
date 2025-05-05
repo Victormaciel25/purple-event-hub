@@ -1,3 +1,4 @@
+
 import React, { useEffect, useRef, useState } from "react";
 import { MapPin, Loader2 } from "lucide-react";
 import { GoogleMap, useJsApiLoader, Marker, InfoWindow } from "@react-google-maps/api";
@@ -67,12 +68,13 @@ const LocationMap = ({
 
   // Handle zoom changes to control pin visibility
   useEffect(() => {
-    // Only hide pins based on zoom if keepPinsVisible is false
     if (keepPinsVisible) {
       setShowPins(true);
     } else {
-      // Check if zoom is strictly greater than the threshold
-      setShowPins(currentZoom > PIN_VISIBILITY_ZOOM_THRESHOLD);
+      // Updated condition: pins should be hidden when zoom is <= threshold
+      const shouldShowPins = currentZoom > PIN_VISIBILITY_ZOOM_THRESHOLD;
+      console.log(`Zoom: ${currentZoom}, Threshold: ${PIN_VISIBILITY_ZOOM_THRESHOLD}, Show pins: ${shouldShowPins}`);
+      setShowPins(shouldShowPins);
     }
   }, [currentZoom, keepPinsVisible]);
 
@@ -267,7 +269,7 @@ const LocationMap = ({
               />
             )}
             
-            {/* Only render markers if showPins is true */}
+            {/* Render space markers only if showPins is true */}
             {showPins && spaces.map((space) => (
               <Marker
                 key={space.id}
