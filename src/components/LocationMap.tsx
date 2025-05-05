@@ -1,3 +1,4 @@
+
 import React, { useEffect, useRef, useState } from "react";
 import { MapPin, Loader2 } from "lucide-react";
 import { GoogleMap, useJsApiLoader, Marker, InfoWindow } from "@react-google-maps/api";
@@ -286,7 +287,7 @@ const LocationMap = ({
               />
             ))}
             
-            {/* Mostra a janela de informações para o espaço selecionado */}
+            {/* Mostra a janela de informações para o espaço selecionado, mas sem o nome do estabelecimento */}
             {selectedSpace && (
               <InfoWindow
                 position={{ lat: selectedSpace.latitude, lng: selectedSpace.longitude }}
@@ -305,13 +306,13 @@ const LocationMap = ({
                       <div className="h-40 overflow-hidden">
                         <img 
                           src={selectedSpace.imageUrl} 
-                          alt={selectedSpace.name} 
+                          alt="Localização" 
                           className="w-full h-full object-cover" 
                         />
                       </div>
                     )}
                     <div className="p-2">
-                      <h3 className="font-bold text-base text-iparty">{selectedSpace.name}</h3>
+                      {/* Removido o nome do estabelecimento */}
                       <p className="text-sm text-gray-600 mt-1">
                         {selectedSpace.address}, {selectedSpace.number} - {selectedSpace.state}
                       </p>
