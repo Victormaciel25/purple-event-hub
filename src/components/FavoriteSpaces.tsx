@@ -1,5 +1,5 @@
 
-import React, { useEffect } from "react";
+import React from "react";
 import { useEventSpaceFavorites } from "../hooks/useEventSpaceFavorites";
 import EventSpaceCard from "./EventSpaceCard";
 import { Loader2, RefreshCw } from "lucide-react";
@@ -7,18 +7,10 @@ import { Button } from "./ui/button";
 import { toast } from "sonner";
 
 const FavoriteSpaces: React.FC = () => {
-  const { favoriteSpaces, loading, favorites } = useEventSpaceFavorites();
-  
-  useEffect(() => {
-    // Verificamos se há inconsistência entre os favoritos e os espaços carregados
-    if (!loading && favorites.length > 0 && favoriteSpaces.length === 0) {
-      console.log("Detectada inconsistência entre favoritos e espaços carregados:", 
-                  { favoritesCount: favorites.length, spacesCount: favoriteSpaces.length });
-    }
-  }, [loading, favorites, favoriteSpaces]);
+  const { favoriteSpaces, loading, favorites, error, refreshFavorites } = useEventSpaceFavorites();
   
   const handleRefresh = () => {
-    window.location.reload();
+    refreshFavorites();
     toast.info("Atualizando favoritos...");
   };
   
@@ -31,6 +23,7 @@ const FavoriteSpaces: React.FC = () => {
     );
   }
 
+  // Verificamos se há inconsistência entre os favoritos e os espaços carregados
   if (favorites.length > 0 && favoriteSpaces.length === 0) {
     return (
       <div className="text-center py-8 space-y-4">
@@ -38,6 +31,22 @@ const FavoriteSpaces: React.FC = () => {
         <Button 
           variant="outline" 
           onClick={handleRefresh} 
+          className="flex items-center gap-2"
+        >
+          <RefreshCw size={16} />
+          <span>Tentar novamente</span>
+        </Button>
+      </div>
+    );
+  }
+  
+  if (error) {
+    return (
+      <div className="text-center py-8 space-y-4">
+        <p className="text-red-500">{error}</p>
+        <Button 
+          variant="outline" 
+          onClick={handleRefresh}
           className="flex items-center gap-2"
         >
           <RefreshCw size={16} />

@@ -1,5 +1,5 @@
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -13,29 +13,38 @@ export type FavoriteSpace = {
   state?: string;
 };
 
-// Criamos uma variável global para armazenar o estado dos favoritos
-// Isso garante que todas as instâncias do hook compartilhem o mesmo estado
-let globalFavorites: string[] = [];
+// Criamos um estado global para armazenar os IDs dos favoritos
+let globalFavoriteIds: string[] = [];
+// Flag para controlar se os favoritos já foram inicializados do localStorage
+let favoritesInitialized = false;
 
 export const useEventSpaceFavorites = () => {
-  // Usamos o estado global como valor inicial
-  const [favorites, setFavorites] = useState<string[]>(() => {
-    // Se já temos favoritos no estado global, usamos eles
-    if (globalFavorites.length > 0) {
-      return [...globalFavorites];
-    }
-    
-    // Caso contrário, carregamos do localStorage
-    const savedFavorites = localStorage.getItem('eventSpaceFavorites');
-    const parsedFavorites = savedFavorites ? JSON.parse(savedFavorites) : [];
-    
-    // Atualizamos o estado global
-    globalFavorites = parsedFavorites;
-    return parsedFavorites;
-  });
-  
+  // Inicializamos o estado local com o estado global
+  const [favorites, setFavorites] = useState<string[]>([...globalFavoriteIds]);
   const [favoriteSpaces, setFavoriteSpaces] = useState<FavoriteSpace[]>([]);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // Inicializa os favoritos do localStorage apenas uma vez
+  useEffect(() => {
+    if (!favoritesInitialized) {
+      const savedFavorites = localStorage.getItem('eventSpaceFavorites');
+      if (savedFavorites) {
+        try {
+          const parsedFavorites = JSON.parse(savedFavorites);
+          if (Array.isArray(parsedFavorites)) {
+            // Atualiza o estado global
+            globalFavoriteIds = parsedFavorites;
+            // Atualiza o estado local
+            setFavorites(parsedFavorites);
+          }
+        } catch (e) {
+          console.error("Erro ao carregar favoritos do localStorage:", e);
+        }
+      }
+      favoritesInitialized = true;
+    }
+  }, []);
 
   // Memorize os IDs válidos para evitar consultas desnecessárias
   const validFavoriteIds = useMemo(() => {
@@ -45,11 +54,17 @@ export const useEventSpaceFavorites = () => {
     });
   }, [favorites]);
 
-  // Salva os favoritos no localStorage e atualiza o estado global sempre que mudar
+  // Salva os favoritos no localStorage sempre que mudar
   useEffect(() => {
-    localStorage.setItem('eventSpaceFavorites', JSON.stringify(favorites));
-    globalFavorites = [...favorites]; // Atualiza o estado global
-    
+    if (favoritesInitialized) {
+      localStorage.setItem('eventSpaceFavorites', JSON.stringify(favorites));
+      // Sincroniza com o estado global
+      globalFavoriteIds = [...favorites];
+    }
+  }, [favorites]);
+
+  // Carrega os espaços quando os favoritos mudarem
+  useEffect(() => {
     if (validFavoriteIds.length > 0) {
       fetchFavoriteSpaces();
     } else {
@@ -57,12 +72,18 @@ export const useEventSpaceFavorites = () => {
     }
   }, [validFavoriteIds]);
   
-  const fetchFavoriteSpaces = async () => {
-    if (validFavoriteIds.length === 0) return;
+  const fetchFavoriteSpaces = useCallback(async () => {
+    if (validFavoriteIds.length === 0) {
+      setFavoriteSpaces([]);
+      return;
+    }
     
     setLoading(true);
+    setError(null);
     
     try {
+      console.log("Buscando espaços favoritos:", validFavoriteIds);
+      
       // Fetch spaces from Supabase using only valid UUIDs
       const { data, error } = await supabase
         .from("spaces")
@@ -72,6 +93,8 @@ export const useEventSpaceFavorites = () => {
       if (error) {
         throw error;
       }
+      
+      console.log("Espaços encontrados:", data?.length || 0, data);
       
       // Process spaces to include image URLs
       const processedSpaces = await Promise.all((data || []).map(async (space) => {
@@ -100,34 +123,36 @@ export const useEventSpaceFavorites = () => {
       }));
       
       setFavoriteSpaces(processedSpaces);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error fetching favorite spaces:", error);
-      toast.error("Erro ao carregar espaços favoritos");
+      setError(error.message || "Erro ao carregar espaços favoritos");
     } finally {
       setLoading(false);
     }
-  };
+  }, [validFavoriteIds]);
 
   // Função para verificar se um espaço está favoritado
-  const isFavorite = (id: string): boolean => {
-    return favorites.includes(id);
-  };
+  const isFavorite = useCallback((id: string): boolean => {
+    return globalFavoriteIds.includes(id);
+  }, []);
 
   // Função para alternar o status de favorito de um espaço
-  const toggleFavorite = (id: string) => {
+  const toggleFavorite = useCallback((id: string) => {
     // Validate the ID is a UUID before adding to favorites
     const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-    if (!uuidPattern.test(id) && !favorites.includes(id)) {
+    if (!uuidPattern.test(id) && !globalFavoriteIds.includes(id)) {
       console.error("Invalid UUID format for favorite:", id);
       toast.error("Erro ao adicionar favorito: ID inválido");
       return;
     }
     
     // Atualiza o estado local
-    const newFavorites = favorites.includes(id) 
-      ? favorites.filter(favoriteId => favoriteId !== id)
-      : [...favorites, id];
+    const newFavorites = globalFavoriteIds.includes(id) 
+      ? globalFavoriteIds.filter(favoriteId => favoriteId !== id)
+      : [...globalFavoriteIds, id];
       
+    // Atualiza o estado global e depois o estado local
+    globalFavoriteIds = newFavorites;
     setFavorites(newFavorites);
     
     // Fornecer feedback ao usuário
@@ -136,7 +161,15 @@ export const useEventSpaceFavorites = () => {
     } else {
       toast.success("Espaço removido dos favoritos");
     }
-  };
+  }, []);
 
-  return { favorites, favoriteSpaces, loading, isFavorite, toggleFavorite };
+  return { 
+    favorites: globalFavoriteIds, 
+    favoriteSpaces, 
+    loading, 
+    error,
+    isFavorite, 
+    toggleFavorite,
+    refreshFavorites: fetchFavoriteSpaces
+  };
 };
