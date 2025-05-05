@@ -1,3 +1,4 @@
+
 import React from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -82,6 +83,7 @@ const App: React.FC = () => {
               <Route path="/map" element={<Map />} />
               <Route path="/messages" element={<Messages />} />
               <Route path="/profile" element={<Profile />} />
+              <Route path="/spaces/:id" element={<EventSpaceDetails />} />
               <Route path="/event-space/:id" element={<EventSpaceDetails />} />
               <Route path="/register-space" element={<RegisterSpace />} />
               <Route path="/space-approval" element={<SpaceApproval />} />

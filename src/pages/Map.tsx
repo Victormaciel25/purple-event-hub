@@ -96,7 +96,8 @@ const Map = () => {
   };
 
   const handleSpaceClick = (spaceId: string) => {
-    navigate(`/spaces/${spaceId}`);
+    // Navigate to the event space details page with the correct route
+    navigate(`/event-space/${spaceId}`);
   };
 
   return (
