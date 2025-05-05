@@ -351,20 +351,6 @@ const LocationMap = ({
               </p>
             </div>
           )}
-          
-          {/* Texto de zoom no modo viewOnly */}
-          {viewOnly && (
-            <div className="absolute bottom-4 right-4 bg-white p-2 rounded shadow-lg z-10 text-xs">
-              {!showPins && !keepPinsVisible && (
-                <p className="text-gray-600">
-                  Aproxime o mapa para ver os espaços
-                </p>
-              )}
-              <p className="text-gray-600">
-                Zoom: {currentZoom.toFixed(1)}
-              </p>
-            </div>
-          )}
         </>
       )}
     </div>
