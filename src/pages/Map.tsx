@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from "react";
 import { Input } from "@/components/ui/input";
 import { Search, Loader2 } from "lucide-react";
@@ -132,6 +133,9 @@ const Map = () => {
           // Important: Keep pins visible when searching for a location
           // We're not updating the filtered spaces, so all pins stay visible
         }
+        
+        // Clear the search input after successful search
+        setSearchValue("");
       } else {
         setSearchError("Localização não encontrada");
       }
@@ -213,7 +217,7 @@ const Map = () => {
           isLoading={loading}
           initialLocation={mapCenter}
           onMapLoad={(map) => { mapRef.current = map; }}
-          keepPinsVisible={true} // Add this new prop to control pin visibility
+          keepPinsVisible={true} 
         />
       </div>
     </div>
