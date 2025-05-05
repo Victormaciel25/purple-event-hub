@@ -1,12 +1,26 @@
 
 import React, { useEffect, useRef, useState } from "react";
-import { MapPin } from "lucide-react";
-import { GoogleMap, useJsApiLoader, Marker } from "@react-google-maps/api";
+import { MapPin, Loader2 } from "lucide-react";
+import { GoogleMap, useJsApiLoader, Marker, InfoWindow } from "@react-google-maps/api";
+
+interface Space {
+  id: string;
+  name: string;
+  address: string;
+  number: string;
+  state: string;
+  latitude: number;
+  longitude: number;
+  imageUrl?: string;
+}
 
 interface LocationMapProps {
   onLocationSelected?: (lat: number, lng: number) => void;
   initialLocation?: { lat: number, lng: number } | null;
-  viewOnly?: boolean; // Add viewOnly prop
+  viewOnly?: boolean;
+  spaces?: Space[];
+  onSpaceClick?: (spaceId: string) => void;
+  isLoading?: boolean;
 }
 
 const mapContainerStyle = {
@@ -22,11 +36,19 @@ const defaultCenter = {
 
 const GOOGLE_MAPS_API_KEY = "AIzaSyDmquKmV6OtKkJCG2eEe4NIPE8MzcrkUyw";
 
-const LocationMap = ({ onLocationSelected, initialLocation, viewOnly = false }: LocationMapProps) => {
+const LocationMap = ({ 
+  onLocationSelected, 
+  initialLocation, 
+  viewOnly = false, 
+  spaces = [],
+  onSpaceClick,
+  isLoading = false
+}: LocationMapProps) => {
   const [position, setPosition] = useState<{ lat: number, lng: number } | null>(
     initialLocation || null
   );
-  const [hasRequestedLocation, setHasRequestedLocation] = useState(viewOnly); // If viewOnly, skip request screen
+  const [hasRequestedLocation, setHasRequestedLocation] = useState(viewOnly);
+  const [selectedSpace, setSelectedSpace] = useState<Space | null>(null);
   const mapRef = useRef<google.maps.Map | null>(null);
 
   const { isLoaded, loadError } = useJsApiLoader({
@@ -109,6 +131,36 @@ const LocationMap = ({ onLocationSelected, initialLocation, viewOnly = false }: 
     }
   }, [initialLocation]);
 
+  // Effect to fit all markers in view if there are spaces
+  useEffect(() => {
+    if (spaces && spaces.length > 0 && mapRef.current) {
+      const bounds = new google.maps.LatLngBounds();
+      spaces.forEach(space => {
+        bounds.extend(new google.maps.LatLng(space.latitude, space.longitude));
+      });
+      mapRef.current.fitBounds(bounds);
+      
+      // Don't zoom in too much on small areas
+      if (mapRef.current.getZoom() > 15) {
+        mapRef.current.setZoom(15);
+      }
+    }
+  }, [spaces, isLoaded]);
+
+  const handleMarkerClick = (space: Space) => {
+    setSelectedSpace(space);
+  };
+
+  const handleInfoWindowClose = () => {
+    setSelectedSpace(null);
+  };
+
+  const handleSpaceClick = () => {
+    if (selectedSpace && onSpaceClick) {
+      onSpaceClick(selectedSpace.id);
+    }
+  };
+
   if (loadError) {
     return (
       <div className="flex items-center justify-center h-full bg-gray-200 rounded-lg">
@@ -157,7 +209,7 @@ const LocationMap = ({ onLocationSelected, initialLocation, viewOnly = false }: 
             }}
             onLoad={onMapLoad}
           >
-            {position && (
+            {position && !viewOnly && (
               <Marker
                 position={position}
                 draggable={!viewOnly} // Only allow dragging when not in viewOnly mode
@@ -172,7 +224,62 @@ const LocationMap = ({ onLocationSelected, initialLocation, viewOnly = false }: 
                 }}
               />
             )}
+            
+            {/* Render all space markers if provided */}
+            {spaces.map((space) => (
+              <Marker
+                key={space.id}
+                position={{ lat: space.latitude, lng: space.longitude }}
+                onClick={() => handleMarkerClick(space)}
+                icon={{
+                  path: google.maps.SymbolPath.BACKWARD_CLOSED_ARROW,
+                  scale: 6,
+                  fillColor: "#7C3AED", // Cor do iParty (roxo)
+                  fillOpacity: 1,
+                  strokeWeight: 2,
+                  strokeColor: "#FFFFFF",
+                }}
+              />
+            ))}
+            
+            {/* Show info window for selected space */}
+            {selectedSpace && (
+              <InfoWindow
+                position={{ lat: selectedSpace.latitude, lng: selectedSpace.longitude }}
+                onCloseClick={handleInfoWindowClose}
+              >
+                <div 
+                  className="space-info-window max-w-[260px]"
+                  onClick={handleSpaceClick}
+                  style={{ cursor: 'pointer' }}
+                >
+                  {selectedSpace.imageUrl && (
+                    <div className="mb-2 h-32 overflow-hidden rounded">
+                      <img 
+                        src={selectedSpace.imageUrl} 
+                        alt={selectedSpace.name} 
+                        className="w-full h-full object-cover" 
+                      />
+                    </div>
+                  )}
+                  <h3 className="font-bold text-base">{selectedSpace.name}</h3>
+                  <p className="text-sm text-gray-600 truncate">
+                    {selectedSpace.address}, {selectedSpace.number} - {selectedSpace.state}
+                  </p>
+                  <p className="text-xs text-purple-600 mt-1">Clique para ver detalhes</p>
+                </div>
+              </InfoWindow>
+            )}
           </GoogleMap>
+          
+          {isLoading && (
+            <div className="absolute inset-0 bg-gray-200/70 flex items-center justify-center">
+              <div className="flex items-center gap-2 bg-white p-3 rounded-lg shadow">
+                <Loader2 className="h-5 w-5 animate-spin text-iparty" />
+                <span>Carregando espaços...</span>
+              </div>
+            </div>
+          )}
           
           {position && !viewOnly && (
             <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 bg-white p-2 rounded shadow-lg z-10 text-sm text-center">

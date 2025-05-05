@@ -1,14 +1,102 @@
-import React, { useState } from "react";
+
+import React, { useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Search } from "lucide-react";
 import LocationMap from "@/components/LocationMap";
+import { supabase } from "@/integrations/supabase/client";
+import { useNavigate } from "react-router-dom";
+
+type Space = {
+  id: string;
+  name: string;
+  address: string;
+  number: string;
+  state: string;
+  latitude: number;
+  longitude: number;
+  imageUrl?: string;
+};
 
 const Map = () => {
-  const [location, setLocation] = useState<{ lat: number, lng: number } | null>(null);
+  const [spaces, setSpaces] = useState<Space[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [searchValue, setSearchValue] = useState<string>("");
+  const [filteredSpaces, setFilteredSpaces] = useState<Space[]>([]);
+  const navigate = useNavigate();
 
-  // We'll keep this function for consistency but won't allow users to change location
-  const handleLocationSelected = (lat: number, lng: number) => {
-    console.log("Localização visualizada:", { lat, lng });
+  useEffect(() => {
+    fetchSpaces();
+  }, []);
+
+  useEffect(() => {
+    if (searchValue.trim() === "") {
+      setFilteredSpaces(spaces);
+    } else {
+      const lowercaseSearch = searchValue.toLowerCase();
+      const filtered = spaces.filter(space => 
+        space.name.toLowerCase().includes(lowercaseSearch) || 
+        `${space.address}, ${space.number} - ${space.state}`.toLowerCase().includes(lowercaseSearch)
+      );
+      setFilteredSpaces(filtered);
+    }
+  }, [searchValue, spaces]);
+
+  const fetchSpaces = async () => {
+    setLoading(true);
+    try {
+      // Buscar apenas espaços aprovados com latitude e longitude válidos
+      const { data: spacesData, error } = await supabase
+        .from("spaces")
+        .select("id, name, address, number, state, latitude, longitude, space_photos(storage_path)")
+        .eq("status", "approved")
+        .not("latitude", "is", null)
+        .not("longitude", "is", null);
+      
+      if (error) {
+        throw error;
+      }
+
+      if (spacesData) {
+        // Processar os espaços para incluir URLs de imagens
+        const spacesWithImages = await Promise.all(
+          spacesData.map(async (space) => {
+            let imageUrl = undefined;
+
+            if (space.space_photos && space.space_photos.length > 0) {
+              const { data: urlData } = await supabase.storage
+                .from('spaces')
+                .createSignedUrl(space.space_photos[0].storage_path, 3600);
+                
+              if (urlData) {
+                imageUrl = urlData.signedUrl;
+              }
+            }
+
+            return {
+              id: space.id,
+              name: space.name,
+              address: space.address,
+              number: space.number,
+              state: space.state,
+              latitude: Number(space.latitude),
+              longitude: Number(space.longitude),
+              imageUrl: imageUrl
+            };
+          })
+        );
+        
+        setSpaces(spacesWithImages);
+        setFilteredSpaces(spacesWithImages);
+      }
+    } catch (error) {
+      console.error("Erro ao buscar espaços:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSpaceClick = (spaceId: string) => {
+    navigate(`/spaces/${spaceId}`);
   };
 
   return (
@@ -18,14 +106,18 @@ const Map = () => {
         <Input 
           placeholder="Buscar por localização..." 
           className="pl-10"
+          value={searchValue}
+          onChange={(e) => setSearchValue(e.target.value)}
         />
       </div>
 
       <div className="bg-gray-200 rounded-xl h-[calc(100vh-200px)] flex items-center justify-center">
         <LocationMap 
-          onLocationSelected={handleLocationSelected} 
-          initialLocation={location} 
-          viewOnly={true} // Add viewOnly prop to disable pin positioning
+          onLocationSelected={() => {}} 
+          viewOnly={true}
+          spaces={filteredSpaces}
+          onSpaceClick={handleSpaceClick}
+          isLoading={loading}
         />
       </div>
     </div>
