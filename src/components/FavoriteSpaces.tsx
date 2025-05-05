@@ -5,7 +5,7 @@ import EventSpaceCard from "./EventSpaceCard";
 import { Loader2 } from "lucide-react";
 
 const FavoriteSpaces: React.FC = () => {
-  const { favoriteSpaces, loading } = useEventSpaceFavorites();
+  const { favoriteSpaces, loading, favorites } = useEventSpaceFavorites();
   
   if (loading) {
     return (
@@ -16,6 +16,14 @@ const FavoriteSpaces: React.FC = () => {
     );
   }
 
+  if (favorites.length > 0 && favoriteSpaces.length === 0) {
+    return (
+      <div className="text-center py-8">
+        <p className="text-muted-foreground">Não foi possível carregar seus espaços favoritos. Verifique sua conexão ou tente novamente mais tarde.</p>
+      </div>
+    );
+  }
+  
   if (favoriteSpaces.length === 0) {
     return (
       <div className="text-center py-8">

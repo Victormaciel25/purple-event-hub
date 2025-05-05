@@ -39,11 +39,24 @@ export const useEventSpaceFavorites = () => {
     setLoading(true);
     
     try {
-      // Fetch spaces from Supabase
+      // Filter out favorites that aren't valid UUIDs to prevent database errors
+      const validUuids = favorites.filter(id => {
+        // UUID validation regex pattern
+        const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+        return uuidPattern.test(id);
+      });
+
+      if (validUuids.length === 0) {
+        setFavoriteSpaces([]);
+        setLoading(false);
+        return;
+      }
+      
+      // Fetch spaces from Supabase using only valid UUIDs
       const { data, error } = await supabase
         .from("spaces")
         .select("id, name, address, number, state, price, space_photos(storage_path)")
-        .in("id", favorites);
+        .in("id", validUuids);
       
       if (error) {
         throw error;
@@ -87,6 +100,14 @@ export const useEventSpaceFavorites = () => {
   const isFavorite = (id: string) => favorites.includes(id);
 
   const toggleFavorite = (id: string) => {
+    // Validate the ID is a UUID before adding to favorites
+    const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!uuidPattern.test(id) && !favorites.includes(id)) {
+      console.error("Invalid UUID format for favorite:", id);
+      toast.error("Erro ao adicionar favorito: ID inválido");
+      return;
+    }
+    
     setFavorites(prev => 
       prev.includes(id) 
         ? prev.filter(favoriteId => favoriteId !== id) 
