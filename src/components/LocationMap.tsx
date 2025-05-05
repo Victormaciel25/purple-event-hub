@@ -25,6 +25,17 @@ interface LocationMapProps {
   keepPinsVisible?: boolean; // Controla se os pinos ficam visíveis independente do zoom
 }
 
+// Exemplo de style que esconde todos os POIs (incluindo businesses)
+const hidePOIsStyle = [
+  {
+    featureType: "poi",
+    elementType: "all",
+    stylers: [
+      { visibility: "off" }
+    ]
+  }
+];
+
 const mapContainerStyle = {
   width: '100%',
   height: '100%',
@@ -249,7 +260,8 @@ const LocationMap = ({
               fullscreenControl: false,
               streetViewControl: false,
               mapTypeControl: false,
-              zoomControl: true
+              zoomControl: true,
+              styles: hidePOIsStyle // Aplicando o estilo para esconder POIs
             }}
             onLoad={handleMapLoad}
           >
