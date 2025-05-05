@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from "react";
 import { Input } from "@/components/ui/input";
 import { Search, Loader2 } from "lucide-react";
@@ -109,7 +108,7 @@ const Map = () => {
   };
 
   const handleSpaceClick = (spaceId: string) => {
-    // Navigate to the event space details page with the correct route
+    // Navegar para a página de detalhes do espaço com a rota correta
     navigate(`/event-space/${spaceId}`);
   };
 
@@ -125,16 +124,16 @@ const Map = () => {
       if (geocodingResult) {
         setMapCenter({ lat: geocodingResult.lat, lng: geocodingResult.lng });
         
-        // Save the map reference when it loads
+        // Se o mapa já foi carregado, ajusta a visualização para a nova localização
         if (mapRef.current) {
           mapRef.current.panTo({ lat: geocodingResult.lat, lng: geocodingResult.lng });
-          mapRef.current.setZoom(14); // Zoom to an appropriate level
+          mapRef.current.setZoom(14); // Ajusta para um nível de zoom apropriado
           
-          // Important: Keep pins visible when searching for a location
-          // We're not updating the filtered spaces, so all pins stay visible
+          // Importante: Não estamos modificando keepPinsVisible na busca
+          // A visibilidade dos pins será controlada pelo zoom atual, conforme a regra
         }
         
-        // Clear the search input after successful search
+        // Limpar o input de pesquisa após a busca bem-sucedida
         setSearchValue("");
       } else {
         setSearchError("Localização não encontrada");
@@ -217,7 +216,7 @@ const Map = () => {
           isLoading={loading}
           initialLocation={mapCenter}
           onMapLoad={(map) => { mapRef.current = map; }}
-          keepPinsVisible={true} 
+          keepPinsVisible={false} // Mudado para false para permitir que a lógica de zoom funcione
         />
       </div>
     </div>

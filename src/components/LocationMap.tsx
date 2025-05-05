@@ -1,4 +1,3 @@
-
 import React, { useEffect, useRef, useState } from "react";
 import { MapPin, Loader2 } from "lucide-react";
 import { GoogleMap, useJsApiLoader, Marker, InfoWindow } from "@react-google-maps/api";
@@ -23,7 +22,7 @@ interface LocationMapProps {
   onSpaceClick?: (spaceId: string) => void;
   isLoading?: boolean;
   onMapLoad?: (map: google.maps.Map) => void;
-  keepPinsVisible?: boolean; // New prop to control pin visibility regardless of zoom
+  keepPinsVisible?: boolean; // Controla se os pinos ficam visíveis independente do zoom
 }
 
 const mapContainerStyle = {
@@ -37,7 +36,7 @@ const defaultCenter = {
   lng: -46.6333
 };
 
-// Zoom level threshold for showing/hiding pins
+// Limite de zoom para mostrar/ocultar pinos
 const PIN_VISIBILITY_ZOOM_THRESHOLD = 10.0;
 
 const GOOGLE_MAPS_API_KEY = "AIzaSyDmquKmV6OtKkJCG2eEe4NIPE8MzcrkUyw";
@@ -66,19 +65,20 @@ const LocationMap = ({
     googleMapsApiKey: GOOGLE_MAPS_API_KEY
   });
 
-  // Handle zoom changes to control pin visibility
+  // Atualiza o estado de visibilidade dos pinos quando o zoom mudar
   useEffect(() => {
     if (keepPinsVisible) {
+      // Se keepPinsVisible for true, sempre mostrar os pinos
       setShowPins(true);
     } else {
-      // Updated condition: pins should be hidden when zoom is <= threshold
+      // Ocultar pinos quando zoom for <= PIN_VISIBILITY_ZOOM_THRESHOLD
       const shouldShowPins = currentZoom > PIN_VISIBILITY_ZOOM_THRESHOLD;
       console.log(`Zoom: ${currentZoom}, Threshold: ${PIN_VISIBILITY_ZOOM_THRESHOLD}, Show pins: ${shouldShowPins}`);
       setShowPins(shouldShowPins);
     }
   }, [currentZoom, keepPinsVisible]);
 
-  // Update position when initialLocation changes
+  // Atualiza a posição quando initialLocation muda
   useEffect(() => {
     if (initialLocation) {
       setPosition(initialLocation);
@@ -101,7 +101,7 @@ const LocationMap = ({
         },
         (error) => {
           console.error("Erro ao obter localização:", error);
-          // Use default position on error
+          // Usar posição padrão em caso de erro
           setPosition(defaultCenter);
         }
       );
@@ -111,7 +111,7 @@ const LocationMap = ({
     }
   };
 
-  // Load initial position automatically when in viewOnly mode
+  // Carrega posição inicial automaticamente no modo viewOnly
   useEffect(() => {
     if (viewOnly && !position) {
       requestUserLocation();
@@ -119,7 +119,7 @@ const LocationMap = ({
   }, [viewOnly, position]);
 
   const handleMapClick = (event: google.maps.MapMouseEvent) => {
-    // Only allow pin positioning if not in viewOnly mode
+    // Só permite posicionar pino se não estiver no modo viewOnly
     if (viewOnly || !event.latLng) return;
     
     const newPosition = {
@@ -134,7 +134,7 @@ const LocationMap = ({
   };
 
   const onMarkerDragEnd = (event: google.maps.MapMouseEvent) => {
-    // Only allow pin positioning if not in viewOnly mode
+    // Só permite posicionar pino se não estiver no modo viewOnly
     if (viewOnly || !event.latLng) return;
     
     const newPosition = {
@@ -150,24 +150,24 @@ const LocationMap = ({
 
   const handleMapLoad = (map: google.maps.Map) => {
     mapRef.current = map;
-    // Set initial zoom value
+    // Define o valor inicial do zoom
     const initialZoom = map.getZoom() || 12;
     setCurrentZoom(initialZoom);
     
-    // Add zoom change listener
+    // Adiciona listener para mudanças de zoom
     map.addListener('zoom_changed', () => {
       const newZoom = map.getZoom() || 12;
       setCurrentZoom(newZoom);
       console.log("Zoom changed to:", newZoom, "Pins visible:", newZoom > PIN_VISIBILITY_ZOOM_THRESHOLD);
     });
     
-    // Call the onMapLoad callback if provided
+    // Chama o callback onMapLoad se fornecido
     if (onMapLoad) {
       onMapLoad(map);
     }
   };
 
-  // Effect to center the map on initialLocation when it changes
+  // Efeito para centralizar o mapa no initialLocation quando ele muda
   useEffect(() => {
     if (initialLocation && mapRef.current) {
       mapRef.current.panTo({ lat: initialLocation.lat, lng: initialLocation.lng });
@@ -175,7 +175,7 @@ const LocationMap = ({
     }
   }, [initialLocation]);
 
-  // Effect to fit all markers in view if there are spaces
+  // Efeito para ajustar a visualização para incluir todos os marcadores se houver espaços
   useEffect(() => {
     if (spaces && spaces.length > 0 && mapRef.current && !initialLocation) {
       const bounds = new google.maps.LatLngBounds();
@@ -184,7 +184,7 @@ const LocationMap = ({
       });
       mapRef.current.fitBounds(bounds);
       
-      // Don't zoom in too much on small areas
+      // Não aproxima demais em áreas pequenas
       if (mapRef.current.getZoom() > 15) {
         mapRef.current.setZoom(15);
       }
@@ -269,7 +269,7 @@ const LocationMap = ({
               />
             )}
             
-            {/* Render space markers only if showPins is true */}
+            {/* Renderize os marcadores de espaço APENAS se showPins for true */}
             {showPins && spaces.map((space) => (
               <Marker
                 key={space.id}
@@ -286,7 +286,7 @@ const LocationMap = ({
               />
             ))}
             
-            {/* Show info window for selected space */}
+            {/* Mostra a janela de informações para o espaço selecionado */}
             {selectedSpace && (
               <InfoWindow
                 position={{ lat: selectedSpace.latitude, lng: selectedSpace.longitude }}
@@ -332,7 +332,7 @@ const LocationMap = ({
             )}
           </GoogleMap>
           
-          {/* Loading overlay */}
+          {/* Overlay de carregamento */}
           {isLoading && (
             <div className="absolute inset-0 bg-gray-200/70 flex items-center justify-center">
               <div className="flex items-center gap-2 bg-white p-3 rounded-lg shadow">
@@ -342,7 +342,7 @@ const LocationMap = ({
             </div>
           )}
           
-          {/* Position text */}
+          {/* Texto de posição */}
           {position && !viewOnly && (
             <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 bg-white p-2 rounded shadow-lg z-10 text-sm text-center">
               <p>Clique ou arraste o marcador para ajustar a posição exata do seu espaço</p>
@@ -352,7 +352,7 @@ const LocationMap = ({
             </div>
           )}
           
-          {/* View-only mode zoom text */}
+          {/* Texto de zoom no modo viewOnly */}
           {viewOnly && (
             <div className="absolute bottom-4 right-4 bg-white p-2 rounded shadow-lg z-10 text-xs">
               {!showPins && !keepPinsVisible && (
