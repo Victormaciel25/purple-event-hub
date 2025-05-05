@@ -69,12 +69,14 @@ export const useEventSpaceFavorites = () => {
       fetchFavoriteSpaces();
     } else {
       setFavoriteSpaces([]);
+      setError(null); // Limpa qualquer erro anterior quando não há favoritos
     }
   }, [validFavoriteIds]);
   
   const fetchFavoriteSpaces = useCallback(async () => {
     if (validFavoriteIds.length === 0) {
       setFavoriteSpaces([]);
+      setError(null);
       return;
     }
     
@@ -133,27 +135,29 @@ export const useEventSpaceFavorites = () => {
 
   // Função para verificar se um espaço está favoritado
   const isFavorite = useCallback((id: string): boolean => {
-    return globalFavoriteIds.includes(id);
-  }, []);
+    return favorites.includes(id);
+  }, [favorites]);
 
   // Função para alternar o status de favorito de um espaço
   const toggleFavorite = useCallback((id: string) => {
     // Validate the ID is a UUID before adding to favorites
     const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-    if (!uuidPattern.test(id) && !globalFavoriteIds.includes(id)) {
+    if (!uuidPattern.test(id) && !favorites.includes(id)) {
       console.error("Invalid UUID format for favorite:", id);
       toast.error("Erro ao adicionar favorito: ID inválido");
       return;
     }
     
-    // Atualiza o estado local
-    const newFavorites = globalFavoriteIds.includes(id) 
-      ? globalFavoriteIds.filter(favoriteId => favoriteId !== id)
-      : [...globalFavoriteIds, id];
+    // Calculate new favorites list
+    const newFavorites = favorites.includes(id) 
+      ? favorites.filter(favoriteId => favoriteId !== id)
+      : [...favorites, id];
       
-    // Atualiza o estado global e depois o estado local
-    globalFavoriteIds = newFavorites;
+    // Update local state first
     setFavorites(newFavorites);
+    
+    // Update global state
+    globalFavoriteIds = [...newFavorites];
     
     // Fornecer feedback ao usuário
     if (newFavorites.includes(id)) {
@@ -161,10 +165,10 @@ export const useEventSpaceFavorites = () => {
     } else {
       toast.success("Espaço removido dos favoritos");
     }
-  }, []);
+  }, [favorites]);
 
   return { 
-    favorites: globalFavoriteIds, 
+    favorites, 
     favoriteSpaces, 
     loading, 
     error,

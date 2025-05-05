@@ -40,6 +40,16 @@ const FavoriteSpaces: React.FC = () => {
     );
   }
   
+  // Verificamos se o usuário não tem nenhum favorito
+  if (favorites.length === 0) {
+    return (
+      <div className="text-center py-8">
+        <p className="text-muted-foreground">Você ainda não adicionou nenhum espaço aos favoritos.</p>
+        <p className="text-muted-foreground mt-2">Explore espaços e clique no coração para adicioná-los aqui.</p>
+      </div>
+    );
+  }
+  
   // Verificamos se há problema de conectividade
   // (há IDs de favoritos mas não conseguimos carregar os dados)
   if (favorites.length > 0 && favoriteSpaces.length === 0) {
@@ -54,16 +64,6 @@ const FavoriteSpaces: React.FC = () => {
           <RefreshCw size={16} />
           <span>Tentar novamente</span>
         </Button>
-      </div>
-    );
-  }
-  
-  // Mensagem para quando não há favoritos
-  if (favorites.length === 0) {
-    return (
-      <div className="text-center py-8">
-        <p className="text-muted-foreground">Você ainda não adicionou nenhum espaço aos favoritos.</p>
-        <p className="text-muted-foreground mt-2">Explore espaços e clique no coração para adicioná-los aqui.</p>
       </div>
     );
   }
