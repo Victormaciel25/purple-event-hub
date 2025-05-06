@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -469,13 +468,6 @@ const EventSpaceDetails: React.FC = () => {
           Mensagem
         </Button>
       </div>
-      
-      {/* Aviso para o proprietário */}
-      {currentUserId === spaceOwner?.id && (
-        <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-md text-yellow-700 text-center text-sm">
-          Você é o proprietário deste espaço, por isso não é possível iniciar uma conversa consigo mesmo.
-        </div>
-      )}
     </div>
   );
 };
