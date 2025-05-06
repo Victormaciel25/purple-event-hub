@@ -101,23 +101,43 @@ const Messages = () => {
           
           // Fetch chats for this user
           const { data: chatsData, error } = await supabase
-            .from("chats")
-            .select("*")
-            .or(`user_id.eq.${userData.user.id},owner_id.eq.${userData.user.id}`)
+            .rpc('get_user_chats') // Using RPC for type safety
             .order('last_message_time', { ascending: false });
             
-          if (error) throw error;
-          
-          const formattedChats = chatsData.map(chat => ({
-            id: chat.id,
-            name: chat.space_name || "Conversa",
-            lastMessage: chat.last_message || "Iniciar conversa...",
-            time: formatTime(chat.last_message_time),
-            avatar: chat.space_image || "https://source.unsplash.com/random/100x100?building",
-            unread: chat.has_unread && chat.last_message_sender_id !== userData.user.id
-          }));
-          
-          setChats(formattedChats);
+          if (error) {
+            // Fallback query if RPC is not available
+            const { data: fallbackChatsData, error: fallbackError } = await supabase
+              .from("chats")
+              .select("*")
+              .or(`user_id.eq.${userData.user.id},owner_id.eq.${userData.user.id}`)
+              .order('last_message_time', { ascending: false });
+              
+            if (fallbackError) throw fallbackError;
+            
+            if (fallbackChatsData) {
+              const formattedChats = fallbackChatsData.map(chat => ({
+                id: chat.id,
+                name: chat.space_name || "Conversa",
+                lastMessage: chat.last_message || "Iniciar conversa...",
+                time: formatTime(chat.last_message_time),
+                avatar: chat.space_image || "https://source.unsplash.com/random/100x100?building",
+                unread: chat.has_unread && chat.last_message_sender_id !== userData.user.id
+              }));
+              
+              setChats(formattedChats);
+            }
+          } else if (chatsData) {
+            const formattedChats = chatsData.map(chat => ({
+              id: chat.id,
+              name: chat.space_name || "Conversa",
+              lastMessage: chat.last_message || "Iniciar conversa...",
+              time: formatTime(chat.last_message_time),
+              avatar: chat.space_image || "https://source.unsplash.com/random/100x100?building",
+              unread: chat.has_unread && chat.last_message_sender_id !== userData.user.id
+            }));
+            
+            setChats(formattedChats);
+          }
         }
       } catch (error) {
         console.error("Error fetching chats:", error);
@@ -164,12 +184,14 @@ const Messages = () => {
       if (!selectedChat) return;
       
       try {
-        const { data: selectedChatInfo } = await supabase
+        const { data: selectedChatInfo, error: chatError } = await supabase
           .from("chats")
           .select("*")
           .eq("id", selectedChat)
           .single();
           
+        if (chatError) throw chatError;
+        
         if (selectedChatInfo) {
           const chatProps = chats.find(c => c.id === selectedChat);
           if (chatProps) {

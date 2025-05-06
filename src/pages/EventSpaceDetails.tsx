@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -217,23 +218,38 @@ const EventSpaceDetails: React.FC = () => {
         return;
       }
       
-      // Check if chat already exists
-      const { data: existingChat } = await supabase
-        .from("chats")
-        .select("id")
-        .or(`and(user_id.eq.${userData.user.id},owner_id.eq.${spaceOwner.id}),and(user_id.eq.${spaceOwner.id},owner_id.eq.${userData.user.id})`)
-        .eq("space_id", space.id)
-        .limit(1);
+      // Check if chat already exists by using RPC function or raw SQL
+      const { data: existingChats, error: chatQueryError } = await supabase
+        .rpc('get_chat_by_users_and_space', { 
+          current_user_id: userData.user.id,
+          space_owner_id: spaceOwner.id,
+          current_space_id: space.id 
+        });
       
       let chatId;
       
-      if (existingChat && existingChat.length > 0) {
-        // Chat exists, use existing chat
-        chatId = existingChat[0].id;
+      if (chatQueryError) {
+        // Fallback if RPC isn't available
+        const { data: fallbackChats } = await supabase
+          .from("chats")
+          .select("id")
+          .or(`and(user_id.eq.${userData.user.id},owner_id.eq.${spaceOwner.id}),` +
+              `and(user_id.eq.${spaceOwner.id},owner_id.eq.${userData.user.id})`)
+          .eq("space_id", space.id)
+          .limit(1);
+          
+        if (fallbackChats && fallbackChats.length > 0) {
+          chatId = fallbackChats[0].id;
+          toast.info("Abrindo conversa existente");
+        }
+      } else if (existingChats && existingChats.length > 0) {
+        chatId = existingChats[0].id;
         toast.info("Abrindo conversa existente");
-      } else {
+      }
+      
+      if (!chatId) {
         // Create a new chat
-        const { data: newChat, error: chatError } = await supabase
+        const { data: newChat, error: insertError } = await supabase
           .from("chats")
           .insert({
             user_id: userData.user.id,
@@ -247,7 +263,7 @@ const EventSpaceDetails: React.FC = () => {
           .select("id")
           .single();
         
-        if (chatError) throw chatError;
+        if (insertError) throw insertError;
         chatId = newChat.id;
         toast.success("Nova conversa iniciada");
       }

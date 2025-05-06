@@ -16,3 +16,8 @@ verify_jwt = true
 [functions.delete_space_with_photos]
 verify_jwt = true
 
+[functions.get_chat_by_users_and_space]
+verify_jwt = true
+
+[functions.get_user_chats]
+verify_jwt = true
