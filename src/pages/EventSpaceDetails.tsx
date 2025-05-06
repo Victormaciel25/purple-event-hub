@@ -14,7 +14,8 @@ import {
   Heart, 
   Loader2,
   X,
-  Maximize2
+  Maximize2,
+  MessageSquare
 } from "lucide-react";
 import {
   Carousel,
@@ -65,6 +66,7 @@ const EventSpaceDetails: React.FC = () => {
   const [imageUrls, setImageUrls] = useState<string[]>([]);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [isImageDialogOpen, setIsImageDialogOpen] = useState(false);
+  const [spaceOwner, setSpaceOwner] = useState<{ id: string, name: string } | null>(null);
   
   useEffect(() => {
     if (id) {
@@ -79,7 +81,14 @@ const EventSpaceDetails: React.FC = () => {
       // Fetch space details
       const { data: spaceData, error: spaceError } = await supabase
         .from("spaces")
-        .select("*")
+        .select(`
+          *,
+          profiles:user_id (
+            id,
+            first_name,
+            last_name
+          )
+        `)
         .eq("id", spaceId)
         .single();
       
@@ -91,6 +100,19 @@ const EventSpaceDetails: React.FC = () => {
         toast.error("Espaço não encontrado");
         navigate("/explore");
         return;
+      }
+      
+      // Set space owner info
+      if (spaceData.profiles) {
+        const profile = spaceData.profiles as any;
+        const ownerName = profile.first_name && profile.last_name 
+          ? `${profile.first_name} ${profile.last_name}` 
+          : "Proprietário";
+        
+        setSpaceOwner({
+          id: profile.id,
+          name: ownerName
+        });
       }
       
       // Fetch photos related to this space
@@ -183,6 +205,61 @@ const EventSpaceDetails: React.FC = () => {
     setIsImageDialogOpen(true);
   };
   
+  const startChat = async () => {
+    try {
+      if (!space || !spaceOwner) return;
+      
+      const { data: userData, error: userError } = await supabase.auth.getUser();
+      if (userError) throw userError;
+      
+      if (!userData.user) {
+        toast.error("Você precisa estar logado para enviar mensagens");
+        return;
+      }
+      
+      // Check if chat already exists
+      const { data: existingChat } = await supabase
+        .from("chats")
+        .select("id")
+        .or(`and(user_id.eq.${userData.user.id},owner_id.eq.${spaceOwner.id}),and(user_id.eq.${spaceOwner.id},owner_id.eq.${userData.user.id})`)
+        .eq("space_id", space.id)
+        .limit(1);
+      
+      let chatId;
+      
+      if (existingChat && existingChat.length > 0) {
+        // Chat exists, use existing chat
+        chatId = existingChat[0].id;
+        toast.info("Abrindo conversa existente");
+      } else {
+        // Create a new chat
+        const { data: newChat, error: chatError } = await supabase
+          .from("chats")
+          .insert({
+            user_id: userData.user.id,
+            owner_id: spaceOwner.id,
+            space_id: space.id,
+            space_name: space.name,
+            space_image: space.images[0] || null,
+            last_message: "",
+            last_message_time: new Date().toISOString()
+          })
+          .select("id")
+          .single();
+        
+        if (chatError) throw chatError;
+        chatId = newChat.id;
+        toast.success("Nova conversa iniciada");
+      }
+      
+      // Navigate to messages page
+      navigate("/messages");
+    } catch (error) {
+      console.error("Error starting chat:", error);
+      toast.error("Não foi possível iniciar a conversa");
+    }
+  };
+  
   if (loading) {
     return (
       <div className="container px-4 py-6 flex flex-col items-center justify-center h-[70vh]">
@@ -215,17 +292,28 @@ const EventSpaceDetails: React.FC = () => {
           </Button>
           <h1 className="text-xl font-bold truncate">{space.name}</h1>
         </div>
-        <Button 
-          variant="ghost" 
-          size="sm" 
-          onClick={() => toggleFavorite(space.id)}
-          className="p-2 rounded-full hover:bg-gray-100"
-        >
-          <Heart 
-            size={24} 
-            className={isFavorite(space.id) ? "fill-red-500 text-red-500" : "text-gray-500"} 
-          />
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            onClick={startChat}
+            className="p-2 rounded-full hover:bg-gray-100"
+            title="Enviar mensagem"
+          >
+            <MessageSquare size={24} className="text-iparty" />
+          </Button>
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            onClick={() => toggleFavorite(space.id)}
+            className="p-2 rounded-full hover:bg-gray-100"
+          >
+            <Heart 
+              size={24} 
+              className={isFavorite(space.id) ? "fill-red-500 text-red-500" : "text-gray-500"} 
+            />
+          </Button>
+        </div>
       </div>
       
       {/* Carrossel de imagens */}
@@ -327,15 +415,26 @@ const EventSpaceDetails: React.FC = () => {
         </div>
       </div>
       
-      {/* Botão de contato */}
-      <Button 
-        className="w-full bg-green-600 hover:bg-green-700" 
-        size="lg"
-        onClick={handleWhatsAppContact}
-      >
-        <Phone size={18} className="mr-2" />
-        Contatar via WhatsApp
-      </Button>
+      {/* Botões de contato */}
+      <div className="grid grid-cols-2 gap-4">
+        <Button 
+          className="w-full bg-green-600 hover:bg-green-700" 
+          size="lg"
+          onClick={handleWhatsAppContact}
+        >
+          <Phone size={18} className="mr-2" />
+          WhatsApp
+        </Button>
+        
+        <Button 
+          className="w-full bg-iparty hover:bg-iparty-dark" 
+          size="lg"
+          onClick={startChat}
+        >
+          <MessageSquare size={18} className="mr-2" />
+          Mensagem
+        </Button>
+      </div>
     </div>
   );
 };
