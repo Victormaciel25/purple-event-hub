@@ -69,6 +69,7 @@ const EventSpaceDetails: React.FC = () => {
   const [isImageDialogOpen, setIsImageDialogOpen] = useState(false);
   const [spaceOwner, setSpaceOwner] = useState<{ id: string, name: string } | null>(null);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [processingChat, setProcessingChat] = useState(false);
   
   useEffect(() => {
     // Obter o ID do usuário atual
@@ -220,7 +221,12 @@ const EventSpaceDetails: React.FC = () => {
   
   const startChat = async () => {
     try {
-      if (!space || !spaceOwner) return;
+      if (!space || !spaceOwner) {
+        toast.error("Informações do espaço incompletas");
+        return;
+      }
+      
+      setProcessingChat(true);
       
       const { data: userData, error: userError } = await supabase.auth.getUser();
       if (userError) throw userError;
@@ -236,17 +242,19 @@ const EventSpaceDetails: React.FC = () => {
         return;
       }
       
+      console.log("Checking for existing chats...");
+      
       // Check if chat already exists
       const { data: existingChats, error: chatQueryError } = await supabase.functions
         .invoke('get_chat_by_users_and_space', { 
-          body: { 
+          body: JSON.stringify({ 
             current_user_id: userData.user.id,
             space_owner_id: spaceOwner.id,
             current_space_id: space.id 
-          }
+          })
         });
       
-      let chatId;
+      console.log("Existing chats response:", existingChats);
       
       if (chatQueryError) {
         console.error("Error checking for existing chats:", chatQueryError);
@@ -254,10 +262,14 @@ const EventSpaceDetails: React.FC = () => {
         return;
       }
       
+      let chatId;
+      
       if (existingChats && Array.isArray(existingChats) && existingChats.length > 0) {
         chatId = existingChats[0].id;
+        console.log("Using existing chat:", chatId);
         toast.info("Abrindo conversa existente");
       } else {
+        console.log("Creating new chat...");
         // Create a new chat
         const { data: newChat, error: insertError } = await supabase
           .from("chats")
@@ -273,13 +285,17 @@ const EventSpaceDetails: React.FC = () => {
           .select("id")
           .single();
         
-        if (insertError) throw insertError;
+        if (insertError) {
+          console.error("Insert error:", insertError);
+          throw insertError;
+        }
         
-        if (!newChat) {
+        if (!newChat || !newChat.id) {
           throw new Error("Failed to create chat");
         }
         
         chatId = newChat.id;
+        console.log("New chat created:", chatId);
         toast.success("Nova conversa iniciada");
       }
       
@@ -288,6 +304,8 @@ const EventSpaceDetails: React.FC = () => {
     } catch (error: any) {
       console.error("Error starting chat:", error);
       toast.error("Não foi possível iniciar a conversa: " + (error.message || "Erro desconhecido"));
+    } finally {
+      setProcessingChat(false);
     }
   };
   
@@ -330,7 +348,7 @@ const EventSpaceDetails: React.FC = () => {
             onClick={startChat}
             className="p-2 rounded-full hover:bg-gray-100"
             title="Enviar mensagem"
-            disabled={currentUserId === spaceOwner?.id}
+            disabled={currentUserId === spaceOwner?.id || processingChat}
           >
             <MessageSquare size={24} className={currentUserId === spaceOwner?.id ? "text-gray-300" : "text-iparty"} />
           </Button>
@@ -462,9 +480,13 @@ const EventSpaceDetails: React.FC = () => {
           className="w-full bg-iparty hover:bg-iparty-dark" 
           size="lg"
           onClick={startChat}
-          disabled={currentUserId === spaceOwner?.id}
+          disabled={currentUserId === spaceOwner?.id || processingChat}
         >
-          <MessageSquare size={18} className="mr-2" />
+          {processingChat ? (
+            <Loader2 size={18} className="mr-2 animate-spin" />
+          ) : (
+            <MessageSquare size={18} className="mr-2" />
+          )}
           Mensagem
         </Button>
       </div>

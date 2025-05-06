@@ -25,7 +25,25 @@ serve(async (req) => {
       }
     );
 
-    const body = await req.json();
+    // Parse request body
+    let body;
+    try {
+      body = await req.json();
+    } catch (e) {
+      console.error("Error parsing request body:", e);
+      return new Response(
+        JSON.stringify({ 
+          error: 'Invalid JSON in request body' 
+        }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 400 
+        }
+      );
+    }
+
+    console.log("Request body:", body);
+    
     const { current_user_id, space_owner_id, current_space_id } = body;
     
     // Must have all parameters
@@ -52,7 +70,12 @@ serve(async (req) => {
       .eq('space_id', current_space_id)
       .limit(1);
 
-    if (error) throw error;
+    if (error) {
+      console.error("Database query error:", error);
+      throw error;
+    }
+
+    console.log("Query result:", data);
 
     return new Response(
       JSON.stringify(data),
