@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -55,6 +56,7 @@ type SpaceDetails = {
   images: string[];
   latitude?: number;
   longitude?: number;
+  user_id?: string; // Adicionado para verificar o proprietário
 };
 
 const EventSpaceDetails: React.FC = () => {
@@ -67,8 +69,19 @@ const EventSpaceDetails: React.FC = () => {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [isImageDialogOpen, setIsImageDialogOpen] = useState(false);
   const [spaceOwner, setSpaceOwner] = useState<{ id: string, name: string } | null>(null);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   
   useEffect(() => {
+    // Obter o ID do usuário atual
+    const getCurrentUser = async () => {
+      const { data } = await supabase.auth.getUser();
+      if (data.user) {
+        setCurrentUserId(data.user.id);
+      }
+    };
+    
+    getCurrentUser();
+    
     if (id) {
       fetchSpaceDetails(id);
     }
@@ -166,7 +179,8 @@ const EventSpaceDetails: React.FC = () => {
         pool: spaceData.pool || false,
         images: urls,
         latitude: spaceData.latitude,
-        longitude: spaceData.longitude
+        longitude: spaceData.longitude,
+        user_id: spaceData.user_id // Armazenando o ID do proprietário
       };
       
       setSpace(spaceDetails);
@@ -214,6 +228,12 @@ const EventSpaceDetails: React.FC = () => {
       
       if (!userData.user) {
         toast.error("Você precisa estar logado para enviar mensagens");
+        return;
+      }
+
+      // Verificando se o usuário atual é o proprietário do espaço
+      if (userData.user.id === spaceOwner.id) {
+        toast.error("Não é possível iniciar uma conversa consigo mesmo");
         return;
       }
       
@@ -311,8 +331,9 @@ const EventSpaceDetails: React.FC = () => {
             onClick={startChat}
             className="p-2 rounded-full hover:bg-gray-100"
             title="Enviar mensagem"
+            disabled={currentUserId === spaceOwner?.id}
           >
-            <MessageSquare size={24} className="text-iparty" />
+            <MessageSquare size={24} className={currentUserId === spaceOwner?.id ? "text-gray-300" : "text-iparty"} />
           </Button>
           <Button 
             variant="ghost" 
@@ -442,11 +463,19 @@ const EventSpaceDetails: React.FC = () => {
           className="w-full bg-iparty hover:bg-iparty-dark" 
           size="lg"
           onClick={startChat}
+          disabled={currentUserId === spaceOwner?.id}
         >
           <MessageSquare size={18} className="mr-2" />
           Mensagem
         </Button>
       </div>
+      
+      {/* Aviso para o proprietário */}
+      {currentUserId === spaceOwner?.id && (
+        <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-md text-yellow-700 text-center text-sm">
+          Você é o proprietário deste espaço, por isso não é possível iniciar uma conversa consigo mesmo.
+        </div>
+      )}
     </div>
   );
 };
