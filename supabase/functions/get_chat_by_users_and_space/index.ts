@@ -48,6 +48,7 @@ serve(async (req) => {
     
     // Must have all parameters
     if (!current_user_id || !space_owner_id || !current_space_id) {
+      console.error("Missing required parameters:", { current_user_id, space_owner_id, current_space_id });
       return new Response(
         JSON.stringify({ 
           error: 'Missing required parameters' 

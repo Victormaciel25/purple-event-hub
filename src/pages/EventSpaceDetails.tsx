@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -106,14 +107,18 @@ const EventSpaceDetails: React.FC = () => {
         .single();
       
       if (spaceError) {
+        console.error("Error fetching space details:", spaceError);
         throw spaceError;
       }
       
       if (!spaceData) {
+        console.error("No space data found");
         toast.error("Espaço não encontrado");
         navigate("/explore");
         return;
       }
+      
+      console.log("Space data fetched:", spaceData);
       
       // Set space owner info
       if (spaceData.profiles) {
@@ -126,6 +131,10 @@ const EventSpaceDetails: React.FC = () => {
           id: profile.id,
           name: ownerName
         });
+        
+        console.log("Space owner set:", { id: profile.id, name: ownerName });
+      } else {
+        console.error("Owner profile not found in space data");
       }
       
       // Fetch photos related to this space
@@ -135,6 +144,7 @@ const EventSpaceDetails: React.FC = () => {
         .eq("space_id", spaceId);
       
       if (photoError) {
+        console.error("Error fetching photo data:", photoError);
         throw photoError;
       }
       
@@ -180,9 +190,10 @@ const EventSpaceDetails: React.FC = () => {
         images: urls,
         latitude: spaceData.latitude,
         longitude: spaceData.longitude,
-        user_id: spaceData.user_id // Armazenando o ID do proprietário
+        user_id: spaceData.user_id
       };
       
+      console.log("Space details created:", spaceDetails);
       setSpace(spaceDetails);
       setImageUrls(urls);
       
@@ -221,28 +232,50 @@ const EventSpaceDetails: React.FC = () => {
   
   const startChat = async () => {
     try {
-      if (!space || !spaceOwner) {
-        toast.error("Informações do espaço incompletas");
+      console.log("Starting chat with space:", space);
+      console.log("Space owner:", spaceOwner);
+      
+      // Ensure space and owner data are available
+      if (!space) {
+        console.error("Space data is missing");
+        toast.error("Informações do espaço não disponíveis");
+        return;
+      }
+      
+      if (!spaceOwner || !spaceOwner.id) {
+        console.error("Space owner data is missing");
+        toast.error("Informações do proprietário não disponíveis");
         return;
       }
       
       setProcessingChat(true);
       
       const { data: userData, error: userError } = await supabase.auth.getUser();
-      if (userError) throw userError;
+      if (userError) {
+        console.error("Auth error:", userError);
+        throw userError;
+      }
       
       if (!userData.user) {
+        console.error("No user data");
         toast.error("Você precisa estar logado para enviar mensagens");
+        navigate("/login");
         return;
       }
 
       // Verificando se o usuário atual é o proprietário do espaço
       if (userData.user.id === spaceOwner.id) {
+        console.error("User is space owner");
         toast.error("Não é possível iniciar uma conversa consigo mesmo");
         return;
       }
       
       console.log("Checking for existing chats...");
+      console.log("Parameters:", {
+        current_user_id: userData.user.id,
+        space_owner_id: spaceOwner.id,
+        current_space_id: space.id
+      });
       
       // Check if chat already exists
       const { data: existingChats, error: chatQueryError } = await supabase.functions
@@ -258,8 +291,7 @@ const EventSpaceDetails: React.FC = () => {
       
       if (chatQueryError) {
         console.error("Error checking for existing chats:", chatQueryError);
-        toast.error("Erro ao verificar conversas existentes");
-        return;
+        throw chatQueryError;
       }
       
       let chatId;
@@ -291,6 +323,7 @@ const EventSpaceDetails: React.FC = () => {
         }
         
         if (!newChat || !newChat.id) {
+          console.error("No new chat created");
           throw new Error("Failed to create chat");
         }
         
