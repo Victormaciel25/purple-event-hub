@@ -99,12 +99,12 @@ const Messages = () => {
         if (userData?.user?.id) {
           setUserId(userData.user.id);
           
-          // Fetch chats for this user
-          const { data: chatsData, error } = await supabase
-            .rpc('get_user_chats') // Using RPC for type safety
-            .order('last_message_time', { ascending: false });
+          // Fetch chats using direct query instead of RPC
+          const { data: chatsData, error } = await supabase.functions
+            .invoke('get_user_chats');
             
           if (error) {
+            console.error("Error fetching chats:", error);
             // Fallback query if RPC is not available
             const { data: fallbackChatsData, error: fallbackError } = await supabase
               .from("chats")
@@ -127,16 +127,19 @@ const Messages = () => {
               setChats(formattedChats);
             }
           } else if (chatsData) {
-            const formattedChats = chatsData.map(chat => ({
-              id: chat.id,
-              name: chat.space_name || "Conversa",
-              lastMessage: chat.last_message || "Iniciar conversa...",
-              time: formatTime(chat.last_message_time),
-              avatar: chat.space_image || "https://source.unsplash.com/random/100x100?building",
-              unread: chat.has_unread && chat.last_message_sender_id !== userData.user.id
-            }));
-            
-            setChats(formattedChats);
+            // Handle data if it's an array
+            if (Array.isArray(chatsData)) {
+              const formattedChats = chatsData.map(chat => ({
+                id: chat.id,
+                name: chat.space_name || "Conversa",
+                lastMessage: chat.last_message || "Iniciar conversa...",
+                time: formatTime(chat.last_message_time),
+                avatar: chat.space_image || "https://source.unsplash.com/random/100x100?building",
+                unread: chat.has_unread && chat.last_message_sender_id !== userData.user.id
+              }));
+              
+              setChats(formattedChats);
+            }
           }
         }
       } catch (error) {

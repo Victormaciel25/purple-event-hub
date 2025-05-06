@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -218,36 +217,28 @@ const EventSpaceDetails: React.FC = () => {
         return;
       }
       
-      // Check if chat already exists by using RPC function or raw SQL
-      const { data: existingChats, error: chatQueryError } = await supabase
-        .rpc('get_chat_by_users_and_space', { 
-          current_user_id: userData.user.id,
-          space_owner_id: spaceOwner.id,
-          current_space_id: space.id 
+      // Check if chat already exists
+      const { data: existingChats, error: chatQueryError } = await supabase.functions
+        .invoke('get_chat_by_users_and_space', { 
+          body: { 
+            current_user_id: userData.user.id,
+            space_owner_id: spaceOwner.id,
+            current_space_id: space.id 
+          }
         });
       
       let chatId;
       
       if (chatQueryError) {
-        // Fallback if RPC isn't available
-        const { data: fallbackChats } = await supabase
-          .from("chats")
-          .select("id")
-          .or(`and(user_id.eq.${userData.user.id},owner_id.eq.${spaceOwner.id}),` +
-              `and(user_id.eq.${spaceOwner.id},owner_id.eq.${userData.user.id})`)
-          .eq("space_id", space.id)
-          .limit(1);
-          
-        if (fallbackChats && fallbackChats.length > 0) {
-          chatId = fallbackChats[0].id;
-          toast.info("Abrindo conversa existente");
-        }
-      } else if (existingChats && existingChats.length > 0) {
-        chatId = existingChats[0].id;
-        toast.info("Abrindo conversa existente");
+        console.error("Error checking for existing chats:", chatQueryError);
+        toast.error("Erro ao verificar conversas existentes");
+        return;
       }
       
-      if (!chatId) {
+      if (existingChats && Array.isArray(existingChats) && existingChats.length > 0) {
+        chatId = existingChats[0].id;
+        toast.info("Abrindo conversa existente");
+      } else {
         // Create a new chat
         const { data: newChat, error: insertError } = await supabase
           .from("chats")
@@ -264,15 +255,20 @@ const EventSpaceDetails: React.FC = () => {
           .single();
         
         if (insertError) throw insertError;
+        
+        if (!newChat) {
+          throw new Error("Failed to create chat");
+        }
+        
         chatId = newChat.id;
         toast.success("Nova conversa iniciada");
       }
       
       // Navigate to messages page
       navigate("/messages");
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error starting chat:", error);
-      toast.error("Não foi possível iniciar a conversa");
+      toast.error("Não foi possível iniciar a conversa: " + (error.message || "Erro desconhecido"));
     }
   };
   
