@@ -12,8 +12,8 @@ const Layout = () => {
 
   return (
     <div className="min-h-screen flex flex-col">
-      {/* Main content */}
-      <main className="flex-1 pb-16">
+      {/* Main content - Modified to remove bottom padding */}
+      <main className="flex-1">
         <Outlet />
       </main>
 

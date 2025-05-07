@@ -428,8 +428,8 @@ const Messages = () => {
             )}
           </div>
           
-          {/* Message input */}
-          <div className="p-4 bg-white border-t rounded-b-xl">
+          {/* Message input - Modified to remove padding-bottom to reduce space */}
+          <div className="p-4 pb-0 bg-white border-t rounded-b-xl">
             <form 
               className="flex items-end gap-2"
               onSubmit={(e) => {
