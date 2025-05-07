@@ -35,7 +35,7 @@ interface MessageProps {
   is_mine: boolean;
 }
 
-const MessageItem: React.FC<ChatProps & { onClick: () => void; onDelete: () => void }> = ({
+const MessageItem: React.FC<ChatProps & { onClick: () => void }> = ({
   id,
   name,
   lastMessage,
@@ -43,41 +43,23 @@ const MessageItem: React.FC<ChatProps & { onClick: () => void; onDelete: () => v
   avatar,
   unread,
   onClick,
-  onDelete,
 }) => {
   return (
     <div 
-      className="flex items-center p-4 border-b border-gray-100 hover:bg-gray-50 cursor-pointer group" 
+      className="flex items-center p-4 border-b border-gray-100 hover:bg-gray-50 cursor-pointer" 
+      onClick={onClick}
     >
-      <div 
-        className="flex-1 flex items-center"
-        onClick={onClick}
-      >
-        <div className="h-12 w-12 rounded-full overflow-hidden mr-4">
-          <img src={avatar} alt={name} className="w-full h-full object-cover" />
-        </div>
-        <div className="flex-1">
-          <div className="flex justify-between">
-            <h3 className={`font-medium ${unread ? "text-black" : ""}`}>{name}</h3>
-            <span className="text-xs text-muted-foreground">{time}</span>
-          </div>
-          <p className={`text-sm truncate ${unread ? "font-medium text-foreground" : "text-muted-foreground"}`}>
-            {lastMessage}
-          </p>
-        </div>
+      <div className="h-12 w-12 rounded-full overflow-hidden mr-4">
+        <img src={avatar} alt={name} className="w-full h-full object-cover" />
       </div>
-      <div className="opacity-0 group-hover:opacity-100 transition-opacity ml-2">
-        <Button 
-          variant="ghost" 
-          size="sm"
-          className="h-8 w-8 p-0" 
-          onClick={(e) => {
-            e.stopPropagation();
-            onDelete();
-          }}
-        >
-          <Trash2 size={18} className="text-muted-foreground hover:text-destructive" />
-        </Button>
+      <div className="flex-1">
+        <div className="flex justify-between">
+          <h3 className={`font-medium ${unread ? "text-black" : ""}`}>{name}</h3>
+          <span className="text-xs text-muted-foreground">{time}</span>
+        </div>
+        <p className={`text-sm truncate ${unread ? "font-medium text-foreground" : "text-muted-foreground"}`}>
+          {lastMessage}
+        </p>
       </div>
       {unread && (
         <div className="ml-2 h-2 w-2 bg-iparty rounded-full"></div>
@@ -431,7 +413,6 @@ const Messages = () => {
                   key={chat.id} 
                   {...chat}
                   onClick={() => setSelectedChat(chat.id)}
-                  onDelete={() => setChatToDelete(chat.id)}
                 />
               ))
             ) : (
@@ -451,26 +432,38 @@ const Messages = () => {
         // Chat detail view
         <div className="flex flex-col h-[80vh]">
           {/* Chat header */}
-          <div className="flex items-center p-4 border-b bg-white rounded-t-xl shadow-sm">
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              className="mr-2 p-1"
-              onClick={() => setSelectedChat(null)}
+          <div className="flex items-center justify-between p-4 border-b bg-white rounded-t-xl shadow-sm">
+            <div className="flex items-center">
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className="mr-2 p-1"
+                onClick={() => setSelectedChat(null)}
+              >
+                <ArrowLeft size={20} />
+              </Button>
+              
+              {chatInfo && (
+                <div className="flex items-center">
+                  <div className="h-10 w-10 rounded-full overflow-hidden mr-3">
+                    <img src={chatInfo.avatar} alt={chatInfo.name} className="w-full h-full object-cover" />
+                  </div>
+                  <div>
+                    <h3 className="font-medium">{chatInfo.name}</h3>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Delete chat button in top right corner */}
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-muted-foreground hover:text-destructive"
+              onClick={() => setChatToDelete(selectedChat)}
             >
-              <ArrowLeft size={20} />
+              <Trash2 size={18} />
             </Button>
-            
-            {chatInfo && (
-              <div className="flex items-center">
-                <div className="h-10 w-10 rounded-full overflow-hidden mr-3">
-                  <img src={chatInfo.avatar} alt={chatInfo.name} className="w-full h-full object-cover" />
-                </div>
-                <div>
-                  <h3 className="font-medium">{chatInfo.name}</h3>
-                </div>
-              </div>
-            )}
           </div>
           
           {/* Messages */}
