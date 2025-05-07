@@ -1,5 +1,5 @@
 
-import React from "react";
+import React, { useEffect } from "react";
 import { Outlet, NavLink, useLocation } from "react-router-dom";
 import { Calendar, Home, MapPin, MessageSquare, User } from "lucide-react";
 
@@ -9,6 +9,19 @@ const Layout = () => {
   const isActive = (path: string) => {
     return location.pathname === path;
   };
+  
+  useEffect(() => {
+    // Register service worker for caching
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/service-worker.js').then(registration => {
+          console.log('ServiceWorker registration successful with scope: ', registration.scope);
+        }).catch(error => {
+          console.error('ServiceWorker registration failed: ', error);
+        });
+      });
+    }
+  }, []);
 
   return (
     <div className="min-h-screen flex flex-col">

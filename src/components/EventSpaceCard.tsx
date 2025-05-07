@@ -4,6 +4,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { MapPin, Heart } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useEventSpaceFavorites } from "../hooks/useEventSpaceFavorites";
+import OptimizedImage from "./OptimizedImage";
 
 interface EventSpaceProps {
   id: string;
@@ -62,10 +63,10 @@ const EventSpaceCard: React.FC<EventSpaceProps> = ({
         </button>
       </div>
       <div className="relative h-48 overflow-hidden">
-        <img
+        <OptimizedImage
           src={image}
           alt={name}
-          className="w-full h-full object-cover"
+          className="w-full h-full"
         />
         <div className="absolute bottom-0 right-0 bg-iparty text-white px-3 py-1 text-sm font-medium rounded-tl-lg">
           {formatPrice(price)}

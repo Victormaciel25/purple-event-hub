@@ -3,6 +3,7 @@ import React from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Phone } from "lucide-react";
+import OptimizedImage from "./OptimizedImage";
 
 interface VendorProps {
   id: string;
@@ -25,10 +26,10 @@ const VendorCard: React.FC<VendorProps> = ({
     <Card className="overflow-hidden border-0 card-shadow">
       <div className="flex p-4">
         <div className="h-16 w-16 rounded-full overflow-hidden mr-4">
-          <img
+          <OptimizedImage
             src={image}
             alt={name}
-            className="w-full h-full object-cover"
+            className="w-full h-full"
           />
         </div>
         <CardContent className="p-0 flex-1">
