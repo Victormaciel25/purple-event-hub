@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Search, MessageSquare, ArrowLeft } from "lucide-react";
@@ -7,6 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Textarea } from "@/components/ui/textarea";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { useSearchParams } from "react-router-dom";
 
 interface ChatProps {
   id: string;
@@ -79,6 +79,9 @@ const formatTime = (isoString: string): string => {
 };
 
 const Messages = () => {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const chatIdFromUrl = searchParams.get('chat');
+
   const [chats, setChats] = useState<ChatProps[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
@@ -125,6 +128,15 @@ const Messages = () => {
               }));
               
               setChats(formattedChats);
+              
+              // If there's a chat ID in the URL, select it
+              if (chatIdFromUrl) {
+                setSelectedChat(chatIdFromUrl);
+                
+                // Remove the chat parameter from the URL
+                searchParams.delete('chat');
+                setSearchParams(searchParams);
+              }
             }
           } else if (chatsData) {
             // Handle data if it's an array
@@ -139,6 +151,15 @@ const Messages = () => {
               }));
               
               setChats(formattedChats);
+              
+              // If there's a chat ID in the URL, select it
+              if (chatIdFromUrl) {
+                setSelectedChat(chatIdFromUrl);
+                
+                // Remove the chat parameter from the URL
+                searchParams.delete('chat');
+                setSearchParams(searchParams);
+              }
             }
           }
         }
@@ -179,7 +200,7 @@ const Messages = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, []);
+  }, [chatIdFromUrl, searchParams, setSearchParams]);
   
   // Load messages when a chat is selected
   useEffect(() => {

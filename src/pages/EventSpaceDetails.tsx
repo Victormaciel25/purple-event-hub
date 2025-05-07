@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -360,8 +359,8 @@ const EventSpaceDetails: React.FC = () => {
         toast.success("Nova conversa iniciada");
       }
       
-      // Navigate to messages page
-      navigate("/messages");
+      // Modified: Navigate to messages page with the chat ID as a query parameter
+      navigate(`/messages?chat=${chatId}`);
     } catch (error: any) {
       console.error("Error starting chat:", error);
       toast.error("Não foi possível iniciar a conversa: " + (error.message || "Erro desconhecido"));

@@ -62,6 +62,8 @@ serve(async (req) => {
 
     // Check for existing chat with better error handling
     try {
+      console.log("Querying for existing chats with:", { current_user_id, space_owner_id, current_space_id });
+      
       const { data, error } = await supabase
         .from('chats')
         .select('id')
