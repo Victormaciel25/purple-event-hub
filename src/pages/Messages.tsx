@@ -1,12 +1,23 @@
+
 import React, { useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
-import { Search, MessageSquare, ArrowLeft } from "lucide-react";
+import { Search, MessageSquare, ArrowLeft, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { Textarea } from "@/components/ui/textarea";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { useSearchParams } from "react-router-dom";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface ChatProps {
   id: string;
@@ -25,7 +36,7 @@ interface MessageProps {
   is_mine: boolean;
 }
 
-const MessageItem: React.FC<ChatProps & { onClick: () => void }> = ({
+const MessageItem: React.FC<ChatProps & { onClick: () => void; onDelete: () => void }> = ({
   id,
   name,
   lastMessage,
@@ -33,23 +44,41 @@ const MessageItem: React.FC<ChatProps & { onClick: () => void }> = ({
   avatar,
   unread,
   onClick,
+  onDelete,
 }) => {
   return (
     <div 
-      className="flex items-center p-4 border-b border-gray-100 hover:bg-gray-50 cursor-pointer" 
-      onClick={onClick}
+      className="flex items-center p-4 border-b border-gray-100 hover:bg-gray-50 cursor-pointer group" 
     >
-      <div className="h-12 w-12 rounded-full overflow-hidden mr-4">
-        <img src={avatar} alt={name} className="w-full h-full object-cover" />
-      </div>
-      <div className="flex-1">
-        <div className="flex justify-between">
-          <h3 className={`font-medium ${unread ? "text-black" : ""}`}>{name}</h3>
-          <span className="text-xs text-muted-foreground">{time}</span>
+      <div 
+        className="flex-1 flex items-center"
+        onClick={onClick}
+      >
+        <div className="h-12 w-12 rounded-full overflow-hidden mr-4">
+          <img src={avatar} alt={name} className="w-full h-full object-cover" />
         </div>
-        <p className={`text-sm truncate ${unread ? "font-medium text-foreground" : "text-muted-foreground"}`}>
-          {lastMessage}
-        </p>
+        <div className="flex-1">
+          <div className="flex justify-between">
+            <h3 className={`font-medium ${unread ? "text-black" : ""}`}>{name}</h3>
+            <span className="text-xs text-muted-foreground">{time}</span>
+          </div>
+          <p className={`text-sm truncate ${unread ? "font-medium text-foreground" : "text-muted-foreground"}`}>
+            {lastMessage}
+          </p>
+        </div>
+      </div>
+      <div className="opacity-0 group-hover:opacity-100 transition-opacity ml-2">
+        <Button 
+          variant="ghost" 
+          size="sm"
+          className="h-8 w-8 p-0" 
+          onClick={(e) => {
+            e.stopPropagation();
+            onDelete();
+          }}
+        >
+          <Trash2 size={18} className="text-muted-foreground hover:text-destructive" />
+        </Button>
       </div>
       {unread && (
         <div className="ml-2 h-2 w-2 bg-iparty rounded-full"></div>
@@ -91,6 +120,7 @@ const Messages = () => {
   const [sendingMessage, setSendingMessage] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
   const [chatInfo, setChatInfo] = useState<ChatProps | null>(null);
+  const [chatToDelete, setChatToDelete] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchUserAndChats = async () => {
@@ -332,6 +362,46 @@ const Messages = () => {
     }
   };
   
+  const handleDeleteChat = async () => {
+    if (!chatToDelete) return;
+
+    try {
+      // First, delete all messages in the chat
+      const { error: messagesError } = await supabase
+        .from("messages")
+        .delete()
+        .eq("chat_id", chatToDelete);
+        
+      if (messagesError) throw messagesError;
+      
+      // Then, delete the chat itself
+      const { error: chatError } = await supabase
+        .from("chats")
+        .delete()
+        .eq("id", chatToDelete);
+        
+      if (chatError) throw chatError;
+      
+      // Update the UI by removing the deleted chat
+      setChats(prevChats => prevChats.filter(chat => chat.id !== chatToDelete));
+      
+      // If the deleted chat was selected, clear the selection
+      if (selectedChat === chatToDelete) {
+        setSelectedChat(null);
+        setMessages([]);
+        setChatInfo(null);
+      }
+      
+      toast.success("Conversa excluída com sucesso");
+    } catch (error) {
+      console.error("Error deleting chat:", error);
+      toast.error("Erro ao excluir conversa");
+    } finally {
+      // Close the dialog
+      setChatToDelete(null);
+    }
+  };
+  
   const filteredChats = chats.filter(chat => 
     chat.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
@@ -361,7 +431,8 @@ const Messages = () => {
                 <MessageItem 
                   key={chat.id} 
                   {...chat}
-                  onClick={() => setSelectedChat(chat.id)}  
+                  onClick={() => setSelectedChat(chat.id)}
+                  onDelete={() => setChatToDelete(chat.id)}
                 />
               ))
             ) : (
@@ -461,6 +532,24 @@ const Messages = () => {
           </div>
         </div>
       )}
+      
+      {/* Delete confirmation dialog */}
+      <AlertDialog open={!!chatToDelete} onOpenChange={() => setChatToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir conversa?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta ação não pode ser desfeita. Esta conversa e todas as suas mensagens serão excluídas permanentemente.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteChat} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
