@@ -92,17 +92,10 @@ const EventSpaceDetails: React.FC = () => {
     try {
       setLoading(true);
       
-      // Fetch space details
+      // Fetch space details with user profile information
       const { data: spaceData, error: spaceError } = await supabase
         .from("spaces")
-        .select(`
-          *,
-          profiles:user_id (
-            id,
-            first_name,
-            last_name
-          )
-        `)
+        .select("*")
         .eq("id", spaceId)
         .single();
       
@@ -120,21 +113,40 @@ const EventSpaceDetails: React.FC = () => {
       
       console.log("Space data fetched:", spaceData);
       
-      // Set space owner info
-      if (spaceData.profiles) {
-        const profile = spaceData.profiles as any;
-        const ownerName = profile.first_name && profile.last_name 
-          ? `${profile.first_name} ${profile.last_name}` 
-          : "Proprietário";
+      // Now fetch the owner's profile information directly
+      if (spaceData.user_id) {
+        const { data: profileData, error: profileError } = await supabase
+          .from("profiles")
+          .select("id, first_name, last_name")
+          .eq("id", spaceData.user_id)
+          .single();
+          
+        if (profileError) {
+          console.error("Error fetching owner profile:", profileError);
+          // Continue execution even if profile fetch fails
+        }
         
-        setSpaceOwner({
-          id: profile.id,
-          name: ownerName
-        });
-        
-        console.log("Space owner set:", { id: profile.id, name: ownerName });
+        if (profileData) {
+          const ownerName = profileData.first_name && profileData.last_name 
+            ? `${profileData.first_name} ${profileData.last_name}` 
+            : "Proprietário";
+          
+          setSpaceOwner({
+            id: profileData.id,
+            name: ownerName
+          });
+          
+          console.log("Space owner set:", { id: profileData.id, name: ownerName });
+        } else {
+          // If no profile found, at least set the ID from space data
+          setSpaceOwner({
+            id: spaceData.user_id,
+            name: "Proprietário"
+          });
+          console.log("Space owner set with default name:", { id: spaceData.user_id, name: "Proprietário" });
+        }
       } else {
-        console.error("Owner profile not found in space data");
+        console.error("Space has no user_id");
       }
       
       // Fetch photos related to this space
@@ -235,16 +247,32 @@ const EventSpaceDetails: React.FC = () => {
       console.log("Starting chat with space:", space);
       console.log("Space owner:", spaceOwner);
       
-      // Ensure space and owner data are available
+      // Ensure space data is available
       if (!space) {
         console.error("Space data is missing");
         toast.error("Informações do espaço não disponíveis");
         return;
       }
       
-      if (!spaceOwner || !spaceOwner.id) {
-        console.error("Space owner data is missing");
-        toast.error("Informações do proprietário não disponíveis");
+      // Ensure space owner data is available
+      if (!spaceOwner) {
+        // If spaceOwner is not set but space.user_id exists, use it
+        if (space.user_id) {
+          setSpaceOwner({
+            id: space.user_id,
+            name: "Proprietário"
+          });
+          console.log("Set fallback space owner from user_id:", space.user_id);
+        } else {
+          console.error("Space owner data is missing and no fallback available");
+          toast.error("Informações do proprietário não disponíveis");
+          return;
+        }
+      }
+      
+      if (!spaceOwner.id) {
+        console.error("Space owner ID is missing");
+        toast.error("ID do proprietário não disponível");
         return;
       }
       

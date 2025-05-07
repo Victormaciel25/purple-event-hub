@@ -60,40 +60,45 @@ serve(async (req) => {
       );
     }
 
-    // Check for existing chat
-    const { data, error } = await supabase
-      .from('chats')
-      .select('id')
-      .or(
-        `and(user_id.eq.${current_user_id},owner_id.eq.${space_owner_id}),` +
-        `and(user_id.eq.${space_owner_id},owner_id.eq.${current_user_id})`
-      )
-      .eq('space_id', current_space_id)
-      .limit(1);
+    // Check for existing chat with better error handling
+    try {
+      const { data, error } = await supabase
+        .from('chats')
+        .select('id')
+        .or(
+          `and(user_id.eq.${current_user_id},owner_id.eq.${space_owner_id}),` +
+          `and(user_id.eq.${space_owner_id},owner_id.eq.${current_user_id})`
+        )
+        .eq('space_id', current_space_id)
+        .limit(1);
 
-    if (error) {
-      console.error("Database query error:", error);
-      throw error;
-    }
-
-    console.log("Query result:", data);
-
-    return new Response(
-      JSON.stringify(data),
-      { 
-        headers: { 
-          ...corsHeaders, 
-          'Content-Type': 'application/json' 
-        },
-        status: 200 
+      if (error) {
+        console.error("Database query error:", error);
+        throw error;
       }
-    );
+
+      console.log("Query result:", data);
+
+      return new Response(
+        JSON.stringify(data || []),
+        { 
+          headers: { 
+            ...corsHeaders, 
+            'Content-Type': 'application/json' 
+          },
+          status: 200 
+        }
+      );
+    } catch (queryError) {
+      console.error("Query execution error:", queryError);
+      throw queryError;
+    }
 
   } catch (error) {
     console.error('Error:', error);
     
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ error: error.message || "Unknown error occurred" }),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 500 
