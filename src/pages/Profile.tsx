@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Heart, Calendar, HelpCircle, Plus, Home, Shield, CheckSquare, Users } from "lucide-react";
@@ -237,7 +236,8 @@ const Profile = () => {
           
           <MenuCard items={userItems} />
           
-          <div className="mt-6">
+          {/* Sign Out Button - Make sure it's visible */}
+          <div className="mt-6 mb-20">
             <SignOutButton onSignOut={handleSignOut} loading={loading} />
           </div>
         </>
