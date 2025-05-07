@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Search, MessageSquare, ArrowLeft, Trash2 } from "lucide-react";
@@ -499,7 +498,7 @@ const Messages = () => {
             )}
           </div>
           
-          {/* Message input - Modified to remove padding-bottom to reduce space */}
+          {/* Message input */}
           <div className="p-4 pb-0 bg-white border-t rounded-b-xl">
             <form 
               className="flex items-end gap-2"
