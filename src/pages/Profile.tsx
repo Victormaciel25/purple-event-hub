@@ -237,7 +237,9 @@ const Profile = () => {
           
           <MenuCard items={userItems} />
           
-          <SignOutButton onSignOut={handleSignOut} loading={loading} />
+          <div className="mt-6">
+            <SignOutButton onSignOut={handleSignOut} loading={loading} />
+          </div>
         </>
       )}
 
