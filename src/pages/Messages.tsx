@@ -55,7 +55,7 @@ const MessageItem: React.FC<ChatProps & { onClick: () => void }> = ({
           src={avatar || ""}
           alt={name} 
           className="w-full h-full"
-          fallbackSrc="https://source.unsplash.com/random/100x100?person"
+          fallbackSrc="https://images.unsplash.com/photo-1511367461989-f85a21fda167?q=80&w=200&auto=format&fit=crop"
         />
       </div>
       <div className="flex-1">
@@ -456,7 +456,7 @@ const Messages = () => {
                       src={chatInfo.avatar || ""}
                       alt={chatInfo.name} 
                       className="w-full h-full"
-                      fallbackSrc="https://source.unsplash.com/random/100x100?person"
+                      fallbackSrc="https://images.unsplash.com/photo-1511367461989-f85a21fda167?q=80&w=200&auto=format&fit=crop"
                     />
                   </div>
                   <div>

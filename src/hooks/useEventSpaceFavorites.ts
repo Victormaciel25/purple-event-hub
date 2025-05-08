@@ -98,18 +98,23 @@ export const useEventSpaceFavorites = () => {
       
       console.log("Espaços encontrados:", data?.length || 0, data);
       
-      // Process spaces to include image URLs
+      // Process spaces to include image URLs but with more reliable fallbacks
       const processedSpaces = await Promise.all((data || []).map(async (space) => {
-        let imageUrl = "https://source.unsplash.com/random/600x400?event";
+        let imageUrl = "https://images.unsplash.com/photo-1566681855366-282a74153321?q=80&w=600&auto=format&fit=crop";
         
         // If there are photos, get the URL for the first one
         if (space.space_photos && space.space_photos.length > 0) {
-          const { data: urlData } = await supabase.storage
-            .from('spaces')
-            .createSignedUrl(space.space_photos[0].storage_path, 3600);
-            
-          if (urlData) {
-            imageUrl = urlData.signedUrl;
+          try {
+            const { data: urlData } = await supabase.storage
+              .from('spaces')
+              .createSignedUrl(space.space_photos[0].storage_path, 3600);
+              
+            if (urlData?.signedUrl) {
+              imageUrl = urlData.signedUrl;
+            }
+          } catch (err) {
+            console.error("Error getting signed URL:", err);
+            // Continue with fallback URL
           }
         }
         

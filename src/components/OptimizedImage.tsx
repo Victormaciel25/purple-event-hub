@@ -1,5 +1,6 @@
 
 import React, { useState } from "react";
+import { useEffect } from "react";
 
 interface OptimizedImageProps extends React.ImgHTMLAttributes<HTMLImageElement> {
   src: string;
@@ -19,6 +20,14 @@ const OptimizedImage: React.FC<OptimizedImageProps> = ({
 }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+  const [imgSrc, setImgSrc] = useState(src);
+
+  // Reset states when src changes
+  useEffect(() => {
+    setLoading(true);
+    setError(false);
+    setImgSrc(src);
+  }, [src]);
 
   const handleLoad = () => {
     setLoading(false);
@@ -30,8 +39,8 @@ const OptimizedImage: React.FC<OptimizedImageProps> = ({
     setLoading(false);
   };
 
-  // Se a URL da imagem estiver vazia, usar fallback imediatamente
-  if (!src) {
+  // Se a URL da imagem estiver vazia ou houve erro, usar fallback imediatamente
+  if (!imgSrc || error) {
     return (
       <div className={className}>
         <img 
@@ -46,25 +55,16 @@ const OptimizedImage: React.FC<OptimizedImageProps> = ({
 
   return (
     <div className={`${className} overflow-hidden ${loading ? loadingClassName : ''}`}>
-      {!error ? (
-        <img
-          src={src}
-          alt={alt}
-          className={`w-full h-full object-cover transition-opacity duration-300 ${
-            loading ? "opacity-0" : "opacity-100"
-          }`}
-          onLoad={handleLoad}
-          onError={handleError}
-          {...rest}
-        />
-      ) : (
-        <img 
-          src={fallbackSrc}
-          alt={alt}
-          className="w-full h-full object-cover"
-          {...rest}
-        />
-      )}
+      <img
+        src={imgSrc}
+        alt={alt}
+        className={`w-full h-full object-cover transition-opacity duration-300 ${
+          loading ? "opacity-0" : "opacity-100"
+        }`}
+        onLoad={handleLoad}
+        onError={handleError}
+        {...rest}
+      />
     </div>
   );
 };

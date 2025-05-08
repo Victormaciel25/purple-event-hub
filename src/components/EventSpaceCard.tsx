@@ -1,3 +1,4 @@
+
 import React from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { MapPin, Heart } from "lucide-react";
@@ -66,7 +67,7 @@ const EventSpaceCard: React.FC<EventSpaceProps> = ({
           src={image || ""}
           alt={name}
           className="w-full h-full"
-          fallbackSrc="https://source.unsplash.com/random/300x200?space"
+          fallbackSrc="https://images.unsplash.com/photo-1566681855366-282a74153321?q=80&w=600&auto=format&fit=crop"
         />
         <div className="absolute bottom-0 right-0 bg-iparty text-white px-3 py-1 text-sm font-medium rounded-tl-lg">
           {formatPrice(price)}
