@@ -388,7 +388,7 @@ const Messages = () => {
   );
   
   return (
-    <div className="container px-4 pt-6 pb-0 max-w-4xl mx-auto">
+    <div className="container px-4 py-6 max-w-4xl mx-auto">
       {!selectedChat ? (
         // Chat list view
         <>
