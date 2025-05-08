@@ -430,7 +430,7 @@ const Messages = () => {
         </>
       ) : (
         // Chat detail view
-        <div className="flex flex-col flex-1">
+        <div className="flex flex-col h-[80vh]">
           {/* Chat header */}
           <div className="flex items-center justify-between p-4 border-b bg-white rounded-t-xl shadow-sm">
             <div className="flex items-center">
