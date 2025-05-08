@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Search, MessageSquare, ArrowLeft, Trash2 } from "lucide-react";
@@ -19,6 +18,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { cn } from "@/lib/utils";
 
 interface ChatProps {
   id: string;
@@ -63,7 +63,7 @@ const MessageItem: React.FC<ChatProps & { onClick: () => void }> = ({
       </div>
       <div className="flex-1">
         <div className="flex justify-between">
-          <h3 className={`font-medium ${unread ? "text-black" : ""}`}>{name}</h3>
+          <h3 className={`font-medium truncate max-w-[160px] ${unread ? "text-black" : ""}`} title={name}>{name}</h3>
           <span className="text-xs text-muted-foreground">{time}</span>
         </div>
         <p className={`text-sm truncate ${unread ? "font-medium text-foreground" : "text-muted-foreground"}`}>
@@ -182,7 +182,7 @@ const Messages = () => {
                 lastMessage: chat.last_message || "Iniciar conversa...",
                 time: formatTime(chat.last_message_time),
                 space_id: chat.space_id,
-                avatar: chat.space_id && localImageMap && localImageMap[chat.space_id] ? localImageMap[chat.space_id] : chat.space_image || "",
+                avatar: chat.space_id && localImageMap[chat.space_id] ? localImageMap[chat.space_id] : chat.space_image || "",
                 unread: chat.has_unread && chat.last_message_sender_id !== userData.user.id
               }));
               
@@ -243,7 +243,7 @@ const Messages = () => {
                 lastMessage: chat.last_message || "Iniciar conversa...",
                 time: formatTime(chat.last_message_time),
                 space_id: chat.space_id,
-                avatar: chat.space_id && localImageMap && localImageMap[chat.space_id] ? localImageMap[chat.space_id] : chat.space_image || "",
+                avatar: chat.space_id && localImageMap[chat.space_id] ? localImageMap[chat.space_id] : chat.space_image || "",
                 unread: chat.has_unread && chat.last_message_sender_id !== userData.user.id
               }));
               
@@ -540,7 +540,7 @@ const Messages = () => {
                     />
                   </div>
                   <div>
-                    <h3 className="font-medium">{chatInfo.name}</h3>
+                    <h3 className="font-medium truncate max-w-[160px]" title={chatInfo.name}>{chatInfo.name}</h3>
                   </div>
                 </div>
               )}
