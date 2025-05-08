@@ -388,7 +388,7 @@ const Messages = () => {
   );
   
   return (
-    <div className="container px-4 py-6 max-w-4xl mx-auto">
+    <div className="container px-4 pt-6 pb-0 max-w-4xl mx-auto">
       {!selectedChat ? (
         // Chat list view
         <>
@@ -430,7 +430,7 @@ const Messages = () => {
         </>
       ) : (
         // Chat detail view
-        <div className="flex flex-col h-[80vh]">
+        <div className="flex flex-col flex-1">
           {/* Chat header */}
           <div className="flex items-center justify-between p-4 border-b bg-white rounded-t-xl shadow-sm">
             <div className="flex items-center">
