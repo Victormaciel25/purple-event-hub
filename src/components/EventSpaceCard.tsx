@@ -67,6 +67,7 @@ const EventSpaceCard: React.FC<EventSpaceProps> = ({
           src={image}
           alt={name}
           className="w-full h-full"
+          fallbackSrc="https://source.unsplash.com/random/300x200?space"
         />
         <div className="absolute bottom-0 right-0 bg-iparty text-white px-3 py-1 text-sm font-medium rounded-tl-lg">
           {formatPrice(price)}

@@ -6,6 +6,7 @@ interface OptimizedImageProps extends React.ImgHTMLAttributes<HTMLImageElement> 
   alt: string;
   className?: string;
   loadingClassName?: string;
+  fallbackSrc?: string;
 }
 
 const OptimizedImage: React.FC<OptimizedImageProps> = ({
@@ -13,37 +14,44 @@ const OptimizedImage: React.FC<OptimizedImageProps> = ({
   alt,
   className = "",
   loadingClassName = "animate-pulse bg-gray-200",
+  fallbackSrc = "https://source.unsplash.com/random/100x100?building",
   ...rest
 }) => {
   const [loaded, setLoaded] = useState(false);
+  const [error, setError] = useState(false);
   const [imgSrc, setImgSrc] = useState<string | null>(null);
   
   useEffect(() => {
-    // Check if image is in cache
-    caches.match(src).then(cachedResponse => {
-      if (cachedResponse) {
-        // Image is cached, use it immediately
-        cachedResponse.blob().then(blob => {
-          setImgSrc(URL.createObjectURL(blob));
-          setLoaded(true);
-        });
-      } else {
-        // Image not cached, load it normally
-        setImgSrc(src);
-      }
-    });
+    // Reset states when src changes
+    setLoaded(false);
+    setError(false);
     
+    if (!src) {
+      setError(true);
+      return;
+    }
+    
+    // Set image source directly - we'll skip the cache checking as it might be causing issues with signed URLs
+    setImgSrc(src);
+    
+    // Clean up function
     return () => {
-      // Clean up object URL if created
       if (imgSrc && imgSrc.startsWith('blob:')) {
         URL.revokeObjectURL(imgSrc);
       }
     };
   }, [src]);
   
+  // Handle image load error
+  const handleError = () => {
+    console.error("Image failed to load:", src);
+    setError(true);
+    setLoaded(false);
+  };
+  
   return (
-    <div className={`${className} overflow-hidden ${!loaded ? loadingClassName : ''}`}>
-      {imgSrc && (
+    <div className={`${className} overflow-hidden ${!loaded && !error ? loadingClassName : ''}`}>
+      {imgSrc && !error ? (
         <img
           src={imgSrc}
           alt={alt}
@@ -51,6 +59,14 @@ const OptimizedImage: React.FC<OptimizedImageProps> = ({
             loaded ? "opacity-100" : "opacity-0"
           }`}
           onLoad={() => setLoaded(true)}
+          onError={handleError}
+          {...rest}
+        />
+      ) : (
+        <img 
+          src={fallbackSrc}
+          alt={alt}
+          className="w-full h-full object-cover"
           {...rest}
         />
       )}

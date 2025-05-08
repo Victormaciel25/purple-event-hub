@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Search, MessageSquare, ArrowLeft, Trash2 } from "lucide-react";
@@ -8,6 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { useSearchParams } from "react-router-dom";
+import OptimizedImage from "@/components/OptimizedImage";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -51,7 +51,12 @@ const MessageItem: React.FC<ChatProps & { onClick: () => void }> = ({
       onClick={onClick}
     >
       <div className="h-12 w-12 rounded-full overflow-hidden mr-4">
-        <img src={avatar} alt={name} className="w-full h-full object-cover" />
+        <OptimizedImage 
+          src={avatar} 
+          alt={name} 
+          className="w-full h-full"
+          fallbackSrc="https://source.unsplash.com/random/100x100?building"
+        />
       </div>
       <div className="flex-1">
         <div className="flex justify-between">
