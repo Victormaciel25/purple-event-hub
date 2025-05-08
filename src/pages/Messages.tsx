@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Search, MessageSquare, ArrowLeft, Trash2 } from "lucide-react";
@@ -143,14 +144,15 @@ const Messages = () => {
                 .filter(chat => chat.space_id)
                 .map(chat => chat.space_id);
               
+              // Initialize empty image map
+              let localImageMap: Record<string, string> = {};
+              
               // Fetch space photos for all spaces at once
               if (spaceIds.length > 0) {
                 const { data: spacesData } = await supabase
                   .from("spaces")
                   .select("id, space_photos(storage_path)")
                   .in("id", spaceIds);
-                
-                const localImageMap: Record<string, string> = {};
                 
                 // Get signed URLs for all spaces with photos
                 if (spacesData) {
@@ -203,14 +205,15 @@ const Messages = () => {
                 .filter(chat => chat.space_id)
                 .map(chat => chat.space_id);
               
+              // Initialize empty image map
+              let localImageMap: Record<string, string> = {};
+              
               // Fetch space photos for all spaces at once
               if (spaceIds.length > 0) {
                 const { data: spacesData } = await supabase
                   .from("spaces")
                   .select("id, space_photos(storage_path)")
                   .in("id", spaceIds);
-                
-                const localImageMap: Record<string, string> = {};
                 
                 // Get signed URLs for all spaces with photos
                 if (spacesData) {
