@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Search, MessageSquare, ArrowLeft, Trash2 } from "lucide-react";
@@ -151,7 +150,7 @@ const Messages = () => {
                   .select("id, space_photos(storage_path)")
                   .in("id", spaceIds);
                 
-                const imageMap: Record<string, string> = {};
+                const localImageMap: Record<string, string> = {};
                 
                 // Get signed URLs for all spaces with photos
                 if (spacesData) {
@@ -163,7 +162,7 @@ const Messages = () => {
                           .createSignedUrl(space.space_photos[0].storage_path, 3600);
                           
                         if (urlData?.signedUrl) {
-                          imageMap[space.id] = urlData.signedUrl;
+                          localImageMap[space.id] = urlData.signedUrl;
                         }
                       } catch (err) {
                         console.error("Error getting signed URL for space:", space.id, err);
@@ -172,7 +171,7 @@ const Messages = () => {
                   }));
                 }
                 
-                setSpaceImages(imageMap);
+                setSpaceImages(localImageMap);
               }
               
               const formattedChats = fallbackChatsData.map(chat => ({
@@ -181,7 +180,7 @@ const Messages = () => {
                 lastMessage: chat.last_message || "Iniciar conversa...",
                 time: formatTime(chat.last_message_time),
                 space_id: chat.space_id,
-                avatar: chat.space_id && imageMap[chat.space_id] ? imageMap[chat.space_id] : chat.space_image || "",
+                avatar: chat.space_id && localImageMap && localImageMap[chat.space_id] ? localImageMap[chat.space_id] : chat.space_image || "",
                 unread: chat.has_unread && chat.last_message_sender_id !== userData.user.id
               }));
               
@@ -211,7 +210,7 @@ const Messages = () => {
                   .select("id, space_photos(storage_path)")
                   .in("id", spaceIds);
                 
-                const imageMap: Record<string, string> = {};
+                const localImageMap: Record<string, string> = {};
                 
                 // Get signed URLs for all spaces with photos
                 if (spacesData) {
@@ -223,7 +222,7 @@ const Messages = () => {
                           .createSignedUrl(space.space_photos[0].storage_path, 3600);
                           
                         if (urlData?.signedUrl) {
-                          imageMap[space.id] = urlData.signedUrl;
+                          localImageMap[space.id] = urlData.signedUrl;
                         }
                       } catch (err) {
                         console.error("Error getting signed URL for space:", space.id, err);
@@ -232,7 +231,7 @@ const Messages = () => {
                   }));
                 }
                 
-                setSpaceImages(imageMap);
+                setSpaceImages(localImageMap);
               }
               
               const formattedChats = chatsData.map(chat => ({
@@ -241,7 +240,7 @@ const Messages = () => {
                 lastMessage: chat.last_message || "Iniciar conversa...",
                 time: formatTime(chat.last_message_time),
                 space_id: chat.space_id,
-                avatar: chat.space_id && imageMap[chat.space_id] ? imageMap[chat.space_id] : chat.space_image || "",
+                avatar: chat.space_id && localImageMap && localImageMap[chat.space_id] ? localImageMap[chat.space_id] : chat.space_image || "",
                 unread: chat.has_unread && chat.last_message_sender_id !== userData.user.id
               }));
               
