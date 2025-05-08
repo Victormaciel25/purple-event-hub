@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Search, MessageSquare, ArrowLeft, Trash2 } from "lucide-react";
@@ -388,7 +389,7 @@ const Messages = () => {
   );
   
   return (
-    <div className="container px-4 py-6 max-w-4xl mx-auto">
+    <div className="container px-4 pb-16 max-w-4xl mx-auto">
       {!selectedChat ? (
         // Chat list view
         <>
@@ -430,7 +431,7 @@ const Messages = () => {
         </>
       ) : (
         // Chat detail view
-        <div className="flex flex-col h-[80vh]">
+        <div className="flex flex-col h-[calc(100vh-64px)]">
           {/* Chat header */}
           <div className="flex items-center justify-between p-4 border-b bg-white rounded-t-xl shadow-sm">
             <div className="flex items-center">
@@ -492,7 +493,7 @@ const Messages = () => {
           </div>
           
           {/* Message input */}
-          <div className="p-4 pb-0 bg-white border-t rounded-b-xl">
+          <div className="p-4 pt-2 bg-white border-t">
             <form 
               className="flex items-end gap-2"
               onSubmit={(e) => {
