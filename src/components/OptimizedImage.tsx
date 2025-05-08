@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 
 interface OptimizedImageProps extends React.ImgHTMLAttributes<HTMLImageElement> {
   src: string;
@@ -17,48 +17,43 @@ const OptimizedImage: React.FC<OptimizedImageProps> = ({
   fallbackSrc = "https://source.unsplash.com/random/100x100?building",
   ...rest
 }) => {
-  const [loaded, setLoaded] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
-  const [imgSrc, setImgSrc] = useState<string | null>(null);
-  
-  useEffect(() => {
-    // Reset states when src changes
-    setLoaded(false);
-    setError(false);
-    
-    if (!src) {
-      setError(true);
-      return;
-    }
-    
-    // Set image source directly - we'll skip the cache checking as it might be causing issues with signed URLs
-    setImgSrc(src);
-    
-    // Clean up function
-    return () => {
-      if (imgSrc && imgSrc.startsWith('blob:')) {
-        URL.revokeObjectURL(imgSrc);
-      }
-    };
-  }, [src]);
-  
-  // Handle image load error
-  const handleError = () => {
-    console.error("Image failed to load:", src);
-    setError(true);
-    setLoaded(false);
+
+  const handleLoad = () => {
+    setLoading(false);
   };
-  
+
+  const handleError = () => {
+    console.error("Imagem falhou ao carregar:", src);
+    setError(true);
+    setLoading(false);
+  };
+
+  // Se a URL da imagem estiver vazia, usar fallback imediatamente
+  if (!src) {
+    return (
+      <div className={className}>
+        <img 
+          src={fallbackSrc}
+          alt={alt}
+          className="w-full h-full object-cover"
+          {...rest}
+        />
+      </div>
+    );
+  }
+
   return (
-    <div className={`${className} overflow-hidden ${!loaded && !error ? loadingClassName : ''}`}>
-      {imgSrc && !error ? (
+    <div className={`${className} overflow-hidden ${loading ? loadingClassName : ''}`}>
+      {!error ? (
         <img
-          src={imgSrc}
+          src={src}
           alt={alt}
           className={`w-full h-full object-cover transition-opacity duration-300 ${
-            loaded ? "opacity-100" : "opacity-0"
+            loading ? "opacity-0" : "opacity-100"
           }`}
-          onLoad={() => setLoaded(true)}
+          onLoad={handleLoad}
           onError={handleError}
           {...rest}
         />

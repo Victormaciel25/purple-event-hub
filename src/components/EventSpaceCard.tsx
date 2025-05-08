@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { MapPin, Heart } from "lucide-react";
@@ -64,7 +63,7 @@ const EventSpaceCard: React.FC<EventSpaceProps> = ({
       </div>
       <div className="relative h-48 overflow-hidden">
         <OptimizedImage
-          src={image}
+          src={image || ""}
           alt={name}
           className="w-full h-full"
           fallbackSrc="https://source.unsplash.com/random/300x200?space"

@@ -52,10 +52,10 @@ const MessageItem: React.FC<ChatProps & { onClick: () => void }> = ({
     >
       <div className="h-12 w-12 rounded-full overflow-hidden mr-4">
         <OptimizedImage 
-          src={avatar} 
+          src={avatar || ""}
           alt={name} 
           className="w-full h-full"
-          fallbackSrc="https://source.unsplash.com/random/100x100?building"
+          fallbackSrc="https://source.unsplash.com/random/100x100?person"
         />
       </div>
       <div className="flex-1">
@@ -452,7 +452,12 @@ const Messages = () => {
               {chatInfo && (
                 <div className="flex items-center">
                   <div className="h-10 w-10 rounded-full overflow-hidden mr-3">
-                    <img src={chatInfo.avatar} alt={chatInfo.name} className="w-full h-full object-cover" />
+                    <OptimizedImage 
+                      src={chatInfo.avatar || ""}
+                      alt={chatInfo.name} 
+                      className="w-full h-full"
+                      fallbackSrc="https://source.unsplash.com/random/100x100?person"
+                    />
                   </div>
                   <div>
                     <h3 className="font-medium">{chatInfo.name}</h3>
