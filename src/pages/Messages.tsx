@@ -26,6 +26,7 @@ interface ChatProps {
   time: string;
   avatar: string;
   unread?: boolean;
+  space_id?: string;
 }
 
 interface MessageProps {
@@ -55,7 +56,7 @@ const MessageItem: React.FC<ChatProps & { onClick: () => void }> = ({
           src={avatar || ""}
           alt={name} 
           className="w-full h-full"
-          fallbackSrc="https://images.unsplash.com/photo-1511367461989-f85a21fda167?q=80&w=200&auto=format&fit=crop"
+          fallbackSrc="https://images.unsplash.com/photo-1566681855366-282a74153321?q=80&w=200&auto=format&fit=crop"
         />
       </div>
       <div className="flex-1">
@@ -108,6 +109,7 @@ const Messages = () => {
   const [userId, setUserId] = useState<string | null>(null);
   const [chatInfo, setChatInfo] = useState<ChatProps | null>(null);
   const [chatToDelete, setChatToDelete] = useState<string | null>(null);
+  const [spaceImages, setSpaceImages] = useState<Record<string, string>>({});
 
   useEffect(() => {
     const fetchUserAndChats = async () => {
@@ -135,12 +137,49 @@ const Messages = () => {
             if (fallbackError) throw fallbackError;
             
             if (fallbackChatsData) {
+              // Collect all space IDs to fetch their images
+              const spaceIds = fallbackChatsData
+                .filter(chat => chat.space_id)
+                .map(chat => chat.space_id);
+              
+              // Fetch space photos for all spaces at once
+              if (spaceIds.length > 0) {
+                const { data: spacesData } = await supabase
+                  .from("spaces")
+                  .select("id, space_photos(storage_path)")
+                  .in("id", spaceIds);
+                
+                const spaceImageMap: Record<string, string> = {};
+                
+                // Get signed URLs for all spaces with photos
+                if (spacesData) {
+                  await Promise.all(spacesData.map(async (space) => {
+                    if (space.space_photos && space.space_photos.length > 0) {
+                      try {
+                        const { data: urlData } = await supabase.storage
+                          .from('spaces')
+                          .createSignedUrl(space.space_photos[0].storage_path, 3600);
+                          
+                        if (urlData?.signedUrl) {
+                          spaceImageMap[space.id] = urlData.signedUrl;
+                        }
+                      } catch (err) {
+                        console.error("Error getting signed URL for space:", space.id, err);
+                      }
+                    }
+                  }));
+                }
+                
+                setSpaceImages(spaceImageMap);
+              }
+              
               const formattedChats = fallbackChatsData.map(chat => ({
                 id: chat.id,
                 name: chat.space_name || "Conversa",
                 lastMessage: chat.last_message || "Iniciar conversa...",
                 time: formatTime(chat.last_message_time),
-                avatar: chat.space_image || "https://source.unsplash.com/random/100x100?building",
+                space_id: chat.space_id,
+                avatar: chat.space_id ? spaceImages[chat.space_id] || chat.space_image || "" : "",
                 unread: chat.has_unread && chat.last_message_sender_id !== userData.user.id
               }));
               
@@ -158,12 +197,49 @@ const Messages = () => {
           } else if (chatsData) {
             // Handle data if it's an array
             if (Array.isArray(chatsData)) {
+              // Collect all space IDs to fetch their images
+              const spaceIds = chatsData
+                .filter(chat => chat.space_id)
+                .map(chat => chat.space_id);
+              
+              // Fetch space photos for all spaces at once
+              if (spaceIds.length > 0) {
+                const { data: spacesData } = await supabase
+                  .from("spaces")
+                  .select("id, space_photos(storage_path)")
+                  .in("id", spaceIds);
+                
+                const spaceImageMap: Record<string, string> = {};
+                
+                // Get signed URLs for all spaces with photos
+                if (spacesData) {
+                  await Promise.all(spacesData.map(async (space) => {
+                    if (space.space_photos && space.space_photos.length > 0) {
+                      try {
+                        const { data: urlData } = await supabase.storage
+                          .from('spaces')
+                          .createSignedUrl(space.space_photos[0].storage_path, 3600);
+                          
+                        if (urlData?.signedUrl) {
+                          spaceImageMap[space.id] = urlData.signedUrl;
+                        }
+                      } catch (err) {
+                        console.error("Error getting signed URL for space:", space.id, err);
+                      }
+                    }
+                  }));
+                }
+                
+                setSpaceImages(spaceImageMap);
+              }
+              
               const formattedChats = chatsData.map(chat => ({
                 id: chat.id,
                 name: chat.space_name || "Conversa",
                 lastMessage: chat.last_message || "Iniciar conversa...",
                 time: formatTime(chat.last_message_time),
-                avatar: chat.space_image || "https://source.unsplash.com/random/100x100?building",
+                space_id: chat.space_id,
+                avatar: chat.space_id ? spaceImageMap[chat.space_id] || chat.space_image || "" : "",
                 unread: chat.has_unread && chat.last_message_sender_id !== userData.user.id
               }));
               
@@ -453,10 +529,10 @@ const Messages = () => {
                 <div className="flex items-center">
                   <div className="h-10 w-10 rounded-full overflow-hidden mr-3">
                     <OptimizedImage 
-                      src={chatInfo.avatar || ""}
+                      src={chatInfo.space_id ? spaceImages[chatInfo.space_id] || "" : chatInfo.avatar || ""}
                       alt={chatInfo.name} 
                       className="w-full h-full"
-                      fallbackSrc="https://images.unsplash.com/photo-1511367461989-f85a21fda167?q=80&w=200&auto=format&fit=crop"
+                      fallbackSrc="https://images.unsplash.com/photo-1566681855366-282a74153321?q=80&w=200&auto=format&fit=crop"
                     />
                   </div>
                   <div>

@@ -1,6 +1,5 @@
 
-import React, { useState } from "react";
-import { useEffect } from "react";
+import React, { useState, useEffect } from "react";
 
 interface OptimizedImageProps extends React.ImgHTMLAttributes<HTMLImageElement> {
   src: string;
@@ -15,7 +14,7 @@ const OptimizedImage: React.FC<OptimizedImageProps> = ({
   alt,
   className = "",
   loadingClassName = "animate-pulse bg-gray-200",
-  fallbackSrc = "https://source.unsplash.com/random/100x100?building",
+  fallbackSrc = "https://images.unsplash.com/photo-1566681855366-282a74153321?q=80&w=600&auto=format&fit=crop",
   ...rest
 }) => {
   const [loading, setLoading] = useState(true);
