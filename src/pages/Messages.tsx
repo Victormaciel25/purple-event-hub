@@ -539,8 +539,8 @@ const Messages = () => {
                       fallbackSrc="https://images.unsplash.com/photo-1566681855366-282a74153321?q=80&w=200&auto=format&fit=crop"
                     />
                   </div>
-                  <div>
-                    <h3 className="font-medium truncate max-w-[160px]" title={chatInfo.name}>{chatInfo.name}</h3>
+                  <div className="max-w-[180px]">
+                    <h3 className="font-medium truncate text-sm" title={chatInfo.name}>{chatInfo.name}</h3>
                   </div>
                 </div>
               )}
