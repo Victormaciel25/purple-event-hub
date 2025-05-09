@@ -12,6 +12,7 @@ export type Database = {
       chats: {
         Row: {
           created_at: string | null
+          deleted: boolean | null
           has_unread: boolean | null
           id: string
           last_message: string | null
@@ -25,6 +26,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string | null
+          deleted?: boolean | null
           has_unread?: boolean | null
           id?: string
           last_message?: string | null
@@ -38,6 +40,7 @@ export type Database = {
         }
         Update: {
           created_at?: string | null
+          deleted?: boolean | null
           has_unread?: boolean | null
           id?: string
           last_message?: string | null

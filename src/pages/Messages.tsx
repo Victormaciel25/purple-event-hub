@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Search, MessageSquare, ArrowLeft, Trash2 } from "lucide-react";
@@ -134,6 +135,7 @@ const Messages = () => {
               .from("chats")
               .select("*")
               .or(`user_id.eq.${userData.user.id},owner_id.eq.${userData.user.id}`)
+              .is('deleted', false)
               .order('last_message_time', { ascending: false });
               
             if (fallbackError) throw fallbackError;
@@ -278,6 +280,10 @@ const Messages = () => {
         payload => {
           setChats(currentChats => {
             const updatedChat = payload.new as any;
+            // Ignore updates for deleted chats
+            if (updatedChat.deleted) {
+              return currentChats.filter(chat => chat.id !== updatedChat.id);
+            }
             return currentChats.map(chat => {
               if (chat.id === updatedChat.id) {
                 return {
@@ -433,7 +439,7 @@ const Messages = () => {
     if (!chatToDelete) return;
 
     try {
-      // Primeiro, atualiza o chat para marcá-lo como excluído
+      // Update chat to mark it as deleted
       const { error: chatUpdateError } = await supabase
         .from("chats")
         .update({ deleted: true })
@@ -441,10 +447,10 @@ const Messages = () => {
         
       if (chatUpdateError) throw chatUpdateError;
       
-      // Atualiza a UI removendo o chat excluído
+      // Update the UI by removing the deleted chat
       setChats(prevChats => prevChats.filter(chat => chat.id !== chatToDelete));
       
-      // Se o chat excluído estava selecionado, limpa a seleção
+      // If the deleted chat was selected, clear the selection
       if (selectedChat === chatToDelete) {
         setSelectedChat(null);
         setMessages([]);
@@ -456,7 +462,7 @@ const Messages = () => {
       console.error("Error deleting chat:", error);
       toast.error("Erro ao excluir conversa");
     } finally {
-      // Fecha o diálogo
+      // Close the dialog
       setChatToDelete(null);
     }
   };
