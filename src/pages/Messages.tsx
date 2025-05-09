@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Search, MessageSquare, ArrowLeft, Trash2 } from "lucide-react";
@@ -434,26 +433,18 @@ const Messages = () => {
     if (!chatToDelete) return;
 
     try {
-      // First, delete all messages in the chat
-      const { error: messagesError } = await supabase
-        .from("messages")
-        .delete()
-        .eq("chat_id", chatToDelete);
-        
-      if (messagesError) throw messagesError;
-      
-      // Then, delete the chat itself
-      const { error: chatError } = await supabase
+      // Primeiro, atualiza o chat para marcá-lo como excluído
+      const { error: chatUpdateError } = await supabase
         .from("chats")
-        .delete()
+        .update({ deleted: true })
         .eq("id", chatToDelete);
         
-      if (chatError) throw chatError;
+      if (chatUpdateError) throw chatUpdateError;
       
-      // Update the UI by removing the deleted chat
+      // Atualiza a UI removendo o chat excluído
       setChats(prevChats => prevChats.filter(chat => chat.id !== chatToDelete));
       
-      // If the deleted chat was selected, clear the selection
+      // Se o chat excluído estava selecionado, limpa a seleção
       if (selectedChat === chatToDelete) {
         setSelectedChat(null);
         setMessages([]);
@@ -465,7 +456,7 @@ const Messages = () => {
       console.error("Error deleting chat:", error);
       toast.error("Erro ao excluir conversa");
     } finally {
-      // Close the dialog
+      // Fecha o diálogo
       setChatToDelete(null);
     }
   };

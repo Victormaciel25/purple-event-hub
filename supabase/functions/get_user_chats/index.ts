@@ -55,10 +55,12 @@ serve(async (req) => {
     }
 
     // Fetch chats for this user
+    // Adicionado filtro para não trazer chats excluídos (marcados com deleted = true)
     const { data, error } = await supabase
       .from('chats')
       .select('*')
       .or(`user_id.eq.${user.id},owner_id.eq.${user.id}`)
+      .is('deleted', null) // Apenas chats não excluídos
       .order('last_message_time', { ascending: false });
 
     if (error) throw error;
