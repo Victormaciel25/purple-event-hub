@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Search, MessageSquare, ArrowLeft, Trash2 } from "lucide-react";
@@ -561,12 +560,27 @@ const Messages = () => {
               messages.map(message => (
                 <div 
                   key={message.id} 
-                  className={`mb-4 max-w-[80%] ${message.is_mine ? 'ml-auto' : 'mr-auto'}`}
+                  className={cn(
+                    "mb-4 max-w-[80%]",
+                    message.is_mine ? "ml-auto" : "mr-auto"
+                  )}
                 >
-                  <div className={`rounded-lg p-3 ${message.is_mine ? 'bg-iparty text-white' : 'bg-white'}`}>
+                  <div 
+                    className={cn(
+                      "rounded-lg p-3", 
+                      message.is_mine 
+                        ? "bg-iparty text-white rounded-tr-none" 
+                        : "bg-white rounded-tl-none"
+                    )}
+                  >
                     {message.content}
                   </div>
-                  <div className={`text-xs mt-1 ${message.is_mine ? 'text-right' : ''} text-muted-foreground`}>
+                  <div 
+                    className={cn(
+                      "text-xs mt-1 text-muted-foreground",
+                      message.is_mine ? "text-right" : ""
+                    )}
+                  >
                     {formatTime(message.timestamp)}
                   </div>
                 </div>
