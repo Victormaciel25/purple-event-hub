@@ -395,13 +395,13 @@ const EventSpaceDetails: React.FC = () => {
   return (
     <div className="container px-4 py-6 pb-20 mx-auto">
       <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center">
-          <Button variant="ghost" size="sm" onClick={() => navigate(-1)} className="mr-2">
+        <div className="flex items-center flex-1 min-w-0">
+          <Button variant="ghost" size="sm" onClick={() => navigate(-1)} className="mr-2 flex-shrink-0">
             <ChevronLeft size={20} />
           </Button>
-          <h1 className="text-xl font-bold truncate">{space.name}</h1>
+          <h1 className="text-xl font-bold truncate" title={space.name}>{space.name}</h1>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-shrink-0">
           <Button 
             variant="ghost" 
             size="sm" 
