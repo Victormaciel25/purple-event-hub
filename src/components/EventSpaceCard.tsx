@@ -82,7 +82,7 @@ const EventSpaceCard: React.FC<EventSpaceProps> = ({
         </h3>
         <div className="flex items-center text-muted-foreground text-sm">
           <MapPin size={14} className="mr-1 flex-shrink-0" />
-          <span className="truncate">{address}</span>
+          <span className="truncate line-clamp-1" title={address}>{address}</span>
         </div>
       </CardContent>
     </Card>
