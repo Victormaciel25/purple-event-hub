@@ -215,7 +215,7 @@ const Explore = () => {
           <p className="text-gray-500">Nenhum espaço encontrado.</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pb-20">
           {filteredSpaces.map((space) => (
             <EventSpaceCard 
               key={space.id} 
