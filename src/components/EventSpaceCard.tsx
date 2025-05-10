@@ -74,9 +74,14 @@ const EventSpaceCard: React.FC<EventSpaceProps> = ({
         </div>
       </div>
       <CardContent className="p-4">
-        <h3 className="font-semibold text-lg leading-tight mb-1">{name}</h3>
+        <h3 
+          className="font-semibold text-lg leading-tight mb-1 line-clamp-2" 
+          title={name}
+        >
+          {name}
+        </h3>
         <div className="flex items-center text-muted-foreground text-sm">
-          <MapPin size={14} className="mr-1" />
+          <MapPin size={14} className="mr-1 flex-shrink-0" />
           <span className="truncate">{address}</span>
         </div>
       </CardContent>
