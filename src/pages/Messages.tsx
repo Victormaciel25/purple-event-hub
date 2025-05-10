@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Search, MessageSquare, ArrowLeft, Trash2 } from "lucide-react";
@@ -561,27 +562,29 @@ const Messages = () => {
                 <div 
                   key={message.id} 
                   className={cn(
-                    "mb-4 max-w-[80%]",
-                    message.is_mine ? "ml-auto" : "mr-auto"
+                    "mb-4 flex",
+                    message.is_mine ? "justify-end" : "justify-start"
                   )}
                 >
-                  <div 
-                    className={cn(
-                      "rounded-lg p-3", 
-                      message.is_mine 
-                        ? "bg-iparty text-white rounded-tr-none" 
-                        : "bg-white rounded-tl-none"
-                    )}
-                  >
-                    {message.content}
-                  </div>
-                  <div 
-                    className={cn(
-                      "text-xs mt-1 text-muted-foreground",
-                      message.is_mine ? "text-right" : ""
-                    )}
-                  >
-                    {formatTime(message.timestamp)}
+                  <div className="max-w-[80%] inline-block">
+                    <div 
+                      className={cn(
+                        "rounded-2xl p-3 px-4 inline-block", 
+                        message.is_mine 
+                          ? "bg-iparty text-white rounded-tr-none" 
+                          : "bg-white rounded-tl-none"
+                      )}
+                    >
+                      {message.content}
+                    </div>
+                    <div 
+                      className={cn(
+                        "text-xs mt-1 text-muted-foreground",
+                        message.is_mine ? "text-right" : ""
+                      )}
+                    >
+                      {formatTime(message.timestamp)}
+                    </div>
                   </div>
                 </div>
               ))
