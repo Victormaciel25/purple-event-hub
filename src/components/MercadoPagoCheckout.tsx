@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { Button } from "@/components/ui/button";
@@ -240,7 +239,7 @@ const MercadoPagoCheckout: React.FC<CheckoutProps> = ({
             </div>
           </div>
           
-          <button type="submit" id="form-checkout__submit">Pagar ${formatPrice(plan.price)}</button>
+          <button type="submit" id="form-checkout__submit">Pagar</button>
           <progress value="0" class="progress-bar" id="payment-progress">Carregando...</progress>
         </form>
       `;
