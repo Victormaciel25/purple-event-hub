@@ -149,6 +149,7 @@ const MercadoPagoCheckout: React.FC<CheckoutProps> = ({
           cursor: pointer;
           font-size: 16px;
           transition: background-color 0.2s;
+          margin-bottom: 24px;
         }
         
         #form-checkout__submit:hover {
@@ -255,7 +256,7 @@ const MercadoPagoCheckout: React.FC<CheckoutProps> = ({
           installments: {
             id: "form-checkout__installments",
             placeholder: "Parcelas",
-          },
+          },        
           identificationType: {
             id: "form-checkout__identificationType",
             placeholder: "Tipo de documento",
@@ -271,11 +272,8 @@ const MercadoPagoCheckout: React.FC<CheckoutProps> = ({
         },
         callbacks: {
           onFormMounted: error => {
-            if (error) {
-              console.warn("Form Mounted handling error: ", error);
-              return;
-            }
-            console.log("Payment form mounted successfully");
+            if (error) return console.warn("Form Mounted handling error: ", error);
+            console.log("Form mounted");
           },
           onSubmit: event => {
             event.preventDefault();
@@ -362,7 +360,7 @@ const MercadoPagoCheckout: React.FC<CheckoutProps> = ({
           size="lg"
           onClick={handleShowCheckout}
           disabled={loading || !sdkReady}
-          className="bg-iparty"
+          className="bg-iparty mb-4"
         >
           {loading ? (
             <>
