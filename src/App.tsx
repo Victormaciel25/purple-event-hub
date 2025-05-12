@@ -21,6 +21,7 @@ import SpaceApproval from "./pages/SpaceApproval";
 import AdminManagement from "./pages/AdminManagement";
 import UserSpaces from "./pages/UserSpaces";
 import EditSpace from "./pages/EditSpace";
+import PromoteSpace from "./pages/PromoteSpace";
 
 // Create a QueryClient instance outside of the component
 const queryClient = new QueryClient();
@@ -90,6 +91,7 @@ const App: React.FC = () => {
               <Route path="/admin-management" element={<AdminManagement />} />
               <Route path="/user-spaces" element={<UserSpaces />} />
               <Route path="/edit-space/:id" element={<EditSpace />} />
+              <Route path="/promote-space" element={<PromoteSpace />} />
             </Route>
             
             {/* Catch-all route */}
