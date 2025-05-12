@@ -2,12 +2,13 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardFooter } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ChevronLeft, Check } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import MercadoPagoCheckout from "@/components/MercadoPagoCheckout";
 
 type Space = {
   id: string;
@@ -63,6 +64,7 @@ const PromoteSpace: React.FC = () => {
   const [selectedSpace, setSelectedSpace] = useState<string>("");
   const [selectedPlan, setSelectedPlan] = useState<string>("daily");
   const [loading, setLoading] = useState(true);
+  const [paymentSuccess, setPaymentSuccess] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -104,26 +106,16 @@ const PromoteSpace: React.FC = () => {
     }
   };
 
-  const handleCheckout = () => {
-    const selectedPlanData = plans.find(plan => plan.id === selectedPlan);
+  const handlePaymentSuccess = () => {
+    setPaymentSuccess(true);
     
-    if (!selectedSpace || !selectedPlanData) {
-      toast.error("Por favor, selecione um espaço e um plano.");
-      return;
-    }
+    // In a production app, you would also update the database to
+    // mark the space as promoted with the selected plan
     
-    const selectedSpaceName = spaces.find(space => space.id === selectedSpace)?.name;
-    
-    toast.success(
-      `Iniciando checkout para o espaço "${selectedSpaceName}" com o plano ${selectedPlanData.name}`
-    );
-    
-    // TODO: Implement actual payment integration
-    console.log("Checkout for:", {
-      spaceId: selectedSpace,
-      spaceName: selectedSpaceName,
-      plan: selectedPlanData
-    });
+    // Redirect to profile after a delay
+    setTimeout(() => {
+      navigate("/profile");
+    }, 3000);
   };
 
   const formatPrice = (price: number) => {
@@ -161,6 +153,34 @@ const PromoteSpace: React.FC = () => {
           <Button onClick={() => navigate("/register-space")} className="bg-iparty">
             Cadastrar Novo Espaço
           </Button>
+        </Card>
+      </div>
+    );
+  }
+
+  if (paymentSuccess) {
+    return (
+      <div className="container px-4 py-6 max-w-4xl mx-auto">
+        <div className="flex items-center mb-6">
+          <Button variant="ghost" size="sm" onClick={() => navigate("/profile")} className="mr-2">
+            <ChevronLeft size={20} />
+          </Button>
+          <h1 className="text-2xl font-bold">Promover Espaço</h1>
+        </div>
+        <Card className="p-6 text-center">
+          <div className="flex flex-col items-center justify-center py-8">
+            <div className="rounded-full bg-green-100 p-3 mb-4">
+              <Check className="w-8 h-8 text-green-600" />
+            </div>
+            <h2 className="text-xl font-bold mb-2">Pagamento realizado com sucesso!</h2>
+            <p className="text-gray-600 mb-6">
+              Seu espaço "{spaces.find(space => space.id === selectedSpace)?.name}" 
+              foi promovido com o plano {plans.find(plan => plan.id === selectedPlan)?.name}.
+            </p>
+            <Button onClick={() => navigate("/profile")} className="bg-iparty">
+              Voltar ao perfil
+            </Button>
+          </div>
         </Card>
       </div>
     );
@@ -231,15 +251,12 @@ const PromoteSpace: React.FC = () => {
       </div>
 
       <div className="flex justify-center">
-        <Button 
-          size="lg"
-          onClick={handleCheckout}
-          disabled={!selectedSpace}
-          className="bg-iparty"
-        >
-          <Check size={20} className="mr-2" />
-          Continuar para o pagamento
-        </Button>
+        <MercadoPagoCheckout 
+          spaceId={selectedSpace}
+          spaceName={spaces.find(space => space.id === selectedSpace)?.name || ""}
+          plan={plans.find(plan => plan.id === selectedPlan) || plans[0]}
+          onSuccess={handlePaymentSuccess}
+        />
       </div>
     </div>
   );

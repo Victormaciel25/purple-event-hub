@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -25,6 +24,10 @@ import PromoteSpace from "./pages/PromoteSpace";
 
 // Create a QueryClient instance outside of the component
 const queryClient = new QueryClient();
+
+// Add a global CSS variable for the iparty color
+import './index.css';
+// Ensure we have the iparty color variable in :root in index.css
 
 const App: React.FC = () => {
   const [session, setSession] = useState<any>(null);
