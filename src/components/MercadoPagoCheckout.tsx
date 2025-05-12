@@ -80,7 +80,7 @@ const MercadoPagoCheckout: React.FC<CheckoutProps> = ({
       // Create card payment brick
       const bricksBuilder = mp.bricks();
       
-      // Create preference object (in a real implementation, this would come from your backend)
+      // Create preference object
       const preference = {
         items: [
           {
@@ -101,6 +101,7 @@ const MercadoPagoCheckout: React.FC<CheckoutProps> = ({
         const settings = {
           initialization: {
             amount: plan.price,
+            preferenceId: null, // In a real implementation, you would get this from your backend
           },
           callbacks: {
             onReady: () => {
@@ -113,23 +114,23 @@ const MercadoPagoCheckout: React.FC<CheckoutProps> = ({
               // callback called on submit form
               console.log("CardPaymentBrick - Payment submitted:", cardFormData);
               
-              // For test/demo purposes, we'll simulate a successful payment
-              setTimeout(() => {
-                toast.success(`Pagamento de ${formatPrice(plan.price)} realizado com sucesso!`, {
-                  duration: 5000,
-                });
-                
-                if (onSuccess) {
-                  onSuccess();
-                }
-              }, 2000);
-
+              // This is where you would send the payment data to your backend to process
+              // For now, we'll simulate a successful payment after a delay
+              
               return new Promise((resolve, reject) => {
                 // In a real implementation, you would send cardFormData to your backend
                 // and process the payment with Mercado Pago's API
                 
-                // For the demo, we'll resolve the promise after a delay
-                setTimeout(resolve, 1500);
+                setTimeout(() => {
+                  toast.success(`Pagamento de ${formatPrice(plan.price)} realizado com sucesso!`, {
+                    duration: 5000,
+                  });
+                  
+                  if (onSuccess) {
+                    onSuccess();
+                  }
+                  resolve(true);
+                }, 2000);
               });
             },
             onError: (error: any) => {
