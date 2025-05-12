@@ -37,6 +37,19 @@ const MercadoPagoCheckout: React.FC<CheckoutProps> = ({
   const [sdkReady, setSdkReady] = useState(false);
   const [showCheckoutForm, setShowCheckoutForm] = useState(false);
   const [processingPayment, setProcessingPayment] = useState(false);
+  const [userId, setUserId] = useState<string | null>(null);
+  
+  // Get user ID on component mount
+  useEffect(() => {
+    const getUserId = async () => {
+      const { data } = await supabase.auth.getSession();
+      if (data.session) {
+        setUserId(data.session.user.id);
+      }
+    };
+    
+    getUserId();
+  }, []);
   
   // Load Mercado Pago SDK
   useEffect(() => {
@@ -69,10 +82,20 @@ const MercadoPagoCheckout: React.FC<CheckoutProps> = ({
     };
   }, []);
 
-  const handleShowCheckout = () => {
+  const handleShowCheckout = async () => {
     if (!sdkReady) {
       toast.error("Mercado Pago ainda está carregando. Por favor, aguarde.");
       return;
+    }
+    
+    // Check if user is authenticated
+    if (!userId) {
+      const { data } = await supabase.auth.getSession();
+      if (!data.session) {
+        toast.error("Você precisa estar logado para realizar um pagamento.");
+        return;
+      }
+      setUserId(data.session.user.id);
     }
     
     setLoading(true);
@@ -323,7 +346,8 @@ const MercadoPagoCheckout: React.FC<CheckoutProps> = ({
                     number: formData.identificationNumber
                   },
                   space_id: spaceId,
-                  plan_id: plan.id
+                  plan_id: plan.id,
+                  user_id: userId  // Send the user_id to the edge function
                 })
               });
               

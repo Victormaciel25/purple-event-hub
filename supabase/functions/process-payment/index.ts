@@ -28,7 +28,8 @@ async function processPayment(req: Request) {
       email, 
       identification,
       space_id,
-      plan_id
+      plan_id,
+      user_id  // Get user_id from request payload
     } = await req.json();
 
     console.log("Processing payment with data:", {
@@ -39,15 +40,16 @@ async function processPayment(req: Request) {
       installments,
       email,
       space_id,
-      plan_id
+      plan_id,
+      user_id  // Log the user_id for debugging
     });
 
     // Validate required fields
-    if (!token || !payment_method_id || !transaction_amount || !email) {
+    if (!token || !payment_method_id || !transaction_amount || !email || !user_id) {
       return new Response(
         JSON.stringify({ 
           success: false, 
-          error: "Missing required payment information" 
+          error: "Missing required payment information or user ID" 
         }),
         { 
           status: 400,
@@ -55,25 +57,6 @@ async function processPayment(req: Request) {
         }
       );
     }
-
-    // Get user session
-    const { data: sessionData, error: sessionError } = await supabase.auth.getUser();
-    
-    if (sessionError || !sessionData.user) {
-      console.error("Authentication error:", sessionError);
-      return new Response(
-        JSON.stringify({ 
-          success: false, 
-          error: "Authentication error. Please log in again." 
-        }),
-        { 
-          status: 401,
-          headers: { ...corsHeaders, "Content-Type": "application/json" }
-        }
-      );
-    }
-    
-    const userId = sessionData.user.id;
 
     // Make request to Mercado Pago API to process payment
     const mpResponse = await fetch("https://api.mercadopago.com/v1/payments", {
@@ -119,7 +102,7 @@ async function processPayment(req: Request) {
           payment_id: mpData.id,
           payment_status: mpData.status,
           amount: transaction_amount,
-          user_id: userId,
+          user_id,
           expires_at: expiresAt ? expiresAt.toISOString() : null
         });
 
