@@ -1,8 +1,10 @@
+
 import React, { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { Button } from "@/components/ui/button";
 import { Check, Loader2 } from "lucide-react";
 import { MERCADO_PAGO_CONFIG } from '@/config/app-config';
+import { supabase } from '@/integrations/supabase/client';
 
 type CheckoutProps = {
   spaceId: string;
@@ -34,6 +36,7 @@ const MercadoPagoCheckout: React.FC<CheckoutProps> = ({
   const [loading, setLoading] = useState(false);
   const [sdkReady, setSdkReady] = useState(false);
   const [showCheckoutForm, setShowCheckoutForm] = useState(false);
+  const [processingPayment, setProcessingPayment] = useState(false);
   
   // Load Mercado Pago SDK
   useEffect(() => {
@@ -159,7 +162,7 @@ const MercadoPagoCheckout: React.FC<CheckoutProps> = ({
           cursor: pointer;
           font-size: 16px;
           transition: background-color 0.2s;
-          margin-bottom: 30px;
+          margin-bottom: 0px;
         }
         
         #form-checkout__submit:hover {
@@ -292,59 +295,70 @@ const MercadoPagoCheckout: React.FC<CheckoutProps> = ({
             if (error) return console.warn("Form Mounted handling error: ", error);
             console.log("Form mounted");
           },
-          onSubmit: event => {
+          onSubmit: async event => {
             event.preventDefault();
+            
+            if (processingPayment) return;
             
             const progressBar = document.querySelector<HTMLProgressElement>("#payment-progress");
             if (progressBar) progressBar.removeAttribute("value");
+            
+            setProcessingPayment(true);
 
             try {
-              const {
-                paymentMethodId: payment_method_id,
-                issuerId: issuer_id,
-                cardholderEmail: email,
-                amount,
-                token,
-                installments,
-                identificationNumber,
-                identificationType,
-              } = cardForm.getCardFormData();
+              const formData = cardForm.getCardFormData();
+              console.log("Payment form data:", formData);
               
-              console.log("Payment form data:", {
-                token,
-                issuer_id,
-                payment_method_id,
-                transaction_amount: Number(amount),
-                installments: Number(installments),
-                email,
+              // Get current session to ensure user is authenticated
+              const { data: sessionData } = await supabase.auth.getSession();
+              if (!sessionData.session) {
+                throw new Error("Usuário não está autenticado");
+              }
+
+              // Process payment through Supabase Edge Function
+              const { data, error } = await supabase.functions.invoke('process-payment', {
+                body: JSON.stringify({
+                  token: formData.token,
+                  issuer_id: formData.issuerId,
+                  payment_method_id: formData.paymentMethodId,
+                  transaction_amount: formData.amount,
+                  installments: formData.installments,
+                  email: formData.cardholderEmail,
+                  identification: {
+                    type: formData.identificationType,
+                    number: formData.identificationNumber
+                  },
+                  space_id: spaceId,
+                  plan_id: plan.id
+                })
               });
               
-              // In a real implementation, you would send this data to your backend
-              // For now, we'll simulate a successful payment after a delay
+              if (error) throw error;
               
-              setTimeout(() => {
-                if (progressBar) progressBar.setAttribute("value", "0");
-                
-                // Clean up Mercado Pago elements after payment
-                cleanupMercadoPagoElements();
-                
-                toast.success(`Pagamento de ${formatPrice(plan.price)} realizado com sucesso!`, {
+              if (data.success) {
+                toast.success(`Pagamento realizado com sucesso!`, {
                   duration: 5000,
                 });
+
+                // Clean up Mercado Pago elements after payment
+                cleanupMercadoPagoElements();
                 
                 if (onSuccess) {
                   onSuccess();
                 }
-              }, 2000);
+              } else {
+                throw new Error(data.error || "Erro ao processar pagamento");
+              }
             } catch (error) {
-              console.error("Form submission error:", error);
-              toast.error("Erro ao processar pagamento. Verifique os dados do cartão.");
-              
-              if (progressBar) progressBar.setAttribute("value", "0");
+              console.error("Payment processing error:", error);
+              toast.error(error instanceof Error ? error.message : "Erro ao processar pagamento. Verifique os dados do cartão.");
               
               if (onError) {
                 onError();
               }
+            } finally {
+              if (progressBar) progressBar.setAttribute("value", "0");
+              setProcessingPayment(false);
             }
           },
           onFetching: (resource) => {
