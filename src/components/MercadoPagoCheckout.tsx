@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { Button } from "@/components/ui/button";
@@ -37,8 +38,10 @@ const MercadoPagoCheckout: React.FC<CheckoutProps> = ({
   
   // Load Mercado Pago SDK
   useEffect(() => {
+    let script: HTMLScriptElement | null = null;
+    
     if (!window.MercadoPago) {
-      const script = document.createElement('script');
+      script = document.createElement('script');
       script.src = "https://sdk.mercadopago.com/js/v2";
       script.onload = () => {
         setSdkReady(true);
@@ -58,6 +61,23 @@ const MercadoPagoCheckout: React.FC<CheckoutProps> = ({
       const formContainer = document.getElementById('payment-form-container');
       if (formContainer) {
         formContainer.innerHTML = '';
+      }
+      
+      // Remove any style elements that might have been created
+      const formStyles = document.getElementById('mp-form-styles');
+      if (formStyles) {
+        formStyles.remove();
+      }
+      
+      // Remove any other Mercado Pago elements that might have been created
+      const mpElements = document.querySelectorAll('[id^="MPHidden"]');
+      mpElements.forEach(element => {
+        element.remove();
+      });
+      
+      // Remove the script if we created it
+      if (script) {
+        script.remove();
       }
     };
   }, []);
@@ -94,8 +114,15 @@ const MercadoPagoCheckout: React.FC<CheckoutProps> = ({
     try {
       const mp = new window.MercadoPago(MERCADO_PAGO_CONFIG.PUBLIC_KEY);
       
+      // Remove any existing styles to avoid duplicates
+      const existingStyles = document.getElementById('mp-form-styles');
+      if (existingStyles) {
+        existingStyles.remove();
+      }
+      
       // Create styles for the form
       const formStyles = document.createElement('style');
+      formStyles.id = 'mp-form-styles';
       formStyles.textContent = `
         #form-checkout {
           display: flex;
@@ -307,6 +334,9 @@ const MercadoPagoCheckout: React.FC<CheckoutProps> = ({
               setTimeout(() => {
                 if (progressBar) progressBar.setAttribute("value", "0");
                 
+                // Clean up Mercado Pago elements after payment
+                cleanupMercadoPagoElements();
+                
                 toast.success(`Pagamento de ${formatPrice(plan.price)} realizado com sucesso!`, {
                   duration: 5000,
                 });
@@ -342,6 +372,27 @@ const MercadoPagoCheckout: React.FC<CheckoutProps> = ({
     } catch (error) {
       console.error("Error initializing payment form:", error);
       toast.error("Erro ao inicializar formulário de pagamento");
+    }
+  };
+  
+  // Helper function to clean up Mercado Pago elements
+  const cleanupMercadoPagoElements = () => {
+    // Remove any hidden inputs that Mercado Pago might have added
+    const hiddenInputs = document.querySelectorAll('[id^="MPHidden"]');
+    hiddenInputs.forEach((element) => {
+      element.remove();
+    });
+    
+    // Remove any iframes that Mercado Pago might have created
+    const mpIframes = document.querySelectorAll('iframe[src*="mercadopago"]');
+    mpIframes.forEach((iframe) => {
+      iframe.remove();
+    });
+    
+    // Reset the payment form container
+    const formContainer = document.getElementById('payment-form-container');
+    if (formContainer) {
+      formContainer.innerHTML = '';
     }
   };
   

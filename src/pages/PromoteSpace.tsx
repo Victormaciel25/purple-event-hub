@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -69,6 +68,27 @@ const PromoteSpace: React.FC = () => {
 
   useEffect(() => {
     fetchUserSpaces();
+    
+    // Cleanup function for when component unmounts
+    return () => {
+      // Remove any Mercado Pago elements that might be left over
+      const mpElements = document.querySelectorAll('[id^="MPHidden"]');
+      mpElements.forEach(element => {
+        element.remove();
+      });
+      
+      // Remove any styles that might have been added
+      const formStyles = document.getElementById('mp-form-styles');
+      if (formStyles) {
+        formStyles.remove();
+      }
+      
+      // Remove any iframes that Mercado Pago might have created
+      const mpIframes = document.querySelectorAll('iframe[src*="mercadopago"]');
+      mpIframes.forEach(iframe => {
+        iframe.remove();
+      });
+    };
   }, []);
 
   const fetchUserSpaces = async () => {

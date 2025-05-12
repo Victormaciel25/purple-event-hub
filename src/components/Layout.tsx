@@ -21,7 +21,30 @@ const Layout = () => {
         });
       });
     }
-  }, []);
+    
+    // Cleanup Mercado Pago elements whenever location changes
+    const cleanupMercadoPagoElements = () => {
+      // Remove any hidden inputs that Mercado Pago might have added
+      const hiddenInputs = document.querySelectorAll('[id^="MPHidden"]');
+      hiddenInputs.forEach((element) => {
+        element.remove();
+      });
+      
+      // Remove any iframes that Mercado Pago might have created
+      const mpIframes = document.querySelectorAll('iframe[src*="mercadopago"]');
+      mpIframes.forEach((iframe) => {
+        iframe.remove();
+      });
+    };
+    
+    // Initial cleanup
+    cleanupMercadoPagoElements();
+    
+    // Cleanup on location change
+    return () => {
+      cleanupMercadoPagoElements();
+    };
+  }, [location.pathname]);
 
   return (
     <div className="min-h-screen flex flex-col">
