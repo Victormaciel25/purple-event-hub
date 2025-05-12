@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { Button } from "@/components/ui/button";
@@ -149,7 +148,7 @@ const MercadoPagoCheckout: React.FC<CheckoutProps> = ({
           cursor: pointer;
           font-size: 16px;
           transition: background-color 0.2s;
-          margin-bottom: 24px;
+          margin-bottom: 30px;
         }
         
         #form-checkout__submit:hover {
