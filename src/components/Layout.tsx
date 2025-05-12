@@ -35,6 +35,12 @@ const Layout = () => {
       mpIframes.forEach((iframe) => {
         iframe.remove();
       });
+      
+      // Remove any overlay elements that might have been created
+      const overlays = document.querySelectorAll('.mercadopago-overlay');
+      overlays.forEach((element) => {
+        element.remove();
+      });
     };
     
     // Initial cleanup

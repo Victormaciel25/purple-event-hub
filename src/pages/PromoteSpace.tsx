@@ -88,6 +88,12 @@ const PromoteSpace: React.FC = () => {
       mpIframes.forEach(iframe => {
         iframe.remove();
       });
+      
+      // Remove any overlay elements
+      const overlays = document.querySelectorAll('.mercadopago-overlay');
+      overlays.forEach(element => {
+        element.remove();
+      });
     };
   }, []);
 
@@ -208,7 +214,7 @@ const PromoteSpace: React.FC = () => {
 
   return (
     <div className="container px-4 py-6 max-w-4xl mx-auto mb-20">
-      <div className="flex items-center mb-6">
+      <div className="flex items-center mb-6 bg-white">
         <Button variant="ghost" size="sm" onClick={() => navigate("/profile")} className="mr-2">
           <ChevronLeft size={20} />
         </Button>
@@ -270,7 +276,7 @@ const PromoteSpace: React.FC = () => {
         </RadioGroup>
       </div>
 
-      <div className="flex justify-center">
+      <div className="flex justify-center mb-16">
         <MercadoPagoCheckout 
           spaceId={selectedSpace}
           spaceName={spaces.find(space => space.id === selectedSpace)?.name || ""}

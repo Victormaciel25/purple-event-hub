@@ -58,22 +58,7 @@ const MercadoPagoCheckout: React.FC<CheckoutProps> = ({
     
     return () => {
       // Cleanup if component unmounts
-      const formContainer = document.getElementById('payment-form-container');
-      if (formContainer) {
-        formContainer.innerHTML = '';
-      }
-      
-      // Remove any style elements that might have been created
-      const formStyles = document.getElementById('mp-form-styles');
-      if (formStyles) {
-        formStyles.remove();
-      }
-      
-      // Remove any other Mercado Pago elements that might have been created
-      const mpElements = document.querySelectorAll('[id^="MPHidden"]');
-      mpElements.forEach(element => {
-        element.remove();
-      });
+      cleanupMercadoPagoElements();
       
       // Remove the script if we created it
       if (script) {
@@ -186,6 +171,13 @@ const MercadoPagoCheckout: React.FC<CheckoutProps> = ({
           width: 100%;
           height: 8px;
           margin-top: 16px;
+        }
+        
+        /* Remove any overlays that Mercado Pago might create */
+        .mercadopago-overlay {
+          display: none !important;
+          opacity: 0 !important;
+          visibility: hidden !important;
         }
       `;
       document.head.appendChild(formStyles);
@@ -389,6 +381,18 @@ const MercadoPagoCheckout: React.FC<CheckoutProps> = ({
       iframe.remove();
     });
     
+    // Remove any styles that might have been added
+    const formStyles = document.getElementById('mp-form-styles');
+    if (formStyles) {
+      formStyles.remove();
+    }
+    
+    // Remove any overlay elements that might have been created
+    const overlays = document.querySelectorAll('.mercadopago-overlay');
+    overlays.forEach((element) => {
+      element.remove();
+    });
+    
     // Reset the payment form container
     const formContainer = document.getElementById('payment-form-container');
     if (formContainer) {
@@ -410,7 +414,7 @@ const MercadoPagoCheckout: React.FC<CheckoutProps> = ({
           size="lg"
           onClick={handleShowCheckout}
           disabled={loading || !sdkReady}
-          className="bg-iparty mb-4"
+          className="bg-iparty"
         >
           {loading ? (
             <>
@@ -426,7 +430,7 @@ const MercadoPagoCheckout: React.FC<CheckoutProps> = ({
         </Button>
       ) : null}
       
-      <div id="payment-form-container" className="mt-6 min-h-[300px]"></div>
+      <div id="payment-form-container" className="mt-6 mb-16"></div>
     </div>
   );
 };
