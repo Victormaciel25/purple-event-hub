@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -213,7 +214,7 @@ const PromoteSpace: React.FC = () => {
   }
 
   return (
-    <div className="container px-4 py-6 max-w-4xl mx-auto mb-20">
+    <div className="container px-4 py-6 pb-20 max-w-4xl mx-auto">
       <div className="flex items-center mb-6 bg-white">
         <Button variant="ghost" size="sm" onClick={() => navigate("/profile")} className="mr-2">
           <ChevronLeft size={20} />
@@ -276,7 +277,7 @@ const PromoteSpace: React.FC = () => {
         </RadioGroup>
       </div>
 
-      <div className="flex justify-center mb-16">
+      <div className="flex justify-center">
         <MercadoPagoCheckout 
           spaceId={selectedSpace}
           spaceName={spaces.find(space => space.id === selectedSpace)?.name || ""}

@@ -430,7 +430,7 @@ const MercadoPagoCheckout: React.FC<CheckoutProps> = ({
         </Button>
       ) : null}
       
-      <div id="payment-form-container" className="mt-6 mb-16"></div>
+      <div id="payment-form-container" className="mt-6"></div>
     </div>
   );
 };
