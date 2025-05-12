@@ -56,6 +56,25 @@ async function processPayment(req: Request) {
       );
     }
 
+    // Get user session
+    const { data: sessionData, error: sessionError } = await supabase.auth.getUser();
+    
+    if (sessionError || !sessionData.user) {
+      console.error("Authentication error:", sessionError);
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: "Authentication error. Please log in again." 
+        }),
+        { 
+          status: 401,
+          headers: { ...corsHeaders, "Content-Type": "application/json" }
+        }
+      );
+    }
+    
+    const userId = sessionData.user.id;
+
     // Make request to Mercado Pago API to process payment
     const mpResponse = await fetch("https://api.mercadopago.com/v1/payments", {
       method: "POST",
@@ -81,6 +100,16 @@ async function processPayment(req: Request) {
 
     // Check if payment was successful
     if (mpResponse.ok) {
+      // Calculate expiration based on plan
+      let expiresAt = null;
+      if (plan_id === 'daily') {
+        expiresAt = new Date(new Date().getTime() + 24 * 60 * 60 * 1000); // 1 day
+      } else if (plan_id === 'weekly') {
+        expiresAt = new Date(new Date().getTime() + 7 * 24 * 60 * 60 * 1000); // 7 days
+      } else if (plan_id === 'monthly') {
+        expiresAt = new Date(new Date().getTime() + 30 * 24 * 60 * 60 * 1000); // 30 days
+      }
+      
       // Store payment information in database
       const { error: dbError } = await supabase
         .from('space_promotions')
@@ -90,7 +119,8 @@ async function processPayment(req: Request) {
           payment_id: mpData.id,
           payment_status: mpData.status,
           amount: transaction_amount,
-          user_id: (await supabase.auth.getUser()).data.user?.id
+          user_id: userId,
+          expires_at: expiresAt ? expiresAt.toISOString() : null
         });
 
       if (dbError) {

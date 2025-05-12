@@ -73,5 +73,4 @@ url = ""
 # Configuration for the Edge Functions feature. This is in beta.
 
 [functions.process-payment]
-verify_jwt = true
-
+verify_jwt = false

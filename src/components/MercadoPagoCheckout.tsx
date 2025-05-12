@@ -308,12 +308,6 @@ const MercadoPagoCheckout: React.FC<CheckoutProps> = ({
             try {
               const formData = cardForm.getCardFormData();
               console.log("Payment form data:", formData);
-              
-              // Get current session to ensure user is authenticated
-              const { data: sessionData } = await supabase.auth.getSession();
-              if (!sessionData.session) {
-                throw new Error("Usuário não está autenticado");
-              }
 
               // Process payment through Supabase Edge Function
               const { data, error } = await supabase.functions.invoke('process-payment', {
@@ -411,13 +405,6 @@ const MercadoPagoCheckout: React.FC<CheckoutProps> = ({
     if (formContainer) {
       formContainer.innerHTML = '';
     }
-  };
-  
-  const formatPrice = (price: number) => {
-    return price.toLocaleString('pt-BR', {
-      style: 'currency',
-      currency: 'BRL',
-    });
   };
 
   return (
