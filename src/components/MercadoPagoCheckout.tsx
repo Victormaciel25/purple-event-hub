@@ -34,6 +34,7 @@ const MercadoPagoCheckout: React.FC<CheckoutProps> = ({
 }) => {
   const [loading, setLoading] = useState(false);
   const [sdkReady, setSdkReady] = useState(false);
+  const [checkoutRendered, setCheckoutRendered] = useState(false);
   
   // Load Mercado Pago SDK
   useEffect(() => {
@@ -54,7 +55,13 @@ const MercadoPagoCheckout: React.FC<CheckoutProps> = ({
     }
     
     return () => {
-      // Cleanup if needed
+      // Cleanup if component unmounts
+      if (checkoutRendered) {
+        const container = document.getElementById('cardPaymentBrick_container');
+        if (container) {
+          container.innerHTML = '';
+        }
+      }
     };
   }, []);
 
@@ -70,29 +77,88 @@ const MercadoPagoCheckout: React.FC<CheckoutProps> = ({
       // Initialize MercadoPago
       const mp = new window.MercadoPago(MERCADO_PAGO_CONFIG.PUBLIC_KEY);
       
-      // In a real implementation, you would call your backend to create a preference
-      // For this demo with test keys, we'll simulate a successful payment flow
+      // Create card payment brick
+      const bricksBuilder = mp.bricks();
       
-      // Simulate API call delay
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      // Create preference object (in a real implementation, this would come from your backend)
+      const preference = {
+        items: [
+          {
+            id: plan.id,
+            title: `${plan.name} para ${spaceName}`,
+            description: `Plano ${plan.duration}`,
+            quantity: 1,
+            unit_price: plan.price
+          }
+        ],
+        payer: {
+          email: 'test_user_123456@testuser.com' // In production, this would be the user's email
+        }
+      };
+
+      // Render card payment brick
+      const renderCardPaymentBrick = async () => {
+        const settings = {
+          initialization: {
+            amount: plan.price,
+          },
+          callbacks: {
+            onReady: () => {
+              // brick ready to use
+              console.log("CardPaymentBrick ready");
+              setLoading(false);
+              setCheckoutRendered(true);
+            },
+            onSubmit: (cardFormData: any) => {
+              // callback called on submit form
+              console.log("CardPaymentBrick - Payment submitted:", cardFormData);
+              
+              // For test/demo purposes, we'll simulate a successful payment
+              setTimeout(() => {
+                toast.success(`Pagamento de ${formatPrice(plan.price)} realizado com sucesso!`, {
+                  duration: 5000,
+                });
+                
+                if (onSuccess) {
+                  onSuccess();
+                }
+              }, 2000);
+
+              return new Promise((resolve, reject) => {
+                // In a real implementation, you would send cardFormData to your backend
+                // and process the payment with Mercado Pago's API
+                
+                // For the demo, we'll resolve the promise after a delay
+                setTimeout(resolve, 1500);
+              });
+            },
+            onError: (error: any) => {
+              // callback called for all error cases related to the brick
+              console.error("CardPaymentBrick error:", error);
+              toast.error("Erro ao processar o pagamento. Tente novamente.");
+              
+              if (onError) {
+                onError();
+              }
+            }
+          }
+        };
+        
+        const cardPaymentBrickController = await bricksBuilder.create('cardPayment', 'cardPaymentBrick_container', settings);
+      };
       
-      // For test/demo purposes, we'll simulate success
-      toast.success(`Pagamento de ${formatPrice(plan.price)} realizado com sucesso!`, {
-        duration: 5000,
-      });
-      
-      if (onSuccess) {
-        onSuccess();
-      }
+      // Wait a moment then render the brick
+      setTimeout(() => {
+        renderCardPaymentBrick();
+      }, 500);
       
     } catch (error) {
       console.error("Checkout error:", error);
-      toast.error("Erro ao processar o pagamento. Tente novamente.");
+      toast.error("Erro ao iniciar o checkout. Tente novamente.");
       
       if (onError) {
         onError();
       }
-    } finally {
       setLoading(false);
     }
   };
@@ -105,24 +171,30 @@ const MercadoPagoCheckout: React.FC<CheckoutProps> = ({
   };
 
   return (
-    <Button 
-      size="lg"
-      onClick={handleCheckout}
-      disabled={loading || !sdkReady}
-      className="bg-iparty"
-    >
-      {loading ? (
-        <>
-          <Loader2 size={20} className="mr-2 animate-spin" />
-          Processando...
-        </>
-      ) : (
-        <>
-          <Check size={20} className="mr-2" />
-          Continuar para o pagamento
-        </>
-      )}
-    </Button>
+    <div className="flex flex-col w-full">
+      {!checkoutRendered ? (
+        <Button 
+          size="lg"
+          onClick={handleCheckout}
+          disabled={loading || !sdkReady}
+          className="bg-iparty"
+        >
+          {loading ? (
+            <>
+              <Loader2 size={20} className="mr-2 animate-spin" />
+              Carregando formulário de pagamento...
+            </>
+          ) : (
+            <>
+              <Check size={20} className="mr-2" />
+              Continuar para o pagamento
+            </>
+          )}
+        </Button>
+      ) : null}
+      
+      <div id="cardPaymentBrick_container" className="mt-6 min-h-[300px]"></div>
+    </div>
   );
 };
 
