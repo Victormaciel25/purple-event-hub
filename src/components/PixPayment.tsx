@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { toast } from '@/components/ui/use-toast';
 import { Button } from "@/components/ui/button";
 import { Copy, Check, Loader2, QrCode } from "lucide-react";
@@ -37,6 +37,8 @@ const PixPayment: React.FC<PixPaymentProps> = ({
   const [processingPayment, setProcessingPayment] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
   const [mercadoPagoPublicKey, setMercadoPagoPublicKey] = useState<string | null>(null);
+  const [identificationTypes, setIdentificationTypes] = useState<Array<{id: string, name: string}>>([]);
+  const formCheckoutRef = useRef<HTMLFormElement>(null);
 
   // Get user ID and Mercado Pago public key on component mount
   useEffect(() => {
@@ -53,7 +55,11 @@ const PixPayment: React.FC<PixPaymentProps> = ({
         
         if (error) {
           console.error("Error fetching Mercado Pago public key:", error);
-          toast.error("Erro ao obter chave de pagamento");
+          toast({
+            variant: "destructive",
+            title: "Erro",
+            description: "Erro ao obter chave de pagamento"
+          });
           setErrorMessage("Não foi possível se conectar ao serviço de pagamento. Tente novamente mais tarde.");
           return;
         }
@@ -82,12 +88,19 @@ const PixPayment: React.FC<PixPaymentProps> = ({
       script.src = "https://sdk.mercadopago.com/js/v2";
       script.onload = () => {
         console.log("Mercado Pago SDK loaded successfully");
+        initializeMercadoPago();
       };
       script.onerror = () => {
-        toast.error("Erro ao carregar o Mercado Pago");
+        toast({
+          variant: "destructive",
+          title: "Erro",
+          description: "Erro ao carregar o Mercado Pago"
+        });
         console.error("Failed to load Mercado Pago SDK");
       };
       document.body.appendChild(script);
+    } else {
+      initializeMercadoPago();
     }
     
     return () => {
@@ -96,7 +109,65 @@ const PixPayment: React.FC<PixPaymentProps> = ({
         script.remove();
       }
     };
-  }, []);
+  }, [mercadoPagoPublicKey]);
+
+  // Initialize Mercado Pago and get identification types
+  const initializeMercadoPago = async () => {
+    if (!mercadoPagoPublicKey) return;
+    
+    try {
+      // @ts-ignore - MercadoPago is loaded dynamically
+      const mp = new window.MercadoPago(mercadoPagoPublicKey);
+      
+      // Get identification types
+      const fetchedTypes = await mp.getIdentificationTypes();
+      setIdentificationTypes(fetchedTypes);
+      
+      console.log("Identification types loaded:", fetchedTypes);
+      
+      // Manually populate the select element
+      const identificationTypeElement = document.getElementById('form-checkout__identificationType');
+      if (identificationTypeElement) {
+        createSelectOptions(identificationTypeElement, fetchedTypes);
+      }
+    } catch (error) {
+      console.error("Error initializing Mercado Pago:", error);
+      setErrorMessage("Erro ao inicializar o serviço de pagamento");
+    }
+  };
+
+  // Helper function to create select options
+  const createSelectOptions = (elem: HTMLElement, options: Array<{id: string, name: string}>, labelsAndKeys = { label: "name", value: "id" }) => {
+    const { label, value } = labelsAndKeys;
+    const selectElem = elem as HTMLSelectElement;
+    
+    // Clear existing options
+    selectElem.options.length = 0;
+    
+    // Create a document fragment to improve performance
+    const tempOptions = document.createDocumentFragment();
+    
+    // Add a default "Select" option
+    const defaultOption = document.createElement('option');
+    defaultOption.value = "";
+    defaultOption.textContent = "Selecione";
+    tempOptions.appendChild(defaultOption);
+    
+    // Add options from API
+    options.forEach(option => {
+      const optValue = option[value as keyof typeof option];
+      const optLabel = option[label as keyof typeof option];
+      
+      const opt = document.createElement('option');
+      opt.value = optValue as string;
+      opt.textContent = optLabel as string;
+      
+      tempOptions.appendChild(opt);
+    });
+    
+    // Append all options at once
+    selectElem.appendChild(tempOptions);
+  };
 
   // Simulate PIX code generation - in a real app, you would get this from your payment processor
   const generatePix = async (event: React.FormEvent<HTMLFormElement>) => {
@@ -117,7 +188,11 @@ const PixPayment: React.FC<PixPaymentProps> = ({
       
       // Validate form data
       if (!payerFirstName || !payerLastName || !email || !identificationType || !identificationNumber) {
-        toast.error("Por favor, preencha todos os campos obrigatórios");
+        toast({
+          variant: "destructive",
+          title: "Erro",
+          description: "Por favor, preencha todos os campos obrigatórios"
+        });
         setShowForm(true);
         setProcessingPayment(false);
         setLoading(false);
@@ -136,7 +211,11 @@ const PixPayment: React.FC<PixPaymentProps> = ({
       setProcessingPayment(false);
     } catch (error) {
       console.error("Error generating PIX:", error);
-      toast.error("Erro ao gerar código PIX");
+      toast({
+        variant: "destructive",
+        title: "Erro",
+        description: "Erro ao gerar código PIX"
+      });
       setErrorMessage("Não foi possível gerar o código PIX. Por favor, tente novamente mais tarde.");
       setLoading(false);
       setProcessingPayment(false);
@@ -154,11 +233,18 @@ const PixPayment: React.FC<PixPaymentProps> = ({
     navigator.clipboard.writeText(pixCode)
       .then(() => {
         setCopied(true);
-        toast.success("Código PIX copiado para a área de transferência!");
+        toast({
+          title: "Sucesso",
+          description: "Código PIX copiado para a área de transferência!"
+        });
         setTimeout(() => setCopied(false), 3000);
       })
       .catch(() => {
-        toast.error("Erro ao copiar código PIX");
+        toast({
+          variant: "destructive",
+          title: "Erro",
+          description: "Erro ao copiar código PIX"
+        });
       });
   };
 
@@ -173,7 +259,7 @@ const PixPayment: React.FC<PixPaymentProps> = ({
 
       {showForm && !showQrCode && (
         <div className="w-full max-w-md">
-          <form id="form-checkout" onSubmit={generatePix} className="space-y-4">
+          <form id="form-checkout" ref={formCheckoutRef} onSubmit={generatePix} className="space-y-4">
             <div className="space-y-4">
               <div>
                 <label htmlFor="form-checkout__payerFirstName" className="block text-sm font-medium text-gray-700 mb-1">Nome</label>
@@ -216,10 +302,7 @@ const PixPayment: React.FC<PixPaymentProps> = ({
                   className="w-full p-2 border border-gray-300 rounded-md"
                   required
                 >
-                  <option value="">Selecione</option>
-                  <option value="CPF">CPF</option>
-                  <option value="CNPJ">CNPJ</option>
-                  <option value="RG">RG</option>
+                  <option value="">Carregando...</option>
                 </select>
               </div>
               
