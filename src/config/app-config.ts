@@ -18,6 +18,7 @@ export const EDGE_FUNCTIONS = {
   DELETE_SPACE_WITH_PHOTOS: `${SUPABASE_CONFIG.URL}/functions/v1/delete_space_with_photos`,
   GET_USER_CHATS: `${SUPABASE_CONFIG.URL}/functions/v1/get_user_chats`,
   GET_CHAT_BY_USERS_AND_SPACE: `${SUPABASE_CONFIG.URL}/functions/v1/get_chat_by_users_and_space`,
+  GET_MERCADO_PAGO_PUBLIC_KEY: `${SUPABASE_CONFIG.URL}/functions/v1/get-mercado-pago-public-key`,
 };
 
 // Storage buckets
@@ -43,6 +44,5 @@ export const SPACE_CATEGORIES = {
 
 // Mercado Pago configuration
 export const MERCADO_PAGO_CONFIG = {
-  PUBLIC_KEY: "TEST-4f8352a7-5e5b-482d-912c-1c4c3a1f8779"
-  // Note: Access token should only be used in backend functions, not client-side
+  // Note: Public key is now retrieved from Edge Function
 };

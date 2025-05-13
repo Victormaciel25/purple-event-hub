@@ -3,9 +3,9 @@ import React, { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { Button } from "@/components/ui/button";
 import { Check, Loader2 } from "lucide-react";
-import { MERCADO_PAGO_CONFIG } from '@/config/app-config';
 import { supabase } from '@/integrations/supabase/client';
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
+import { EDGE_FUNCTIONS } from '@/config/app-config';
 
 type CheckoutProps = {
   spaceId: string;
@@ -40,17 +40,41 @@ const MercadoPagoCheckout: React.FC<CheckoutProps> = ({
   const [processingPayment, setProcessingPayment] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [mercadoPagoPublicKey, setMercadoPagoPublicKey] = useState<string | null>(null);
   
-  // Get user ID on component mount
+  // Get user ID and Mercado Pago public key on component mount
   useEffect(() => {
-    const getUserId = async () => {
-      const { data } = await supabase.auth.getSession();
-      if (data.session) {
-        setUserId(data.session.user.id);
+    const initialize = async () => {
+      try {
+        // Get user session
+        const { data } = await supabase.auth.getSession();
+        if (data.session) {
+          setUserId(data.session.user.id);
+        }
+        
+        // Fetch Mercado Pago public key from edge function
+        const { data: mpKeyData, error } = await supabase.functions.invoke('get-mercado-pago-public-key');
+        
+        if (error) {
+          console.error("Error fetching Mercado Pago public key:", error);
+          toast.error("Erro ao obter chave de pagamento");
+          setErrorMessage("Não foi possível se conectar ao serviço de pagamento. Tente novamente mais tarde.");
+          return;
+        }
+        
+        if (mpKeyData && mpKeyData.public_key) {
+          setMercadoPagoPublicKey(mpKeyData.public_key);
+        } else {
+          console.error("Public key not found in response");
+          setErrorMessage("Configuração de pagamento incompleta");
+        }
+      } catch (error) {
+        console.error("Initialization error:", error);
+        setErrorMessage("Erro ao inicializar o checkout");
       }
     };
     
-    getUserId();
+    initialize();
   }, []);
   
   // Load Mercado Pago SDK
@@ -100,6 +124,12 @@ const MercadoPagoCheckout: React.FC<CheckoutProps> = ({
       setUserId(data.session.user.id);
     }
     
+    // Check if we have the public key
+    if (!mercadoPagoPublicKey) {
+      toast.error("Chave de pagamento não disponível. Tente novamente mais tarde.");
+      return;
+    }
+    
     setLoading(true);
     setErrorMessage(null);
     
@@ -127,7 +157,12 @@ const MercadoPagoCheckout: React.FC<CheckoutProps> = ({
   
   const initializePaymentForm = () => {
     try {
-      const mp = new window.MercadoPago(MERCADO_PAGO_CONFIG.PUBLIC_KEY);
+      if (!mercadoPagoPublicKey) {
+        toast.error("Chave de pagamento não disponível");
+        return;
+      }
+      
+      const mp = new window.MercadoPago(mercadoPagoPublicKey);
       
       // Remove any existing styles to avoid duplicates
       const existingStyles = document.getElementById('mp-form-styles');
@@ -463,13 +498,18 @@ const MercadoPagoCheckout: React.FC<CheckoutProps> = ({
         <Button 
           size="lg"
           onClick={handleShowCheckout}
-          disabled={loading || !sdkReady}
+          disabled={loading || !sdkReady || !mercadoPagoPublicKey}
           className="bg-iparty"
         >
           {loading ? (
             <>
               <Loader2 size={20} className="mr-2 animate-spin" />
               Carregando formulário de pagamento...
+            </>
+          ) : !mercadoPagoPublicKey ? (
+            <>
+              <Loader2 size={20} className="mr-2 animate-spin" />
+              Carregando configurações de pagamento...
             </>
           ) : (
             <>

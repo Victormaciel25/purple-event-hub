@@ -5,3 +5,5 @@ project_id = "kfqorqjwbkxzrqhuvnyh"
 [functions]
 [functions.process-payment]
 verify_jwt = false
+[functions.get-mercado-pago-public-key]
+verify_jwt = false
