@@ -165,89 +165,6 @@ const MercadoPagoCheckout: React.FC<CheckoutProps> = ({
       
       const mp = new window.MercadoPago(mercadoPagoPublicKey);
       
-      // Remove any existing styles to avoid duplicates
-      const existingStyles = document.getElementById('mp-form-styles');
-      if (existingStyles) {
-        existingStyles.remove();
-      }
-      
-      // Create styles for the form
-      const formStyles = document.createElement('style');
-      formStyles.id = 'mp-form-styles';
-      formStyles.textContent = `
-        #form-checkout {
-          display: flex;
-          flex-direction: column;
-          max-width: 600px;
-          gap: 16px;
-          margin: 0 auto;
-        }
-        
-        .container {
-          height: 40px;
-          display: block;
-          border: 1px solid rgb(209, 213, 219);
-          border-radius: 0.375rem;
-          padding: 8px 12px;
-          font-size: 16px;
-          width: 100%;
-          background-color: white;
-        }
-        
-        .form-control {
-          height: 40px;
-          display: block;
-          border: 1px solid rgb(209, 213, 219);
-          border-radius: 0.375rem;
-          padding: 8px 12px;
-          font-size: 16px;
-          width: 100%;
-        }
-        
-        .form-group {
-          margin-bottom: 12px;
-        }
-        
-        .form-group label {
-          display: block;
-          margin-bottom: 4px;
-          font-size: 14px;
-          font-weight: 500;
-          color: rgba(0, 0, 0, 0.7);
-        }
-        
-        #form-checkout__submit {
-          background-color: rgb(147, 51, 234);
-          color: white;
-          font-weight: 500;
-          padding: 10px 16px;
-          border-radius: 0.375rem;
-          border: none;
-          cursor: pointer;
-          font-size: 16px;
-          transition: background-color 0.2s;
-          margin-bottom: 0px;
-        }
-        
-        #form-checkout__submit:hover {
-          background-color: rgb(126, 34, 206);
-        }
-        
-        .progress-bar {
-          width: 100%;
-          height: 8px;
-          margin-top: 16px;
-        }
-        
-        /* Remove any overlays that Mercado Pago might create */
-        .mercadopago-overlay {
-          display: none !important;
-          opacity: 0 !important;
-          visibility: hidden !important;
-        }
-      `;
-      document.head.appendChild(formStyles);
-      
       // Create the payment form HTML
       const paymentFormContainer = document.getElementById('payment-form-container');
       if (!paymentFormContainer) {
@@ -256,208 +173,145 @@ const MercadoPagoCheckout: React.FC<CheckoutProps> = ({
       }
       
       paymentFormContainer.innerHTML = `
-        <form id="form-checkout">
-          <div class="form-group">
-            <label for="form-checkout__cardNumber">Número do Cartão</label>
-            <div id="form-checkout__cardNumber" class="container"></div>
-          </div>
-          
-          <div class="form-group">
-            <label for="form-checkout__cardholderName">Titular do Cartão</label>
-            <input type="text" id="form-checkout__cardholderName" class="form-control" />
-          </div>
-          
-          <div class="form-group">
-            <label for="form-checkout__cardholderEmail">E-mail</label>
-            <input type="email" id="form-checkout__cardholderEmail" class="form-control" />
-          </div>
-          
-          <div style="display: flex; gap: 16px;">
-            <div class="form-group" style="flex: 1;">
-              <label for="form-checkout__expirationDate">Data de Validade</label>
-              <div id="form-checkout__expirationDate" class="container"></div>
+        <form id="form-checkout" action="/process_payment" method="post">
+          <div class="space-y-4">
+            <div class="form-group">
+              <label for="form-checkout__payerFirstName" class="block text-gray-700 text-sm font-medium mb-1">Nome</label>
+              <input id="form-checkout__payerFirstName" name="payerFirstName" type="text" class="w-full p-2 border border-gray-300 rounded" required>
+            </div>
+            <div class="form-group">
+              <label for="form-checkout__payerLastName" class="block text-gray-700 text-sm font-medium mb-1">Sobrenome</label>
+              <input id="form-checkout__payerLastName" name="payerLastName" type="text" class="w-full p-2 border border-gray-300 rounded" required>
+            </div>
+            <div class="form-group">
+              <label for="form-checkout__email" class="block text-gray-700 text-sm font-medium mb-1">E-mail</label>
+              <input id="form-checkout__email" name="email" type="email" class="w-full p-2 border border-gray-300 rounded" required>
+            </div>
+            <div class="form-group">
+              <label for="form-checkout__identificationType" class="block text-gray-700 text-sm font-medium mb-1">Tipo de documento</label>
+              <select id="form-checkout__identificationType" name="identificationType" class="w-full p-2 border border-gray-300 rounded" required></select>
+            </div>
+            <div class="form-group">
+              <label for="form-checkout__identificationNumber" class="block text-gray-700 text-sm font-medium mb-1">Número do documento</label>
+              <input id="form-checkout__identificationNumber" name="identificationNumber" type="text" class="w-full p-2 border border-gray-300 rounded" required>
             </div>
             
-            <div class="form-group" style="flex: 1;">
-              <label for="form-checkout__securityCode">CVV</label>
-              <div id="form-checkout__securityCode" class="container"></div>
+            <div class="form-group">
+              <div id="form-checkout__cardNumber" class="p-2 border border-gray-300 rounded"></div>
             </div>
-          </div>
-          
-          <div class="form-group">
-            <label for="form-checkout__issuer">Banco Emissor</label>
-            <select id="form-checkout__issuer" class="form-control"></select>
-          </div>
-          
-          <div class="form-group">
-            <label for="form-checkout__installments">Parcelas</label>
-            <select id="form-checkout__installments" class="form-control"></select>
-          </div>
-          
-          <div style="display: flex; gap: 16px;">
-            <div class="form-group" style="flex: 1;">
-              <label for="form-checkout__identificationType">Tipo de Documento</label>
-              <select id="form-checkout__identificationType" class="form-control"></select>
+            <div class="flex space-x-4">
+              <div class="form-group w-1/2">
+                <div id="form-checkout__expirationDate" class="p-2 border border-gray-300 rounded"></div>
+              </div>
+              <div class="form-group w-1/2">
+                <div id="form-checkout__securityCode" class="p-2 border border-gray-300 rounded"></div>
+              </div>
+            </div>
+            <div class="form-group">
+              <select id="form-checkout__installments" name="installments" class="w-full p-2 border border-gray-300 rounded"></select>
             </div>
             
-            <div class="form-group" style="flex: 1;">
-              <label for="form-checkout__identificationNumber">Número do Documento</label>
-              <input type="text" id="form-checkout__identificationNumber" class="form-control" />
+            <div class="form-group">
+              <input type="hidden" name="transactionAmount" id="transactionAmount" value="${plan.price}">
+              <input type="hidden" name="description" id="description" value="Promoção do espaço: ${spaceName}">
             </div>
+            
+            <button type="submit" id="form-checkout__submit" class="w-full bg-iparty text-white rounded-md py-2 px-4 font-medium hover:bg-purple-700 transition-colors">
+              Pagar ${plan.price.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+            </button>
           </div>
-          
-          <button type="submit" id="form-checkout__submit">Pagar</button>
-          <progress value="0" class="progress-bar" id="payment-progress">Carregando...</progress>
         </form>
+        <progress value="0" class="progress-bar w-full h-1 mt-4" id="payment-progress">Carregando...</progress>
       `;
+
+      // Initialize the identification types
+      mp.getIdentificationTypes();
       
-      // Initialize Mercado Pago card form
-      const cardForm = mp.cardForm({
-        amount: plan.price.toString(),
-        iframe: true,
-        form: {
-          id: "form-checkout",
-          cardNumber: {
-            id: "form-checkout__cardNumber",
-            placeholder: "Número do cartão",
-          },
-          expirationDate: {
-            id: "form-checkout__expirationDate",
-            placeholder: "MM/YY",
-          },
-          securityCode: {
-            id: "form-checkout__securityCode",
-            placeholder: "Código de segurança",
-          },
-          cardholderName: {
-            id: "form-checkout__cardholderName",
-            placeholder: "Titular do cartão",
-          },
-          issuer: {
-            id: "form-checkout__issuer",
-            placeholder: "Banco emissor",
-          },
-          installments: {
-            id: "form-checkout__installments",
-            placeholder: "Parcelas",
-          },        
-          identificationType: {
-            id: "form-checkout__identificationType",
-            placeholder: "Tipo de documento",
-          },
-          identificationNumber: {
-            id: "form-checkout__identificationNumber",
-            placeholder: "Número do documento",
-          },
-          cardholderEmail: {
-            id: "form-checkout__cardholderEmail",
-            placeholder: "E-mail",
-          },
-        },
-        callbacks: {
-          onFormMounted: error => {
-            if (error) return console.warn("Form Mounted handling error: ", error);
-            console.log("Form mounted");
-          },
-          onSubmit: async event => {
-            event.preventDefault();
-            
-            if (processingPayment) return;
-            setErrorMessage(null);
-            setPaymentStatus(null);
-            
-            const progressBar = document.querySelector<HTMLProgressElement>("#payment-progress");
-            if (progressBar) progressBar.removeAttribute("value");
-            
-            setProcessingPayment(true);
-
-            try {
-              const formData = cardForm.getCardFormData();
-              console.log("Payment form data:", formData);
-              
-              if (!userId) {
-                throw new Error("Usuário não identificado. Faça login novamente.");
-              }
-
-              // Process payment through Supabase Edge Function
-              const { data, error } = await supabase.functions.invoke('process-payment', {
-                body: JSON.stringify({
-                  token: formData.token,
-                  issuer_id: formData.issuerId,
-                  payment_method_id: formData.paymentMethodId,
-                  transaction_amount: formData.amount,
-                  installments: formData.installments,
-                  email: formData.cardholderEmail,
-                  identification: {
-                    type: formData.identificationType,
-                    number: formData.identificationNumber
-                  },
-                  space_id: spaceId,
-                  plan_id: plan.id,
-                  user_id: userId
-                })
-              });
-              
-              if (error) {
-                console.error("Payment function error:", error);
-                throw new Error("Erro na comunicação com o servidor de pagamentos");
-              }
-              
-              if (data && data.success) {
-                // Store payment status
-                setPaymentStatus(data.status);
-                
-                // Only call onSuccess if payment status is "approved"
-                if (data.status === "approved") {
-                  toast.success("Pagamento aprovado com sucesso!");
-
-                  // Clean up Mercado Pago elements after payment
-                  cleanupMercadoPagoElements();
-                  
-                  if (onSuccess) {
-                    onSuccess();
-                  }
-                } else if (data.status === "in_process" || data.status === "pending") {
-                  toast.info("Pagamento em processamento. Aguarde a confirmação.");
-                  setErrorMessage("Seu pagamento está em análise. Você receberá uma confirmação em breve.");
-                } else {
-                  // Handle other statuses
-                  toast.warning(`Status do pagamento: ${data.status}. Verifique mais tarde.`);
-                  setErrorMessage(`Pagamento registrado com status: ${data.status}`);
-                }
-              } else {
-                const errorMsg = data?.error || "Ocorreu um erro ao processar o pagamento.";
-                setErrorMessage(errorMsg);
-                throw new Error(errorMsg);
-              }
-            } catch (error) {
-              console.error("Payment processing error:", error);
-              
-              const errorMsg = error instanceof Error ? error.message : "Erro ao processar pagamento. Verifique os dados do cartão.";
-              toast.error(errorMsg);
-              setErrorMessage(errorMsg);
-              
-              if (onError) {
-                onError();
-              }
-            } finally {
-              if (progressBar) progressBar.setAttribute("value", "0");
-              setProcessingPayment(false);
-            }
-          },
-          onFetching: (resource) => {
-            console.log("Fetching resource: ", resource);
-            
-            // Animate progress bar
-            const progressBar = document.querySelector<HTMLProgressElement>(".progress-bar");
-            if (progressBar) progressBar.removeAttribute("value");
-            
-            return () => {
-              if (progressBar) progressBar.setAttribute("value", "0");
-            };
+      // Handle form submission
+      document.getElementById("form-checkout")?.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        
+        if (processingPayment) return;
+        setProcessingPayment(true);
+        
+        const progressBar = document.querySelector<HTMLProgressElement>("#payment-progress");
+        if (progressBar) progressBar.removeAttribute("value");
+        
+        try {
+          // Get form data
+          const formData = new FormData(e.target as HTMLFormElement);
+          const formDataObj: Record<string, any> = {};
+          formData.forEach((value, key) => {
+            formDataObj[key] = value;
+          });
+          
+          if (!userId) {
+            throw new Error("Usuário não identificado. Faça login novamente.");
           }
-        },
+
+          // Process payment through Supabase Edge Function
+          const { data, error } = await supabase.functions.invoke('process-payment', {
+            body: JSON.stringify({
+              payerFirstName: formDataObj.payerFirstName,
+              payerLastName: formDataObj.payerLastName,
+              email: formDataObj.email,
+              identificationType: formDataObj.identificationType,
+              identificationNumber: formDataObj.identificationNumber,
+              transaction_amount: plan.price,
+              space_id: spaceId,
+              plan_id: plan.id,
+              user_id: userId
+            })
+          });
+          
+          if (error) {
+            console.error("Payment function error:", error);
+            throw new Error("Erro na comunicação com o servidor de pagamentos");
+          }
+          
+          if (data && data.success) {
+            // Store payment status
+            setPaymentStatus(data.status);
+            
+            // Only call onSuccess if payment status is "approved"
+            if (data.status === "approved") {
+              toast.success("Pagamento aprovado com sucesso!");
+
+              // Clean up Mercado Pago elements after payment
+              cleanupMercadoPagoElements();
+              
+              if (onSuccess) {
+                onSuccess();
+              }
+            } else if (data.status === "in_process" || data.status === "pending") {
+              toast.info("Pagamento em processamento. Aguarde a confirmação.");
+              setErrorMessage("Seu pagamento está em análise. Você receberá uma confirmação em breve.");
+            } else {
+              // Handle other statuses
+              toast.warning(`Status do pagamento: ${data.status}. Verifique mais tarde.`);
+              setErrorMessage(`Pagamento registrado com status: ${data.status}`);
+            }
+          } else {
+            const errorMsg = data?.error || "Ocorreu um erro ao processar o pagamento.";
+            setErrorMessage(errorMsg);
+            throw new Error(errorMsg);
+          }
+        } catch (error) {
+          console.error("Payment processing error:", error);
+          
+          const errorMsg = error instanceof Error ? error.message : "Erro ao processar pagamento. Verifique os dados do cartão.";
+          toast.error(errorMsg);
+          setErrorMessage(errorMsg);
+          
+          if (onError) {
+            onError();
+          }
+        } finally {
+          if (progressBar) progressBar.setAttribute("value", "0");
+          setProcessingPayment(false);
+        }
       });
+      
     } catch (error) {
       console.error("Error initializing payment form:", error);
       toast.error("Erro ao inicializar formulário de pagamento");
