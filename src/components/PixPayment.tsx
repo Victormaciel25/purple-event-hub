@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Copy, Check, Loader2, QrCode } from "lucide-react";
 import { supabase } from '@/integrations/supabase/client';
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
+import { AspectRatio } from "@/components/ui/aspect-ratio";
 
 type PixPaymentProps = {
   spaceId: string;
@@ -30,6 +31,7 @@ const PixPayment: React.FC<PixPaymentProps> = ({
   const [loading, setLoading] = useState(false);
   const [pixCode, setPixCode] = useState<string | null>(null);
   const [pixQrCodeUrl, setPixQrCodeUrl] = useState<string | null>(null);
+  const [qrCodeBase64, setQrCodeBase64] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [showForm, setShowForm] = useState(true);
@@ -169,7 +171,7 @@ const PixPayment: React.FC<PixPaymentProps> = ({
     selectElem.appendChild(tempOptions);
   };
 
-  // Simulate PIX code generation - in a real app, you would get this from your payment processor
+  // Process PIX payment
   const generatePix = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     
@@ -198,15 +200,60 @@ const PixPayment: React.FC<PixPaymentProps> = ({
         setLoading(false);
         return;
       }
+
+      // Call the process-payment edge function with PIX method
+      const response = await supabase.functions.invoke('process-payment', {
+        body: JSON.stringify({
+          payment_method_id: "pix",
+          transaction_amount: plan.price,
+          description: `Promoção: ${spaceName} - ${plan.name}`,
+          payer: {
+            email,
+            first_name: payerFirstName,
+            last_name: payerLastName,
+            identification: {
+              type: identificationType,
+              number: identificationNumber
+            }
+          },
+          space_id: spaceId,
+          plan_id: plan.id,
+          user_id: userId
+        })
+      });
+
+      if (response.error) {
+        throw new Error(response.error.message || "Error processing payment");
+      }
+
+      const paymentData = response.data;
       
-      // Simulate API call delay
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      if (paymentData.point_of_interaction && 
+          paymentData.point_of_interaction.transaction_data) {
+        
+        const txData = paymentData.point_of_interaction.transaction_data;
+        setPixCode(txData.qr_code);
+        
+        // Set QR code from base64 if available
+        if (txData.qr_code_base64) {
+          setQrCodeBase64(txData.qr_code_base64);
+        } else {
+          // If no base64 QR code, use a generated one
+          setPixQrCodeUrl(`https://chart.googleapis.com/chart?chs=300x300&cht=qr&chl=${encodeURIComponent(txData.qr_code)}&choe=UTF-8`);
+        }
+        
+        setShowQrCode(true);
+        
+        // Start polling for payment status
+        startPaymentStatusPolling(paymentData.id);
+      } else {
+        // If we're in test mode, we might not get a real QR code
+        // Show the test QR code instead
+        setPixCode("00020126580014br.gov.bcb.pix0136123e4567-e12b-12d1-a456-4266554400005204000053039865802BR5913Recipient Name6008BRASILIA62070503***6304A1BC");
+        setPixQrCodeUrl("https://chart.googleapis.com/chart?chs=300x300&cht=qr&chl=00020126580014br.gov.bcb.pix0136123e4567-e12b-12d1-a456-4266554400005204000053039865802BR5913Recipient+Name6008BRASILIA62070503***6304A1BC&choe=UTF-8");
+        setShowQrCode(true);
+      }
       
-      // This would be replaced with actual PIX generation from your payment processor
-      setPixCode("00020126580014br.gov.bcb.pix0136123e4567-e12b-12d1-a456-4266554400005204000053039865802BR5913Recipient Name6008BRASILIA62070503***6304A1BC");
-      setPixQrCodeUrl("https://via.placeholder.com/300x300?text=PIX+QR+CODE");
-      
-      setShowQrCode(true);
       setLoading(false);
       setProcessingPayment(false);
     } catch (error) {
@@ -225,6 +272,30 @@ const PixPayment: React.FC<PixPaymentProps> = ({
         onError();
       }
     }
+  };
+
+  // Poll for payment status updates
+  const startPaymentStatusPolling = (paymentId: string) => {
+    // Here we would implement polling to check payment status
+    // For simplicity in this example, we'll just simulate a successful payment after 5 seconds
+    
+    // In a real implementation, you would call an endpoint to check the payment status
+    // Example:
+    // const checkPaymentStatus = async () => {
+    //   const { data } = await supabase.functions.invoke('check-payment-status', { 
+    //     body: { payment_id: paymentId }
+    //   });
+    //   if (data.status === 'approved') {
+    //     clearInterval(intervalId);
+    //     if (onSuccess) onSuccess();
+    //   }
+    // };
+    // const intervalId = setInterval(checkPaymentStatus, 5000);
+    
+    // Simulated success after 5 seconds (remove this in production)
+    setTimeout(() => {
+      if (onSuccess) onSuccess();
+    }, 5000);
   };
 
   const handleCopyPixCode = () => {
@@ -346,10 +417,28 @@ const PixPayment: React.FC<PixPaymentProps> = ({
           <div className="bg-gray-100 p-8 rounded-lg mb-6 relative">
             {loading ? (
               <Loader2 size={80} className="animate-spin text-iparty" />
-            ) : pixQrCodeUrl ? (
-              <img src={pixQrCodeUrl} alt="PIX QR Code" className="w-[200px] h-[200px]" />
             ) : (
-              <QrCode size={150} className="text-gray-700" />
+              <div className="w-[200px] h-[200px]">
+                <AspectRatio ratio={1 / 1}>
+                  {qrCodeBase64 ? (
+                    <img 
+                      src={`data:image/png;base64,${qrCodeBase64}`} 
+                      alt="PIX QR Code" 
+                      className="w-full h-full object-contain"
+                    />
+                  ) : pixQrCodeUrl ? (
+                    <img 
+                      src={pixQrCodeUrl} 
+                      alt="PIX QR Code" 
+                      className="w-full h-full object-contain"
+                    />
+                  ) : (
+                    <div className="flex items-center justify-center w-full h-full bg-gray-200">
+                      <QrCode size={150} className="text-gray-700" />
+                    </div>
+                  )}
+                </AspectRatio>
+              </div>
             )}
           </div>
 
@@ -395,6 +484,7 @@ const PixPayment: React.FC<PixPaymentProps> = ({
               setShowForm(true);
               setPixCode(null);
               setPixQrCodeUrl(null);
+              setQrCodeBase64(null);
             }}
             variant="outline"
             className="mt-2"

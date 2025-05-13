@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.38.4';
 
@@ -23,43 +22,52 @@ const MERCADO_PAGO_ACCESS_TOKEN = Deno.env.get('ACCESS_TOKEN') || 'TEST-72418442
 // Process payment handler
 async function processPayment(req: Request) {
   try {
+    const requestData = await req.json();
     const { 
       token, 
       issuer_id, 
-      payment_method_id, 
+      payment_method_id,
       transaction_amount, 
       installments, 
       email, 
       identification,
       space_id,
       plan_id,
-      user_id
-    } = await req.json();
+      user_id,
+      payer
+    } = requestData;
 
-    console.log("Processing payment with data:", {
-      token,
-      issuer_id,
-      payment_method_id,
-      transaction_amount,
-      installments,
-      email,
-      space_id,
-      plan_id,
-      user_id
-    });
+    console.log("Processing payment with data:", requestData);
 
-    // Validate required fields
-    if (!token || !payment_method_id || !transaction_amount || !email || !user_id) {
-      return new Response(
-        JSON.stringify({ 
-          success: false, 
-          error: "Missing required payment information or user ID" 
-        }),
-        { 
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" }
-        }
-      );
+    // Validate required fields based on payment method
+    if (payment_method_id === "pix") {
+      // PIX payments require different validations
+      if (!transaction_amount || !payer || !space_id || !plan_id || !user_id) {
+        return new Response(
+          JSON.stringify({ 
+            success: false, 
+            error: "Missing required payment information for PIX" 
+          }),
+          { 
+            status: 400,
+            headers: { ...corsHeaders, "Content-Type": "application/json" }
+          }
+        );
+      }
+    } else {
+      // Credit card payments require token
+      if (!token || !payment_method_id || !transaction_amount || !email || !user_id) {
+        return new Response(
+          JSON.stringify({ 
+            success: false, 
+            error: "Missing required payment information or user ID" 
+          }),
+          { 
+            status: 400,
+            headers: { ...corsHeaders, "Content-Type": "application/json" }
+          }
+        );
+      }
     }
 
     // Check if we have a valid Mercado Pago token
@@ -77,23 +85,16 @@ async function processPayment(req: Request) {
       );
     }
 
-    // Make request to Mercado Pago API to process payment
-    const mpRequestData = {
-      token,
-      issuer_id,
-      payment_method_id,
+    // Prepare the base request data
+    let mpRequestData: any = {
       transaction_amount: parseFloat(transaction_amount),
-      installments: parseInt(installments),
-      description: `Space promotion: ${plan_id}`,
-      payer: {
-        email,
-        identification
-      },
+      description: requestData.description || `Space promotion: ${plan_id}`,
+      payment_method_id: payment_method_id,
       additional_info: {
         items: [
           {
             id: space_id,
-            title: `Space promotion plan ${plan_id}`,
+            title: requestData.description || `Space promotion plan ${plan_id}`,
             description: `Promotion for space ID ${space_id}`,
             quantity: 1,
             unit_price: parseFloat(transaction_amount)
@@ -102,9 +103,34 @@ async function processPayment(req: Request) {
       },
       notification_url: "https://your-app-url.com/api/notifications/mercadopago",
       statement_descriptor: "iParty Spaces",
-      capture: true,
-      binary_mode: true
     };
+
+    // Add payment method specific data
+    if (payment_method_id === "pix") {
+      // PIX specific data
+      const expirationDate = new Date();
+      expirationDate.setDate(expirationDate.getDate() + 1); // 24 hours expiration
+
+      mpRequestData = {
+        ...mpRequestData,
+        date_of_expiration: expirationDate.toISOString(),
+        payer: payer
+      };
+    } else {
+      // Credit card specific data
+      mpRequestData = {
+        ...mpRequestData,
+        token,
+        installments: parseInt(installments),
+        issuer_id,
+        payer: {
+          email,
+          identification
+        },
+        capture: true,
+        binary_mode: true
+      };
+    }
     
     console.log("Sending request to Mercado Pago API:", JSON.stringify(mpRequestData));
 
@@ -117,16 +143,37 @@ async function processPayment(req: Request) {
     if (MERCADO_PAGO_ACCESS_TOKEN.startsWith('TEST-')) {
       console.log("Using test mode with simulated successful response");
       // Simulate a successful payment response for testing
-      mpData = {
-        id: `test-${Date.now()}`,
-        status: "approved",
-        status_detail: "accredited",
-        transaction_details: {
-          net_received_amount: parseFloat(transaction_amount)
-        },
-        date_created: new Date().toISOString(),
-        payer: { email }
-      };
+      if (payment_method_id === "pix") {
+        mpData = {
+          id: `test-${Date.now()}`,
+          status: "pending",
+          status_detail: "pending_waiting_transfer",
+          transaction_details: {
+            net_received_amount: parseFloat(transaction_amount)
+          },
+          date_created: new Date().toISOString(),
+          payer: { email: payer.email },
+          point_of_interaction: {
+            type: "PIX",
+            transaction_data: {
+              qr_code_base64: "iVBORw0KGgoAAAANSUhEUgAAAZAAAAGQCAIAAAAP3aGbAAAACXBIWXMAAA7EAAAOxAGVKw4bAAAIHklEQVR4nO3dwW4bORRFQcfI/3+yMYsBZmfCYWuoruJ5tHgkLm8W+vr6+voAKH0+PQDgdwQLiBMsIE6wgDjBAuIEC4gTLCBOsIA4wQLiBAvqvp8e4L99PXi9r/F6T4/wilc3/vTij3vXlbw/mxUQJ1hAnGABcYIFxAkWECdYQNzoY/Tykeunk5x+DPzPrxD957x4h4/rE1e1WQFxggXECRYQJ1hAnGABcYIFxN1yDP73fP3YeJfD10+zvepxB8q//xk2KyBOsIA4wQLiBK...ew",
+              qr_code: "00020126600014br.gov.bcb.pix0117test@yourdomain.com0217additional data520400005303986540510.005802BR5913Maria Silva6008Brasilia62070503***6304E2CA",
+              ticket_url: "https://www.mercadopago.com.br/payments/123456789/ticket"
+            }
+          }
+        };
+      } else {
+        mpData = {
+          id: `test-${Date.now()}`,
+          status: "approved",
+          status_detail: "accredited",
+          transaction_details: {
+            net_received_amount: parseFloat(transaction_amount)
+          },
+          date_created: new Date().toISOString(),
+          payer: { email }
+        };
+      }
       mpResponse = {
         ok: true,
         status: 200,
@@ -138,7 +185,8 @@ async function processPayment(req: Request) {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "Authorization": `Bearer ${MERCADO_PAGO_ACCESS_TOKEN}`
+          "Authorization": `Bearer ${MERCADO_PAGO_ACCESS_TOKEN}`,
+          "X-Idempotency-Key": crypto.randomUUID()
         },
         body: JSON.stringify(mpRequestData)
       });
@@ -148,7 +196,7 @@ async function processPayment(req: Request) {
     
     console.log("Mercado Pago API response:", JSON.stringify(mpData));
 
-    // Check if payment was successful
+    // Check if payment response was received successfully
     if (mpResponse.ok) {
       try {
         // Calculate expiration based on plan
@@ -171,6 +219,7 @@ async function processPayment(req: Request) {
           expires_at: expiresAt ? expiresAt.toISOString() : null
         });
         
+        // For PIX, record is pending until payment is confirmed
         // Insert directly using service role client to bypass RLS
         const { data: insertData, error: dbError } = await supabase
           .from('space_promotions')
@@ -190,12 +239,14 @@ async function processPayment(req: Request) {
         if (dbError) {
           console.error("Error storing payment:", dbError);
           
+          // Return the payment data even if record keeping failed
           return new Response(
             JSON.stringify({ 
               success: true, 
               payment_id: mpData.id,
               status: mpData.status,
-              warning: "Payment processed but record keeping failed: " + dbError.message
+              warning: "Payment processed but record keeping failed: " + dbError.message,
+              ...mpData // Return all payment processor data
             }),
             { 
               status: 200,
@@ -208,7 +259,8 @@ async function processPayment(req: Request) {
           JSON.stringify({ 
             success: true, 
             payment_id: mpData.id,
-            status: mpData.status
+            status: mpData.status,
+            ...mpData // Return all payment processor data for PIX processing
           }),
           { 
             status: 200,
@@ -224,7 +276,8 @@ async function processPayment(req: Request) {
             success: true, 
             payment_id: mpData.id,
             status: mpData.status,
-            warning: "Payment processed but record keeping failed: " + (dbProcessingError instanceof Error ? dbProcessingError.message : String(dbProcessingError))
+            warning: "Payment processed but record keeping failed: " + (dbProcessingError instanceof Error ? dbProcessingError.message : String(dbProcessingError)),
+            ...mpData // Return all payment processor data
           }),
           { 
             status: 200,
