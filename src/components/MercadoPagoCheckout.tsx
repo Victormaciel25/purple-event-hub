@@ -366,7 +366,7 @@ const MercadoPagoCheckout: React.FC<CheckoutProps> = ({
                 throw new Error("Erro na comunicação com o servidor de pagamentos");
               }
               
-              if (data.success) {
+              if (data && data.success) {
                 toast.success(`Pagamento realizado com sucesso!`, {
                   duration: 5000,
                 });
@@ -378,8 +378,9 @@ const MercadoPagoCheckout: React.FC<CheckoutProps> = ({
                   onSuccess();
                 }
               } else {
-                setErrorMessage(data.error || "Ocorreu um erro ao processar o pagamento.");
-                throw new Error(data.error || "Erro ao processar pagamento");
+                const errorMsg = data?.error || "Ocorreu um erro ao processar o pagamento.";
+                setErrorMessage(errorMsg);
+                throw new Error(errorMsg);
               }
             } catch (error) {
               console.error("Payment processing error:", error);
