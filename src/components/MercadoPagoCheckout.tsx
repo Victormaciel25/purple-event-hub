@@ -41,6 +41,7 @@ const MercadoPagoCheckout: React.FC<CheckoutProps> = ({
   const [userId, setUserId] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [mercadoPagoPublicKey, setMercadoPagoPublicKey] = useState<string | null>(null);
+  const [paymentStatus, setPaymentStatus] = useState<string | null>(null);
   
   // Get user ID and Mercado Pago public key on component mount
   useEffect(() => {
@@ -363,6 +364,7 @@ const MercadoPagoCheckout: React.FC<CheckoutProps> = ({
             
             if (processingPayment) return;
             setErrorMessage(null);
+            setPaymentStatus(null);
             
             const progressBar = document.querySelector<HTMLProgressElement>("#payment-progress");
             if (progressBar) progressBar.removeAttribute("value");
@@ -402,15 +404,30 @@ const MercadoPagoCheckout: React.FC<CheckoutProps> = ({
               }
               
               if (data && data.success) {
-                toast.success(`Pagamento realizado com sucesso!`, {
-                  duration: 5000,
-                });
-
-                // Clean up Mercado Pago elements after payment
-                cleanupMercadoPagoElements();
+                // Store payment status
+                setPaymentStatus(data.status);
                 
-                if (onSuccess) {
-                  onSuccess();
+                // Only call onSuccess if payment status is "approved"
+                if (data.status === "approved") {
+                  toast.success(`Pagamento aprovado com sucesso!`, {
+                    duration: 5000,
+                  });
+
+                  // Clean up Mercado Pago elements after payment
+                  cleanupMercadoPagoElements();
+                  
+                  if (onSuccess) {
+                    onSuccess();
+                  }
+                } else if (data.status === "in_process" || data.status === "pending") {
+                  toast.info(`Pagamento em processamento. Aguarde a confirmação.`, {
+                    duration: 5000,
+                  });
+                  setErrorMessage("Seu pagamento está em análise. Você receberá uma confirmação em breve.");
+                } else {
+                  // Handle other statuses
+                  toast.warning(`Status do pagamento: ${data.status}. Verifique mais tarde.`);
+                  setErrorMessage(`Pagamento registrado com status: ${data.status}`);
                 }
               } else {
                 const errorMsg = data?.error || "Ocorreu um erro ao processar o pagamento.";
@@ -491,6 +508,18 @@ const MercadoPagoCheckout: React.FC<CheckoutProps> = ({
         <Alert variant="destructive" className="mb-4">
           <AlertTitle>Erro no processamento</AlertTitle>
           <AlertDescription>{errorMessage}</AlertDescription>
+        </Alert>
+      )}
+      
+      {paymentStatus && paymentStatus !== "approved" && (
+        <Alert className="mb-4">
+          <AlertTitle>Status do Pagamento</AlertTitle>
+          <AlertDescription>
+            Seu pagamento está com status: {paymentStatus}. 
+            {paymentStatus === "in_process" || paymentStatus === "pending" 
+              ? " Aguarde a confirmação." 
+              : " Entre em contato com o suporte se precisar de ajuda."}
+          </AlertDescription>
         </Alert>
       )}
       

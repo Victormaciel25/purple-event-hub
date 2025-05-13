@@ -133,16 +133,48 @@ const PromoteSpace: React.FC = () => {
     }
   };
 
-  const handlePaymentSuccess = () => {
-    setPaymentSuccess(true);
-    
-    // In a production app, you would also update the database to
-    // mark the space as promoted with the selected plan
-    
-    // Redirect to profile after a delay
-    setTimeout(() => {
-      navigate("/profile");
-    }, 3000);
+  // This will only be called when payment is confirmed and approved by Mercado Pago
+  const handlePaymentSuccess = async () => {
+    // Verify payment status in database before showing success screen
+    try {
+      // Check for an approved payment in the database to confirm
+      const { data: sessionData } = await supabase.auth.getSession();
+      if (!sessionData.session) {
+        console.error("No active session found");
+        return;
+      }
+
+      const userId = sessionData.session.user.id;
+      
+      // Query the space_promotions table for this space and verify it's active
+      const { data: promotionData, error } = await supabase
+        .from("space_promotions")
+        .select("payment_status")
+        .eq("space_id", selectedSpace)
+        .eq("user_id", userId)
+        .eq("plan_id", selectedPlan)
+        .order("created_at", { ascending: false })
+        .limit(1);
+      
+      if (error) {
+        console.error("Error verifying payment status:", error);
+        return;
+      }
+
+      // Only show success if we have a confirmed payment record in database
+      if (promotionData && promotionData.length > 0 && promotionData[0].payment_status === "approved") {
+        setPaymentSuccess(true);
+        
+        // Redirect to profile after a delay
+        setTimeout(() => {
+          navigate("/profile");
+        }, 3000);
+      } else {
+        toast.warning("Aguardando confirmação de pagamento do processador");
+      }
+    } catch (error) {
+      console.error("Error validating payment success:", error);
+    }
   };
 
   const formatPrice = (price: number) => {
