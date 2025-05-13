@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useToast } from "@/hooks/use-toast";
+import { useToast } from "@/components/ui/use-toast";
 import { Button } from "@/components/ui/button";
 import { Loader2, Check, QrCode } from "lucide-react";
 import { supabase } from '@/integrations/supabase/client';
@@ -48,11 +48,11 @@ const MercadoPagoCheckout: React.FC<CheckoutProps> = ({
   const [processingPix, setProcessingPix] = useState(false);
   
   // Use the proper toast hook from shadcn
-  const { addToast } = useToast();
+  const { toast } = useToast();
   
   // Function to show toast messages
   const showToast = (props: { title?: string; description: string; variant?: "default" | "destructive" }) => {
-    addToast(props);
+    toast(props);
   };
   
   // Get user ID and Mercado Pago public key on component mount
@@ -295,7 +295,7 @@ const MercadoPagoCheckout: React.FC<CheckoutProps> = ({
     if (!userId) {
       const { data } = await supabase.auth.getSession();
       if (!data.session) {
-        toast({
+        showToast({
           title: "Erro",
           description: "Você precisa estar logado para realizar um pagamento.",
           variant: "destructive"
@@ -362,7 +362,7 @@ const MercadoPagoCheckout: React.FC<CheckoutProps> = ({
       
     } catch (error) {
       console.error("PIX payment error:", error);
-      toast({
+      showToast({
         title: "Erro",
         description: error instanceof Error ? error.message : "Erro ao gerar pagamento PIX",
         variant: "destructive"
@@ -452,7 +452,7 @@ const MercadoPagoCheckout: React.FC<CheckoutProps> = ({
               
               // Show success message
               if (data.status === 'approved') {
-                toast({
+                showToast({
                   title: "Sucesso",
                   description: "Pagamento aprovado com sucesso!"
                 });
@@ -460,7 +460,7 @@ const MercadoPagoCheckout: React.FC<CheckoutProps> = ({
                   onSuccess();
                 }
               } else {
-                toast({
+                showToast({
                   title: "Informação",
                   description: `Pagamento em processamento. Status: ${data.status}`
                 });
@@ -469,7 +469,7 @@ const MercadoPagoCheckout: React.FC<CheckoutProps> = ({
               return { status: "success" };
             } catch (error) {
               console.error("Error processing payment:", error);
-              toast({
+              showToast({
                 title: "Erro",
                 description: "Erro ao processar pagamento. Por favor, tente novamente."
               });
@@ -592,7 +592,7 @@ const MercadoPagoCheckout: React.FC<CheckoutProps> = ({
             ) : (
               <>
                 <Check size={20} className="mr-2" />
-                Pagar com Cartão de Crédito ou D��bito
+                Pagar com Cartão de Crédito ou D����bito
               </>
             )}
           </Button>

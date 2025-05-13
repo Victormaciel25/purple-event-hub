@@ -3,7 +3,7 @@ import React, { useEffect, useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Loader2, QrCode, Copy, Check, ExternalLink } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
+import { useToast } from "@/components/ui/use-toast";
 
 type PixPaymentProps = {
   paymentData: {
@@ -87,7 +87,7 @@ const PixPayment: React.FC<PixPaymentProps> = ({
         <p className="text-gray-500 text-sm">{description}</p>
       </div>
       
-      {paymentData.qr_code_base64 && (
+      {paymentData?.qr_code_base64 && (
         <div className="bg-white p-3 border border-gray-200 rounded-lg">
           <img 
             src={`data:image/jpeg;base64,${paymentData.qr_code_base64}`} 
@@ -97,7 +97,7 @@ const PixPayment: React.FC<PixPaymentProps> = ({
         </div>
       )}
       
-      {paymentData.qr_code && (
+      {paymentData?.qr_code && (
         <div className="w-full">
           <p className="text-sm text-gray-500 mb-1">Copiar código PIX:</p>
           <div className="flex items-center">
@@ -114,7 +114,7 @@ const PixPayment: React.FC<PixPaymentProps> = ({
         </div>
       )}
       
-      {paymentData.ticket_url && (
+      {paymentData?.ticket_url && (
         <Button 
           variant="outline" 
           className="w-full flex items-center justify-center gap-2 mt-4"
