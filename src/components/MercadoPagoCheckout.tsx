@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useToast, toast } from "@/hooks/use-toast";
+import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Loader2, Check } from "lucide-react";
 import { supabase } from '@/integrations/supabase/client';
@@ -302,11 +302,17 @@ const MercadoPagoCheckout: React.FC<CheckoutProps> = ({
         },
         customization: {
           paymentMethods: {
-            ticket: "all",
+            ticket: "pix",
             bankTransfer: "all",
             creditCard: "all",
             prepaidCard: "all",
-            debitCard: "all",
+            debitCard: {
+              id: "debitcard", 
+              options: {
+                allowedPaymentMethods: ["master", "visa", "elo", "hipercard", "american express"],
+                excludedPaymentMethods: ["debcabal", "debvisa", "debmaster", "caixa"]
+              }
+            },
             mercadoPago: "all",
           },
           visual: {
