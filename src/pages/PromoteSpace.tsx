@@ -6,7 +6,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ChevronLeft, Check } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { useToast, toast } from "@/hooks/use-toast";
+import { useToast } from "@/hooks/use-toast";
 import MercadoPagoCheckout from "@/components/MercadoPagoCheckout";
 
 type Space = {
@@ -65,11 +65,17 @@ const PromoteSpace: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [paymentSuccess, setPaymentSuccess] = useState(false);
   const navigate = useNavigate();
-  const { addToast } = useToast();
+  const { toast } = useToast();
   
   // Function to show toast messages
   const showToast = (props: { title?: string; description: string; variant?: "default" | "destructive" }) => {
-    addToast(props);
+    if (props.variant === "destructive") {
+      toast.error(props.description);
+    } else if (props.title === "Sucesso") {
+      toast.success(props.description);
+    } else {
+      toast.default(props.description);
+    }
   };
 
   useEffect(() => {
