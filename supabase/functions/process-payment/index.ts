@@ -146,20 +146,18 @@ async function processPayment(req: Request) {
 
     // Check if payment was successful
     if (mpResponse.ok) {
-      // Calculate expiration based on plan
-      let expiresAt = null;
-      if (plan_id === 'daily') {
-        expiresAt = new Date(new Date().getTime() + 24 * 60 * 60 * 1000); // 1 day
-      } else if (plan_id === 'weekly') {
-        expiresAt = new Date(new Date().getTime() + 7 * 24 * 60 * 60 * 1000); // 7 days
-      } else if (plan_id === 'monthly') {
-        expiresAt = new Date(new Date().getTime() + 30 * 24 * 60 * 60 * 1000); // 30 days
-      }
-      
-      // Store payment information in database
-      const { data: insertData, error: dbError } = await supabase
-        .from('space_promotions')
-        .insert({
+      try {
+        // Calculate expiration based on plan
+        let expiresAt = null;
+        if (plan_id === 'daily') {
+          expiresAt = new Date(new Date().getTime() + 24 * 60 * 60 * 1000); // 1 day
+        } else if (plan_id === 'weekly') {
+          expiresAt = new Date(new Date().getTime() + 7 * 24 * 60 * 60 * 1000); // 7 days
+        } else if (plan_id === 'monthly') {
+          expiresAt = new Date(new Date().getTime() + 30 * 24 * 60 * 60 * 1000); // 30 days
+        }
+        
+        console.log("About to insert into space_promotions table with data:", {
           space_id,
           plan_id,
           payment_id: mpData.id,
@@ -168,26 +166,80 @@ async function processPayment(req: Request) {
           user_id,
           expires_at: expiresAt ? expiresAt.toISOString() : null
         });
-
-      console.log("Database insert result:", insertData, dbError);
-
-      if (dbError) {
-        console.error("Error storing payment:", dbError);
-        // Payment was processed but we failed to store it
-        // We should handle this case better in production
-      }
-
-      return new Response(
-        JSON.stringify({ 
-          success: true, 
-          payment_id: mpData.id,
-          status: mpData.status
-        }),
-        { 
-          status: 200,
-          headers: { ...corsHeaders, "Content-Type": "application/json" }
+        
+        // Check if the space_promotions table exists and has the required columns
+        const { error: tableCheckError } = await supabase
+          .from('space_promotions')
+          .select('id')
+          .limit(1);
+          
+        if (tableCheckError) {
+          console.error("Error checking space_promotions table:", tableCheckError);
+          throw new Error(`Table check failed: ${tableCheckError.message}`);
         }
-      );
+        
+        // Store payment information in database
+        const { data: insertData, error: dbError } = await supabase
+          .from('space_promotions')
+          .insert({
+            space_id,
+            plan_id,
+            payment_id: mpData.id,
+            payment_status: mpData.status,
+            amount: transaction_amount,
+            user_id,
+            expires_at: expiresAt ? expiresAt.toISOString() : null
+          })
+          .select();
+
+        console.log("Database insert result:", insertData, dbError);
+
+        if (dbError) {
+          console.error("Error storing payment:", dbError);
+          // Payment was processed but we failed to store it
+          // Let's still return success to the user but log the error
+          return new Response(
+            JSON.stringify({ 
+              success: true, 
+              payment_id: mpData.id,
+              status: mpData.status,
+              warning: "Payment processed but record keeping failed"
+            }),
+            { 
+              status: 200,
+              headers: { ...corsHeaders, "Content-Type": "application/json" }
+            }
+          );
+        }
+
+        return new Response(
+          JSON.stringify({ 
+            success: true, 
+            payment_id: mpData.id,
+            status: mpData.status
+          }),
+          { 
+            status: 200,
+            headers: { ...corsHeaders, "Content-Type": "application/json" }
+          }
+        );
+      } catch (dbProcessingError) {
+        console.error("Error in database processing:", dbProcessingError);
+        
+        // Payment was successful but database processing failed
+        return new Response(
+          JSON.stringify({ 
+            success: true, 
+            payment_id: mpData.id,
+            status: mpData.status,
+            warning: "Payment processed but record keeping failed: " + dbProcessingError.message
+          }),
+          { 
+            status: 200,
+            headers: { ...corsHeaders, "Content-Type": "application/json" }
+          }
+        );
+      }
     } else {
       // Payment failed
       console.error("Payment processing failed:", mpData);
