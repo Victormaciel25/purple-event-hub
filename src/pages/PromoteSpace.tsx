@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -70,11 +71,18 @@ const PromoteSpace: React.FC = () => {
   // Function to show toast messages
   const showToast = (props: { title?: string; description: string; variant?: "default" | "destructive" }) => {
     if (props.variant === "destructive") {
-      toast.error(props.description);
+      toast({
+        variant: "destructive",
+        description: props.description,
+      });
     } else if (props.title === "Sucesso") {
-      toast.success(props.description);
+      toast({
+        description: props.description,
+      });
     } else {
-      toast.default(props.description);
+      toast({
+        description: props.description,
+      });
     }
   };
 

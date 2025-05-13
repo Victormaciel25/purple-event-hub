@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { useToast } from "@/components/ui/use-toast";
 import { Button } from "@/components/ui/button";
@@ -52,13 +53,11 @@ const MercadoPagoCheckout: React.FC<CheckoutProps> = ({
   
   // Function to show toast messages
   const showToast = (props: { title?: string; description: string; variant?: "default" | "destructive" }) => {
-    if (props.variant === "destructive") {
-      toast.error(props.description);
-    } else if (props.title === "Sucesso") {
-      toast.success(props.description);
-    } else {
-      toast.default(props.description);
-    }
+    toast({
+      title: props.title,
+      description: props.description,
+      variant: props.variant
+    });
   };
   
   // Get user ID and Mercado Pago public key on component mount
