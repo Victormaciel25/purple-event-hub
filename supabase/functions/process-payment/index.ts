@@ -69,7 +69,22 @@ async function processPayment(req: Request) {
       payer: {
         email,
         identification
-      }
+      },
+      additional_info: {
+        items: [
+          {
+            id: space_id,
+            title: `Space promotion plan ${plan_id}`,
+            description: `Promotion for space ID ${space_id}`,
+            quantity: 1,
+            unit_price: parseFloat(transaction_amount)
+          }
+        ]
+      },
+      notification_url: "https://your-app-url.com/api/notifications/mercadopago",
+      statement_descriptor: "iParty Spaces",
+      capture: true,
+      binary_mode: true
     };
     
     console.log("Sending request to Mercado Pago API:", JSON.stringify(mpRequestData));

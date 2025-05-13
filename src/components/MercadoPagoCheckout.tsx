@@ -331,6 +331,10 @@ const MercadoPagoCheckout: React.FC<CheckoutProps> = ({
             try {
               const formData = cardForm.getCardFormData();
               console.log("Payment form data:", formData);
+              
+              if (!userId) {
+                throw new Error("Usuário não identificado. Faça login novamente.");
+              }
 
               // Process payment through Supabase Edge Function
               const { data, error } = await supabase.functions.invoke('process-payment', {
@@ -347,11 +351,14 @@ const MercadoPagoCheckout: React.FC<CheckoutProps> = ({
                   },
                   space_id: spaceId,
                   plan_id: plan.id,
-                  user_id: userId  // Send the user_id to the edge function
+                  user_id: userId
                 })
               });
               
-              if (error) throw error;
+              if (error) {
+                console.error("Payment function error:", error);
+                throw new Error("Erro na comunicação com o servidor de pagamentos");
+              }
               
               if (data.success) {
                 toast.success(`Pagamento realizado com sucesso!`, {
