@@ -1,13 +1,13 @@
 
+import * as React from "react";
 import {
   Toast,
   ToastClose,
   ToastDescription,
-  ToastProvider,
+  ToastProvider as ToastPrimitive,
   ToastTitle,
   ToastViewport,
 } from "@/components/ui/toast";
-import { useState, useEffect, createContext, useContext } from "react";
 
 const TOAST_LIMIT = 10;
 const TOAST_REMOVE_DELAY = 1000;
@@ -122,15 +122,17 @@ type ToastContextType = {
   updateToast: (toast: Partial<ToasterToast> & { id: string }) => void;
   dismissToast: (toastId: string) => void;
   removeToast: (toastId: string) => void;
+  toast: {
+    custom: (props: Omit<ToasterToast, "id" | "open">) => void;
+    default: (message: string) => void;
+    error: (message: string) => void;
+    success: (message: string) => void;
+    warning: (message: string) => void;
+    dismiss: (toastId: string) => void;
+  };
 };
 
-const ToastContext = createContext<ToastContextType>({
-  toasts: [],
-  addToast: () => {},
-  updateToast: () => {},
-  dismissToast: () => {},
-  removeToast: () => {},
-});
+const ToastContext = React.createContext<ToastContextType | undefined>(undefined);
 
 // The context provider that must be available in the app when using toasts
 export const ToastProvider = ({ children }: { children: React.ReactNode }) => {
@@ -149,25 +151,75 @@ export const ToastProvider = ({ children }: { children: React.ReactNode }) => {
     });
   }, [state.toasts]);
 
+  const toastFunctions = React.useMemo(() => ({
+    custom: (props: Omit<ToasterToast, "id" | "open">) => {
+      dispatch({ type: actionTypes.ADD_TOAST, toast: props });
+    },
+    default: (message: string) => {
+      dispatch({
+        type: actionTypes.ADD_TOAST,
+        toast: { variant: "default", description: message },
+      });
+    },
+    error: (message: string) => {
+      dispatch({
+        type: actionTypes.ADD_TOAST,
+        toast: { variant: "destructive", description: message },
+      });
+    },
+    success: (message: string) => {
+      dispatch({
+        type: actionTypes.ADD_TOAST,
+        toast: { description: message },
+      });
+    },
+    warning: (message: string) => {
+      dispatch({
+        type: actionTypes.ADD_TOAST,
+        toast: { description: message, variant: "default" },
+      });
+    },
+    dismiss: (toastId: string) => {
+      dispatch({ type: actionTypes.DISMISS_TOAST, toastId });
+    },
+  }), [dispatch]);
+
+  const contextValue = React.useMemo(
+    () => ({
+      toasts: state.toasts,
+      addToast: (toast: Omit<ToasterToast, "id" | "open">) => {
+        dispatch({ type: actionTypes.ADD_TOAST, toast });
+      },
+      updateToast: (toast: Partial<ToasterToast> & { id: string }) => {
+        dispatch({ type: actionTypes.UPDATE_TOAST, toast });
+      },
+      dismissToast: (toastId: string) => {
+        dispatch({ type: actionTypes.DISMISS_TOAST, toastId });
+      },
+      removeToast: (toastId: string) => {
+        dispatch({ type: actionTypes.REMOVE_TOAST, toastId });
+      },
+      toast: toastFunctions,
+    }),
+    [state.toasts, toastFunctions]
+  );
+
   return (
-    <ToastContext.Provider
-      value={{
-        toasts: state.toasts,
-        addToast: (toast) => {
-          dispatch({ type: actionTypes.ADD_TOAST, toast });
-        },
-        updateToast: (toast) => {
-          dispatch({ type: actionTypes.UPDATE_TOAST, toast });
-        },
-        dismissToast: (toastId) => {
-          dispatch({ type: actionTypes.DISMISS_TOAST, toastId });
-        },
-        removeToast: (toastId) => {
-          dispatch({ type: actionTypes.REMOVE_TOAST, toastId });
-        },
-      }}
-    >
+    <ToastContext.Provider value={contextValue}>
       {children}
+      <ToastPrimitive>
+        {state.toasts.map(({ id, title, description, action, ...props }) => (
+          <Toast key={id} {...props}>
+            <div className="grid gap-1">
+              {title && <ToastTitle>{title}</ToastTitle>}
+              {description && <ToastDescription>{description}</ToastDescription>}
+            </div>
+            {action}
+            <ToastClose />
+          </Toast>
+        ))}
+        <ToastViewport />
+      </ToastPrimitive>
     </ToastContext.Provider>
   );
 };
@@ -180,69 +232,62 @@ export function useToast() {
     throw new Error("useToast must be used within a ToastProvider");
   }
   
-  // Add a toast function directly to the returned object
-  return {
-    ...context,
-    toast: (props: Omit<ToasterToast, "id" | "open">) => {
-      context.addToast(props);
-    }
-  };
+  return context;
 }
 
-// Create a separate toast object for direct import
-// This uses the current context via useToast internally
-const toastFn = (props: Omit<ToasterToast, "id" | "open">) => {
-  const { addToast } = React.useContext(ToastContext);
-  if (!addToast) {
-    console.error("Toast function called outside of ToastProvider context");
-    return;
-  }
-  addToast(props);
-};
-
-// Standalone toast functions for common use cases
+// Create standalone toast object for direct import
 export const toast = {
-  // Helper function to add a toast
   custom: (props: Omit<ToasterToast, "id" | "open">) => {
-    toastFn(props);
-  },
-  
-  // Default toast with just a message as description
-  default: (message: string) => {
-    toastFn({
-      variant: "default",
-      description: message,
-    });
-  },
-  
-  // Destructive/error toast
-  error: (message: string) => {
-    toastFn({
-      variant: "destructive",
-      description: message,
-    });
-  },
-  
-  // Success toast
-  success: (message: string) => {
-    toastFn({
-      description: message,
-    });
-  },
-  
-  // Warning toast
-  warning: (message: string) => {
-    toastFn({
-      description: message,
-      variant: "default",
-    });
-  },
-  
-  // Dismiss a toast by ID
-  dismiss: (toastId: string) => {
-    const { dismissToast } = React.useContext(ToastContext);
-    if (dismissToast) {
-      dismissToast(toastId);
+    const context = React.useContext(ToastContext);
+    if (!context) {
+      console.error("Toast function called outside of ToastProvider context");
+      return;
     }
+    context.addToast(props);
+  },
+  
+  default: (message: string) => {
+    const context = React.useContext(ToastContext);
+    if (!context) {
+      console.error("Toast function called outside of ToastProvider context");
+      return;
+    }
+    context.toast.default(message);
+  },
+  
+  error: (message: string) => {
+    const context = React.useContext(ToastContext);
+    if (!context) {
+      console.error("Toast function called outside of ToastProvider context");
+      return;
+    }
+    context.toast.error(message);
+  },
+  
+  success: (message: string) => {
+    const context = React.useContext(ToastContext);
+    if (!context) {
+      console.error("Toast function called outside of ToastProvider context");
+      return;
+    }
+    context.toast.success(message);
+  },
+  
+  warning: (message: string) => {
+    const context = React.useContext(ToastContext);
+    if (!context) {
+      console.error("Toast function called outside of ToastProvider context");
+      return;
+    }
+    context.toast.warning(message);
+  },
+  
+  dismiss: (toastId: string) => {
+    const context = React.useContext(ToastContext);
+    if (!context) {
+      console.error("Toast function called outside of ToastProvider context");
+      return;
+    }
+    context.toast.dismiss(toastId);
   },
 };

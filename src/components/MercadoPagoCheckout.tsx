@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useToast } from "@/hooks/use-toast";
+import { useToast, toast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Loader2, Check } from "lucide-react";
 import { supabase } from '@/integrations/supabase/client';
@@ -351,7 +351,7 @@ const MercadoPagoCheckout: React.FC<CheckoutProps> = ({
               
               // Show success message
               if (data.status === 'approved') {
-                toast({
+                showToast({
                   title: "Sucesso",
                   description: "Pagamento aprovado com sucesso!"
                 });
@@ -359,7 +359,7 @@ const MercadoPagoCheckout: React.FC<CheckoutProps> = ({
                   onSuccess();
                 }
               } else {
-                toast({
+                showToast({
                   title: "Informação",
                   description: `Pagamento em processamento. Status: ${data.status}`
                 });
@@ -368,7 +368,7 @@ const MercadoPagoCheckout: React.FC<CheckoutProps> = ({
               return { status: "success" };
             } catch (error) {
               console.error("Error processing payment:", error);
-              toast({
+              showToast({
                 title: "Erro",
                 description: "Erro ao processar pagamento. Por favor, tente novamente."
               });

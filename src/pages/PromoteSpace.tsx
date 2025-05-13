@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -7,7 +6,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ChevronLeft, Check } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/hooks/use-toast";
+import { useToast, toast } from "@/hooks/use-toast";
 import MercadoPagoCheckout from "@/components/MercadoPagoCheckout";
 
 type Space = {
@@ -184,7 +183,11 @@ const PromoteSpace: React.FC = () => {
           navigate("/profile");
         }, 3000);
       } else {
-        toast.warning("Aguardando confirmação de pagamento do processador");
+        showToast({
+          title: "Aguardando",
+          description: "Aguardando confirmação de pagamento do processador",
+          variant: "default"
+        });
       }
     } catch (error) {
       console.error("Error validating payment success:", error);
