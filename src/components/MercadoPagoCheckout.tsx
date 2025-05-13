@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { useToast } from "@/components/ui/use-toast";
 import { Button } from "@/components/ui/button";
@@ -50,11 +51,6 @@ const MercadoPagoCheckout: React.FC<CheckoutProps> = ({
   // Use the proper toast hook from shadcn
   const { toast } = useToast();
   
-  // Function to show toast messages
-  const showToast = (props: { title?: string; description: string; variant?: "default" | "destructive" }) => {
-    toast(props);
-  };
-  
   // Get user ID and Mercado Pago public key on component mount
   useEffect(() => {
     const initialize = async () => {
@@ -70,7 +66,7 @@ const MercadoPagoCheckout: React.FC<CheckoutProps> = ({
         
         if (error) {
           console.error("Error fetching Mercado Pago public key:", error);
-          showToast({
+          toast({
             title: "Erro",
             description: "Erro ao obter chave de pagamento",
             variant: "destructive"
@@ -92,7 +88,7 @@ const MercadoPagoCheckout: React.FC<CheckoutProps> = ({
     };
     
     initialize();
-  }, []);
+  }, [toast]);
   
   // Load Mercado Pago SDK
   useEffect(() => {
@@ -106,7 +102,7 @@ const MercadoPagoCheckout: React.FC<CheckoutProps> = ({
         console.log("Mercado Pago SDK loaded successfully");
       };
       script.onerror = () => {
-        showToast({
+        toast({
           title: "Erro",
           description: "Erro ao carregar o Mercado Pago",
           variant: "destructive"
@@ -127,7 +123,7 @@ const MercadoPagoCheckout: React.FC<CheckoutProps> = ({
         script.remove();
       }
     };
-  }, []);
+  }, [toast]);
 
   // Initialize Payment Brick when it's ready to be shown
   useEffect(() => {
@@ -164,7 +160,7 @@ const MercadoPagoCheckout: React.FC<CheckoutProps> = ({
 
   const handleShowCheckout = async () => {
     if (!sdkReady) {
-      showToast({
+      toast({
         title: "Aguarde",
         description: "Mercado Pago ainda está carregando. Por favor, aguarde."
       });
@@ -175,7 +171,7 @@ const MercadoPagoCheckout: React.FC<CheckoutProps> = ({
     if (!userId) {
       const { data } = await supabase.auth.getSession();
       if (!data.session) {
-        showToast({
+        toast({
           title: "Erro",
           description: "Você precisa estar logado para realizar um pagamento.",
           variant: "destructive"
@@ -187,7 +183,7 @@ const MercadoPagoCheckout: React.FC<CheckoutProps> = ({
     
     // Check if we have the public key
     if (!mercadoPagoPublicKey) {
-      showToast({
+      toast({
         title: "Erro",
         description: "Chave de pagamento não disponível. Tente novamente mais tarde.",
         variant: "destructive"
@@ -227,7 +223,7 @@ const MercadoPagoCheckout: React.FC<CheckoutProps> = ({
       
     } catch (error) {
       console.error("Checkout error:", error);
-      showToast({
+      toast({
         title: "Erro",
         description: "Erro ao iniciar o checkout. Tente novamente.",
         variant: "destructive"
@@ -295,7 +291,7 @@ const MercadoPagoCheckout: React.FC<CheckoutProps> = ({
     if (!userId) {
       const { data } = await supabase.auth.getSession();
       if (!data.session) {
-        showToast({
+        toast({
           title: "Erro",
           description: "Você precisa estar logado para realizar um pagamento.",
           variant: "destructive"
@@ -362,7 +358,7 @@ const MercadoPagoCheckout: React.FC<CheckoutProps> = ({
       
     } catch (error) {
       console.error("PIX payment error:", error);
-      showToast({
+      toast({
         title: "Erro",
         description: error instanceof Error ? error.message : "Erro ao gerar pagamento PIX",
         variant: "destructive"
@@ -452,7 +448,7 @@ const MercadoPagoCheckout: React.FC<CheckoutProps> = ({
               
               // Show success message
               if (data.status === 'approved') {
-                showToast({
+                toast({
                   title: "Sucesso",
                   description: "Pagamento aprovado com sucesso!"
                 });
@@ -460,7 +456,7 @@ const MercadoPagoCheckout: React.FC<CheckoutProps> = ({
                   onSuccess();
                 }
               } else {
-                showToast({
+                toast({
                   title: "Informação",
                   description: `Pagamento em processamento. Status: ${data.status}`
                 });
@@ -469,7 +465,7 @@ const MercadoPagoCheckout: React.FC<CheckoutProps> = ({
               return { status: "success" };
             } catch (error) {
               console.error("Error processing payment:", error);
-              showToast({
+              toast({
                 title: "Erro",
                 description: "Erro ao processar pagamento. Por favor, tente novamente."
               });
@@ -592,7 +588,7 @@ const MercadoPagoCheckout: React.FC<CheckoutProps> = ({
             ) : (
               <>
                 <Check size={20} className="mr-2" />
-                Pagar com Cartão de Crédito ou D����bito
+                Pagar com Cartão de Crédito ou Débito
               </>
             )}
           </Button>
