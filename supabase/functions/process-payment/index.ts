@@ -42,7 +42,8 @@ async function processPayment(req: Request) {
       space_id,
       plan_id,
       user_id,
-      description
+      description,
+      preference_id
     } = requestData;
 
     console.log(`Processing ${payment_type} payment with data:`, {
@@ -56,15 +57,16 @@ async function processPayment(req: Request) {
       space_id,
       plan_id,
       user_id,
-      description
+      description,
+      preference_id
     });
 
-    // Validate required fields
-    if (!transaction_amount || !email || !user_id || !space_id || !plan_id) {
+    // Validate required fields for all payment types
+    if (!user_id || !space_id || !plan_id) {
       return new Response(
         JSON.stringify({ 
           success: false, 
-          error: "Missing required payment information" 
+          error: "Missing required information" 
         }),
         { 
           status: 400,
@@ -88,10 +90,76 @@ async function processPayment(req: Request) {
       );
     }
     
-    // Different payload based on payment type
+    // Different payload based on payment type and whether we have a preference
     let mpRequestData;
+    let endpoint = "payments";
     
-    if (payment_type === 'pix') {
+    if (preference_id) {
+      // Check if this is a test preference
+      if (preference_id.startsWith('test-preference-')) {
+        // For test preferences, we'll simulate an approved payment
+        const paymentId = `test-payment-${Date.now()}`;
+        const amount = transaction_amount || 100;
+        
+        // Calculate expiration based on plan
+        let expiresAt = null;
+        if (plan_id === 'daily') {
+          expiresAt = new Date(new Date().getTime() + 24 * 60 * 60 * 1000); // 1 day
+        } else if (plan_id === 'weekly') {
+          expiresAt = new Date(new Date().getTime() + 7 * 24 * 60 * 60 * 1000); // 7 days
+        } else if (plan_id === 'monthly') {
+          expiresAt = new Date(new Date().getTime() + 30 * 24 * 60 * 60 * 1000); // 30 days
+        }
+        
+        // Update the promotion record with payment information
+        const { data: updateData, error: updateError } = await supabase
+          .from('space_promotions')
+          .update({
+            payment_id: paymentId,
+            payment_status: 'approved',
+            expires_at: expiresAt ? expiresAt.toISOString() : null
+          })
+          .eq('preference_id', preference_id)
+          .select();
+        
+        if (updateError) {
+          console.error("Error updating promotion with payment info:", updateError);
+        }
+        
+        return new Response(
+          JSON.stringify({ 
+            success: true, 
+            payment_id: paymentId,
+            status: 'approved'
+          }),
+          { 
+            status: 200,
+            headers: { ...corsHeaders, "Content-Type": "application/json" }
+          }
+        );
+      }
+      
+      // If we have a preference ID, we'll use it to process the payment
+      mpRequestData = {
+        preference_id: preference_id
+      };
+      
+      if (payment_method_id) {
+        mpRequestData.payment_method_id = payment_method_id;
+      }
+      
+      if (token) {
+        mpRequestData.token = token;
+      }
+      
+      if (installments) {
+        mpRequestData.installments = parseInt(installments);
+      }
+      
+      if (email) {
+        mpRequestData.payer = { email };
+      }
+    } else if (payment_type === 'pix') {
       // PIX payment payload
       mpRequestData = {
         transaction_amount: parseFloat(transaction_amount),
@@ -173,7 +241,7 @@ async function processPayment(req: Request) {
           status: "pending",
           status_detail: "pending_waiting_transfer",
           transaction_details: {
-            net_received_amount: parseFloat(transaction_amount)
+            net_received_amount: parseFloat(transaction_amount || "0")
           },
           date_created: new Date().toISOString(),
           date_of_expiration: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(), // 24 hours expiration
@@ -198,7 +266,7 @@ async function processPayment(req: Request) {
           status: "approved",
           status_detail: "accredited",
           transaction_details: {
-            net_received_amount: parseFloat(transaction_amount)
+            net_received_amount: parseFloat(transaction_amount || "0")
           },
           date_created: new Date().toISOString(),
           payer: { email }
@@ -212,7 +280,7 @@ async function processPayment(req: Request) {
       } as Response;
     } else {
       // Real API call with idempotency key
-      mpResponse = await fetch("https://api.mercadopago.com/v1/payments", {
+      mpResponse = await fetch(`https://api.mercadopago.com/v1/${endpoint}`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -240,20 +308,35 @@ async function processPayment(req: Request) {
           expiresAt = new Date(new Date().getTime() + 30 * 24 * 60 * 60 * 1000); // 30 days
         }
         
-        console.log("About to insert into space_promotions table with data:", {
-          space_id,
-          plan_id,
-          payment_id: mpData.id,
-          payment_status: mpData.status,
-          amount: transaction_amount,
-          user_id,
-          expires_at: expiresAt ? expiresAt.toISOString() : null
-        });
+        let insertOrUpdateData;
         
-        // Insert directly using service role client to bypass RLS
-        const { data: insertData, error: dbError } = await supabase
-          .from('space_promotions')
-          .insert({
+        // If we have a preference ID, we update the existing record
+        if (preference_id) {
+          console.log("Updating space_promotions table with payment data:", {
+            payment_id: mpData.id,
+            payment_status: mpData.status,
+            expires_at: expiresAt ? expiresAt.toISOString() : null
+          });
+          
+          const { data, error } = await supabase
+            .from('space_promotions')
+            .update({
+              payment_id: mpData.id,
+              payment_status: mpData.status,
+              expires_at: expiresAt ? expiresAt.toISOString() : null
+            })
+            .eq('preference_id', preference_id)
+            .select();
+          
+          insertOrUpdateData = data;
+          
+          if (error) {
+            console.error("Error updating payment record:", error);
+            throw error;
+          }
+        } else {
+          // Insert directly using service role client to bypass RLS
+          console.log("Inserting into space_promotions table with data:", {
             space_id,
             plan_id,
             payment_id: mpData.id,
@@ -261,28 +344,30 @@ async function processPayment(req: Request) {
             amount: transaction_amount,
             user_id,
             expires_at: expiresAt ? expiresAt.toISOString() : null
-          })
-          .select();
-
-        console.log("Database insert result:", insertData, dbError);
-
-        if (dbError) {
-          console.error("Error storing payment:", dbError);
+          });
           
-          return new Response(
-            JSON.stringify({ 
-              success: true, 
+          const { data, error } = await supabase
+            .from('space_promotions')
+            .insert({
+              space_id,
+              plan_id,
               payment_id: mpData.id,
-              status: mpData.status,
-              warning: "Payment processed but record keeping failed: " + dbError.message,
-              point_of_interaction: mpData.point_of_interaction
-            }),
-            { 
-              status: 200,
-              headers: { ...corsHeaders, "Content-Type": "application/json" }
-            }
-          );
+              payment_status: mpData.status,
+              amount: transaction_amount,
+              user_id,
+              expires_at: expiresAt ? expiresAt.toISOString() : null
+            })
+            .select();
+  
+          insertOrUpdateData = data;
+          
+          if (error) {
+            console.error("Error storing payment:", error);
+            throw error;
+          }
         }
+
+        console.log("Database operation result:", insertOrUpdateData);
 
         return new Response(
           JSON.stringify({ 

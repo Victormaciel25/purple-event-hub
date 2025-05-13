@@ -1,33 +1,36 @@
 
--- Create table to store space promotion payments
-CREATE TABLE IF NOT EXISTS public.space_promotions (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID REFERENCES auth.users NOT NULL,
-  space_id UUID REFERENCES public.spaces NOT NULL,
-  plan_id TEXT NOT NULL,
-  payment_id TEXT,
-  payment_status TEXT NOT NULL,
-  amount NUMERIC NOT NULL,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT now() NOT NULL,
-  expires_at TIMESTAMP WITH TIME ZONE,
-  active BOOLEAN DEFAULT TRUE NOT NULL
-);
+-- Enable Row Level Security
+alter table "public"."space_promotions" enable row level security;
 
--- Add RLS policies
-ALTER TABLE public.space_promotions ENABLE ROW LEVEL SECURITY;
+-- Add preference_id column for the payment brick flow
+ALTER TABLE "public"."space_promotions"
+ADD COLUMN IF NOT EXISTS "preference_id" text;
 
--- Allow authenticated users to see their own promotion data
-CREATE POLICY "Users can view their own space promotions" 
-ON public.space_promotions
+-- Create security policies
+CREATE POLICY "Allow users to view their own promotions"
+ON "public"."space_promotions"
 FOR SELECT
+TO authenticated
 USING (auth.uid() = user_id);
 
--- Allow authenticated users to insert their own promotion data
-CREATE POLICY "Users can insert their own space promotions" 
-ON public.space_promotions
+CREATE POLICY "Allow user to insert their own promotions"
+ON "public"."space_promotions"
 FOR INSERT
+TO authenticated
 WITH CHECK (auth.uid() = user_id);
 
--- Add index for improved query performance
-CREATE INDEX space_promotions_space_id_idx ON public.space_promotions(space_id);
-CREATE INDEX space_promotions_user_id_idx ON public.space_promotions(user_id);
+-- Create index on user_id
+CREATE INDEX IF NOT EXISTS idx_space_promotions_user_id
+ON public.space_promotions (user_id);
+
+-- Create index on space_id
+CREATE INDEX IF NOT EXISTS idx_space_promotions_space_id
+ON public.space_promotions (space_id);
+
+-- Create index on payment_id
+CREATE INDEX IF NOT EXISTS idx_space_promotions_payment_id
+ON public.space_promotions (payment_id);
+
+-- Create index on preference_id
+CREATE INDEX IF NOT EXISTS idx_space_promotions_preference_id
+ON public.space_promotions (preference_id);
