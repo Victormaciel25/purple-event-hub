@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
@@ -46,7 +45,12 @@ const MercadoPagoCheckout: React.FC<CheckoutProps> = ({
   const [paymentStatus, setPaymentStatus] = useState<string | null>(null);
 
   // Use the proper toast hook from shadcn
-  const { toast } = useToast();
+  const { addToast } = useToast();
+  
+  // Function to show toast messages
+  const showToast = (props: { title?: string; description: string; variant?: "default" | "destructive" }) => {
+    addToast(props);
+  };
   
   // Get user ID and Mercado Pago public key on component mount
   useEffect(() => {
@@ -63,9 +67,10 @@ const MercadoPagoCheckout: React.FC<CheckoutProps> = ({
         
         if (error) {
           console.error("Error fetching Mercado Pago public key:", error);
-          toast({
+          showToast({
             title: "Erro",
-            description: "Erro ao obter chave de pagamento"
+            description: "Erro ao obter chave de pagamento",
+            variant: "destructive"
           });
           setErrorMessage("Não foi possível se conectar ao serviço de pagamento. Tente novamente mais tarde.");
           return;
@@ -84,7 +89,7 @@ const MercadoPagoCheckout: React.FC<CheckoutProps> = ({
     };
     
     initialize();
-  }, [toast]);
+  }, []);
   
   // Load Mercado Pago SDK
   useEffect(() => {
@@ -98,9 +103,10 @@ const MercadoPagoCheckout: React.FC<CheckoutProps> = ({
         console.log("Mercado Pago SDK loaded successfully");
       };
       script.onerror = () => {
-        toast({
+        showToast({
           title: "Erro",
-          description: "Erro ao carregar o Mercado Pago"
+          description: "Erro ao carregar o Mercado Pago",
+          variant: "destructive"
         });
         console.error("Failed to load Mercado Pago SDK");
       };
@@ -118,7 +124,7 @@ const MercadoPagoCheckout: React.FC<CheckoutProps> = ({
         script.remove();
       }
     };
-  }, [toast]);
+  }, []);
 
   // Initialize Payment Brick when it's ready to be shown
   useEffect(() => {
@@ -155,7 +161,7 @@ const MercadoPagoCheckout: React.FC<CheckoutProps> = ({
 
   const handleShowCheckout = async () => {
     if (!sdkReady) {
-      toast({
+      showToast({
         title: "Aguarde",
         description: "Mercado Pago ainda está carregando. Por favor, aguarde."
       });
@@ -166,9 +172,10 @@ const MercadoPagoCheckout: React.FC<CheckoutProps> = ({
     if (!userId) {
       const { data } = await supabase.auth.getSession();
       if (!data.session) {
-        toast({
+        showToast({
           title: "Erro",
-          description: "Você precisa estar logado para realizar um pagamento."
+          description: "Você precisa estar logado para realizar um pagamento.",
+          variant: "destructive"
         });
         return;
       }
@@ -177,9 +184,10 @@ const MercadoPagoCheckout: React.FC<CheckoutProps> = ({
     
     // Check if we have the public key
     if (!mercadoPagoPublicKey) {
-      toast({
+      showToast({
         title: "Erro",
-        description: "Chave de pagamento não disponível. Tente novamente mais tarde."
+        description: "Chave de pagamento não disponível. Tente novamente mais tarde.",
+        variant: "destructive"
       });
       return;
     }
@@ -216,9 +224,10 @@ const MercadoPagoCheckout: React.FC<CheckoutProps> = ({
       
     } catch (error) {
       console.error("Checkout error:", error);
-      toast({
+      showToast({
         title: "Erro",
-        description: "Erro ao iniciar o checkout. Tente novamente."
+        description: "Erro ao iniciar o checkout. Tente novamente.",
+        variant: "destructive"
       });
       
       setErrorMessage("Não foi possível iniciar o checkout. Por favor, tente novamente mais tarde.");

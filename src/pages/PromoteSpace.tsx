@@ -66,7 +66,12 @@ const PromoteSpace: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [paymentSuccess, setPaymentSuccess] = useState(false);
   const navigate = useNavigate();
-  const { toast } = useToast();
+  const { addToast } = useToast();
+  
+  // Function to show toast messages
+  const showToast = (props: { title?: string; description: string; variant?: "default" | "destructive" }) => {
+    addToast(props);
+  };
 
   useEffect(() => {
     fetchUserSpaces();
@@ -106,9 +111,10 @@ const PromoteSpace: React.FC = () => {
       const { data: sessionData } = await supabase.auth.getSession();
       
       if (!sessionData.session) {
-        toast({
+        showToast({
           title: "Erro",
-          description: "Você precisa estar logado para promover um espaço"
+          description: "Você precisa estar logado para promover um espaço",
+          variant: "destructive"
         });
         navigate("/");
         return;
@@ -131,9 +137,10 @@ const PromoteSpace: React.FC = () => {
       }
     } catch (error) {
       console.error("Erro ao carregar espaços:", error);
-      toast({
+      showToast({
         title: "Erro",
-        description: "Erro ao carregar seus espaços"
+        description: "Erro ao carregar seus espaços",
+        variant: "destructive"
       });
     } finally {
       setLoading(false);
