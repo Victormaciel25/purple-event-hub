@@ -2,9 +2,8 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Heart, Calendar, HelpCircle, Plus, Home, Shield, CheckSquare, Users } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/components/ui/use-toast";
-import { useUserRoles } from "@/hooks/useUserRoles";
 import { toast } from "sonner";
+import { useUserRoles } from "@/hooks/useUserRoles";
 import FavoriteSpaces from "../components/FavoriteSpaces";
 import EditProfileDialog from "@/components/EditProfileDialog";
 import ProfileHeader from "@/components/profile/ProfileHeader";
@@ -18,7 +17,6 @@ const Profile = () => {
   const [session, setSession] = useState<any>(null);
   const [showEditProfile, setShowEditProfile] = useState(false);
   const navigate = useNavigate();
-  const { toast: toastUI } = useToast();
   const { isAdmin, isSuperAdmin, loading: roleLoading, userId } = useUserRoles();
 
   useEffect(() => {
@@ -76,18 +74,11 @@ const Profile = () => {
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
       
-      toastUI({
-        title: "Desconectado",
-        description: "Você saiu da sua conta com sucesso",
-      });
+      toast.success("Você saiu da sua conta com sucesso");
       
       navigate("/");
     } catch (error: any) {
-      toastUI({
-        title: "Erro ao sair",
-        description: error.message,
-        variant: "destructive",
-      });
+      toast.error("Erro ao sair: " + error.message);
     } finally {
       setLoading(false);
     }

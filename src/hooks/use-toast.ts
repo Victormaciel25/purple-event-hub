@@ -19,6 +19,7 @@ type ToasterToast = {
   action?: React.ReactNode;
   open: boolean;
   onOpenChange?: (open: boolean) => void;
+  variant?: "default" | "destructive";
 };
 
 const actionTypes = {
@@ -115,13 +116,15 @@ const reducer = (state: ToastState, action: Action): ToastState => {
   }
 };
 
-const ToastContext = createContext<{
+type ToastContextType = {
   toasts: ToasterToast[];
   addToast: (toast: Omit<ToasterToast, "id" | "open">) => void;
   updateToast: (toast: Partial<ToasterToast> & { id: string }) => void;
   dismissToast: (toastId: string) => void;
   removeToast: (toastId: string) => void;
-}>({
+};
+
+const ToastContext = createContext<ToastContextType>({
   toasts: [],
   addToast: () => {},
   updateToast: () => {},
@@ -130,22 +133,41 @@ const ToastContext = createContext<{
 });
 
 export function useToast() {
-  const [state, dispatch] = useState<ToastState>(initialState);
+  const [state, setState] = useState<ToastState>(initialState);
 
   const addToast = (toast: Omit<ToasterToast, "id" | "open">) => {
-    dispatch({ type: actionTypes.ADD_TOAST, toast });
+    setState((prevState) => ({
+      ...prevState,
+      toasts: [
+        ...prevState.toasts,
+        { id: genId(), open: true, ...toast },
+      ].slice(-TOAST_LIMIT),
+    }));
   };
 
   const updateToast = (toast: Partial<ToasterToast> & { id: string }) => {
-    dispatch({ type: actionTypes.UPDATE_TOAST, toast });
+    setState((prevState) => ({
+      ...prevState,
+      toasts: prevState.toasts.map((t) =>
+        t.id === toast.id ? { ...t, ...toast } : t
+      ),
+    }));
   };
 
   const dismissToast = (toastId: string) => {
-    dispatch({ type: actionTypes.DISMISS_TOAST, toastId });
+    setState((prevState) => ({
+      ...prevState,
+      toasts: prevState.toasts.map((t) =>
+        t.id === toastId ? { ...t, open: false } : t
+      ),
+    }));
   };
 
   const removeToast = (toastId: string) => {
-    dispatch({ type: actionTypes.REMOVE_TOAST, toastId });
+    setState((prevState) => ({
+      ...prevState,
+      toasts: prevState.toasts.filter((t) => t.id !== toastId),
+    }));
   };
 
   useEffect(() => {
@@ -176,14 +198,44 @@ export function useToast() {
   };
 }
 
-type Toast = Omit<ToasterToast, "id" | "open">;
-
-export function toast(props: Toast) {
-  const { addToast } = useToast();
-  addToast(props);
-}
-
-toast.dismiss = (toastId: string) => {
-  const { dismissToast } = useToast();
-  dismissToast(toastId);
+// Export a toast function for use in components
+export const toast = {
+  // Helper function to add a toast
+  custom: (props: Omit<ToasterToast, "id" | "open">) => {
+    const { addToast } = useToast();
+    addToast(props);
+  },
+  
+  // Default toast with just a message as description
+  default: (message: string) => {
+    const { addToast } = useToast();
+    addToast({
+      variant: "default",
+      description: message,
+    });
+  },
+  
+  // Destructive/error toast
+  error: (message: string) => {
+    const { addToast } = useToast();
+    addToast({
+      variant: "destructive",
+      description: message,
+    });
+  },
+  
+  // Success toast
+  success: (message: string, options?: { duration?: number }) => {
+    const { addToast } = useToast();
+    addToast({
+      description: message,
+      ...options,
+    });
+  },
+  
+  // Dismiss a toast by ID
+  dismiss: (toastId: string) => {
+    const { dismissToast } = useToast();
+    dismissToast(toastId);
+  },
 };
