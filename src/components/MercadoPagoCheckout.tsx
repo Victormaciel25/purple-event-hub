@@ -21,11 +21,12 @@ type CheckoutProps = {
   onError?: () => void;
 };
 
-declare global {
-  interface Window {
-    MercadoPago: any;
-  }
-}
+// Remove the duplicate declaration since it's already in vite-env.d.ts
+// declare global {
+//   interface Window {
+//     MercadoPago: any;
+//   }
+// }
 
 const MercadoPagoCheckout: React.FC<CheckoutProps> = ({ 
   spaceId, 
