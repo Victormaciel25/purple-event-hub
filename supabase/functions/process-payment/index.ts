@@ -29,7 +29,7 @@ async function processPayment(req: Request) {
       identification,
       space_id,
       plan_id,
-      user_id  // Get user_id from request payload
+      user_id
     } = await req.json();
 
     console.log("Processing payment with data:", {
@@ -41,7 +41,7 @@ async function processPayment(req: Request) {
       email,
       space_id,
       plan_id,
-      user_id  // Log the user_id for debugging
+      user_id
     });
 
     // Validate required fields
@@ -59,27 +59,32 @@ async function processPayment(req: Request) {
     }
 
     // Make request to Mercado Pago API to process payment
+    const mpRequestData = {
+      token,
+      issuer_id,
+      payment_method_id,
+      transaction_amount: parseFloat(transaction_amount),
+      installments: parseInt(installments),
+      description: `Space promotion: ${plan_id}`,
+      payer: {
+        email,
+        identification
+      }
+    };
+    
+    console.log("Sending request to Mercado Pago API:", JSON.stringify(mpRequestData));
+
     const mpResponse = await fetch("https://api.mercadopago.com/v1/payments", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         "Authorization": `Bearer ${MERCADO_PAGO_ACCESS_TOKEN}`
       },
-      body: JSON.stringify({
-        token,
-        issuer_id,
-        payment_method_id,
-        transaction_amount: parseFloat(transaction_amount),
-        installments: parseInt(installments),
-        description: `Space promotion: ${plan_id}`,
-        payer: {
-          email,
-          identification
-        }
-      })
+      body: JSON.stringify(mpRequestData)
     });
 
     const mpData = await mpResponse.json();
+    console.log("Mercado Pago API response:", JSON.stringify(mpData));
 
     // Check if payment was successful
     if (mpResponse.ok) {
@@ -94,7 +99,7 @@ async function processPayment(req: Request) {
       }
       
       // Store payment information in database
-      const { error: dbError } = await supabase
+      const { data: insertData, error: dbError } = await supabase
         .from('space_promotions')
         .insert({
           space_id,
@@ -105,6 +110,8 @@ async function processPayment(req: Request) {
           user_id,
           expires_at: expiresAt ? expiresAt.toISOString() : null
         });
+
+      console.log("Database insert result:", insertData, dbError);
 
       if (dbError) {
         console.error("Error storing payment:", dbError);
@@ -129,7 +136,8 @@ async function processPayment(req: Request) {
       return new Response(
         JSON.stringify({ 
           success: false, 
-          error: mpData.message || "Payment processing failed" 
+          error: mpData.message || "Payment processing failed",
+          details: mpData
         }),
         { 
           status: 400,
@@ -140,7 +148,11 @@ async function processPayment(req: Request) {
   } catch (error) {
     console.error("Error processing payment:", error);
     return new Response(
-      JSON.stringify({ success: false, error: "Server error processing payment" }),
+      JSON.stringify({ 
+        success: false, 
+        error: "Server error processing payment",
+        details: error.message
+      }),
       { 
         status: 500, 
         headers: { ...corsHeaders, "Content-Type": "application/json" }
