@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -5,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { LogIn, Check } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { toast } from "sonner";
+import { useToast } from "@/components/ui/use-toast";
 
 const Login = () => {
   const [isLogin, setIsLogin] = useState(true);
@@ -17,6 +18,7 @@ const Login = () => {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const { toast } = useToast();
 
   useEffect(() => {
     // Check if user is already logged in
@@ -44,13 +46,20 @@ const Login = () => {
 
         if (error) throw error;
 
-        toast.success("Login bem-sucedido. Bem-vindo de volta!");
+        toast({
+          title: "Login bem-sucedido",
+          description: "Bem-vindo de volta!",
+        });
         
         navigate("/explore");
       } else {
         // Handle signup
         if (password !== confirmPassword) {
-          toast.error("As senhas não coincidem");
+          toast({
+            title: "Erro",
+            description: "As senhas não coincidem",
+            variant: "destructive",
+          });
           setLoading(false);
           return;
         }
@@ -108,7 +117,11 @@ const Login = () => {
                 
               if (retryError) {
                 console.error("Erro ao criar perfil (tentativa 2):", retryError);
-                toast.error("Cadastro realizado, mas houve um erro ao salvar seu perfil. Você pode completar seu perfil mais tarde.");
+                toast({
+                  title: "Aviso",
+                  description: "Cadastro realizado, mas houve um erro ao salvar seu perfil. Você pode completar seu perfil mais tarde.",
+                  variant: "destructive",
+                });
               }
             }
           } catch (profileError: any) {
@@ -116,13 +129,20 @@ const Login = () => {
           }
         }
 
-        toast.success("Sua conta foi criada com sucesso!");
+        toast({
+          title: "Cadastro realizado",
+          description: "Sua conta foi criada com sucesso!",
+        });
         
         // Automatically switch to login view after successful signup
         setIsLogin(true);
       }
     } catch (error: any) {
-      toast.error(error.message);
+      toast({
+        title: "Erro",
+        description: error.message,
+        variant: "destructive",
+      });
     } finally {
       setLoading(false);
     }

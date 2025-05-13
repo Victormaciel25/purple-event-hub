@@ -7,7 +7,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ChevronLeft, Check } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import MercadoPagoCheckout from "@/components/MercadoPagoCheckout";
 
 type Space = {
@@ -66,25 +66,6 @@ const PromoteSpace: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [paymentSuccess, setPaymentSuccess] = useState(false);
   const navigate = useNavigate();
-  const { toast } = useToast();
-  
-  // Function to show toast messages
-  const showToast = (props: { title?: string; description: string; variant?: "default" | "destructive" }) => {
-    if (props.variant === "destructive") {
-      toast({
-        variant: "destructive",
-        description: props.description,
-      });
-    } else if (props.title === "Sucesso") {
-      toast({
-        description: props.description,
-      });
-    } else {
-      toast({
-        description: props.description,
-      });
-    }
-  };
 
   useEffect(() => {
     fetchUserSpaces();
@@ -124,11 +105,7 @@ const PromoteSpace: React.FC = () => {
       const { data: sessionData } = await supabase.auth.getSession();
       
       if (!sessionData.session) {
-        showToast({
-          title: "Erro",
-          description: "Você precisa estar logado para promover um espaço",
-          variant: "destructive"
-        });
+        toast.error("Você precisa estar logado para promover um espaço");
         navigate("/");
         return;
       }
@@ -150,11 +127,7 @@ const PromoteSpace: React.FC = () => {
       }
     } catch (error) {
       console.error("Erro ao carregar espaços:", error);
-      showToast({
-        title: "Erro",
-        description: "Erro ao carregar seus espaços",
-        variant: "destructive"
-      });
+      toast.error("Erro ao carregar seus espaços");
     } finally {
       setLoading(false);
     }
@@ -197,11 +170,7 @@ const PromoteSpace: React.FC = () => {
           navigate("/profile");
         }, 3000);
       } else {
-        showToast({
-          title: "Aguardando",
-          description: "Aguardando confirmação de pagamento do processador",
-          variant: "default"
-        });
+        toast.warning("Aguardando confirmação de pagamento do processador");
       }
     } catch (error) {
       console.error("Error validating payment success:", error);

@@ -1,11 +1,11 @@
 
 import React, { useEffect, useState } from 'react';
-import { useToast } from "@/components/ui/use-toast";
+import { toast } from 'sonner';
 import { Button } from "@/components/ui/button";
-import { Loader2, Check, QrCode } from "lucide-react";
+import { Check, Loader2 } from "lucide-react";
 import { supabase } from '@/integrations/supabase/client';
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
-import PixPayment from "./PixPayment";
+import { EDGE_FUNCTIONS } from '@/config/app-config';
 
 type CheckoutProps = {
   spaceId: string;
@@ -24,8 +24,6 @@ type CheckoutProps = {
 declare global {
   interface Window {
     MercadoPago: any;
-    paymentBrickController: any;
-    bricksBuilder: any;
   }
 }
 
@@ -38,27 +36,12 @@ const MercadoPagoCheckout: React.FC<CheckoutProps> = ({
 }) => {
   const [loading, setLoading] = useState(false);
   const [sdkReady, setSdkReady] = useState(false);
-  const [showPaymentBrick, setShowPaymentBrick] = useState(false);
+  const [showCheckoutForm, setShowCheckoutForm] = useState(false);
   const [processingPayment, setProcessingPayment] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [mercadoPagoPublicKey, setMercadoPagoPublicKey] = useState<string | null>(null);
-  const [preferenceId, setPreferenceId] = useState<string | null>(null);
   const [paymentStatus, setPaymentStatus] = useState<string | null>(null);
-  const [pixPaymentData, setPixPaymentData] = useState<any>(null);
-  const [processingPix, setProcessingPix] = useState(false);
-  
-  // Use the proper toast hook from shadcn
-  const { toast } = useToast();
-  
-  // Function to show toast messages
-  const showToast = (props: { title?: string; description: string; variant?: "default" | "destructive" }) => {
-    toast({
-      title: props.title,
-      description: props.description,
-      variant: props.variant
-    });
-  };
   
   // Get user ID and Mercado Pago public key on component mount
   useEffect(() => {
@@ -75,11 +58,7 @@ const MercadoPagoCheckout: React.FC<CheckoutProps> = ({
         
         if (error) {
           console.error("Error fetching Mercado Pago public key:", error);
-          showToast({
-            title: "Erro",
-            description: "Erro ao obter chave de pagamento",
-            variant: "destructive"
-          });
+          toast.error("Erro ao obter chave de pagamento");
           setErrorMessage("Não foi possível se conectar ao serviço de pagamento. Tente novamente mais tarde.");
           return;
         }
@@ -111,11 +90,7 @@ const MercadoPagoCheckout: React.FC<CheckoutProps> = ({
         console.log("Mercado Pago SDK loaded successfully");
       };
       script.onerror = () => {
-        showToast({
-          title: "Erro",
-          description: "Erro ao carregar o Mercado Pago",
-          variant: "destructive"
-        });
+        toast.error("Erro ao carregar o Mercado Pago");
         console.error("Failed to load Mercado Pago SDK");
       };
       document.body.appendChild(script);
@@ -125,7 +100,7 @@ const MercadoPagoCheckout: React.FC<CheckoutProps> = ({
     
     return () => {
       // Cleanup if component unmounts
-      cleanupMercadoPago();
+      cleanupMercadoPagoElements();
       
       // Remove the script if we created it
       if (script) {
@@ -134,45 +109,9 @@ const MercadoPagoCheckout: React.FC<CheckoutProps> = ({
     };
   }, []);
 
-  // Initialize Payment Brick when it's ready to be shown
-  useEffect(() => {
-    if (showPaymentBrick && sdkReady && mercadoPagoPublicKey && preferenceId) {
-      const initializePaymentBrick = async () => {
-        try {
-          const mp = new window.MercadoPago(mercadoPagoPublicKey, {
-            locale: 'pt-BR'
-          });
-          const bricksBuilder = mp.bricks();
-          window.bricksBuilder = bricksBuilder;
-          
-          await renderPaymentBrick(bricksBuilder);
-        } catch (error) {
-          console.error("Error initializing Payment Brick:", error);
-          setErrorMessage("Erro ao inicializar o formulário de pagamento");
-        }
-      };
-      
-      initializePaymentBrick();
-    }
-    
-    return () => {
-      // Cleanup when component unmounts or when we hide the brick
-      if (window.paymentBrickController) {
-        try {
-          window.paymentBrickController.unmount();
-        } catch (e) {
-          console.error("Error unmounting Payment Brick:", e);
-        }
-      }
-    };
-  }, [showPaymentBrick, sdkReady, mercadoPagoPublicKey, preferenceId]);
-
   const handleShowCheckout = async () => {
     if (!sdkReady) {
-      showToast({
-        title: "Aguarde",
-        description: "Mercado Pago ainda está carregando. Por favor, aguarde."
-      });
+      toast.error("Mercado Pago ainda está carregando. Por favor, aguarde.");
       return;
     }
     
@@ -180,11 +119,7 @@ const MercadoPagoCheckout: React.FC<CheckoutProps> = ({
     if (!userId) {
       const { data } = await supabase.auth.getSession();
       if (!data.session) {
-        showToast({
-          title: "Erro",
-          description: "Você precisa estar logado para realizar um pagamento.",
-          variant: "destructive"
-        });
+        toast.error("Você precisa estar logado para realizar um pagamento.");
         return;
       }
       setUserId(data.session.user.id);
@@ -192,11 +127,7 @@ const MercadoPagoCheckout: React.FC<CheckoutProps> = ({
     
     // Check if we have the public key
     if (!mercadoPagoPublicKey) {
-      showToast({
-        title: "Erro",
-        description: "Chave de pagamento não disponível. Tente novamente mais tarde.",
-        variant: "destructive"
-      });
+      toast.error("Chave de pagamento não disponível. Tente novamente mais tarde.");
       return;
     }
     
@@ -204,320 +135,342 @@ const MercadoPagoCheckout: React.FC<CheckoutProps> = ({
     setErrorMessage(null);
     
     try {
-      // Create a payment preference
-      const { data: preferenceData, error: preferenceError } = await supabase.functions.invoke('create-payment-preference', {
-        body: JSON.stringify({
-          space_id: spaceId,
-          plan_id: plan.id,
-          user_id: userId,
-          amount: plan.price,
-          description: `Promoção para ${spaceName}: ${plan.name}`
-        })
-      });
+      // Show the payment form
+      setShowCheckoutForm(true);
       
-      if (preferenceError) {
-        throw new Error(`Erro ao criar preferência de pagamento: ${preferenceError.message}`);
-      }
-      
-      if (!preferenceData || !preferenceData.id) {
-        throw new Error("Não foi possível criar a preferência de pagamento.");
-      }
-      
-      // Set the preference ID and show the payment form
-      setPreferenceId(preferenceData.id);
-      setShowPaymentBrick(true);
-      
-      // Start checking for payment status
-      startPaymentStatusCheck(preferenceData.id);
-      
+      // Initialize the form after a small delay to ensure DOM is ready
+      setTimeout(() => {
+        initializePaymentForm();
+        setLoading(false);
+      }, 500);
     } catch (error) {
       console.error("Checkout error:", error);
-      showToast({
-        title: "Erro",
-        description: "Erro ao iniciar o checkout. Tente novamente.",
-        variant: "destructive"
-      });
+      toast.error("Erro ao iniciar o checkout. Tente novamente.");
       
       setErrorMessage("Não foi possível iniciar o checkout. Por favor, tente novamente mais tarde.");
       
       if (onError) {
         onError();
       }
-    } finally {
       setLoading(false);
     }
   };
   
-  const startPaymentStatusCheck = (paymentId: string) => {
-    if (!paymentId || !userId) return;
-    
-    // Check payment status every 10 seconds
-    const statusInterval = setInterval(async () => {
-      try {
-        // Check payment status in database
-        const { data: promotionData, error } = await supabase
-          .from("space_promotions")
-          .select("payment_status")
-          .or(`payment_id.eq.${paymentId},preference_id.eq.${paymentId}`)
-          .eq("user_id", userId)
-          .order("created_at", { ascending: false })
-          .limit(1);
-          
-        if (error) {
-          console.error("Error checking payment status:", error);
-          return;
-        }
-        
-        if (promotionData && promotionData.length > 0) {
-          const status = promotionData[0].payment_status;
-          setPaymentStatus(status);
-          
-          // If payment is approved, call onSuccess and clear interval
-          if (status === 'approved') {
-            if (onSuccess) {
-              onSuccess();
-            }
-            clearInterval(statusInterval);
-          }
-        }
-      } catch (err) {
-        console.error("Error checking payment status:", err);
-      }
-    }, 10000);
-    
-    // Clear interval after 15 minutes (max time to wait for payment)
-    setTimeout(() => {
-      clearInterval(statusInterval);
-    }, 15 * 60 * 1000);
-    
-    // Return cleanup function
-    return () => {
-      clearInterval(statusInterval);
-    };
-  };
-  
-  const handlePixPayment = async () => {
-    if (!userId) {
-      const { data } = await supabase.auth.getSession();
-      if (!data.session) {
-        showToast({
-          title: "Erro",
-          description: "Você precisa estar logado para realizar um pagamento.",
-          variant: "destructive"
-        });
+  const initializePaymentForm = () => {
+    try {
+      if (!mercadoPagoPublicKey) {
+        toast.error("Chave de pagamento não disponível");
         return;
       }
-      setUserId(data.session.user.id);
-    }
-    
-    setProcessingPix(true);
-    setErrorMessage(null);
-    
-    try {
-      // Create a payment preference
-      const { data: preferenceData, error: preferenceError } = await supabase.functions.invoke('create-payment-preference', {
-        body: JSON.stringify({
-          space_id: spaceId,
-          plan_id: plan.id,
-          user_id: userId,
-          amount: plan.price,
-          description: `Promoção para ${spaceName}: ${plan.name}`
-        })
-      });
       
-      if (preferenceError) {
-        throw new Error(`Erro ao criar preferência de pagamento: ${preferenceError.message}`);
+      const mp = new window.MercadoPago(mercadoPagoPublicKey);
+      
+      // Remove any existing styles to avoid duplicates
+      const existingStyles = document.getElementById('mp-form-styles');
+      if (existingStyles) {
+        existingStyles.remove();
       }
       
-      if (!preferenceData || !preferenceData.id) {
-        throw new Error("Não foi possível criar a preferência de pagamento.");
+      // Create styles for the form
+      const formStyles = document.createElement('style');
+      formStyles.id = 'mp-form-styles';
+      formStyles.textContent = `
+        #form-checkout {
+          display: flex;
+          flex-direction: column;
+          max-width: 600px;
+          gap: 16px;
+          margin: 0 auto;
+        }
+        
+        .container {
+          height: 40px;
+          display: block;
+          border: 1px solid rgb(209, 213, 219);
+          border-radius: 0.375rem;
+          padding: 8px 12px;
+          font-size: 16px;
+          width: 100%;
+          background-color: white;
+        }
+        
+        .form-control {
+          height: 40px;
+          display: block;
+          border: 1px solid rgb(209, 213, 219);
+          border-radius: 0.375rem;
+          padding: 8px 12px;
+          font-size: 16px;
+          width: 100%;
+        }
+        
+        .form-group {
+          margin-bottom: 12px;
+        }
+        
+        .form-group label {
+          display: block;
+          margin-bottom: 4px;
+          font-size: 14px;
+          font-weight: 500;
+          color: rgba(0, 0, 0, 0.7);
+        }
+        
+        #form-checkout__submit {
+          background-color: rgb(147, 51, 234);
+          color: white;
+          font-weight: 500;
+          padding: 10px 16px;
+          border-radius: 0.375rem;
+          border: none;
+          cursor: pointer;
+          font-size: 16px;
+          transition: background-color 0.2s;
+          margin-bottom: 0px;
+        }
+        
+        #form-checkout__submit:hover {
+          background-color: rgb(126, 34, 206);
+        }
+        
+        .progress-bar {
+          width: 100%;
+          height: 8px;
+          margin-top: 16px;
+        }
+        
+        /* Remove any overlays that Mercado Pago might create */
+        .mercadopago-overlay {
+          display: none !important;
+          opacity: 0 !important;
+          visibility: hidden !important;
+        }
+      `;
+      document.head.appendChild(formStyles);
+      
+      // Create the payment form HTML
+      const paymentFormContainer = document.getElementById('payment-form-container');
+      if (!paymentFormContainer) {
+        console.error("Payment form container not found");
+        return;
       }
       
-      // Set the preference ID
-      setPreferenceId(preferenceData.id);
+      paymentFormContainer.innerHTML = `
+        <form id="form-checkout">
+          <div class="form-group">
+            <label for="form-checkout__cardNumber">Número do Cartão</label>
+            <div id="form-checkout__cardNumber" class="container"></div>
+          </div>
+          
+          <div class="form-group">
+            <label for="form-checkout__cardholderName">Titular do Cartão</label>
+            <input type="text" id="form-checkout__cardholderName" class="form-control" />
+          </div>
+          
+          <div class="form-group">
+            <label for="form-checkout__cardholderEmail">E-mail</label>
+            <input type="email" id="form-checkout__cardholderEmail" class="form-control" />
+          </div>
+          
+          <div style="display: flex; gap: 16px;">
+            <div class="form-group" style="flex: 1;">
+              <label for="form-checkout__expirationDate">Data de Validade</label>
+              <div id="form-checkout__expirationDate" class="container"></div>
+            </div>
+            
+            <div class="form-group" style="flex: 1;">
+              <label for="form-checkout__securityCode">CVV</label>
+              <div id="form-checkout__securityCode" class="container"></div>
+            </div>
+          </div>
+          
+          <div class="form-group">
+            <label for="form-checkout__issuer">Banco Emissor</label>
+            <select id="form-checkout__issuer" class="form-control"></select>
+          </div>
+          
+          <div class="form-group">
+            <label for="form-checkout__installments">Parcelas</label>
+            <select id="form-checkout__installments" class="form-control"></select>
+          </div>
+          
+          <div style="display: flex; gap: 16px;">
+            <div class="form-group" style="flex: 1;">
+              <label for="form-checkout__identificationType">Tipo de Documento</label>
+              <select id="form-checkout__identificationType" class="form-control"></select>
+            </div>
+            
+            <div class="form-group" style="flex: 1;">
+              <label for="form-checkout__identificationNumber">Número do Documento</label>
+              <input type="text" id="form-checkout__identificationNumber" class="form-control" />
+            </div>
+          </div>
+          
+          <button type="submit" id="form-checkout__submit">Pagar</button>
+          <progress value="0" class="progress-bar" id="payment-progress">Carregando...</progress>
+        </form>
+      `;
       
-      // Generate PIX data
-      const { data: pixData, error: pixError } = await supabase.functions.invoke('process-payment', {
-        body: JSON.stringify({
-          payment_type: 'pix',
-          space_id: spaceId,
-          plan_id: plan.id,
-          user_id: userId,
-          preference_id: preferenceData.id,
-          transaction_amount: plan.price,
-          description: `Promoção para ${spaceName}: ${plan.name}`,
-          email: 'cliente@example.com' // This will be replaced by the actual user email in the function
-        })
-      });
-      
-      if (pixError) {
-        throw new Error(`Erro ao gerar pagamento PIX: ${pixError.message}`);
-      }
-      
-      if (!pixData || !pixData.success) {
-        throw new Error(pixData?.error || "Erro desconhecido ao gerar pagamento PIX");
-      }
-      
-      // Set payment status and PIX data
-      setPaymentStatus(pixData.status);
-      setPixPaymentData(pixData.point_of_interaction?.transaction_data || null);
-      
-      // Start checking for payment status
-      startPaymentStatusCheck(preferenceData.id);
-      
-    } catch (error) {
-      console.error("PIX payment error:", error);
-      showToast({
-        title: "Erro",
-        description: error instanceof Error ? error.message : "Erro ao gerar pagamento PIX",
-        variant: "destructive"
-      });
-      
-      setErrorMessage("Não foi possível gerar o pagamento PIX. Por favor, tente novamente mais tarde.");
-      
-      if (onError) {
-        onError();
-      }
-    } finally {
-      setProcessingPix(false);
-    }
-  };
-  
-  const renderPaymentBrick = async (bricksBuilder: any) => {
-    if (!preferenceId) {
-      console.error("Preference ID is missing");
-      return;
-    }
-    
-    try {
-      const settings = {
-        initialization: {
-          amount: plan.price,
-          preferenceId: preferenceId,
-        },
-        customization: {
-          paymentMethods: {
-            ticket: "pix",
-            bankTransfer: "all",
-            creditCard: "all",
-            prepaidCard: "all",
-            debitCard: {
-              id: "debitcard", 
-              options: {
-                allowedPaymentMethods: ["master", "visa", "elo", "hipercard", "american express"],
-                excludedPaymentMethods: ["debcabal", "debvisa", "debmaster", "caixa"]
-              }
-            },
-            mercadoPago: "all",
+      // Initialize Mercado Pago card form
+      const cardForm = mp.cardForm({
+        amount: plan.price.toString(),
+        iframe: true,
+        form: {
+          id: "form-checkout",
+          cardNumber: {
+            id: "form-checkout__cardNumber",
+            placeholder: "Número do cartão",
           },
-          visual: {
-            hideFormTitle: true,
-            hidePaymentButton: false,
+          expirationDate: {
+            id: "form-checkout__expirationDate",
+            placeholder: "MM/YY",
+          },
+          securityCode: {
+            id: "form-checkout__securityCode",
+            placeholder: "Código de segurança",
+          },
+          cardholderName: {
+            id: "form-checkout__cardholderName",
+            placeholder: "Titular do cartão",
+          },
+          issuer: {
+            id: "form-checkout__issuer",
+            placeholder: "Banco emissor",
+          },
+          installments: {
+            id: "form-checkout__installments",
+            placeholder: "Parcelas",
+          },        
+          identificationType: {
+            id: "form-checkout__identificationType",
+            placeholder: "Tipo de documento",
+          },
+          identificationNumber: {
+            id: "form-checkout__identificationNumber",
+            placeholder: "Número do documento",
+          },
+          cardholderEmail: {
+            id: "form-checkout__cardholderEmail",
+            placeholder: "E-mail",
           },
         },
         callbacks: {
-          onReady: () => {
-            console.log("Payment Brick is ready");
-            setLoading(false);
+          onFormMounted: error => {
+            if (error) return console.warn("Form Mounted handling error: ", error);
+            console.log("Form mounted");
           },
-          onSubmit: async ({ selectedPaymentMethod, formData }: { selectedPaymentMethod: string, formData: any }) => {
-            // Set processing state
-            setProcessingPayment(true);
+          onSubmit: async event => {
+            event.preventDefault();
             
+            if (processingPayment) return;
+            setErrorMessage(null);
+            setPaymentStatus(null);
+            
+            const progressBar = document.querySelector<HTMLProgressElement>("#payment-progress");
+            if (progressBar) progressBar.removeAttribute("value");
+            
+            setProcessingPayment(true);
+
             try {
-              console.log("Payment submitted:", selectedPaymentMethod, formData);
+              const formData = cardForm.getCardFormData();
+              console.log("Payment form data:", formData);
               
-              // Process payment through our edge function
+              if (!userId) {
+                throw new Error("Usuário não identificado. Faça login novamente.");
+              }
+
+              // Process payment through Supabase Edge Function
               const { data, error } = await supabase.functions.invoke('process-payment', {
                 body: JSON.stringify({
-                  ...formData,
+                  token: formData.token,
+                  issuer_id: formData.issuerId,
+                  payment_method_id: formData.paymentMethodId,
+                  transaction_amount: formData.amount,
+                  installments: formData.installments,
+                  email: formData.cardholderEmail,
+                  identification: {
+                    type: formData.identificationType,
+                    number: formData.identificationNumber
+                  },
                   space_id: spaceId,
                   plan_id: plan.id,
-                  user_id: userId,
-                  preference_id: preferenceId,
-                  payment_type: selectedPaymentMethod
+                  user_id: userId
                 })
               });
               
               if (error) {
-                throw new Error(`Error processing payment: ${error.message}`);
+                console.error("Payment function error:", error);
+                throw new Error("Erro na comunicação com o servidor de pagamentos");
               }
               
-              if (!data || !data.success) {
-                throw new Error(data?.error || "Unknown error processing payment");
-              }
-              
-              // Set payment status
-              setPaymentStatus(data.status);
-              
-              // If this is a PIX payment, set the PIX data
-              if (selectedPaymentMethod === 'pix' && data.point_of_interaction) {
-                setPixPaymentData(data.point_of_interaction.transaction_data);
-              }
-              
-              // Show success message
-              if (data.status === 'approved') {
-                showToast({
-                  title: "Sucesso",
-                  description: "Pagamento aprovado com sucesso!"
-                });
-                if (onSuccess) {
-                  onSuccess();
+              if (data && data.success) {
+                // Store payment status
+                setPaymentStatus(data.status);
+                
+                // Only call onSuccess if payment status is "approved"
+                if (data.status === "approved") {
+                  toast.success(`Pagamento aprovado com sucesso!`, {
+                    duration: 5000,
+                  });
+
+                  // Clean up Mercado Pago elements after payment
+                  cleanupMercadoPagoElements();
+                  
+                  if (onSuccess) {
+                    onSuccess();
+                  }
+                } else if (data.status === "in_process" || data.status === "pending") {
+                  toast.info(`Pagamento em processamento. Aguarde a confirmação.`, {
+                    duration: 5000,
+                  });
+                  setErrorMessage("Seu pagamento está em análise. Você receberá uma confirmação em breve.");
+                } else {
+                  // Handle other statuses
+                  toast.warning(`Status do pagamento: ${data.status}. Verifique mais tarde.`);
+                  setErrorMessage(`Pagamento registrado com status: ${data.status}`);
                 }
               } else {
-                showToast({
-                  title: "Informação",
-                  description: `Pagamento em processamento. Status: ${data.status}`
-                });
+                const errorMsg = data?.error || "Ocorreu um erro ao processar o pagamento.";
+                setErrorMessage(errorMsg);
+                throw new Error(errorMsg);
               }
-              
-              return { status: "success" };
             } catch (error) {
-              console.error("Error processing payment:", error);
-              showToast({
-                title: "Erro",
-                description: "Erro ao processar pagamento. Por favor, tente novamente."
-              });
+              console.error("Payment processing error:", error);
+              
+              const errorMsg = error instanceof Error ? error.message : "Erro ao processar pagamento. Verifique os dados do cartão.";
+              toast.error(errorMsg);
+              setErrorMessage(errorMsg);
               
               if (onError) {
                 onError();
               }
-              
-              return { status: "error" };
             } finally {
+              if (progressBar) progressBar.setAttribute("value", "0");
               setProcessingPayment(false);
             }
           },
-          onError: (error: any) => {
-            console.error("Payment Brick error:", error);
-            setErrorMessage(`Erro no processamento: ${error.message || "Erro desconhecido"}`);
-          },
+          onFetching: (resource) => {
+            console.log("Fetching resource: ", resource);
+            
+            // Animate progress bar
+            const progressBar = document.querySelector<HTMLProgressElement>(".progress-bar");
+            if (progressBar) progressBar.removeAttribute("value");
+            
+            return () => {
+              if (progressBar) progressBar.setAttribute("value", "0");
+            };
+          }
         },
-      };
-      
-      // Create Payment Brick
-      window.paymentBrickController = await bricksBuilder.create(
-        "payment",
-        "paymentBrick_container",
-        settings
-      );
+      });
     } catch (error) {
-      console.error("Error rendering Payment Brick:", error);
-      setErrorMessage("Erro ao carregar o formulário de pagamento");
+      console.error("Error initializing payment form:", error);
+      toast.error("Erro ao inicializar formulário de pagamento");
+      setErrorMessage("Não foi possível carregar o formulário de pagamento. Por favor, tente novamente mais tarde.");
     }
   };
   
   // Helper function to clean up Mercado Pago elements
-  const cleanupMercadoPago = () => {
-    // Unmount Payment Brick if it exists
-    if (window.paymentBrickController) {
-      try {
-        window.paymentBrickController.unmount();
-      } catch (e) {
-        console.error("Error unmounting Payment Brick:", e);
-      }
-    }
-    
+  const cleanupMercadoPagoElements = () => {
     // Remove any hidden inputs that Mercado Pago might have added
     const hiddenInputs = document.querySelectorAll('[id^="MPHidden"]');
     hiddenInputs.forEach((element) => {
@@ -541,19 +494,13 @@ const MercadoPagoCheckout: React.FC<CheckoutProps> = ({
     overlays.forEach((element) => {
       element.remove();
     });
+    
+    // Reset the payment form container
+    const formContainer = document.getElementById('payment-form-container');
+    if (formContainer) {
+      formContainer.innerHTML = '';
+    }
   };
-
-  // If we have PIX payment data, show the PIX component
-  if (pixPaymentData) {
-    return (
-      <PixPayment 
-        paymentData={pixPaymentData}
-        amount={plan.price}
-        description={`Promoção para ${spaceName}: ${plan.name}`}
-        isLoading={false}
-      />
-    );
-  }
 
   return (
     <div className="flex flex-col w-full">
@@ -576,57 +523,33 @@ const MercadoPagoCheckout: React.FC<CheckoutProps> = ({
         </Alert>
       )}
       
-      {!showPaymentBrick ? (
-        <div className="flex flex-col space-y-4 w-full">
-          <Button 
-            size="lg"
-            onClick={handleShowCheckout}
-            disabled={loading || !sdkReady || !mercadoPagoPublicKey}
-            className="bg-iparty"
-          >
-            {loading ? (
-              <>
-                <Loader2 size={20} className="mr-2 animate-spin" />
-                Carregando opções de pagamento...
-              </>
-            ) : !mercadoPagoPublicKey ? (
-              <>
-                <Loader2 size={20} className="mr-2 animate-spin" />
-                Carregando configurações de pagamento...
-              </>
-            ) : (
-              <>
-                <Check size={20} className="mr-2" />
-                Pagar com Cartão de Crédito ou Débito
-              </>
-            )}
-          </Button>
-          
-          <Button 
-            variant="outline"
-            size="lg"
-            onClick={handlePixPayment}
-            disabled={processingPix || !mercadoPagoPublicKey}
-            className="border-iparty text-iparty hover:bg-iparty/10"
-          >
-            {processingPix ? (
-              <>
-                <Loader2 size={20} className="mr-2 animate-spin" />
-                Gerando pagamento PIX...
-              </>
-            ) : (
-              <>
-                <QrCode size={20} className="mr-2" />
-                Pagar com PIX
-              </>
-            )}
-          </Button>
-        </div>
-      ) : (
-        <div className="w-full">
-          <div id="paymentBrick_container" className="w-full"></div>
-        </div>
-      )}
+      {!showCheckoutForm ? (
+        <Button 
+          size="lg"
+          onClick={handleShowCheckout}
+          disabled={loading || !sdkReady || !mercadoPagoPublicKey}
+          className="bg-iparty"
+        >
+          {loading ? (
+            <>
+              <Loader2 size={20} className="mr-2 animate-spin" />
+              Carregando formulário de pagamento...
+            </>
+          ) : !mercadoPagoPublicKey ? (
+            <>
+              <Loader2 size={20} className="mr-2 animate-spin" />
+              Carregando configurações de pagamento...
+            </>
+          ) : (
+            <>
+              <Check size={20} className="mr-2" />
+              Continuar para o pagamento
+            </>
+          )}
+        </Button>
+      ) : null}
+      
+      <div id="payment-form-container" className="mt-6"></div>
     </div>
   );
 };

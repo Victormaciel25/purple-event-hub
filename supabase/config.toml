@@ -1,53 +1,9 @@
 
-project_id = "iparty-spaces"
+# This file configures Supabase deployment settings.
+project_id = "kfqorqjwbkxzrqhuvnyh"
 
-[api]
-enabled = true
-port = 54321
-schemas = ["public", "storage", "graphql_public"]
-
-[db]
-port = 54322
-
-[realtime]
-enabled = true
-log_level = "warn"
-
-[studio]
-enabled = true
-port = 54323
-
-[inbucket]
-enabled = true
-port = 54324
-
-[auth]
-enabled = true
-port = 54325
-
-[storage]
-enabled = true
-
-[edge_functions]
-enabled = true
-
-[[edge_functions.files]]
-path = "supabase/functions/get_user_by_email/index.ts"
-
-[[edge_functions.files]]
-path = "supabase/functions/get_chat_by_users_and_space/index.ts"
-
-[[edge_functions.files]]
-path = "supabase/functions/get_user_chats/index.ts"
-
-[[edge_functions.files]]
-path = "supabase/functions/get-mercado-pago-public-key/index.ts"
-
-[[edge_functions.files]]
-path = "supabase/functions/process-payment/index.ts"
-
-[[edge_functions.files]]
-path = "supabase/functions/delete_space_with_photos/index.ts"
-
-[[edge_functions.files]]
-path = "supabase/functions/create-payment-preference/index.ts"
+[functions]
+[functions.process-payment]
+verify_jwt = false
+[functions.get-mercado-pago-public-key]
+verify_jwt = false
