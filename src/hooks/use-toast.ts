@@ -139,7 +139,7 @@ function dispatch(action: Action) {
 
 type Toast = Omit<ToasterToast, "id">
 
-function toast({ ...props }: Toast) {
+function toast(props: Toast) {
   const id = genId()
 
   const update = (props: ToasterToast) =>
@@ -167,6 +167,36 @@ function toast({ ...props }: Toast) {
     update,
   }
 }
+
+// Helper methods for common toast types
+toast.error = (message: string) => {
+  return toast({ 
+    variant: "destructive", 
+    title: "Erro", 
+    description: message 
+  });
+};
+
+toast.success = (message: string) => {
+  return toast({ 
+    title: "Sucesso", 
+    description: message 
+  });
+};
+
+toast.warning = (message: string) => {
+  return toast({ 
+    title: "Atenção", 
+    description: message 
+  });
+};
+
+toast.info = (message: string) => {
+  return toast({ 
+    title: "Informação", 
+    description: message 
+  });
+};
 
 function useToast() {
   const [state, setState] = React.useState<State>(memoryState)
