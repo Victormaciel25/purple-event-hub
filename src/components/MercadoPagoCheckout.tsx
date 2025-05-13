@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Check, Loader2 } from "lucide-react";
 import { MERCADO_PAGO_CONFIG } from '@/config/app-config';
 import { supabase } from '@/integrations/supabase/client';
+import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 
 type CheckoutProps = {
   spaceId: string;
@@ -38,6 +39,7 @@ const MercadoPagoCheckout: React.FC<CheckoutProps> = ({
   const [showCheckoutForm, setShowCheckoutForm] = useState(false);
   const [processingPayment, setProcessingPayment] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   
   // Get user ID on component mount
   useEffect(() => {
@@ -99,6 +101,7 @@ const MercadoPagoCheckout: React.FC<CheckoutProps> = ({
     }
     
     setLoading(true);
+    setErrorMessage(null);
     
     try {
       // Show the payment form
@@ -112,6 +115,8 @@ const MercadoPagoCheckout: React.FC<CheckoutProps> = ({
     } catch (error) {
       console.error("Checkout error:", error);
       toast.error("Erro ao iniciar o checkout. Tente novamente.");
+      
+      setErrorMessage("Não foi possível iniciar o checkout. Por favor, tente novamente mais tarde.");
       
       if (onError) {
         onError();
@@ -322,6 +327,7 @@ const MercadoPagoCheckout: React.FC<CheckoutProps> = ({
             event.preventDefault();
             
             if (processingPayment) return;
+            setErrorMessage(null);
             
             const progressBar = document.querySelector<HTMLProgressElement>("#payment-progress");
             if (progressBar) progressBar.removeAttribute("value");
@@ -372,11 +378,15 @@ const MercadoPagoCheckout: React.FC<CheckoutProps> = ({
                   onSuccess();
                 }
               } else {
+                setErrorMessage(data.error || "Ocorreu um erro ao processar o pagamento.");
                 throw new Error(data.error || "Erro ao processar pagamento");
               }
             } catch (error) {
               console.error("Payment processing error:", error);
-              toast.error(error instanceof Error ? error.message : "Erro ao processar pagamento. Verifique os dados do cartão.");
+              
+              const errorMsg = error instanceof Error ? error.message : "Erro ao processar pagamento. Verifique os dados do cartão.";
+              toast.error(errorMsg);
+              setErrorMessage(errorMsg);
               
               if (onError) {
                 onError();
@@ -402,6 +412,7 @@ const MercadoPagoCheckout: React.FC<CheckoutProps> = ({
     } catch (error) {
       console.error("Error initializing payment form:", error);
       toast.error("Erro ao inicializar formulário de pagamento");
+      setErrorMessage("Não foi possível carregar o formulário de pagamento. Por favor, tente novamente mais tarde.");
     }
   };
   
@@ -440,6 +451,13 @@ const MercadoPagoCheckout: React.FC<CheckoutProps> = ({
 
   return (
     <div className="flex flex-col w-full">
+      {errorMessage && (
+        <Alert variant="destructive" className="mb-4">
+          <AlertTitle>Erro no processamento</AlertTitle>
+          <AlertDescription>{errorMessage}</AlertDescription>
+        </Alert>
+      )}
+      
       {!showCheckoutForm ? (
         <Button 
           size="lg"

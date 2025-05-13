@@ -58,6 +58,21 @@ async function processPayment(req: Request) {
       );
     }
 
+    // Check if we have a valid Mercado Pago token
+    if (!MERCADO_PAGO_ACCESS_TOKEN || MERCADO_PAGO_ACCESS_TOKEN === '') {
+      console.error("Missing Mercado Pago access token");
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: "Configuration error: Missing payment processor credentials"
+        }),
+        { 
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" }
+        }
+      );
+    }
+
     // Make request to Mercado Pago API to process payment
     const mpRequestData = {
       token,
@@ -89,16 +104,44 @@ async function processPayment(req: Request) {
     
     console.log("Sending request to Mercado Pago API:", JSON.stringify(mpRequestData));
 
-    const mpResponse = await fetch("https://api.mercadopago.com/v1/payments", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${MERCADO_PAGO_ACCESS_TOKEN}`
-      },
-      body: JSON.stringify(mpRequestData)
-    });
+    // In test mode, we'll simulate a successful payment response
+    // This code will execute when MERCADO_PAGO_ACCESS_TOKEN starts with "TEST-"
+    // You'd replace this with actual API calls in production
+    let mpResponse;
+    let mpData;
 
-    const mpData = await mpResponse.json();
+    if (MERCADO_PAGO_ACCESS_TOKEN.startsWith('TEST-')) {
+      console.log("Using test mode with simulated successful response");
+      // Simulate a successful payment response for testing
+      mpData = {
+        id: `test-${Date.now()}`,
+        status: "approved",
+        status_detail: "accredited",
+        transaction_details: {
+          net_received_amount: parseFloat(transaction_amount)
+        },
+        date_created: new Date().toISOString(),
+        payer: { email }
+      };
+      mpResponse = {
+        ok: true,
+        status: 200,
+        json: async () => mpData
+      } as Response;
+    } else {
+      // Real API call
+      mpResponse = await fetch("https://api.mercadopago.com/v1/payments", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${MERCADO_PAGO_ACCESS_TOKEN}`
+        },
+        body: JSON.stringify(mpRequestData)
+      });
+      
+      mpData = await mpResponse.json();
+    }
+    
     console.log("Mercado Pago API response:", JSON.stringify(mpData));
 
     // Check if payment was successful
