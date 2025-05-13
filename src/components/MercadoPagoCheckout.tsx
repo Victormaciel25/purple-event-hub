@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
-import { Loader2, Check } from "lucide-react";
+import { Loader2, Check, QrCode } from "lucide-react";
 import { supabase } from '@/integrations/supabase/client';
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
+import PixPayment from "./PixPayment";
 
 type CheckoutProps = {
   spaceId: string;
@@ -43,7 +44,9 @@ const MercadoPagoCheckout: React.FC<CheckoutProps> = ({
   const [mercadoPagoPublicKey, setMercadoPagoPublicKey] = useState<string | null>(null);
   const [preferenceId, setPreferenceId] = useState<string | null>(null);
   const [paymentStatus, setPaymentStatus] = useState<string | null>(null);
-
+  const [pixPaymentData, setPixPaymentData] = useState<any>(null);
+  const [processingPix, setProcessingPix] = useState(false);
+  
   // Use the proper toast hook from shadcn
   const { addToast } = useToast();
   
@@ -288,6 +291,93 @@ const MercadoPagoCheckout: React.FC<CheckoutProps> = ({
     };
   };
   
+  const handlePixPayment = async () => {
+    if (!userId) {
+      const { data } = await supabase.auth.getSession();
+      if (!data.session) {
+        toast({
+          title: "Erro",
+          description: "Você precisa estar logado para realizar um pagamento.",
+          variant: "destructive"
+        });
+        return;
+      }
+      setUserId(data.session.user.id);
+    }
+    
+    setProcessingPix(true);
+    setErrorMessage(null);
+    
+    try {
+      // Create a payment preference
+      const { data: preferenceData, error: preferenceError } = await supabase.functions.invoke('create-payment-preference', {
+        body: JSON.stringify({
+          space_id: spaceId,
+          plan_id: plan.id,
+          user_id: userId,
+          amount: plan.price,
+          description: `Promoção para ${spaceName}: ${plan.name}`
+        })
+      });
+      
+      if (preferenceError) {
+        throw new Error(`Erro ao criar preferência de pagamento: ${preferenceError.message}`);
+      }
+      
+      if (!preferenceData || !preferenceData.id) {
+        throw new Error("Não foi possível criar a preferência de pagamento.");
+      }
+      
+      // Set the preference ID
+      setPreferenceId(preferenceData.id);
+      
+      // Generate PIX data
+      const { data: pixData, error: pixError } = await supabase.functions.invoke('process-payment', {
+        body: JSON.stringify({
+          payment_type: 'pix',
+          space_id: spaceId,
+          plan_id: plan.id,
+          user_id: userId,
+          preference_id: preferenceData.id,
+          transaction_amount: plan.price,
+          description: `Promoção para ${spaceName}: ${plan.name}`,
+          email: 'cliente@example.com' // This will be replaced by the actual user email in the function
+        })
+      });
+      
+      if (pixError) {
+        throw new Error(`Erro ao gerar pagamento PIX: ${pixError.message}`);
+      }
+      
+      if (!pixData || !pixData.success) {
+        throw new Error(pixData?.error || "Erro desconhecido ao gerar pagamento PIX");
+      }
+      
+      // Set payment status and PIX data
+      setPaymentStatus(pixData.status);
+      setPixPaymentData(pixData.point_of_interaction?.transaction_data || null);
+      
+      // Start checking for payment status
+      startPaymentStatusCheck(preferenceData.id);
+      
+    } catch (error) {
+      console.error("PIX payment error:", error);
+      toast({
+        title: "Erro",
+        description: error instanceof Error ? error.message : "Erro ao gerar pagamento PIX",
+        variant: "destructive"
+      });
+      
+      setErrorMessage("Não foi possível gerar o pagamento PIX. Por favor, tente novamente mais tarde.");
+      
+      if (onError) {
+        onError();
+      }
+    } finally {
+      setProcessingPix(false);
+    }
+  };
+  
   const renderPaymentBrick = async (bricksBuilder: any) => {
     if (!preferenceId) {
       console.error("Preference ID is missing");
@@ -355,9 +445,14 @@ const MercadoPagoCheckout: React.FC<CheckoutProps> = ({
               // Set payment status
               setPaymentStatus(data.status);
               
+              // If this is a PIX payment, set the PIX data
+              if (selectedPaymentMethod === 'pix' && data.point_of_interaction) {
+                setPixPaymentData(data.point_of_interaction.transaction_data);
+              }
+              
               // Show success message
               if (data.status === 'approved') {
-                showToast({
+                toast({
                   title: "Sucesso",
                   description: "Pagamento aprovado com sucesso!"
                 });
@@ -365,7 +460,7 @@ const MercadoPagoCheckout: React.FC<CheckoutProps> = ({
                   onSuccess();
                 }
               } else {
-                showToast({
+                toast({
                   title: "Informação",
                   description: `Pagamento em processamento. Status: ${data.status}`
                 });
@@ -374,7 +469,7 @@ const MercadoPagoCheckout: React.FC<CheckoutProps> = ({
               return { status: "success" };
             } catch (error) {
               console.error("Error processing payment:", error);
-              showToast({
+              toast({
                 title: "Erro",
                 description: "Erro ao processar pagamento. Por favor, tente novamente."
               });
@@ -443,6 +538,18 @@ const MercadoPagoCheckout: React.FC<CheckoutProps> = ({
     });
   };
 
+  // If we have PIX payment data, show the PIX component
+  if (pixPaymentData) {
+    return (
+      <PixPayment 
+        paymentData={pixPaymentData}
+        amount={plan.price}
+        description={`Promoção para ${spaceName}: ${plan.name}`}
+        isLoading={false}
+      />
+    );
+  }
+
   return (
     <div className="flex flex-col w-full">
       {errorMessage && (
@@ -465,29 +572,51 @@ const MercadoPagoCheckout: React.FC<CheckoutProps> = ({
       )}
       
       {!showPaymentBrick ? (
-        <Button 
-          size="lg"
-          onClick={handleShowCheckout}
-          disabled={loading || !sdkReady || !mercadoPagoPublicKey}
-          className="bg-iparty"
-        >
-          {loading ? (
-            <>
-              <Loader2 size={20} className="mr-2 animate-spin" />
-              Carregando formulário de pagamento...
-            </>
-          ) : !mercadoPagoPublicKey ? (
-            <>
-              <Loader2 size={20} className="mr-2 animate-spin" />
-              Carregando configurações de pagamento...
-            </>
-          ) : (
-            <>
-              <Check size={20} className="mr-2" />
-              Continuar para o pagamento
-            </>
-          )}
-        </Button>
+        <div className="flex flex-col space-y-4 w-full">
+          <Button 
+            size="lg"
+            onClick={handleShowCheckout}
+            disabled={loading || !sdkReady || !mercadoPagoPublicKey}
+            className="bg-iparty"
+          >
+            {loading ? (
+              <>
+                <Loader2 size={20} className="mr-2 animate-spin" />
+                Carregando opções de pagamento...
+              </>
+            ) : !mercadoPagoPublicKey ? (
+              <>
+                <Loader2 size={20} className="mr-2 animate-spin" />
+                Carregando configurações de pagamento...
+              </>
+            ) : (
+              <>
+                <Check size={20} className="mr-2" />
+                Pagar com Cartão de Crédito ou D��bito
+              </>
+            )}
+          </Button>
+          
+          <Button 
+            variant="outline"
+            size="lg"
+            onClick={handlePixPayment}
+            disabled={processingPix || !mercadoPagoPublicKey}
+            className="border-iparty text-iparty hover:bg-iparty/10"
+          >
+            {processingPix ? (
+              <>
+                <Loader2 size={20} className="mr-2 animate-spin" />
+                Gerando pagamento PIX...
+              </>
+            ) : (
+              <>
+                <QrCode size={20} className="mr-2" />
+                Pagar com PIX
+              </>
+            )}
+          </Button>
+        </div>
       ) : (
         <div className="w-full">
           <div id="paymentBrick_container" className="w-full"></div>

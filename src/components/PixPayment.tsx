@@ -3,7 +3,7 @@ import React, { useEffect, useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Loader2, QrCode, Copy, Check, ExternalLink } from "lucide-react";
-import { toast } from "sonner";
+import { useToast } from "@/hooks/use-toast";
 
 type PixPaymentProps = {
   paymentData: {
@@ -24,6 +24,7 @@ const PixPayment: React.FC<PixPaymentProps> = ({
   isLoading 
 }) => {
   const [copied, setCopied] = useState(false);
+  const { toast } = useToast();
 
   // Reset copied state after 2 seconds
   useEffect(() => {
@@ -38,11 +39,18 @@ const PixPayment: React.FC<PixPaymentProps> = ({
       navigator.clipboard.writeText(paymentData.qr_code)
         .then(() => {
           setCopied(true);
-          toast.success("Código PIX copiado com sucesso!");
+          toast({
+            title: "Sucesso",
+            description: "Código PIX copiado com sucesso!",
+          });
         })
         .catch((error) => {
           console.error("Erro ao copiar código PIX:", error);
-          toast.error("Erro ao copiar o código PIX");
+          toast({
+            title: "Erro",
+            description: "Erro ao copiar o código PIX",
+            variant: "destructive",
+          });
         });
     }
   };
