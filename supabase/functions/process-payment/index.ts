@@ -20,10 +20,18 @@ const supabaseClient = createClient(supabaseUrl, supabaseAnonKey);
 // Mercado Pago API configuration
 const MERCADO_PAGO_ACCESS_TOKEN = Deno.env.get('ACCESS_TOKEN') || 'TEST-72418442407574-032019-06b36295f414c18196c22b750c1afb56-334101838';
 
+// Generate a unique idempotency key
+function generateIdempotencyKey() {
+  return `${Date.now()}-${Math.random().toString(36).substring(2, 15)}`;
+}
+
 // Process payment handler
 async function processPayment(req: Request) {
   try {
+    const requestData = await req.json();
+    
     const { 
+      payment_type = 'credit_card',
       token, 
       issuer_id, 
       payment_method_id, 
@@ -33,11 +41,13 @@ async function processPayment(req: Request) {
       identification,
       space_id,
       plan_id,
-      user_id
-    } = await req.json();
+      user_id,
+      description
+    } = requestData;
 
-    console.log("Processing payment with data:", {
-      token,
+    console.log(`Processing ${payment_type} payment with data:`, {
+      payment_type,
+      token: token ? "***" : undefined,
       issuer_id,
       payment_method_id,
       transaction_amount,
@@ -45,15 +55,16 @@ async function processPayment(req: Request) {
       email,
       space_id,
       plan_id,
-      user_id
+      user_id,
+      description
     });
 
     // Validate required fields
-    if (!token || !payment_method_id || !transaction_amount || !email || !user_id) {
+    if (!transaction_amount || !email || !user_id || !space_id || !plan_id) {
       return new Response(
         JSON.stringify({ 
           success: false, 
-          error: "Missing required payment information or user ID" 
+          error: "Missing required payment information" 
         }),
         { 
           status: 400,
@@ -76,37 +87,74 @@ async function processPayment(req: Request) {
         }
       );
     }
-
-    // Make request to Mercado Pago API to process payment
-    const mpRequestData = {
-      token,
-      issuer_id,
-      payment_method_id,
-      transaction_amount: parseFloat(transaction_amount),
-      installments: parseInt(installments),
-      description: `Space promotion: ${plan_id}`,
-      payer: {
-        email,
-        identification
-      },
-      additional_info: {
-        items: [
-          {
-            id: space_id,
-            title: `Space promotion plan ${plan_id}`,
-            description: `Promotion for space ID ${space_id}`,
-            quantity: 1,
-            unit_price: parseFloat(transaction_amount)
+    
+    // Different payload based on payment type
+    let mpRequestData;
+    
+    if (payment_type === 'pix') {
+      // PIX payment payload
+      mpRequestData = {
+        transaction_amount: parseFloat(transaction_amount),
+        description: description || `Space promotion: ${plan_id}`,
+        payment_method_id: 'pix',
+        payer: {
+          email,
+          identification: identification || {}
+        },
+        metadata: {
+          space_id,
+          plan_id,
+          user_id
+        }
+      };
+    } else {
+      // Credit card payment payload
+      if (!token || !payment_method_id) {
+        return new Response(
+          JSON.stringify({ 
+            success: false, 
+            error: "Missing required credit card payment information" 
+          }),
+          { 
+            status: 400,
+            headers: { ...corsHeaders, "Content-Type": "application/json" }
           }
-        ]
-      },
-      notification_url: "https://your-app-url.com/api/notifications/mercadopago",
-      statement_descriptor: "iParty Spaces",
-      capture: true,
-      binary_mode: true
-    };
+        );
+      }
+      
+      mpRequestData = {
+        token,
+        issuer_id,
+        payment_method_id,
+        transaction_amount: parseFloat(transaction_amount),
+        installments: parseInt(installments || '1'),
+        description: description || `Space promotion: ${plan_id}`,
+        payer: {
+          email,
+          identification
+        },
+        additional_info: {
+          items: [
+            {
+              id: space_id,
+              title: `Space promotion plan ${plan_id}`,
+              description: `Promotion for space ID ${space_id}`,
+              quantity: 1,
+              unit_price: parseFloat(transaction_amount)
+            }
+          ]
+        },
+        notification_url: "https://your-app-url.com/api/notifications/mercadopago",
+        statement_descriptor: "iParty Spaces",
+        capture: true,
+        binary_mode: true
+      };
+    }
     
     console.log("Sending request to Mercado Pago API:", JSON.stringify(mpRequestData));
+
+    // Generate a unique idempotency key for this request
+    const idempotencyKey = generateIdempotencyKey();
 
     // In test mode, we'll simulate a successful payment response
     // This code will execute when MERCADO_PAGO_ACCESS_TOKEN starts with "TEST-"
@@ -116,29 +164,60 @@ async function processPayment(req: Request) {
 
     if (MERCADO_PAGO_ACCESS_TOKEN.startsWith('TEST-')) {
       console.log("Using test mode with simulated successful response");
-      // Simulate a successful payment response for testing
-      mpData = {
-        id: `test-${Date.now()}`,
-        status: "approved",
-        status_detail: "accredited",
-        transaction_details: {
-          net_received_amount: parseFloat(transaction_amount)
-        },
-        date_created: new Date().toISOString(),
-        payer: { email }
-      };
+      
+      // Different test response based on payment type
+      if (payment_type === 'pix') {
+        // Simulated PIX response
+        mpData = {
+          id: `pix-test-${Date.now()}`,
+          status: "pending",
+          status_detail: "pending_waiting_transfer",
+          transaction_details: {
+            net_received_amount: parseFloat(transaction_amount)
+          },
+          date_created: new Date().toISOString(),
+          date_of_expiration: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(), // 24 hours expiration
+          payer: { email },
+          point_of_interaction: {
+            type: "PIX",
+            application_data: {
+              name: "TEST_SDK",
+              version: "1.0.0"
+            },
+            transaction_data: {
+              qr_code_base64: "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",
+              qr_code: "00020126600014br.gov.bcb.pix0117john@testgmail.com0217additional data52040000530398654051000.005802BR5913Maria Silva6008Brasilia62070503***6304E2CA",
+              ticket_url: "https://www.mercadopago.com.br/payments/123456789/ticket"
+            }
+          }
+        };
+      } else {
+        // Simulated credit card response
+        mpData = {
+          id: `test-${Date.now()}`,
+          status: "approved",
+          status_detail: "accredited",
+          transaction_details: {
+            net_received_amount: parseFloat(transaction_amount)
+          },
+          date_created: new Date().toISOString(),
+          payer: { email }
+        };
+      }
+      
       mpResponse = {
         ok: true,
         status: 200,
         json: async () => mpData
       } as Response;
     } else {
-      // Real API call
+      // Real API call with idempotency key
       mpResponse = await fetch("https://api.mercadopago.com/v1/payments", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "Authorization": `Bearer ${MERCADO_PAGO_ACCESS_TOKEN}`
+          "Authorization": `Bearer ${MERCADO_PAGO_ACCESS_TOKEN}`,
+          "X-Idempotency-Key": idempotencyKey
         },
         body: JSON.stringify(mpRequestData)
       });
@@ -148,7 +227,7 @@ async function processPayment(req: Request) {
     
     console.log("Mercado Pago API response:", JSON.stringify(mpData));
 
-    // Check if payment was successful
+    // Check if payment API call was successful
     if (mpResponse.ok) {
       try {
         // Calculate expiration based on plan
@@ -195,7 +274,8 @@ async function processPayment(req: Request) {
               success: true, 
               payment_id: mpData.id,
               status: mpData.status,
-              warning: "Payment processed but record keeping failed: " + dbError.message
+              warning: "Payment processed but record keeping failed: " + dbError.message,
+              point_of_interaction: mpData.point_of_interaction
             }),
             { 
               status: 200,
@@ -208,7 +288,8 @@ async function processPayment(req: Request) {
           JSON.stringify({ 
             success: true, 
             payment_id: mpData.id,
-            status: mpData.status
+            status: mpData.status,
+            point_of_interaction: mpData.point_of_interaction
           }),
           { 
             status: 200,
@@ -224,7 +305,8 @@ async function processPayment(req: Request) {
             success: true, 
             payment_id: mpData.id,
             status: mpData.status,
-            warning: "Payment processed but record keeping failed: " + (dbProcessingError instanceof Error ? dbProcessingError.message : String(dbProcessingError))
+            warning: "Payment processed but record keeping failed: " + (dbProcessingError instanceof Error ? dbProcessingError.message : String(dbProcessingError)),
+            point_of_interaction: mpData.point_of_interaction
           }),
           { 
             status: 200,

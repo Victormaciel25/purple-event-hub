@@ -2,9 +2,11 @@
 import React, { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { Button } from "@/components/ui/button";
-import { Check, Loader2 } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Check, Loader2, CreditCard } from "lucide-react";
 import { supabase } from '@/integrations/supabase/client';
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
+import PixPayment from './PixPayment';
 import { EDGE_FUNCTIONS } from '@/config/app-config';
 
 type CheckoutProps = {
@@ -27,6 +29,8 @@ declare global {
   }
 }
 
+type PaymentMethod = 'credit_card' | 'pix';
+
 const MercadoPagoCheckout: React.FC<CheckoutProps> = ({ 
   spaceId, 
   spaceName, 
@@ -42,6 +46,9 @@ const MercadoPagoCheckout: React.FC<CheckoutProps> = ({
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [mercadoPagoPublicKey, setMercadoPagoPublicKey] = useState<string | null>(null);
   const [paymentStatus, setPaymentStatus] = useState<string | null>(null);
+  const [activePaymentMethod, setActivePaymentMethod] = useState<PaymentMethod>('credit_card');
+  const [pixPaymentData, setPixPaymentData] = useState<any>(null);
+  const [pixLoading, setPixLoading] = useState(false);
   
   // Get user ID and Mercado Pago public key on component mount
   useEffect(() => {
@@ -140,7 +147,9 @@ const MercadoPagoCheckout: React.FC<CheckoutProps> = ({
       
       // Initialize the form after a small delay to ensure DOM is ready
       setTimeout(() => {
-        initializePaymentForm();
+        if (activePaymentMethod === 'credit_card') {
+          initializePaymentForm();
+        }
         setLoading(false);
       }, 500);
     } catch (error) {
@@ -154,6 +163,112 @@ const MercadoPagoCheckout: React.FC<CheckoutProps> = ({
       }
       setLoading(false);
     }
+  };
+
+  const handleCreatePixPayment = async () => {
+    if (!userId) {
+      toast.error("Você precisa estar logado para realizar um pagamento.");
+      return;
+    }
+    
+    setPixLoading(true);
+    setErrorMessage(null);
+    
+    try {
+      // Get user's email
+      const { data: userData } = await supabase.auth.getUser();
+      const userEmail = userData.user?.email;
+      
+      if (!userEmail) {
+        throw new Error("Não foi possível obter o email do usuário");
+      }
+      
+      // Create PIX payment
+      const { data, error } = await supabase.functions.invoke('process-payment', {
+        body: JSON.stringify({
+          payment_method_id: 'pix',
+          transaction_amount: plan.price.toString(),
+          email: userEmail,
+          space_id: spaceId,
+          plan_id: plan.id,
+          user_id: userId,
+          description: `Promoção para ${spaceName}: ${plan.name}`,
+          payment_type: 'pix'
+        })
+      });
+      
+      if (error) {
+        throw new Error(`Erro ao processar pagamento: ${error.message}`);
+      }
+      
+      if (!data || !data.success) {
+        throw new Error(data?.error || "Erro desconhecido ao processar pagamento PIX");
+      }
+      
+      // Set payment data
+      setPixPaymentData(data.point_of_interaction?.transaction_data || {});
+      setPaymentStatus(data.status);
+      
+      // Start checking for payment status
+      if (data.status === 'pending') {
+        startPaymentStatusCheck(data.payment_id);
+      }
+      
+    } catch (error) {
+      console.error("PIX payment error:", error);
+      setErrorMessage(error instanceof Error ? error.message : "Erro ao processar pagamento PIX");
+      if (onError) onError();
+    } finally {
+      setPixLoading(false);
+    }
+  };
+  
+  const startPaymentStatusCheck = (paymentId: string) => {
+    if (!paymentId) return;
+    
+    // Check payment status every 10 seconds
+    const statusInterval = setInterval(async () => {
+      try {
+        // Check payment status in database
+        const { data: promotionData, error } = await supabase
+          .from("space_promotions")
+          .select("payment_status")
+          .eq("payment_id", paymentId)
+          .eq("user_id", userId)
+          .order("created_at", { ascending: false })
+          .limit(1);
+          
+        if (error) {
+          console.error("Error checking payment status:", error);
+          return;
+        }
+        
+        if (promotionData && promotionData.length > 0) {
+          const status = promotionData[0].payment_status;
+          setPaymentStatus(status);
+          
+          // If payment is approved, call onSuccess and clear interval
+          if (status === 'approved') {
+            if (onSuccess) {
+              onSuccess();
+            }
+            clearInterval(statusInterval);
+          }
+        }
+      } catch (err) {
+        console.error("Error checking payment status:", err);
+      }
+    }, 10000);
+    
+    // Clear interval after 15 minutes (max time to wait for PIX payment)
+    setTimeout(() => {
+      clearInterval(statusInterval);
+    }, 15 * 60 * 1000);
+    
+    // Save interval ID for cleanup
+    return () => {
+      clearInterval(statusInterval);
+    };
   };
   
   const initializePaymentForm = () => {
@@ -394,7 +509,8 @@ const MercadoPagoCheckout: React.FC<CheckoutProps> = ({
                   },
                   space_id: spaceId,
                   plan_id: plan.id,
-                  user_id: userId
+                  user_id: userId,
+                  payment_type: 'credit_card'
                 })
               });
               
@@ -547,9 +663,53 @@ const MercadoPagoCheckout: React.FC<CheckoutProps> = ({
             </>
           )}
         </Button>
-      ) : null}
-      
-      <div id="payment-form-container" className="mt-6"></div>
+      ) : (
+        <Tabs defaultValue="credit_card" className="w-full" onValueChange={(value) => setActivePaymentMethod(value as PaymentMethod)}>
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="credit_card" className="flex items-center gap-2">
+              <CreditCard size={16} />
+              Cartão de Crédito
+            </TabsTrigger>
+            <TabsTrigger value="pix" className="flex items-center gap-2">
+              <QrCode size={16} />
+              PIX
+            </TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="credit_card" className="mt-4">
+            <div id="payment-form-container" className="mt-2"></div>
+          </TabsContent>
+          
+          <TabsContent value="pix" className="mt-4">
+            {!pixPaymentData ? (
+              <Button 
+                onClick={handleCreatePixPayment}
+                disabled={pixLoading || !userId}
+                className="w-full bg-iparty"
+              >
+                {pixLoading ? (
+                  <>
+                    <Loader2 size={20} className="mr-2 animate-spin" />
+                    Gerando PIX...
+                  </>
+                ) : (
+                  <>
+                    <QrCode size={20} className="mr-2" />
+                    Gerar código PIX
+                  </>
+                )}
+              </Button>
+            ) : (
+              <PixPayment 
+                paymentData={pixPaymentData}
+                amount={plan.price}
+                description={`Promoção para ${spaceName}: ${plan.name}`}
+                isLoading={pixLoading}
+              />
+            )}
+          </TabsContent>
+        </Tabs>
+      )}
     </div>
   );
 };
