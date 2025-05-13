@@ -43,7 +43,6 @@ export const SPACE_CATEGORIES = {
 
 // Mercado Pago configuration
 export const MERCADO_PAGO_CONFIG = {
-  PUBLIC_KEY: "TEST-4f8352a7-5e5b-482d-912c-1c4c3a1f8779",
+  PUBLIC_KEY: "TEST-4f8352a7-5e5b-482d-912c-1c4c3a1f8779"
   // Note: Access token should only be used in backend functions, not client-side
-  ACCESS_TOKEN: "TEST-72418442407574-032019-06b36295f414c18196c22b750c1afb56-334101838"
 };
