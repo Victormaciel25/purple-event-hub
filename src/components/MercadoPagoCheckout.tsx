@@ -58,7 +58,11 @@ const MercadoPagoCheckout: React.FC<CheckoutProps> = ({
         
         if (error) {
           console.error("Error fetching Mercado Pago public key:", error);
-          toast.error("Erro ao obter chave de pagamento");
+          toast({
+            variant: "destructive",
+            title: "Erro",
+            description: "Erro ao obter chave de pagamento"
+          });
           setErrorMessage("Não foi possível se conectar ao serviço de pagamento. Tente novamente mais tarde.");
           return;
         }
@@ -90,7 +94,11 @@ const MercadoPagoCheckout: React.FC<CheckoutProps> = ({
         console.log("Mercado Pago SDK loaded successfully");
       };
       script.onerror = () => {
-        toast.error("Erro ao carregar o Mercado Pago");
+        toast({
+          variant: "destructive",
+          title: "Erro",
+          description: "Erro ao carregar o Mercado Pago"
+        });
         console.error("Failed to load Mercado Pago SDK");
       };
       document.body.appendChild(script);
@@ -111,7 +119,11 @@ const MercadoPagoCheckout: React.FC<CheckoutProps> = ({
 
   const handleShowCheckout = async () => {
     if (!sdkReady) {
-      toast.error("Mercado Pago ainda está carregando. Por favor, aguarde.");
+      toast({
+        variant: "destructive",
+        title: "Aguarde",
+        description: "Mercado Pago ainda está carregando. Por favor, aguarde."
+      });
       return;
     }
     
@@ -119,7 +131,11 @@ const MercadoPagoCheckout: React.FC<CheckoutProps> = ({
     if (!userId) {
       const { data } = await supabase.auth.getSession();
       if (!data.session) {
-        toast.error("Você precisa estar logado para realizar um pagamento.");
+        toast({
+          variant: "destructive",
+          title: "Erro",
+          description: "Você precisa estar logado para realizar um pagamento."
+        });
         return;
       }
       setUserId(data.session.user.id);
@@ -127,7 +143,11 @@ const MercadoPagoCheckout: React.FC<CheckoutProps> = ({
     
     // Check if we have the public key
     if (!mercadoPagoPublicKey) {
-      toast.error("Chave de pagamento não disponível. Tente novamente mais tarde.");
+      toast({
+        variant: "destructive",
+        title: "Erro",
+        description: "Chave de pagamento não disponível. Tente novamente mais tarde."
+      });
       return;
     }
     
@@ -145,7 +165,11 @@ const MercadoPagoCheckout: React.FC<CheckoutProps> = ({
       }, 500);
     } catch (error) {
       console.error("Checkout error:", error);
-      toast.error("Erro ao iniciar o checkout. Tente novamente.");
+      toast({
+        variant: "destructive",
+        title: "Erro",
+        description: "Erro ao iniciar o checkout. Tente novamente."
+      });
       
       setErrorMessage("Não foi possível iniciar o checkout. Por favor, tente novamente mais tarde.");
       
@@ -159,7 +183,11 @@ const MercadoPagoCheckout: React.FC<CheckoutProps> = ({
   const initializePaymentForm = () => {
     try {
       if (!mercadoPagoPublicKey) {
-        toast.error("Chave de pagamento não disponível");
+        toast({
+          variant: "destructive",
+          title: "Erro",
+          description: "Chave de pagamento não disponível"
+        });
         return;
       }
       
@@ -275,7 +303,11 @@ const MercadoPagoCheckout: React.FC<CheckoutProps> = ({
             
             // Only call onSuccess if payment status is "approved"
             if (data.status === "approved") {
-              toast.success("Pagamento aprovado com sucesso!");
+              toast({
+                variant: "default",
+                title: "Sucesso",
+                description: "Pagamento aprovado com sucesso!"
+              });
 
               // Clean up Mercado Pago elements after payment
               cleanupMercadoPagoElements();
@@ -284,11 +316,19 @@ const MercadoPagoCheckout: React.FC<CheckoutProps> = ({
                 onSuccess();
               }
             } else if (data.status === "in_process" || data.status === "pending") {
-              toast.info("Pagamento em processamento. Aguarde a confirmação.");
+              toast({
+                variant: "default",
+                title: "Processando",
+                description: "Pagamento em processamento. Aguarde a confirmação."
+              });
               setErrorMessage("Seu pagamento está em análise. Você receberá uma confirmação em breve.");
             } else {
               // Handle other statuses
-              toast.warning(`Status do pagamento: ${data.status}. Verifique mais tarde.`);
+              toast({
+                variant: "warning",
+                title: "Atenção",
+                description: `Status do pagamento: ${data.status}. Verifique mais tarde.`
+              });
               setErrorMessage(`Pagamento registrado com status: ${data.status}`);
             }
           } else {
@@ -300,7 +340,11 @@ const MercadoPagoCheckout: React.FC<CheckoutProps> = ({
           console.error("Payment processing error:", error);
           
           const errorMsg = error instanceof Error ? error.message : "Erro ao processar pagamento. Verifique os dados do cartão.";
-          toast.error(errorMsg);
+          toast({
+            variant: "destructive",
+            title: "Erro",
+            description: errorMsg
+          });
           setErrorMessage(errorMsg);
           
           if (onError) {
@@ -314,7 +358,11 @@ const MercadoPagoCheckout: React.FC<CheckoutProps> = ({
       
     } catch (error) {
       console.error("Error initializing payment form:", error);
-      toast.error("Erro ao inicializar formulário de pagamento");
+      toast({
+        variant: "destructive",
+        title: "Erro",
+        description: "Erro ao inicializar formulário de pagamento"
+      });
       setErrorMessage("Não foi possível carregar o formulário de pagamento. Por favor, tente novamente mais tarde.");
     }
   };

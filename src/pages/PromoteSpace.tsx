@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -172,7 +173,11 @@ const PromoteSpace: React.FC = () => {
           navigate("/profile");
         }, 3000);
       } else {
-        toast.warning("Aguardando confirmação de pagamento do processador");
+        toast({
+          variant: "warning",
+          title: "Aguardando confirmação",
+          description: "Aguardando confirmação de pagamento do processador"
+        });
       }
     } catch (error) {
       console.error("Error validating payment success:", error);
