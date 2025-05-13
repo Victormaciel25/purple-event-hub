@@ -150,6 +150,53 @@ export type Database = {
           },
         ]
       }
+      space_promotions: {
+        Row: {
+          active: boolean
+          amount: number
+          created_at: string
+          expires_at: string | null
+          id: string
+          payment_id: string | null
+          payment_status: string
+          plan_id: string
+          space_id: string
+          user_id: string
+        }
+        Insert: {
+          active?: boolean
+          amount: number
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          payment_id?: string | null
+          payment_status: string
+          plan_id: string
+          space_id: string
+          user_id: string
+        }
+        Update: {
+          active?: boolean
+          amount?: number
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          payment_id?: string | null
+          payment_status?: string
+          plan_id?: string
+          space_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "space_promotions_space_id_fkey"
+            columns: ["space_id"]
+            isOneToOne: false
+            referencedRelation: "spaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       spaces: {
         Row: {
           address: string

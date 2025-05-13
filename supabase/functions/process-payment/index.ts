@@ -8,10 +8,14 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// Create a Supabase client
+// Create a Supabase client with service role key to bypass RLS policies
 const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
+const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
+const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+// For client operations, use the anon key
 const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY') || '';
-const supabase = createClient(supabaseUrl, supabaseAnonKey);
+const supabaseClient = createClient(supabaseUrl, supabaseAnonKey);
 
 // Mercado Pago API configuration
 const MERCADO_PAGO_ACCESS_TOKEN = Deno.env.get('ACCESS_TOKEN') || 'TEST-72418442407574-032019-06b36295f414c18196c22b750c1afb56-334101838';
@@ -167,18 +171,7 @@ async function processPayment(req: Request) {
           expires_at: expiresAt ? expiresAt.toISOString() : null
         });
         
-        // Check if the space_promotions table exists and has the required columns
-        const { error: tableCheckError } = await supabase
-          .from('space_promotions')
-          .select('id')
-          .limit(1);
-          
-        if (tableCheckError) {
-          console.error("Error checking space_promotions table:", tableCheckError);
-          throw new Error(`Table check failed: ${tableCheckError.message}`);
-        }
-        
-        // Store payment information in database
+        // Insert directly using service role client to bypass RLS
         const { data: insertData, error: dbError } = await supabase
           .from('space_promotions')
           .insert({
@@ -196,14 +189,13 @@ async function processPayment(req: Request) {
 
         if (dbError) {
           console.error("Error storing payment:", dbError);
-          // Payment was processed but we failed to store it
-          // Let's still return success to the user but log the error
+          
           return new Response(
             JSON.stringify({ 
               success: true, 
               payment_id: mpData.id,
               status: mpData.status,
-              warning: "Payment processed but record keeping failed"
+              warning: "Payment processed but record keeping failed: " + dbError.message
             }),
             { 
               status: 200,
@@ -232,7 +224,7 @@ async function processPayment(req: Request) {
             success: true, 
             payment_id: mpData.id,
             status: mpData.status,
-            warning: "Payment processed but record keeping failed: " + dbProcessingError.message
+            warning: "Payment processed but record keeping failed: " + (dbProcessingError instanceof Error ? dbProcessingError.message : String(dbProcessingError))
           }),
           { 
             status: 200,
