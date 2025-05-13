@@ -134,6 +134,27 @@ type ToastContextType = {
 
 const ToastContext = React.createContext<ToastContextType | undefined>(undefined);
 
+// The Toaster component renders the toast UI with the ToastProvider
+export function Toaster() {
+  const { toasts } = useToast();
+  
+  return (
+    <ToastPrimitive>
+      {toasts.map(({ id, title, description, action, ...props }) => (
+        <Toast key={id} {...props}>
+          <div className="grid gap-1">
+            {title && <ToastTitle>{title}</ToastTitle>}
+            {description && <ToastDescription>{description}</ToastDescription>}
+          </div>
+          {action}
+          <ToastClose />
+        </Toast>
+      ))}
+      <ToastViewport />
+    </ToastPrimitive>
+  );
+}
+
 // The context provider that must be available in the app when using toasts
 export const ToastProvider = ({ children }: { children: React.ReactNode }) => {
   const [state, dispatch] = React.useReducer(reducer, initialState);
@@ -207,19 +228,6 @@ export const ToastProvider = ({ children }: { children: React.ReactNode }) => {
   return (
     <ToastContext.Provider value={contextValue}>
       {children}
-      <ToastPrimitive>
-        {state.toasts.map(({ id, title, description, action, ...props }) => (
-          <Toast key={id} {...props}>
-            <div className="grid gap-1">
-              {title && <ToastTitle>{title}</ToastTitle>}
-              {description && <ToastDescription>{description}</ToastDescription>}
-            </div>
-            {action}
-            <ToastClose />
-          </Toast>
-        ))}
-        <ToastViewport />
-      </ToastPrimitive>
     </ToastContext.Provider>
   );
 };
@@ -238,56 +246,80 @@ export function useToast() {
 // Create standalone toast object for direct import
 export const toast = {
   custom: (props: Omit<ToasterToast, "id" | "open">) => {
-    const context = React.useContext(ToastContext);
-    if (!context) {
-      console.error("Toast function called outside of ToastProvider context");
-      return;
+    try {
+      const context = React.useContext(ToastContext);
+      if (!context) {
+        console.error("Toast function called outside of ToastProvider context");
+        return;
+      }
+      context.toast.custom(props);
+    } catch (error) {
+      console.error("Error calling toast:", error);
     }
-    context.addToast(props);
   },
   
   default: (message: string) => {
-    const context = React.useContext(ToastContext);
-    if (!context) {
-      console.error("Toast function called outside of ToastProvider context");
-      return;
+    try {
+      const context = React.useContext(ToastContext);
+      if (!context) {
+        console.error("Toast function called outside of ToastProvider context");
+        return;
+      }
+      context.toast.default(message);
+    } catch (error) {
+      console.error("Error calling toast:", error);
     }
-    context.toast.default(message);
   },
   
   error: (message: string) => {
-    const context = React.useContext(ToastContext);
-    if (!context) {
-      console.error("Toast function called outside of ToastProvider context");
-      return;
+    try {
+      const context = React.useContext(ToastContext);
+      if (!context) {
+        console.error("Toast function called outside of ToastProvider context");
+        return;
+      }
+      context.toast.error(message);
+    } catch (error) {
+      console.error("Error calling toast:", error);
     }
-    context.toast.error(message);
   },
   
   success: (message: string) => {
-    const context = React.useContext(ToastContext);
-    if (!context) {
-      console.error("Toast function called outside of ToastProvider context");
-      return;
+    try {
+      const context = React.useContext(ToastContext);
+      if (!context) {
+        console.error("Toast function called outside of ToastProvider context");
+        return;
+      }
+      context.toast.success(message);
+    } catch (error) {
+      console.error("Error calling toast:", error);
     }
-    context.toast.success(message);
   },
   
   warning: (message: string) => {
-    const context = React.useContext(ToastContext);
-    if (!context) {
-      console.error("Toast function called outside of ToastProvider context");
-      return;
+    try {
+      const context = React.useContext(ToastContext);
+      if (!context) {
+        console.error("Toast function called outside of ToastProvider context");
+        return;
+      }
+      context.toast.warning(message);
+    } catch (error) {
+      console.error("Error calling toast:", error);
     }
-    context.toast.warning(message);
   },
   
   dismiss: (toastId: string) => {
-    const context = React.useContext(ToastContext);
-    if (!context) {
-      console.error("Toast function called outside of ToastProvider context");
-      return;
+    try {
+      const context = React.useContext(ToastContext);
+      if (!context) {
+        console.error("Toast function called outside of ToastProvider context");
+        return;
+      }
+      context.toast.dismiss(toastId);
+    } catch (error) {
+      console.error("Error calling toast:", error);
     }
-    context.toast.dismiss(toastId);
   },
 };

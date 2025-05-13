@@ -1,3 +1,4 @@
+
 import React from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -6,6 +7,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { supabase } from "./integrations/supabase/client";
+import { ToastProvider } from "@/hooks/use-toast";
 import Layout from "./components/Layout";
 import Login from "./pages/Login";
 import Explore from "./pages/Explore";
@@ -65,43 +67,45 @@ const App: React.FC = () => {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
-          <Routes>
-            {/* Login Route */}
-            <Route 
-              path="/" 
-              element={session ? <Navigate to="/explore" replace /> : <Login />} 
-            />
-            
-            {/* App Routes with Layout */}
-            <Route element={
-              <RequireAuth>
-                <Layout />
-              </RequireAuth>
-            }>
-              <Route path="/explore" element={<Explore />} />
-              <Route path="/vendors" element={<Vendors />} />
-              <Route path="/map" element={<Map />} />
-              <Route path="/messages" element={<Messages />} />
-              <Route path="/profile" element={<Profile />} />
-              <Route path="/spaces/:id" element={<EventSpaceDetails />} />
-              <Route path="/event-space/:id" element={<EventSpaceDetails />} />
-              <Route path="/register-space" element={<RegisterSpace />} />
-              <Route path="/space-approval" element={<SpaceApproval />} />
-              <Route path="/admin-management" element={<AdminManagement />} />
-              <Route path="/user-spaces" element={<UserSpaces />} />
-              <Route path="/edit-space/:id" element={<EditSpace />} />
-              <Route path="/promote-space" element={<PromoteSpace />} />
-            </Route>
-            
-            {/* Catch-all route */}
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </BrowserRouter>
-      </TooltipProvider>
+      <ToastProvider>
+        <TooltipProvider>
+          <Toaster />
+          <Sonner />
+          <BrowserRouter>
+            <Routes>
+              {/* Login Route */}
+              <Route 
+                path="/" 
+                element={session ? <Navigate to="/explore" replace /> : <Login />} 
+              />
+              
+              {/* App Routes with Layout */}
+              <Route element={
+                <RequireAuth>
+                  <Layout />
+                </RequireAuth>
+              }>
+                <Route path="/explore" element={<Explore />} />
+                <Route path="/vendors" element={<Vendors />} />
+                <Route path="/map" element={<Map />} />
+                <Route path="/messages" element={<Messages />} />
+                <Route path="/profile" element={<Profile />} />
+                <Route path="/spaces/:id" element={<EventSpaceDetails />} />
+                <Route path="/event-space/:id" element={<EventSpaceDetails />} />
+                <Route path="/register-space" element={<RegisterSpace />} />
+                <Route path="/space-approval" element={<SpaceApproval />} />
+                <Route path="/admin-management" element={<AdminManagement />} />
+                <Route path="/user-spaces" element={<UserSpaces />} />
+                <Route path="/edit-space/:id" element={<EditSpace />} />
+                <Route path="/promote-space" element={<PromoteSpace />} />
+              </Route>
+              
+              {/* Catch-all route */}
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </BrowserRouter>
+        </TooltipProvider>
+      </ToastProvider>
     </QueryClientProvider>
   );
 };
