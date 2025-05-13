@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Check, Loader2, CreditCard, Qr } from "lucide-react";
+import { Check, Loader2, CreditCard, QrCode } from "lucide-react";
 import { supabase } from '@/integrations/supabase/client';
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import PixPayment from './PixPayment';
@@ -670,7 +670,7 @@ const MercadoPagoCheckout: React.FC<CheckoutProps> = ({
               Cartão de Crédito
             </TabsTrigger>
             <TabsTrigger value="pix" className="flex items-center gap-2">
-              <Qr size={16} />
+              <QrCode size={16} />
               PIX
             </TabsTrigger>
           </TabsList>
@@ -693,7 +693,7 @@ const MercadoPagoCheckout: React.FC<CheckoutProps> = ({
                   </>
                 ) : (
                   <>
-                    <Qr size={20} className="mr-2" />
+                    <QrCode size={20} className="mr-2" />
                     Gerar código PIX
                   </>
                 )}
