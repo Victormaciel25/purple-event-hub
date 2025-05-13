@@ -1,6 +1,6 @@
 
 import React, { useEffect, useState } from 'react';
-import { toast } from 'sonner';
+import { toast } from '@/components/ui/use-toast';
 import { Button } from "@/components/ui/button";
 import { Check, Loader2 } from "lucide-react";
 import { supabase } from '@/integrations/supabase/client';
@@ -409,9 +409,7 @@ const MercadoPagoCheckout: React.FC<CheckoutProps> = ({
                 
                 // Only call onSuccess if payment status is "approved"
                 if (data.status === "approved") {
-                  toast.success(`Pagamento aprovado com sucesso!`, {
-                    duration: 5000,
-                  });
+                  toast.success("Pagamento aprovado com sucesso!");
 
                   // Clean up Mercado Pago elements after payment
                   cleanupMercadoPagoElements();
@@ -420,9 +418,7 @@ const MercadoPagoCheckout: React.FC<CheckoutProps> = ({
                     onSuccess();
                   }
                 } else if (data.status === "in_process" || data.status === "pending") {
-                  toast.info(`Pagamento em processamento. Aguarde a confirmação.`, {
-                    duration: 5000,
-                  });
+                  toast.info("Pagamento em processamento. Aguarde a confirmação.");
                   setErrorMessage("Seu pagamento está em análise. Você receberá uma confirmação em breve.");
                 } else {
                   // Handle other statuses

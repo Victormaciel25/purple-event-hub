@@ -5,10 +5,12 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ChevronLeft, Check } from "lucide-react";
+import { ChevronLeft, Check, CreditCard, QrCode } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { toast } from "sonner";
+import { toast } from "@/components/ui/use-toast";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import MercadoPagoCheckout from "@/components/MercadoPagoCheckout";
+import PixPayment from "@/components/PixPayment";
 
 type Space = {
   id: string;
@@ -65,6 +67,7 @@ const PromoteSpace: React.FC = () => {
   const [selectedPlan, setSelectedPlan] = useState<string>("daily");
   const [loading, setLoading] = useState(true);
   const [paymentSuccess, setPaymentSuccess] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState<"card" | "pix">("card");
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -309,13 +312,50 @@ const PromoteSpace: React.FC = () => {
         </RadioGroup>
       </div>
 
-      <div className="flex justify-center">
-        <MercadoPagoCheckout 
-          spaceId={selectedSpace}
-          spaceName={spaces.find(space => space.id === selectedSpace)?.name || ""}
-          plan={plans.find(plan => plan.id === selectedPlan) || plans[0]}
-          onSuccess={handlePaymentSuccess}
-        />
+      <div className="mb-8">
+        <h2 className="text-lg font-medium mb-3">Escolha a forma de pagamento:</h2>
+        <Tabs 
+          value={paymentMethod} 
+          onValueChange={(value) => setPaymentMethod(value as "card" | "pix")}
+          className="w-full"
+        >
+          <TabsList className="grid w-full grid-cols-2 mb-4">
+            <TabsTrigger value="card" className="flex items-center gap-2">
+              <CreditCard size={18} />
+              <span>Cartão de Crédito</span>
+            </TabsTrigger>
+            <TabsTrigger value="pix" className="flex items-center gap-2">
+              <QrCode size={18} />
+              <span>Pix</span>
+            </TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="card" className="mt-4">
+            <Card>
+              <CardContent className="pt-4">
+                <MercadoPagoCheckout 
+                  spaceId={selectedSpace}
+                  spaceName={spaces.find(space => space.id === selectedSpace)?.name || ""}
+                  plan={plans.find(plan => plan.id === selectedPlan) || plans[0]}
+                  onSuccess={handlePaymentSuccess}
+                />
+              </CardContent>
+            </Card>
+          </TabsContent>
+          
+          <TabsContent value="pix" className="mt-4">
+            <Card>
+              <CardContent className="pt-4">
+                <PixPayment
+                  spaceId={selectedSpace}
+                  spaceName={spaces.find(space => space.id === selectedSpace)?.name || ""}
+                  plan={plans.find(plan => plan.id === selectedPlan) || plans[0]}
+                  onSuccess={handlePaymentSuccess}
+                />
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   );

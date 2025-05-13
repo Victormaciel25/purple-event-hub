@@ -160,6 +160,7 @@ export type Database = {
           payment_id: string | null
           payment_status: string
           plan_id: string
+          preference_id: string | null
           space_id: string
           user_id: string
         }
@@ -172,6 +173,7 @@ export type Database = {
           payment_id?: string | null
           payment_status: string
           plan_id: string
+          preference_id?: string | null
           space_id: string
           user_id: string
         }
@@ -184,6 +186,7 @@ export type Database = {
           payment_id?: string | null
           payment_status?: string
           plan_id?: string
+          preference_id?: string | null
           space_id?: string
           user_id?: string
         }
