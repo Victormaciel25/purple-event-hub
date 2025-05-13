@@ -1,6 +1,6 @@
 
 import React, { useEffect, useState } from 'react';
-import { toast } from "@/hooks/use-toast";
+import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Loader2, Check } from "lucide-react";
 import { supabase } from '@/integrations/supabase/client';
@@ -44,6 +44,9 @@ const MercadoPagoCheckout: React.FC<CheckoutProps> = ({
   const [mercadoPagoPublicKey, setMercadoPagoPublicKey] = useState<string | null>(null);
   const [preferenceId, setPreferenceId] = useState<string | null>(null);
   const [paymentStatus, setPaymentStatus] = useState<string | null>(null);
+
+  // Use the proper toast hook from shadcn
+  const { toast } = useToast();
   
   // Get user ID and Mercado Pago public key on component mount
   useEffect(() => {
@@ -81,7 +84,7 @@ const MercadoPagoCheckout: React.FC<CheckoutProps> = ({
     };
     
     initialize();
-  }, []);
+  }, [toast]);
   
   // Load Mercado Pago SDK
   useEffect(() => {
@@ -115,14 +118,16 @@ const MercadoPagoCheckout: React.FC<CheckoutProps> = ({
         script.remove();
       }
     };
-  }, []);
+  }, [toast]);
 
   // Initialize Payment Brick when it's ready to be shown
   useEffect(() => {
     if (showPaymentBrick && sdkReady && mercadoPagoPublicKey && preferenceId) {
       const initializePaymentBrick = async () => {
         try {
-          const mp = new window.MercadoPago(mercadoPagoPublicKey);
+          const mp = new window.MercadoPago(mercadoPagoPublicKey, {
+            locale: 'pt-BR'
+          });
           const bricksBuilder = mp.bricks();
           window.bricksBuilder = bricksBuilder;
           
@@ -268,7 +273,7 @@ const MercadoPagoCheckout: React.FC<CheckoutProps> = ({
       clearInterval(statusInterval);
     }, 15 * 60 * 1000);
     
-    // Save interval ID for cleanup
+    // Return cleanup function
     return () => {
       clearInterval(statusInterval);
     };

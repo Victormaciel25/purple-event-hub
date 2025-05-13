@@ -7,7 +7,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ChevronLeft, Check } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { toast } from "sonner";
+import { useToast } from "@/hooks/use-toast";
 import MercadoPagoCheckout from "@/components/MercadoPagoCheckout";
 
 type Space = {
@@ -66,6 +66,7 @@ const PromoteSpace: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [paymentSuccess, setPaymentSuccess] = useState(false);
   const navigate = useNavigate();
+  const { toast } = useToast();
 
   useEffect(() => {
     fetchUserSpaces();
@@ -105,7 +106,10 @@ const PromoteSpace: React.FC = () => {
       const { data: sessionData } = await supabase.auth.getSession();
       
       if (!sessionData.session) {
-        toast.error("Você precisa estar logado para promover um espaço");
+        toast({
+          title: "Erro",
+          description: "Você precisa estar logado para promover um espaço"
+        });
         navigate("/");
         return;
       }
@@ -127,7 +131,10 @@ const PromoteSpace: React.FC = () => {
       }
     } catch (error) {
       console.error("Erro ao carregar espaços:", error);
-      toast.error("Erro ao carregar seus espaços");
+      toast({
+        title: "Erro",
+        description: "Erro ao carregar seus espaços"
+      });
     } finally {
       setLoading(false);
     }
