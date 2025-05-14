@@ -1,3 +1,4 @@
+
 import React from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -34,21 +35,25 @@ const App: React.FC = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Check if user is already logged in
-    const checkSession = async () => {
-      const { data } = await supabase.auth.getSession();
-      setSession(data.session);
-      setLoading(false);
-    };
-
-    checkSession();
-
-    // Listen for auth changes
+    // Set up auth state listener first
     const { data: authListener } = supabase.auth.onAuthStateChange(
       (_event, newSession) => {
+        console.log("Auth state changed:", _event);
         setSession(newSession);
       }
     );
+
+    // Then check for existing session
+    const checkSession = async () => {
+      try {
+        const { data } = await supabase.auth.getSession();
+        setSession(data.session);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    checkSession();
 
     return () => {
       authListener.subscription.unsubscribe();
