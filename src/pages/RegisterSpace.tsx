@@ -661,16 +661,17 @@ const RegisterSpace = () => {
             </div>
           )}
 
-          <div className="flex justify-end mt-6">
+          <div className="flex justify-end mt-8">
             <Button 
               type="submit" 
-              className="bg-iparty hover:bg-iparty/90 text-white py-2 px-4 rounded flex items-center"
+              variant="default"
+              className="bg-iparty hover:bg-iparty/90 text-white py-2 px-6 rounded flex items-center"
               disabled={submitting}
             >
               {currentStep < 4 ? (
                 <>
                   Próximo
-                  <ChevronRight className="ml-1" size={16} />
+                  <ChevronRight className="ml-2" size={18} />
                 </>
               ) : submitting ? (
                 "Enviando..."
