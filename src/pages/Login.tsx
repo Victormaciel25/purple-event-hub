@@ -17,35 +17,61 @@ const Login = () => {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
-  const [initialAuthCheckDone, setInitialAuthCheckDone] = useState(false);
+  const [initialAuthCheck, setInitialAuthCheck] = useState(false);
+  const [sessionChecked, setSessionChecked] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
 
+  // One-time session check when component mounts
   useEffect(() => {
-    // Check if user is already logged in
-    const checkUser = async () => {
+    let isMounted = true;
+    
+    const checkSession = async () => {
       try {
+        setInitialAuthCheck(true);
         const { data } = await supabase.auth.getSession();
-        if (data.session) {
-          navigate("/explore");
+        
+        if (isMounted) {
+          if (data.session) {
+            navigate("/explore", { replace: true });
+          }
+          setSessionChecked(true);
+        }
+      } catch (error) {
+        console.error("Error checking session:", error);
+        if (isMounted) {
+          setSessionChecked(true);
         }
       } finally {
-        setInitialAuthCheckDone(true);
+        if (isMounted) {
+          setInitialAuthCheck(false);
+        }
       }
     };
     
-    checkUser();
-
-    // Set up auth state listener
+    checkSession();
+    
+    return () => {
+      isMounted = false;
+    };
+  }, [navigate]);
+  
+  // Setup auth listener separately
+  useEffect(() => {
     const { data: authListener } = supabase.auth.onAuthStateChange(
       (event, session) => {
-        // Only handle navigation when a user signs in
+        console.log("Login component: Auth state changed:", event);
+        
+        // Only navigate on successful sign in
         if (event === 'SIGNED_IN' && session) {
-          navigate("/explore");
+          // Use setTimeout to avoid potential React state update conflicts
+          setTimeout(() => {
+            navigate("/explore", { replace: true });
+          }, 0);
         }
       }
     );
-
+    
     return () => {
       authListener.subscription.unsubscribe();
     };
@@ -167,11 +193,20 @@ const Login = () => {
     }
   };
 
-  // Return loading state until the initial auth check is complete
-  if (!initialAuthCheckDone) {
+  // Show loading state until initial session check completes
+  if (!sessionChecked) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-background p-4">
         <div>Carregando...</div>
+      </div>
+    );
+  }
+
+  // Show loading state while login/signup is processing
+  if (initialAuthCheck) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-background p-4">
+        <div>Verificando autenticação...</div>
       </div>
     );
   }
