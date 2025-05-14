@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,63 +18,54 @@ const Login = () => {
   const [loading, setLoading] = useState(false);
   const [initialAuthCheck, setInitialAuthCheck] = useState(false);
   const [sessionChecked, setSessionChecked] = useState(false);
+  const [redirecting, setRedirecting] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  // One-time session check when component mounts
+  // Session check on mount
   useEffect(() => {
     let isMounted = true;
-    
+
     const checkSession = async () => {
       try {
         setInitialAuthCheck(true);
         const { data } = await supabase.auth.getSession();
-        
-        if (isMounted) {
-          if (data.session) {
-            navigate("/explore", { replace: true });
-          }
-          setSessionChecked(true);
+
+        if (isMounted && data.session && !redirecting) {
+          setRedirecting(true);
+          navigate("/explore", { replace: true });
         }
+        if (isMounted) setSessionChecked(true);
       } catch (error) {
         console.error("Error checking session:", error);
-        if (isMounted) {
-          setSessionChecked(true);
-        }
+        if (isMounted) setSessionChecked(true);
       } finally {
-        if (isMounted) {
-          setInitialAuthCheck(false);
-        }
+        if (isMounted) setInitialAuthCheck(false);
       }
     };
-    
+
     checkSession();
-    
+
     return () => {
       isMounted = false;
     };
-  }, [navigate]);
-  
-  // Setup auth listener separately
+  }, [navigate, redirecting]);
+
+  // Auth state change listener
   useEffect(() => {
     const { data: authListener } = supabase.auth.onAuthStateChange(
       (event, session) => {
-        console.log("Login component: Auth state changed:", event);
-        
-        // Only navigate on successful sign in
-        if (event === 'SIGNED_IN' && session) {
-          // Use setTimeout to avoid potential React state update conflicts
-          setTimeout(() => {
-            navigate("/explore", { replace: true });
-          }, 0);
+        if (event === "SIGNED_IN" && session && !redirecting) {
+          setRedirecting(true);
+          navigate("/explore", { replace: true });
         }
       }
     );
-    
+
     return () => {
       authListener.subscription.unsubscribe();
     };
-  }, [navigate]);
+  }, [navigate, redirecting]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
