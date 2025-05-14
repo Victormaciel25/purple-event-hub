@@ -14,6 +14,7 @@ import SignOutButton from "@/components/profile/SignOutButton";
 const Profile = () => {
   const [showFavorites, setShowFavorites] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [signingOut, setSigningOut] = useState(false);
   const [profile, setProfile] = useState<any>(null);
   const [session, setSession] = useState<any>(null);
   const [showEditProfile, setShowEditProfile] = useState(false);
@@ -59,7 +60,7 @@ const Profile = () => {
     const { data: authListener } = supabase.auth.onAuthStateChange(
       async (event, newSession) => {
         if (event === "SIGNED_OUT") {
-          navigate("/");
+          navigate("/", { replace: true });
         } else if (newSession && event === "SIGNED_IN") {
           setSession(newSession);
         }
@@ -72,25 +73,51 @@ const Profile = () => {
   }, [navigate]);
 
   const handleSignOut = async () => {
-    setLoading(true);
+    if (signingOut) return; // Prevent multiple sign-out attempts
+    
+    setSigningOut(true);
     try {
+      // First check if we still have a valid session
+      const { data: sessionData } = await supabase.auth.getSession();
+      
+      if (!sessionData.session) {
+        // No session found, just redirect to login
+        toastUI({
+          title: "Sessão expirada",
+          description: "Sua sessão expirou. Redirecionando para login.",
+        });
+        navigate("/", { replace: true });
+        return;
+      }
+      
+      // We have a session, attempt to sign out
       const { error } = await supabase.auth.signOut();
-      if (error) throw error;
+      
+      if (error) {
+        console.error("Sign out error:", error);
+        throw error;
+      }
       
       toastUI({
         title: "Desconectado",
         description: "Você saiu da sua conta com sucesso",
       });
       
-      navigate("/");
+      navigate("/", { replace: true });
     } catch (error: any) {
+      console.error("Sign out error:", error);
       toastUI({
         title: "Erro ao sair",
-        description: error.message,
+        description: error.message || "Ocorreu um erro ao sair da conta",
         variant: "destructive",
       });
+      
+      // If we can't sign out properly, force navigate to login
+      if (error.message === "Auth session missing!" || error.message.includes("session")) {
+        navigate("/", { replace: true });
+      }
     } finally {
-      setLoading(false);
+      setSigningOut(false);
     }
   };
 
@@ -244,10 +271,8 @@ const Profile = () => {
         email={session?.user?.email}
         avatarUrl={avatarUrl}
         onEditProfile={() => setShowEditProfile(true)}
-        onUpdatePhoto={() => {}} // This is now a no-op function
+        onUpdatePhoto={() => {}}
       />
-
-      {/* Hidden file input is no longer needed since the avatar isn't clickable */}
 
       {showFavorites ? (
         <>
@@ -274,7 +299,10 @@ const Profile = () => {
           
           {/* Sign Out Button - Make sure it's visible */}
           <div className="mt-6 mb-20">
-            <SignOutButton onSignOut={handleSignOut} loading={loading} />
+            <SignOutButton 
+              onSignOut={handleSignOut} 
+              loading={signingOut}
+            />
           </div>
         </>
       )}
