@@ -681,7 +681,7 @@ const RegisterSpace = () => {
             </div>
           )}
 
-          <div className="flex justify-end mt-8 mb-24">
+          <div className="flex justify-end mt-8 mb-18">
             <Button 
               type="submit" 
               variant="default"
