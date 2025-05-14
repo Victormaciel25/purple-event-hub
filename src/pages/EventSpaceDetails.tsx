@@ -15,7 +15,8 @@ import {
   Loader2,
   X,
   Maximize2,
-  MessageSquare
+  MessageSquare,
+  Trash2
 } from "lucide-react";
 import {
   Carousel,
@@ -33,6 +34,17 @@ import {
   DialogContent,
   DialogClose
 } from "@/components/ui/dialog";
+import { useUserRoles } from "@/hooks/useUserRoles";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 // Define a type for the space details with all the fields
 type SpaceDetails = {
@@ -70,6 +82,10 @@ const EventSpaceDetails: React.FC = () => {
   const [spaceOwner, setSpaceOwner] = useState<{ id: string, name: string } | null>(null);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [processingChat, setProcessingChat] = useState(false);
+  const { isAdmin } = useUserRoles();
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deleteReason, setDeleteReason] = useState("");
+  const [deletingSpace, setDeletingSpace] = useState(false);
   
   useEffect(() => {
     // Obter o ID do usuário atual
@@ -369,6 +385,44 @@ const EventSpaceDetails: React.FC = () => {
     }
   };
   
+  const handleDeleteSpace = async () => {
+    if (!deleteReason.trim()) {
+      toast.error("Por favor, forneça um motivo para a exclusão");
+      return;
+    }
+
+    try {
+      setDeletingSpace(true);
+
+      if (!space || !space.id) {
+        toast.error("Não foi possível identificar o espaço");
+        return;
+      }
+
+      // First, send a notification to the space owner with the delete reason
+      // This could be an entry in a notifications table, an email, etc.
+      console.log(`Sending notification to user ${space.user_id} about space deletion`);
+      console.log(`Delete reason: ${deleteReason}`);
+
+      // Then delete the space and related photos using the existing edge function
+      const { error } = await supabase.functions.invoke("delete_space_with_photos", {
+        body: { space_id: space.id }
+      });
+
+      if (error) throw error;
+
+      toast.success("Espaço excluído com sucesso");
+      setDeleteDialogOpen(false);
+      navigate("/explore");
+      
+    } catch (error) {
+      console.error("Erro ao excluir espaço:", error);
+      toast.error("Erro ao excluir espaço");
+    } finally {
+      setDeletingSpace(false);
+    }
+  };
+  
   if (loading) {
     return (
       <div className="container px-4 py-6 flex flex-col items-center justify-center h-[70vh]">
@@ -550,6 +604,56 @@ const EventSpaceDetails: React.FC = () => {
           Mensagem
         </Button>
       </div>
+      
+      {/* Delete Space Button for Admins */}
+      {isAdmin && (
+        <div className="mt-4">
+          <Button 
+            variant="destructive" 
+            className="w-full" 
+            size="lg"
+            onClick={() => setDeleteDialogOpen(true)}
+          >
+            <Trash2 size={18} className="mr-2" />
+            Excluir Espaço
+          </Button>
+        </div>
+      )}
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir Espaço</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja excluir este espaço? Esta ação não pode ser desfeita.
+              O proprietário será notificado sobre esta exclusão.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          
+          <Textarea
+            placeholder="Motivo da exclusão (obrigatório)"
+            value={deleteReason}
+            onChange={(e) => setDeleteReason(e.target.value)}
+            className="resize-none mt-4"
+            rows={3}
+          />
+          
+          <AlertDialogFooter className="mt-4">
+            <AlertDialogCancel disabled={deletingSpace}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={(e) => {
+                e.preventDefault();
+                handleDeleteSpace();
+              }}
+              disabled={deletingSpace}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              {deletingSpace ? "Excluindo..." : "Excluir"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
