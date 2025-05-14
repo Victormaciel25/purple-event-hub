@@ -41,6 +41,7 @@ const PixPayment: React.FC<PixPaymentProps> = ({
   const [mercadoPagoPublicKey, setMercadoPagoPublicKey] = useState<string | null>(null);
   const [identificationTypes, setIdentificationTypes] = useState<Array<{id: string, name: string}>>([]);
   const formCheckoutRef = useRef<HTMLFormElement>(null);
+  const pixCodeInputRef = useRef<HTMLInputElement>(null);
 
   // Get user ID and Mercado Pago public key on component mount
   useEffect(() => {
@@ -301,22 +302,27 @@ const PixPayment: React.FC<PixPaymentProps> = ({
   const handleCopyPixCode = () => {
     if (!pixCode) return;
     
-    navigator.clipboard.writeText(pixCode)
-      .then(() => {
-        setCopied(true);
-        toast({
-          title: "Sucesso",
-          description: "Código PIX copiado para a área de transferência!"
+    // Select the input field content
+    if (pixCodeInputRef.current) {
+      pixCodeInputRef.current.select();
+      navigator.clipboard.writeText(pixCode)
+        .then(() => {
+          setCopied(true);
+          toast({
+            title: "Sucesso",
+            description: "Código PIX copiado para a área de transferência!"
+          });
+          setTimeout(() => setCopied(false), 3000);
+        })
+        .catch((err) => {
+          console.error("Error copying text: ", err);
+          toast({
+            variant: "destructive",
+            title: "Erro",
+            description: "Erro ao copiar código PIX"
+          });
         });
-        setTimeout(() => setCopied(false), 3000);
-      })
-      .catch(() => {
-        toast({
-          variant: "destructive",
-          title: "Erro",
-          description: "Erro ao copiar código PIX"
-        });
-      });
+    }
   };
 
   return (
@@ -449,32 +455,42 @@ const PixPayment: React.FC<PixPaymentProps> = ({
           
           {pixCode && (
             <div className="w-full mb-6">
-              <div className="flex items-center justify-between p-3 bg-gray-100 rounded-md">
-                <code className="text-xs sm:text-sm overflow-hidden overflow-ellipsis whitespace-nowrap max-w-[200px] sm:max-w-[300px]">
-                  {pixCode}
-                </code>
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={handleCopyPixCode}
-                  className="ml-2 min-w-[100px]"
-                >
-                  {copied ? (
-                    <>
-                      <Check size={16} className="mr-1" />
-                      Copiado
-                    </>
-                  ) : (
-                    <>
-                      <Copy size={16} className="mr-1" />
-                      Copiar
-                    </>
-                  )}
-                </Button>
+              <div className="flex flex-col space-y-2">
+                <label htmlFor="copiar" className="text-sm font-medium text-gray-700">
+                  Copiar Hash:
+                </label>
+                <div className="flex items-center">
+                  <input
+                    ref={pixCodeInputRef}
+                    type="text"
+                    id="copiar"
+                    value={pixCode}
+                    readOnly
+                    className="flex-1 p-2 border border-gray-300 rounded-l-md text-xs sm:text-sm overflow-hidden overflow-ellipsis"
+                  />
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={handleCopyPixCode}
+                    className="rounded-l-none border-l-0"
+                  >
+                    {copied ? (
+                      <>
+                        <Check size={16} className="mr-1" />
+                        Copiado
+                      </>
+                    ) : (
+                      <>
+                        <Copy size={16} className="mr-1" />
+                        Copiar
+                      </>
+                    )}
+                  </Button>
+                </div>
+                <p className="text-xs text-gray-500 mt-1">
+                  Copie o código acima e cole no seu aplicativo bancário para fazer o pagamento via PIX.
+                </p>
               </div>
-              <p className="text-xs text-gray-500 mt-2">
-                Copie o código acima e cole no seu aplicativo bancário para fazer o pagamento via PIX.
-              </p>
             </div>
           )}
 
