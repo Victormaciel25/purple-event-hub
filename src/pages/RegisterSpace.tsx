@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -24,30 +25,40 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 
-// Define the form schema using Zod
-const formSchema = z.object({
-  name: z.string().min(3, { message: "Nome do espaço deve ter pelo menos 3 caracteres" }),
-  phone: z.string().min(10, { message: "Telefone inválido" }),
-  state: z.string().min(2, { message: "Estado é obrigatório" }),
-  address: z.string().min(5, { message: "Endereço é obrigatório" }),
-  zipCode: z.string().min(8, { message: "CEP inválido" }),
-  number: z.string().min(1, { message: "Número é obrigatório" }),
-  description: z.string().min(20, { message: "Descrição deve ter pelo menos 20 caracteres" }),
-  price: z.string().min(1, { message: "Valor é obrigatório" }),
-  capacity: z.string().min(1, { message: "Capacidade é obrigatória" }),
-  // Amenidades
-  parking: z.boolean().default(false),
-  wifi: z.boolean().default(false),
-  soundSystem: z.boolean().default(false),
-  airConditioning: z.boolean().default(false),
-  kitchen: z.boolean().default(false),
-  pool: z.boolean().default(false),
-  // Categorias
-  categoryWeddings: z.boolean().default(false),
-  categoryCorporate: z.boolean().default(false),
-  categoryBirthdays: z.boolean().default(false),
-  categoryGraduations: z.boolean().default(false),
-});
+// Definindo schemas separados para cada etapa
+const stepSchemas = [
+  z.object({ // Etapa 1
+    name: z.string().min(3, { message: "Nome do espaço deve ter pelo menos 3 caracteres" }),
+    phone: z.string().min(10, { message: "Telefone inválido" }),
+    state: z.string().min(2, { message: "Estado é obrigatório" }),
+    address: z.string().min(5, { message: "Endereço é obrigatório" }),
+    zipCode: z.string().min(8, { message: "CEP inválido" }),
+    number: z.string().min(1, { message: "Número é obrigatório" }),
+    description: z.string().min(20, { message: "Descrição deve ter pelo menos 20 caracteres" }),
+    price: z.string().min(1, { message: "Valor é obrigatório" }),
+    capacity: z.string().min(1, { message: "Capacidade é obrigatória" }),
+  }),
+  z.object({ // Etapa 2
+    parking: z.boolean().default(false),
+    wifi: z.boolean().default(false),
+    soundSystem: z.boolean().default(false),
+    airConditioning: z.boolean().default(false),
+    kitchen: z.boolean().default(false),
+    pool: z.boolean().default(false),
+    categoryWeddings: z.boolean().default(false),
+    categoryCorporate: z.boolean().default(false),
+    categoryBirthdays: z.boolean().default(false),
+    categoryGraduations: z.boolean().default(false),
+  }),
+  z.object({}), // Etapa 3 (sem validações)
+  z.object({}), // Etapa 4 (sem validações)
+];
+
+// Combinando todos os schemas para o tipo final do formulário
+const formSchema = stepSchemas.reduce(
+  (acc, schema) => acc.merge(schema),
+  z.object({})
+);
 
 type FormValues = z.infer<typeof formSchema>;
 
@@ -59,8 +70,11 @@ const RegisterSpace = () => {
   const [submitting, setSubmitting] = useState(false);
   const navigate = useNavigate();
 
+  // Usar o esquema correspondente à etapa atual
+  const currentSchema = stepSchemas[currentStep - 1];
+
   const form = useForm<FormValues>({
-    resolver: zodResolver(formSchema),
+    resolver: zodResolver(currentStep < 3 ? currentSchema : formSchema),
     defaultValues: {
       name: "",
       phone: "",
