@@ -22,6 +22,7 @@ import AdminManagement from "./pages/AdminManagement";
 import UserSpaces from "./pages/UserSpaces";
 import EditSpace from "./pages/EditSpace";
 import PromoteSpace from "./pages/PromoteSpace";
+import Index from "./pages/Index";
 
 // Create a QueryClient instance outside of the component
 const queryClient = new QueryClient();
@@ -61,7 +62,7 @@ const App: React.FC = () => {
   }, []);
 
   const RequireAuth = ({ children }: { children: JSX.Element }) => {
-    return session ? children : <Navigate to="/" replace />;
+    return session ? children : <Navigate to="/login" replace />;
   };
 
   if (loading) {
@@ -75,9 +76,12 @@ const App: React.FC = () => {
         <Sonner />
         <BrowserRouter>
           <Routes>
+            {/* Root route redirects to the index component */}
+            <Route path="/" element={<Index />} />
+            
             {/* Login Route */}
             <Route 
-              path="/" 
+              path="/login" 
               element={session ? <Navigate to="/explore" replace /> : <Login />} 
             />
             
