@@ -302,7 +302,6 @@ const Profile = () => {
         avatarUrl={avatarUrl}
         onEditProfile={() => setShowEditProfile(true)}
         onUpdatePhoto={handleUpdatePhoto}
-        onDeletePhoto={handleDeletePhoto}
       />
 
       {/* Hidden file input for photo upload */}
@@ -349,6 +348,7 @@ const Profile = () => {
         onOpenChange={setShowEditProfile}
         userId={userId}
         onProfileUpdated={refreshProfile}
+        onDeletePhoto={handleDeletePhoto}
       />
     </div>
   );

@@ -13,7 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
-import { Pencil, Loader2, ImagePlus, User } from "lucide-react";
+import { Pencil, Loader2, ImagePlus, User, Trash2 } from "lucide-react";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { toast } from "sonner";
 
@@ -22,6 +22,7 @@ interface EditProfileDialogProps {
   onOpenChange: (open: boolean) => void;
   userId: string | undefined;
   onProfileUpdated: () => void;
+  onDeletePhoto: () => void;
 }
 
 const EditProfileDialog = ({
@@ -29,6 +30,7 @@ const EditProfileDialog = ({
   onOpenChange,
   userId,
   onProfileUpdated,
+  onDeletePhoto,
 }: EditProfileDialogProps) => {
   const [email, setEmail] = useState("");
   const [firstName, setFirstName] = useState("");
@@ -248,12 +250,27 @@ const EditProfileDialog = ({
                     </AvatarFallback>
                   )}
                 </Avatar>
-                <Label
-                  htmlFor="picture"
-                  className="absolute bottom-0 right-0 bg-iparty text-white p-1 rounded-full cursor-pointer"
-                >
-                  <ImagePlus size={16} />
-                </Label>
+                <div className="flex gap-2 mt-2 justify-center">
+                  <Label
+                    htmlFor="picture"
+                    className="bg-iparty text-white p-1.5 rounded-full cursor-pointer flex items-center justify-center w-8 h-8"
+                  >
+                    <ImagePlus size={16} />
+                  </Label>
+                  
+                  {profileImage && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="rounded-full w-8 h-8 p-0 bg-white text-red-500"
+                      onClick={onDeletePhoto}
+                      title="Excluir foto"
+                    >
+                      <Trash2 size={14} />
+                    </Button>
+                  )}
+                </div>
                 <Input
                   id="picture"
                   type="file"

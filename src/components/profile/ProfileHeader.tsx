@@ -1,7 +1,7 @@
 
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Settings, User, Upload, Trash2 } from "lucide-react";
+import { Settings, User } from "lucide-react";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { HoverCard, HoverCardTrigger, HoverCardContent } from "@/components/ui/hover-card";
 
@@ -12,7 +12,6 @@ interface ProfileHeaderProps {
   avatarUrl: string | null;
   onEditProfile: () => void;
   onUpdatePhoto: () => void;
-  onDeletePhoto: () => void;
 }
 
 const ProfileHeader: React.FC<ProfileHeaderProps> = ({
@@ -22,7 +21,6 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({
   avatarUrl,
   onEditProfile,
   onUpdatePhoto,
-  onDeletePhoto,
 }) => {
   const fullName = `${firstName} ${lastName}`.trim();
   const [showPhotoOptions, setShowPhotoOptions] = useState(false);
@@ -35,9 +33,9 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({
     <div className="flex flex-col items-center mb-8">
       <div className="relative">
         <div 
-          onClick={togglePhotoOptions} 
+          onClick={() => onUpdatePhoto()} 
           className="cursor-pointer"
-          aria-label="Clique para opções de foto"
+          aria-label="Clique para alterar foto"
         >
           <Avatar className="h-24 w-24 mb-4">
             {avatarUrl ? (
@@ -49,32 +47,6 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({
             )}
           </Avatar>
         </div>
-        
-        {showPhotoOptions && (
-          <div className="flex gap-2 mt-2 justify-center">
-            <Button
-              variant="outline"
-              size="sm"
-              className="rounded-full w-8 h-8 p-0 bg-white"
-              onClick={onUpdatePhoto}
-              title="Alterar foto"
-            >
-              <Upload size={14} />
-            </Button>
-            
-            {avatarUrl && (
-              <Button
-                variant="outline"
-                size="sm"
-                className="rounded-full w-8 h-8 p-0 bg-white text-red-500"
-                onClick={onDeletePhoto}
-                title="Excluir foto"
-              >
-                <Trash2 size={14} />
-              </Button>
-            )}
-          </div>
-        )}
       </div>
       
       {fullName && (
