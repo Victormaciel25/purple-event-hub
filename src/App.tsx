@@ -33,40 +33,32 @@ import './index.css';
 const App: React.FC = () => {
   const [session, setSession] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [initialCheckComplete, setInitialCheckComplete] = useState(false);
 
   useEffect(() => {
-    // First check for existing session (only once)
+    // Set up auth state listener first
+    const { data: authListener } = supabase.auth.onAuthStateChange(
+      (_event, newSession) => {
+        console.log("Auth state changed:", _event);
+        setSession(newSession);
+      }
+    );
+
+    // Then check for existing session
     const checkSession = async () => {
       try {
         const { data } = await supabase.auth.getSession();
         setSession(data.session);
-      } catch (error) {
-        console.error("Error checking session:", error);
       } finally {
         setLoading(false);
-        setInitialCheckComplete(true);
       }
     };
 
     checkSession();
 
-    // Then set up auth state listener
-    const { data: authListener } = supabase.auth.onAuthStateChange(
-      (event, newSession) => {
-        console.log("Auth state changed:", event);
-        
-        // Only update if initial check is complete to avoid race conditions
-        if (initialCheckComplete) {
-          setSession(newSession);
-        }
-      }
-    );
-
     return () => {
       authListener.subscription.unsubscribe();
     };
-  }, [initialCheckComplete]);
+  }, []);
 
   const RequireAuth = ({ children }: { children: JSX.Element }) => {
     return session ? children : <Navigate to="/" replace />;
