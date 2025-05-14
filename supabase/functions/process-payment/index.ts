@@ -255,6 +255,9 @@ async function processPayment(req: Request) {
           );
         }
 
+        // Log the full payment data for debugging
+        console.log("Payment processed successfully. Full response:", JSON.stringify(mpData));
+        
         return new Response(
           JSON.stringify({ 
             success: true, 

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { toast } from '@/components/ui/use-toast';
 import { Button } from "@/components/ui/button";
@@ -228,12 +227,17 @@ const PixPayment: React.FC<PixPaymentProps> = ({
       }
 
       const paymentData = response.data;
+      console.log("Payment data received:", paymentData);
       
       if (paymentData.point_of_interaction && 
           paymentData.point_of_interaction.transaction_data) {
         
         const txData = paymentData.point_of_interaction.transaction_data;
         setPixCode(txData.qr_code);
+        
+        // Log QR code data for debugging
+        console.log("QR Code received:", txData.qr_code);
+        console.log("QR Code Base64 received:", txData.qr_code_base64 ? "Yes (length: " + txData.qr_code_base64.length + ")" : "No");
         
         // Set QR code from base64 if available
         if (txData.qr_code_base64) {
@@ -250,6 +254,7 @@ const PixPayment: React.FC<PixPaymentProps> = ({
       } else {
         // If we're in test mode, we might not get a real QR code
         // Show the test QR code instead
+        console.log("No QR code in response, using test QR code");
         setPixCode("00020126580014br.gov.bcb.pix0136123e4567-e12b-12d1-a456-4266554400005204000053039865802BR5913Recipient Name6008BRASILIA62070503***6304A1BC");
         setPixQrCodeUrl("https://chart.googleapis.com/chart?chs=300x300&cht=qr&chl=00020126580014br.gov.bcb.pix0136123e4567-e12b-12d1-a456-4266554400005204000053039865802BR5913Recipient+Name6008BRASILIA62070503***6304A1BC&choe=UTF-8");
         setShowQrCode(true);
