@@ -1,9 +1,8 @@
 
-import React, { useState } from "react";
+import React from "react";
 import { Button } from "@/components/ui/button";
 import { Settings, User } from "lucide-react";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { HoverCard, HoverCardTrigger, HoverCardContent } from "@/components/ui/hover-card";
 
 interface ProfileHeaderProps {
   firstName: string;
@@ -20,33 +19,21 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({
   email,
   avatarUrl,
   onEditProfile,
-  onUpdatePhoto,
 }) => {
   const fullName = `${firstName} ${lastName}`.trim();
-  const [showPhotoOptions, setShowPhotoOptions] = useState(false);
-
-  const togglePhotoOptions = () => {
-    setShowPhotoOptions(!showPhotoOptions);
-  };
 
   return (
     <div className="flex flex-col items-center mb-8">
       <div className="relative">
-        <div 
-          onClick={() => onUpdatePhoto()} 
-          className="cursor-pointer"
-          aria-label="Clique para alterar foto"
-        >
-          <Avatar className="h-24 w-24 mb-4">
-            {avatarUrl ? (
-              <AvatarImage src={avatarUrl} alt="Foto de perfil" />
-            ) : (
-              <AvatarFallback className="bg-iparty">
-                <User size={50} className="text-white" />
-              </AvatarFallback>
-            )}
-          </Avatar>
-        </div>
+        <Avatar className="h-24 w-24 mb-4">
+          {avatarUrl ? (
+            <AvatarImage src={avatarUrl} alt="Foto de perfil" />
+          ) : (
+            <AvatarFallback className="bg-iparty">
+              <User size={50} className="text-white" />
+            </AvatarFallback>
+          )}
+        </Avatar>
       </div>
       
       {fullName && (

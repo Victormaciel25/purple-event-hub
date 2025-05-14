@@ -131,63 +131,6 @@ const Profile = () => {
     }
   };
 
-  const handleUpdatePhoto = () => {
-    // Trigger file input click
-    fileInputRef.current?.click();
-  };
-  
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (!e.target.files || e.target.files.length === 0 || !session?.user?.id) {
-      return;
-    }
-    
-    const file = e.target.files[0];
-    const fileExt = file.name.split('.').pop();
-    const fileName = `${session.user.id}-${Date.now()}.${fileExt}`;
-    const filePath = `${session.user.id}/${fileName}`;
-    
-    setLoading(true);
-    
-    try {
-      // Upload the image to Supabase storage
-      const { error: uploadError } = await supabase.storage
-        .from('avatars')
-        .upload(filePath, file, { 
-          upsert: true 
-        });
-      
-      if (uploadError) throw uploadError;
-      
-      // Get the public URL of the uploaded image
-      const { data: urlData } = supabase.storage
-        .from('avatars')
-        .getPublicUrl(filePath);
-      
-      // Update profile with new avatar URL
-      const { error: updateError } = await supabase.auth.updateUser({
-        data: { avatar_url: urlData.publicUrl }
-      });
-      
-      if (updateError) throw updateError;
-      
-      // Update profile in database
-      const { error: profileError } = await supabase
-        .from("profiles")
-        .update({ avatar_url: urlData.publicUrl })
-        .eq("id", session.user.id);
-      
-      if (profileError) throw profileError;
-      
-      toast.success("Foto de perfil atualizada com sucesso");
-      refreshProfile();
-    } catch (error: any) {
-      console.error("Error updating profile photo:", error);
-      toast.error(error.message || "Erro ao atualizar foto de perfil");
-    } finally {
-      setLoading(false);
-    }
-  };
-  
   const handleDeletePhoto = async () => {
     if (!session?.user?.id) return;
     
@@ -301,17 +244,10 @@ const Profile = () => {
         email={session?.user?.email}
         avatarUrl={avatarUrl}
         onEditProfile={() => setShowEditProfile(true)}
-        onUpdatePhoto={handleUpdatePhoto}
+        onUpdatePhoto={() => {}} // This is now a no-op function
       />
 
-      {/* Hidden file input for photo upload */}
-      <input 
-        type="file"
-        ref={fileInputRef}
-        onChange={handleFileChange}
-        accept="image/*"
-        className="hidden"
-      />
+      {/* Hidden file input is no longer needed since the avatar isn't clickable */}
 
       {showFavorites ? (
         <>
