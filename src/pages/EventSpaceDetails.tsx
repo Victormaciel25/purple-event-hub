@@ -326,80 +326,78 @@ const EventSpaceDetails: React.FC = () => {
         current_space_id: space.id
       });
       
-      // Get auth token for the API call
-      const { data: sessionData } = await supabase.auth.getSession();
-      
-      if (!sessionData.session?.access_token) {
-        console.error("No access token available");
-        toast.error("Erro de autenticação: sessão inválida");
-        setProcessingChat(false);
-        return;
-      }
-      
-      // Check if chat already exists
-      const { data: existingChats, error: chatQueryError } = await supabase.functions
-        .invoke('get_chat_by_users_and_space', { 
-          body: { 
-            current_user_id: userData.user.id,
-            space_owner_id: spaceOwner.id,
-            current_space_id: space.id 
+      try {
+        // Check if chat already exists using the request body approach
+        const { data: existingChats, error: chatQueryError } = await supabase.functions
+          .invoke('get_chat_by_users_and_space', { 
+            body: { 
+              current_user_id: userData.user.id,
+              space_owner_id: spaceOwner.id,
+              current_space_id: space.id 
+            }
+          });
+        
+        console.log("Existing chats response:", existingChats);
+        
+        if (chatQueryError) {
+          console.error("Error checking for existing chats:", chatQueryError);
+          toast.error("Erro ao verificar conversas existentes: " + chatQueryError.message);
+          setProcessingChat(false);
+          return;
+        }
+        
+        let chatId;
+        
+        if (existingChats && Array.isArray(existingChats) && existingChats.length > 0) {
+          chatId = existingChats[0].id;
+          console.log("Using existing chat:", chatId);
+          toast.info("Abrindo conversa existente");
+        } else {
+          console.log("Creating new chat...");
+          // Create a new chat
+          const { data: newChat, error: insertError } = await supabase
+            .from("chats")
+            .insert({
+              user_id: userData.user.id,
+              owner_id: spaceOwner.id,
+              space_id: space.id,
+              space_name: space.name,
+              space_image: space.images[0] || null,
+              last_message: "",
+              last_message_time: new Date().toISOString()
+            })
+            .select("id")
+            .single();
+          
+          if (insertError) {
+            console.error("Insert error:", insertError);
+            toast.error("Erro ao criar conversa: " + insertError.message);
+            setProcessingChat(false);
+            return;
           }
+          
+          if (!newChat || !newChat.id) {
+            console.error("No new chat created");
+            toast.error("Falha ao criar conversa");
+            setProcessingChat(false);
+            return;
+          }
+          
+          chatId = newChat.id;
+          console.log("New chat created:", chatId);
+          toast.success("Nova conversa iniciada");
+        }
+        
+        // Navigate to messages page with the chat ID as state
+        // This change will open the chat directly
+        navigate(`/messages`, { 
+          state: { selectedChatId: chatId }
         });
-      
-      console.log("Existing chats response:", existingChats);
-      
-      if (chatQueryError) {
-        console.error("Error checking for existing chats:", chatQueryError);
-        toast.error("Erro ao verificar conversas existentes: " + chatQueryError.message);
+      } catch (error) {
+        console.error("Error in chat process:", error);
+        toast.error("Erro inesperado: " + (error.message || "Erro desconhecido"));
         setProcessingChat(false);
-        return;
       }
-      
-      let chatId;
-      
-      if (existingChats && Array.isArray(existingChats) && existingChats.length > 0) {
-        chatId = existingChats[0].id;
-        console.log("Using existing chat:", chatId);
-        toast.info("Abrindo conversa existente");
-      } else {
-        console.log("Creating new chat...");
-        // Create a new chat
-        const { data: newChat, error: insertError } = await supabase
-          .from("chats")
-          .insert({
-            user_id: userData.user.id,
-            owner_id: spaceOwner.id,
-            space_id: space.id,
-            space_name: space.name,
-            space_image: space.images[0] || null,
-            last_message: "",
-            last_message_time: new Date().toISOString()
-          })
-          .select("id")
-          .single();
-        
-        if (insertError) {
-          console.error("Insert error:", insertError);
-          toast.error("Erro ao criar conversa: " + insertError.message);
-          setProcessingChat(false);
-          return;
-        }
-        
-        if (!newChat || !newChat.id) {
-          console.error("No new chat created");
-          toast.error("Falha ao criar conversa");
-          setProcessingChat(false);
-          return;
-        }
-        
-        chatId = newChat.id;
-        console.log("New chat created:", chatId);
-        toast.success("Nova conversa iniciada");
-      }
-      
-      // Navigate to messages page with the chat ID as a query parameter
-      // Using navigate with a state object to ensure the selected chat is available
-      navigate(`/messages?chat=${chatId}`);
     } catch (error) {
       console.error("Error starting chat:", error);
       toast.error("Não foi possível iniciar a conversa: " + (error.message || "Erro desconhecido"));

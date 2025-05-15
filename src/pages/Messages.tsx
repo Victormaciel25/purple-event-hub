@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Search, MessageSquare, ArrowLeft, Trash2 } from "lucide-react";
@@ -7,7 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Textarea } from "@/components/ui/textarea";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams, useLocation } from "react-router-dom";
 import OptimizedImage from "@/components/OptimizedImage";
 import {
   AlertDialog,
@@ -99,8 +98,12 @@ const formatTime = (isoString: string): string => {
 };
 
 const Messages = () => {
-  const [searchParams, setSearchParams] = useSearchParams();
+  const [searchParams] = useSearchParams();
   const chatIdFromUrl = searchParams.get('chat');
+  const location = useLocation();
+  
+  // Get selectedChatId from location state if available
+  const stateSelectedChatId = location.state?.selectedChatId;
 
   const [chats, setChats] = useState<ChatProps[]>([]);
   const [loading, setLoading] = useState(true);
@@ -217,10 +220,14 @@ const Messages = () => {
         
         setChats(formattedChats);
         
-        // If there's a chat ID in the URL, select it immediately
-        if (chatIdFromUrl) {
-          console.log("Setting selected chat from URL parameter:", chatIdFromUrl);
-          setSelectedChat(chatIdFromUrl);
+        // Priority for selecting chat: 
+        // 1. stateSelectedChatId (from navigation state)
+        // 2. chatIdFromUrl (from URL parameter)
+        const chatToSelect = stateSelectedChatId || chatIdFromUrl;
+        
+        if (chatToSelect) {
+          console.log("Setting selected chat from parameters:", chatToSelect);
+          setSelectedChat(chatToSelect);
         }
       }
     };
@@ -258,7 +265,7 @@ const Messages = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [chatIdFromUrl]); // Only depend on chatIdFromUrl, we don't need setSearchParams
+  }, [chatIdFromUrl, stateSelectedChatId]); // Include stateSelectedChatId in dependencies
   
   // Load messages when a chat is selected
   useEffect(() => {
