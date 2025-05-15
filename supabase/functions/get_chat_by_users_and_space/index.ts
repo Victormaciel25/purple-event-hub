@@ -14,45 +14,16 @@ serve(async (req) => {
   }
 
   try {
-    const authHeader = req.headers.get('Authorization');
-    
-    if (!authHeader) {
-      console.error("Missing Authorization header");
-      return new Response(
-        JSON.stringify({ error: 'Missing Authorization header' }),
-        { 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 401 
-        }
-      );
-    }
-
     // Create supabase client
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_ANON_KEY') ?? '',
       { 
         global: { 
-          headers: { Authorization: authHeader } 
+          headers: { Authorization: req.headers.get('Authorization')! } 
         } 
       }
     );
-
-    // Get the current user for validation
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
-    
-    if (userError || !user) {
-      console.error("User authentication error:", userError);
-      return new Response(
-        JSON.stringify({ 
-          error: 'Unauthorized' 
-        }),
-        { 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 401 
-        }
-      );
-    }
 
     // Parse request body
     let body;
@@ -89,20 +60,6 @@ serve(async (req) => {
       );
     }
 
-    // Validate the requesting user is the same as current_user_id for security
-    if (current_user_id !== user.id) {
-      console.error("User ID mismatch:", { current_user_id, actual_user_id: user.id });
-      return new Response(
-        JSON.stringify({ 
-          error: 'User ID mismatch' 
-        }),
-        { 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 403 
-        }
-      );
-    }
-
     // Check for existing chat with better error handling
     try {
       console.log("Querying for existing chats with:", { current_user_id, space_owner_id, current_space_id });
@@ -111,10 +68,10 @@ serve(async (req) => {
         .from('chats')
         .select('id')
         .or(
-          `and(user_id.eq.${current_user_id},owner_id.eq.${space_owner_id},space_id.eq.${current_space_id}),` +
-          `and(user_id.eq.${space_owner_id},owner_id.eq.${current_user_id},space_id.eq.${current_space_id})`
+          `and(user_id.eq.${current_user_id},owner_id.eq.${space_owner_id}),` +
+          `and(user_id.eq.${space_owner_id},owner_id.eq.${current_user_id})`
         )
-        .eq('deleted', false) // Only get non-deleted chats
+        .eq('space_id', current_space_id)
         .limit(1);
 
       if (error) {
