@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Search, MessageSquare, ArrowLeft, Trash2 } from "lucide-react";
@@ -124,9 +125,11 @@ const Messages = () => {
           setUserId(userData.user.id);
           
           try {
-            // Fetch chats using Edge Function with better error handling
+            // Use our updated edge function with userId in the request body
             const { data: chatsData, error } = await supabase.functions
-              .invoke('get_user_chats');
+              .invoke('get_user_chats', {
+                body: { userId: userData.user.id }
+              });
               
             if (error) {
               console.error("Error fetching chats:", error);
