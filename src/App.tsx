@@ -23,6 +23,7 @@ import UserSpaces from "./pages/UserSpaces";
 import EditSpace from "./pages/EditSpace";
 import PromoteSpace from "./pages/PromoteSpace";
 import Index from "./pages/Index";
+import DeletionNotifications from "./components/DeletionNotifications";
 
 // Create a QueryClient instance outside of the component
 const queryClient = new QueryClient();
@@ -65,6 +66,15 @@ const App: React.FC = () => {
     return session ? children : <Navigate to="/login" replace />;
   };
 
+  const AuthenticatedLayout = () => {
+    return (
+      <>
+        {session && <DeletionNotifications />}
+        <Layout />
+      </>
+    );
+  };
+
   if (loading) {
     return <div>Carregando...</div>;
   }
@@ -88,7 +98,7 @@ const App: React.FC = () => {
             {/* App Routes with Layout */}
             <Route element={
               <RequireAuth>
-                <Layout />
+                <AuthenticatedLayout />
               </RequireAuth>
             }>
               <Route path="/explore" element={<Explore />} />
