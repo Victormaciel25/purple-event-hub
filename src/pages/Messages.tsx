@@ -191,7 +191,7 @@ const Messages = () => {
               setChats(formattedChats);
               
               // If there's a chat ID in the URL, select it
-                if (chatIdFromUrl !== selectedChat) {
+              if (chatIdFromUrl) {
                 setSelectedChat(chatIdFromUrl);
               }
             }
