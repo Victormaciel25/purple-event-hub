@@ -299,6 +299,7 @@ const EventSpaceDetails: React.FC = () => {
       if (userError) {
         console.error("Auth error:", userError);
         toast.error("Erro de autenticação: " + userError.message);
+        setProcessingChat(false);
         return;
       }
       
@@ -306,6 +307,7 @@ const EventSpaceDetails: React.FC = () => {
         console.error("No user data");
         toast.error("Você precisa estar logado para enviar mensagens");
         navigate("/login");
+        setProcessingChat(false);
         return;
       }
 
@@ -329,7 +331,7 @@ const EventSpaceDetails: React.FC = () => {
         // Check if chat already exists
         const { data: existingChats, error: chatQueryError } = await supabase.functions
           .invoke('get_chat_by_users_and_space', { 
-            body: JSON.stringify(requestParams)
+            body: requestParams
           });
         
         if (chatQueryError) {
