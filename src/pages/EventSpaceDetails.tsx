@@ -288,7 +288,7 @@ const EventSpaceDetails: React.FC = () => {
         }
       }
       
-      if (!spaceOwner.id) {
+      if (!spaceOwner?.id) {
         console.error("Space owner ID is missing");
         toast.error("ID do proprietário não disponível");
         return;
@@ -296,10 +296,12 @@ const EventSpaceDetails: React.FC = () => {
       
       setProcessingChat(true);
       
+      // Get current user
       const { data: userData, error: userError } = await supabase.auth.getUser();
       if (userError) {
         console.error("Auth error:", userError);
-        throw userError;
+        toast.error("Erro de autenticação: " + userError.message);
+        return;
       }
       
       if (!userData.user) {
@@ -309,10 +311,11 @@ const EventSpaceDetails: React.FC = () => {
         return;
       }
 
-      // Verificando se o usuário atual é o proprietário do espaço
+      // Check if the user is the space owner
       if (userData.user.id === spaceOwner.id) {
         console.error("User is space owner");
         toast.error("Não é possível iniciar uma conversa consigo mesmo");
+        setProcessingChat(false);
         return;
       }
       
@@ -326,18 +329,20 @@ const EventSpaceDetails: React.FC = () => {
       // Check if chat already exists
       const { data: existingChats, error: chatQueryError } = await supabase.functions
         .invoke('get_chat_by_users_and_space', { 
-          body: JSON.stringify({ 
+          body: { 
             current_user_id: userData.user.id,
             space_owner_id: spaceOwner.id,
             current_space_id: space.id 
-          })
+          }
         });
       
       console.log("Existing chats response:", existingChats);
       
       if (chatQueryError) {
         console.error("Error checking for existing chats:", chatQueryError);
-        throw chatQueryError;
+        toast.error("Erro ao verificar conversas existentes: " + chatQueryError.message);
+        setProcessingChat(false);
+        return;
       }
       
       let chatId;
@@ -365,12 +370,16 @@ const EventSpaceDetails: React.FC = () => {
         
         if (insertError) {
           console.error("Insert error:", insertError);
-          throw insertError;
+          toast.error("Erro ao criar conversa: " + insertError.message);
+          setProcessingChat(false);
+          return;
         }
         
         if (!newChat || !newChat.id) {
           console.error("No new chat created");
-          throw new Error("Failed to create chat");
+          toast.error("Falha ao criar conversa");
+          setProcessingChat(false);
+          return;
         }
         
         chatId = newChat.id;
@@ -378,7 +387,7 @@ const EventSpaceDetails: React.FC = () => {
         toast.success("Nova conversa iniciada");
       }
       
-      // Modified: Navigate to messages page with the chat ID as a query parameter
+      // Navigate to messages page with the chat ID as a query parameter
       navigate(`/messages?chat=${chatId}`);
     } catch (error: any) {
       console.error("Error starting chat:", error);
