@@ -4,11 +4,11 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { ChevronLeft, Edit, Trash2 } from "lucide-react";
+import { ChevronLeft, Edit, Trash2, Bell, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 type UserSpace = {
   id: string;
@@ -21,14 +21,24 @@ type UserSpace = {
   rejection_reason?: string | null;
 };
 
+type DeletionNotification = {
+  id: string;
+  space_name: string;
+  deletion_reason: string;
+  created_at: string;
+  viewed: boolean;
+};
+
 const UserSpaces: React.FC = () => {
   const [spaces, setSpaces] = useState<UserSpace[]>([]);
+  const [notifications, setNotifications] = useState<DeletionNotification[]>([]);
   const [loading, setLoading] = useState(true);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const navigate = useNavigate();
   
   useEffect(() => {
     fetchUserSpaces();
+    fetchNotifications();
   }, []);
   
   const fetchUserSpaces = async () => {
@@ -59,6 +69,45 @@ const UserSpaces: React.FC = () => {
       toast.error("Erro ao carregar seus espaços");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchNotifications = async () => {
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      
+      if (!sessionData.session) {
+        return;
+      }
+      
+      const { data, error } = await supabase
+        .from("space_deletion_notifications")
+        .select("*")
+        .order("created_at", { ascending: false });
+      
+      if (error) throw error;
+      
+      setNotifications(data || []);
+    } catch (error) {
+      console.error("Erro ao carregar notificações:", error);
+    }
+  };
+  
+  const markNotificationAsViewed = async (notificationId: string) => {
+    try {
+      const { error } = await supabase.rpc(
+        'mark_notification_viewed',
+        { notification_id: notificationId }
+      );
+      
+      if (error) throw error;
+      
+      // Atualiza localmente
+      setNotifications(notifications.map(notif => 
+        notif.id === notificationId ? { ...notif, viewed: true } : notif
+      ));
+    } catch (error) {
+      console.error("Erro ao marcar notificação como visualizada:", error);
     }
   };
   
@@ -101,6 +150,16 @@ const UserSpaces: React.FC = () => {
     }
   };
   
+  const dismissNotification = async (notificationId: string) => {
+    try {
+      await markNotificationAsViewed(notificationId);
+      // Removemos a notificação da lista após marcá-la como visualizada
+      setNotifications(notifications.filter(n => n.id !== notificationId));
+    } catch (error) {
+      console.error("Erro ao dispensar notificação:", error);
+    }
+  };
+  
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('pt-BR');
   };
@@ -122,6 +181,40 @@ const UserSpaces: React.FC = () => {
       case 'rejected':
         return <Badge variant="outline" className="bg-red-100 text-red-800 hover:bg-red-100">Rejeitado</Badge>;
     }
+  };
+
+  const renderNotifications = () => {
+    if (notifications.length === 0) return null;
+    
+    return (
+      <div className="mb-6">
+        {notifications.filter(n => !n.viewed).map((notification) => (
+          <Alert key={notification.id} variant="destructive" className="mb-2">
+            <div className="flex justify-between items-start">
+              <div>
+                <AlertTitle className="font-medium">
+                  Espaço excluído: {notification.space_name}
+                </AlertTitle>
+                <AlertDescription>
+                  <p className="mt-1">Motivo: {notification.deletion_reason}</p>
+                  <p className="text-xs mt-1 text-muted-foreground">
+                    {formatDate(notification.created_at)}
+                  </p>
+                </AlertDescription>
+              </div>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className="p-1 h-auto" 
+                onClick={() => dismissNotification(notification.id)}
+              >
+                <X size={16} />
+              </Button>
+            </div>
+          </Alert>
+        ))}
+      </div>
+    );
   };
 
   const renderEmptyState = () => (
@@ -220,6 +313,8 @@ const UserSpaces: React.FC = () => {
           Cadastrar Novo Espaço
         </Button>
       </div>
+      
+      {renderNotifications()}
       
       {loading ? (
         <div className="flex justify-center items-center py-12">

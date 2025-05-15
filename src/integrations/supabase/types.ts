@@ -121,6 +121,33 @@ export type Database = {
         }
         Relationships: []
       }
+      space_deletion_notifications: {
+        Row: {
+          created_at: string
+          deletion_reason: string
+          id: string
+          space_name: string
+          user_id: string
+          viewed: boolean
+        }
+        Insert: {
+          created_at?: string
+          deletion_reason: string
+          id?: string
+          space_name: string
+          user_id: string
+          viewed?: boolean
+        }
+        Update: {
+          created_at?: string
+          deletion_reason?: string
+          id?: string
+          space_name?: string
+          user_id?: string
+          viewed?: boolean
+        }
+        Relationships: []
+      }
       space_photos: {
         Row: {
           created_at: string | null
@@ -327,6 +354,10 @@ export type Database = {
       has_role: {
         Args: { requested_role: string }
         Returns: boolean
+      }
+      mark_notification_viewed: {
+        Args: { notification_id: string }
+        Returns: undefined
       }
     }
     Enums: {

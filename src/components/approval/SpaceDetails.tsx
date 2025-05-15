@@ -98,12 +98,21 @@ const SpaceDetails: React.FC<SpaceDetailsProps> = ({
     try {
       setDeletingSpace(true);
 
-      // First, send a notification to the space owner with the delete reason
-      // This could be an entry in a notifications table, an email, etc.
-      console.log(`Sending notification to user ${selectedSpace.user_id} about space deletion`);
-      console.log(`Delete reason: ${deleteReason}`);
+      // Criar uma notificação para o proprietário do espaço
+      const { error: notificationError } = await supabase
+        .from("space_deletion_notifications")
+        .insert({
+          user_id: selectedSpace.user_id,
+          space_name: selectedSpace.name,
+          deletion_reason: deleteReason
+        });
 
-      // Then delete the space and related photos using the existing edge function
+      if (notificationError) {
+        console.error("Erro ao criar notificação:", notificationError);
+        toast.error("Erro ao notificar o proprietário");
+      }
+
+      // Excluir o espaço usando a função existente
       const { error } = await supabase.functions.invoke("delete_space_with_photos", {
         body: { space_id: selectedSpace.id }
       });
