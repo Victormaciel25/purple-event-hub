@@ -14,6 +14,21 @@ serve(async (req) => {
   }
 
   try {
+    // Get supabase client
+    const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
+    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY') ?? '';
+    
+    if (!supabaseUrl || !supabaseAnonKey) {
+      console.error("Missing Supabase environment variables");
+      return new Response(
+        JSON.stringify({ error: 'Server configuration error' }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 500 
+        }
+      );
+    }
+    
     // Get and verify authorization header
     const authHeader = req.headers.get('Authorization');
     
@@ -29,20 +44,6 @@ serve(async (req) => {
     }
     
     // Create supabase client with the auth token
-    const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
-    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY') ?? '';
-    
-    if (!supabaseUrl || !supabaseAnonKey) {
-      console.error("Missing Supabase environment variables");
-      return new Response(
-        JSON.stringify({ error: 'Server configuration error' }),
-        { 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 500 
-        }
-      );
-    }
-    
     const supabase = createClient(
       supabaseUrl,
       supabaseAnonKey,
@@ -102,7 +103,13 @@ serve(async (req) => {
 
       if (error) {
         console.error("Database query error:", error);
-        throw error;
+        return new Response(
+          JSON.stringify({ error: 'Database error: ' + error.message }),
+          { 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            status: 500 
+          }
+        );
       }
 
       console.log("Query result:", data);
@@ -119,7 +126,13 @@ serve(async (req) => {
       );
     } catch (queryError) {
       console.error("Query execution error:", queryError);
-      throw queryError;
+      return new Response(
+        JSON.stringify({ error: 'Query error: ' + queryError.message }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 500 
+        }
+      );
     }
 
   } catch (error) {

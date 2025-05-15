@@ -14,14 +14,26 @@ serve(async (req) => {
   }
 
   try {
+    // Get supabase client
+    const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
+    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY') ?? '';
+    
+    if (!supabaseUrl || !supabaseAnonKey) {
+      return new Response(
+        JSON.stringify({ error: 'Missing environment variables' }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 500 
+        }
+      );
+    }
+
     // Create supabase client with user's auth token
     const authHeader = req.headers.get('Authorization');
     
     if (!authHeader) {
       return new Response(
-        JSON.stringify({ 
-          error: 'Missing Authorization header' 
-        }),
+        JSON.stringify({ error: 'Missing Authorization header' }),
         { 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
           status: 401 
@@ -30,8 +42,8 @@ serve(async (req) => {
     }
 
     const supabase = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+      supabaseUrl,
+      supabaseAnonKey,
       { 
         global: { 
           headers: { Authorization: authHeader } 
@@ -45,9 +57,7 @@ serve(async (req) => {
     if (userError) {
       console.error("Error getting user:", userError);
       return new Response(
-        JSON.stringify({ 
-          error: 'Authentication error: ' + userError.message 
-        }),
+        JSON.stringify({ error: 'Authentication error: ' + userError.message }),
         { 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
           status: 401 
@@ -57,9 +67,7 @@ serve(async (req) => {
     
     if (!user) {
       return new Response(
-        JSON.stringify({ 
-          error: 'Unauthorized - No user found' 
-        }),
+        JSON.stringify({ error: 'Unauthorized - No user found' }),
         { 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
           status: 401 
@@ -78,7 +86,13 @@ serve(async (req) => {
 
     if (error) {
       console.error("Database error:", error);
-      throw error;
+      return new Response(
+        JSON.stringify({ error: 'Database error: ' + error.message }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 500 
+        }
+      );
     }
 
     return new Response(
