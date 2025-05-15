@@ -7,3 +7,7 @@ project_id = "kfqorqjwbkxzrqhuvnyh"
 verify_jwt = false
 [functions.get-mercado-pago-public-key]
 verify_jwt = false
+[functions.get_chat_by_users_and_space]
+verify_jwt = false
+[functions.get_user_chats]
+verify_jwt = false

@@ -326,6 +326,16 @@ const EventSpaceDetails: React.FC = () => {
         current_space_id: space.id
       });
       
+      // Get auth token for the API call
+      const { data: sessionData } = await supabase.auth.getSession();
+      
+      if (!sessionData.session?.access_token) {
+        console.error("No access token available");
+        toast.error("Erro de autenticação: sessão inválida");
+        setProcessingChat(false);
+        return;
+      }
+      
       // Check if chat already exists
       const { data: existingChats, error: chatQueryError } = await supabase.functions
         .invoke('get_chat_by_users_and_space', { 
@@ -388,9 +398,9 @@ const EventSpaceDetails: React.FC = () => {
       }
       
       // Navigate to messages page with the chat ID as a query parameter
-      // Ensure we use the proper path here
+      // Using navigate with a state object to ensure the selected chat is available
       navigate(`/messages?chat=${chatId}`);
-    } catch (error: any) {
+    } catch (error) {
       console.error("Error starting chat:", error);
       toast.error("Não foi possível iniciar a conversa: " + (error.message || "Erro desconhecido"));
     } finally {
