@@ -38,12 +38,7 @@ export function useSpaceDeletionNotifications() {
         if (notifications && notifications.length > 0) {
           // Exibir cada notificação como um toast
           notifications.forEach((notification: SpaceDeletionNotification) => {
-            toast.error(
-              <div>
-                <p className="font-semibold">O espaço "{notification.space_name}" foi excluído</p>
-                <p>Motivo: {notification.deletion_reason}</p>
-              </div>
-            );
+            toast.error(`O espaço "${notification.space_name}" foi excluído\nMotivo: ${notification.deletion_reason}`);
 
             // Marcar notificação como visualizada
             markNotificationAsViewed(notification.id);
