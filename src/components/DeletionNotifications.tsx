@@ -1,7 +1,7 @@
 
 import React from "react";
 
-// Component intentionally left empty as it's no longer needed
+// Componente removido - a funcionalidade foi substituída pelo hook useSpaceDeletionNotifications
 const DeletionNotifications = () => {
   return null;
 };

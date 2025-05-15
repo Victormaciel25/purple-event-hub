@@ -23,6 +23,7 @@ import UserSpaces from "./pages/UserSpaces";
 import EditSpace from "./pages/EditSpace";
 import PromoteSpace from "./pages/PromoteSpace";
 import Index from "./pages/Index";
+import { useSpaceDeletionNotifications } from "./hooks/useSpaceDeletionNotifications";
 
 // Create a QueryClient instance outside of the component
 const queryClient = new QueryClient();
@@ -34,6 +35,9 @@ import './index.css';
 const App: React.FC = () => {
   const [session, setSession] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  
+  // Use o hook para verificar e exibir notificações de exclusão de espaços
+  useSpaceDeletionNotifications();
 
   useEffect(() => {
     // Set up auth state listener first
