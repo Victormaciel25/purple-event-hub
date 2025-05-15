@@ -1,5 +1,6 @@
+
 import React, { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Loader2, Plus, Trash2, X } from "lucide-react";
@@ -29,19 +30,41 @@ type Chat = {
   deleted: boolean;
 };
 
+type Message = {
+  id: string;
+  chat_id: string;
+  sender_id: string;
+  content: string;
+  created_at: string;
+};
+
 const Messages = () => {
   const [chats, setChats] = useState<Chat[] | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedChat, setSelectedChat] = useState<Chat | null>(null);
   const [newMessage, setNewMessage] = useState("");
-  const [messages, setMessages] = useState<any[]>([]);
+  const [messages, setMessages] = useState<Message[]>([]);
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteChatId, setDeleteChatId] = useState<string | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [messagesByUser, setMessagesByUser] = useState<{[key: string]: boolean}>({});
   const navigate = useNavigate();
+  const location = useLocation();
 
   useEffect(() => {
     fetchChats();
+    
+    // Listen for auth state changes to refresh chats when user logs in/out
+    const { data: authListener } = supabase.auth.onAuthStateChange((event) => {
+      if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
+        console.log("Auth state changed:", event);
+        fetchChats();
+      }
+    });
+    
+    return () => {
+      authListener?.subscription.unsubscribe();
+    };
   }, []);
 
   useEffect(() => {
@@ -51,35 +74,42 @@ const Messages = () => {
   }, [selectedChat]);
 
   useEffect(() => {
-    const queryParams = new URLSearchParams(window.location.search);
-    const chatId = queryParams.get('chat');
-    const shouldOpen = queryParams.get('open') === 'true';
-    
-    if (chatId && shouldOpen && chats) {
-      // Selecionar o chat específico
-      const targetChat = chats.find(chat => chat.id === chatId);
-      if (targetChat) {
-        // Assumindo que você tem uma função como esta para selecionar um chat
-        selectChat(targetChat);
-        
-        // Limpar os parâmetros da URL após processar
-        const newUrl = window.location.pathname;
-        window.history.replaceState({}, document.title, newUrl);
+    // Process URL parameters after chats are loaded
+    if (chats && chats.length > 0) {
+      const queryParams = new URLSearchParams(location.search);
+      const chatId = queryParams.get('chat');
+      const shouldOpen = queryParams.get('open') === 'true';
+      
+      if (chatId && shouldOpen) {
+        console.log("Opening specific chat:", chatId);
+        const targetChat = chats.find(chat => chat.id === chatId);
+        if (targetChat) {
+          console.log("Found target chat:", targetChat);
+          setSelectedChat(targetChat);
+          
+          // Clear the URL parameters after processing
+          const newUrl = window.location.pathname;
+          window.history.replaceState({}, document.title, newUrl);
+        } else {
+          console.log("Target chat not found in loaded chats");
+        }
       }
     }
-  }, [chats]);
+  }, [chats, location.search]);
 
   const fetchChats = async () => {
     setLoading(true);
     try {
+      console.log("Fetching user chats...");
       const { data, error } = await supabase.functions.invoke('get_user_chats');
 
       if (error) {
         console.error("Error fetching chats:", error);
         toast.error("Erro ao carregar as conversas");
+      } else {
+        console.log("Chats loaded:", data?.length);
+        setChats(data);
       }
-
-      setChats(data);
     } catch (error) {
       console.error("Unexpected error:", error);
       toast.error("Erro inesperado ao carregar as conversas");
@@ -90,6 +120,7 @@ const Messages = () => {
 
   const fetchMessages = async (chatId: string) => {
     try {
+      console.log("Fetching messages for chat:", chatId);
       const { data, error } = await supabase
         .from('messages')
         .select('*')
@@ -99,12 +130,33 @@ const Messages = () => {
       if (error) {
         console.error("Error fetching messages:", error);
         toast.error("Erro ao carregar as mensagens");
+      } else {
+        console.log(`Loaded ${data?.length || 0} messages`);
+        setMessages(data || []);
+        identifyCurrentUserMessages(data || []);
       }
-
-      setMessages(data || []);
     } catch (error) {
       console.error("Unexpected error:", error);
       toast.error("Erro inesperado ao carregar as mensagens");
+    }
+  };
+
+  // Helper function to identify messages sent by current user
+  const identifyCurrentUserMessages = async (messages: Message[]) => {
+    try {
+      const { data } = await supabase.auth.getUser();
+      if (data.user) {
+        const userId = data.user.id;
+        const userMessages: {[key: string]: boolean} = {};
+        
+        messages.forEach(message => {
+          userMessages[message.id] = message.sender_id === userId;
+        });
+        
+        setMessagesByUser(userMessages);
+      }
+    } catch (error) {
+      console.error("Error identifying user messages:", error);
     }
   };
 
@@ -114,7 +166,7 @@ const Messages = () => {
 
   const sendMessage = async () => {
     if (!selectedChat) {
-      toast.error("Selecione um conversa para enviar a mensagem");
+      toast.error("Selecione uma conversa para enviar a mensagem");
       return;
     }
 
@@ -153,7 +205,9 @@ const Messages = () => {
         return;
       }
 
-      setMessages([...messages, data]);
+      // Add new message to messages array and mark it as from current user
+      setMessages(prev => [...prev, data]);
+      setMessagesByUser(prev => ({ ...prev, [data.id]: true }));
       setNewMessage("");
 
       // Update last message in chats table
@@ -223,9 +277,9 @@ const Messages = () => {
     <div className="container mx-auto mt-8 p-4">
       <h1 className="text-2xl font-bold mb-4">Mensagens</h1>
 
-      <div className="flex">
+      <div className="flex flex-col md:flex-row">
         {/* Chat List */}
-        <div className="w-1/4 border-r pr-4">
+        <div className="w-full md:w-1/3 lg:w-1/4 border-b md:border-b-0 md:border-r pb-4 md:pb-0 md:pr-4 mb-4 md:mb-0">
           <h2 className="text-lg font-semibold mb-2">Conversas</h2>
           {chats && chats.length > 0 ? (
             <ul className="space-y-2">
@@ -237,16 +291,18 @@ const Messages = () => {
                   onClick={() => selectChat(chat)}
                 >
                   <div className="flex items-center justify-between">
-                    <div>
-                      <div className="font-medium">{chat.space_name}</div>
-                      <div className="text-sm text-gray-500">{chat.last_message}</div>
+                    <div className="flex-1 min-w-0">
+                      <div className="font-medium truncate" title={chat.space_name}>{chat.space_name}</div>
+                      <div className="text-sm text-gray-500 truncate" title={chat.last_message || "Nova conversa"}>
+                        {chat.last_message || "Nova conversa"}
+                      </div>
                     </div>
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
                         confirmDeleteChat(chat.id);
                       }}
-                      className="text-red-500 hover:text-red-700"
+                      className="text-red-500 hover:text-red-700 ml-2 flex-shrink-0"
                     >
                       <Trash2 size={16} />
                     </button>
@@ -260,57 +316,57 @@ const Messages = () => {
         </div>
 
         {/* Message Area */}
-        <div className="w-3/4 pl-4">
+        <div className="w-full md:w-2/3 lg:w-3/4 md:pl-4">
           {selectedChat ? (
-            <div>
+            <div className="flex flex-col h-[calc(100vh-200px)]">
               <h2 className="text-lg font-semibold mb-2">{selectedChat.space_name}</h2>
-              <div className="space-y-2">
-                {messages.map((message) => {
-                  // Get current user ID to determine message alignment
-                  const getCurrentUserId = async () => {
-                    const { data } = await supabase.auth.getUser();
-                    return data.user?.id;
-                  };
-                  
-                  // Use isCurrentUser state for message alignment
-                  const [isCurrentUser, setIsCurrentUser] = useState(false);
-                  
-                  useEffect(() => {
-                    const checkUser = async () => {
-                      const userId = await getCurrentUserId();
-                      setIsCurrentUser(message.sender_id === userId);
-                    };
-                    checkUser();
-                  }, [message.sender_id]);
-                  
-                  return (
+              <div className="flex-1 overflow-y-auto space-y-2 mb-4 border rounded p-4">
+                {messages.length > 0 ? (
+                  messages.map((message) => (
                     <div
                       key={message.id}
-                      className={`p-3 rounded-lg ${
-                        isCurrentUser
-                          ? 'bg-blue-100 ml-auto text-right'
-                          : 'bg-gray-100 mr-auto'
+                      className={`p-3 rounded-lg max-w-[80%] ${
+                        messagesByUser[message.id]
+                          ? 'bg-blue-100 ml-auto'
+                          : 'bg-gray-100'
                       }`}
                     >
                       <p>{message.content}</p>
-                      <span className="text-xs text-gray-500">{new Date(message.created_at).toLocaleString()}</span>
+                      <span className="text-xs text-gray-500 block mt-1">
+                        {new Date(message.created_at).toLocaleString()}
+                      </span>
                     </div>
-                  );
-                })}
+                  ))
+                ) : (
+                  <p className="text-center text-gray-500 my-4">
+                    Nenhuma mensagem ainda. Inicie uma conversa!
+                  </p>
+                )}
               </div>
 
-              <div className="mt-4">
-                <textarea
-                  className="w-full p-2 border rounded"
-                  placeholder="Digite sua mensagem..."
-                  value={newMessage}
-                  onChange={(e) => setNewMessage(e.target.value)}
-                />
-                <Button onClick={sendMessage} className="mt-2">Enviar</Button>
+              <div className="mt-auto">
+                <div className="flex items-center">
+                  <textarea
+                    className="w-full p-2 border rounded-l resize-none"
+                    placeholder="Digite sua mensagem..."
+                    value={newMessage}
+                    onChange={(e) => setNewMessage(e.target.value)}
+                    rows={2}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        sendMessage();
+                      }
+                    }}
+                  />
+                  <Button onClick={sendMessage} className="rounded-l-none h-full">Enviar</Button>
+                </div>
               </div>
             </div>
           ) : (
-            <p>Selecione uma conversa para ver as mensagens.</p>
+            <div className="flex items-center justify-center h-[calc(100vh-200px)] border rounded p-4 bg-gray-50">
+              <p className="text-gray-500">Selecione uma conversa para ver as mensagens.</p>
+            </div>
           )}
         </div>
       </div>

@@ -43,6 +43,7 @@ serve(async (req) => {
     const { data: { user }, error: userError } = await supabase.auth.getUser();
     
     if (userError || !user) {
+      console.error("User authentication error:", userError);
       return new Response(
         JSON.stringify({ 
           error: 'Unauthorized' 
@@ -54,6 +55,8 @@ serve(async (req) => {
       );
     }
 
+    console.log("Authenticated user:", user.id);
+
     // Fetch chats for this user
     // Filter to exclude deleted chats (where deleted = true)
     const { data, error } = await supabase
@@ -63,10 +66,15 @@ serve(async (req) => {
       .eq('deleted', false) // Only get non-deleted chats
       .order('last_message_time', { ascending: false });
 
-    if (error) throw error;
+    if (error) {
+      console.error("Database query error:", error);
+      throw error;
+    }
+
+    console.log(`Found ${data?.length || 0} chats for user ${user.id}`);
 
     return new Response(
-      JSON.stringify(data),
+      JSON.stringify(data || []),
       { 
         headers: { 
           ...corsHeaders, 
@@ -80,7 +88,7 @@ serve(async (req) => {
     console.error('Error:', error);
     
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ error: error.message || "Unknown error occurred" }),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 500 

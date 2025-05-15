@@ -25,6 +25,22 @@ serve(async (req) => {
       }
     );
 
+    // Get the current user for validation
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    
+    if (userError || !user) {
+      console.error("User authentication error:", userError);
+      return new Response(
+        JSON.stringify({ 
+          error: 'Unauthorized' 
+        }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 401 
+        }
+      );
+    }
+
     // Parse request body
     let body;
     try {
@@ -60,6 +76,20 @@ serve(async (req) => {
       );
     }
 
+    // Validate the requesting user is the same as current_user_id for security
+    if (current_user_id !== user.id) {
+      console.error("User ID mismatch:", { current_user_id, actual_user_id: user.id });
+      return new Response(
+        JSON.stringify({ 
+          error: 'User ID mismatch' 
+        }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 403 
+        }
+      );
+    }
+
     // Check for existing chat with better error handling
     try {
       console.log("Querying for existing chats with:", { current_user_id, space_owner_id, current_space_id });
@@ -68,10 +98,10 @@ serve(async (req) => {
         .from('chats')
         .select('id')
         .or(
-          `and(user_id.eq.${current_user_id},owner_id.eq.${space_owner_id}),` +
-          `and(user_id.eq.${space_owner_id},owner_id.eq.${current_user_id})`
+          `and(user_id.eq.${current_user_id},owner_id.eq.${space_owner_id},space_id.eq.${current_space_id}),` +
+          `and(user_id.eq.${space_owner_id},owner_id.eq.${current_user_id},space_id.eq.${current_space_id})`
         )
-        .eq('space_id', current_space_id)
+        .eq('deleted', false) // Only get non-deleted chats
         .limit(1);
 
       if (error) {
