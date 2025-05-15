@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -9,7 +8,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import DeletionNotifications from "@/components/DeletionNotifications";
 
 type UserSpace = {
   id: string;
@@ -221,8 +219,6 @@ const UserSpaces: React.FC = () => {
           Cadastrar Novo Espaço
         </Button>
       </div>
-      
-      <DeletionNotifications />
       
       {loading ? (
         <div className="flex justify-center items-center py-12">

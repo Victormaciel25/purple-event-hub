@@ -24,6 +24,7 @@ import EditSpace from "./pages/EditSpace";
 import PromoteSpace from "./pages/PromoteSpace";
 import Index from "./pages/Index";
 import DeletionNotifications from "./components/DeletionNotifications";
+import SpaceDeletionAlert from "./components/SpaceDeletionAlert";
 
 // Create a QueryClient instance outside of the component
 const queryClient = new QueryClient();
@@ -69,6 +70,7 @@ const App: React.FC = () => {
   const AuthenticatedLayout = () => {
     return (
       <>
+        {session && <SpaceDeletionAlert />}
         {session && <DeletionNotifications />}
         <Layout />
       </>
