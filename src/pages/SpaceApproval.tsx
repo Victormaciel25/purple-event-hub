@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
@@ -54,6 +53,8 @@ const SpaceApproval = () => {
   useEffect(() => {
     if (selectedSpace?.photos) {
       fetchPhotoUrls(selectedSpace.photos);
+    } else {
+      setPhotoUrls([]);
     }
   }, [selectedSpace]);
 
@@ -125,6 +126,7 @@ const SpaceApproval = () => {
         throw error;
       }
 
+      console.log("Fetched space details:", data);
       setSelectedSpace(data as unknown as SpaceDetailsType);
       setSheetOpen(true);
     } catch (error) {
@@ -135,30 +137,49 @@ const SpaceApproval = () => {
 
   const fetchPhotoUrls = async (photos: { id: string; storage_path: string }[]) => {
     try {
-      console.log("Fetching photo URLs for photos:", photos);
+      console.log("Photos to fetch:", photos);
+      
+      if (!photos || photos.length === 0) {
+        console.log("No photos available");
+        setPhotoUrls([]);
+        return;
+      }
       
       const urls = await Promise.all(
         photos.map(async (photo) => {
-          // Ensure we're using the correct storage path format
-          const { data, error } = await supabase.storage
-            .from('spaces')
-            .createSignedUrl(photo.storage_path, 3600);
-          
-          if (error) {
-            console.error("Error creating signed URL for path:", photo.storage_path, error);
-            throw error;
+          if (!photo.storage_path) {
+            console.error("Missing storage path for photo:", photo);
+            return null;
           }
           
-          console.log("Created signed URL for photo:", photo.id, data.signedUrl);
-          return data.signedUrl;
+          try {
+            // Make sure we're using the full storage path
+            const { data, error } = await supabase.storage
+              .from('spaces')
+              .createSignedUrl(photo.storage_path, 3600);
+            
+            if (error) {
+              console.error("Error creating signed URL:", error, "for path:", photo.storage_path);
+              return null;
+            }
+            
+            console.log("Created signed URL for photo:", photo.id, data.signedUrl);
+            return data.signedUrl;
+          } catch (err) {
+            console.error("Exception when creating signed URL:", err);
+            return null;
+          }
         })
       );
       
-      console.log("Final photo URLs:", urls);
-      setPhotoUrls(urls);
+      // Filter out any null values and set the URLs
+      const validUrls = urls.filter(url => url !== null) as string[];
+      console.log("Final valid photo URLs:", validUrls);
+      setPhotoUrls(validUrls);
     } catch (error) {
       console.error("Error fetching photo URLs:", error);
       toast.error("Erro ao carregar fotos");
+      setPhotoUrls([]);
     }
   };
 

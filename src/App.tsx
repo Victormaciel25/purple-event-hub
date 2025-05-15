@@ -21,30 +21,44 @@ import SpaceApproval from "./pages/SpaceApproval";
 import AdminManagement from "./pages/AdminManagement";
 import UserSpaces from "./pages/UserSpaces";
 import EditSpace from "./pages/EditSpace";
+import PromoteSpace from "./pages/PromoteSpace";
+import Index from "./pages/Index";
+import { useSpaceDeletionNotifications } from "./hooks/useSpaceDeletionNotifications";
 
 // Create a QueryClient instance outside of the component
 const queryClient = new QueryClient();
 
+// Add a global CSS variable for the iparty color
+import './index.css';
+// Ensure we have the iparty color variable in :root in index.css
+
 const App: React.FC = () => {
   const [session, setSession] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  
+  // Use o hook para verificar e exibir notificações de exclusão de espaços
+  useSpaceDeletionNotifications();
 
   useEffect(() => {
-    // Check if user is already logged in
-    const checkSession = async () => {
-      const { data } = await supabase.auth.getSession();
-      setSession(data.session);
-      setLoading(false);
-    };
-
-    checkSession();
-
-    // Listen for auth changes
+    // Set up auth state listener first
     const { data: authListener } = supabase.auth.onAuthStateChange(
       (_event, newSession) => {
+        console.log("Auth state changed:", _event);
         setSession(newSession);
       }
     );
+
+    // Then check for existing session
+    const checkSession = async () => {
+      try {
+        const { data } = await supabase.auth.getSession();
+        setSession(data.session);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    checkSession();
 
     return () => {
       authListener.subscription.unsubscribe();
@@ -52,7 +66,11 @@ const App: React.FC = () => {
   }, []);
 
   const RequireAuth = ({ children }: { children: JSX.Element }) => {
-    return session ? children : <Navigate to="/" replace />;
+    return session ? children : <Navigate to="/login" replace />;
+  };
+
+  const AuthenticatedLayout = () => {
+    return <Layout />;
   };
 
   if (loading) {
@@ -66,16 +84,19 @@ const App: React.FC = () => {
         <Sonner />
         <BrowserRouter>
           <Routes>
+            {/* Root route redirects to the index component */}
+            <Route path="/" element={<Index />} />
+            
             {/* Login Route */}
             <Route 
-              path="/" 
+              path="/login" 
               element={session ? <Navigate to="/explore" replace /> : <Login />} 
             />
             
             {/* App Routes with Layout */}
             <Route element={
               <RequireAuth>
-                <Layout />
+                <AuthenticatedLayout />
               </RequireAuth>
             }>
               <Route path="/explore" element={<Explore />} />
@@ -90,6 +111,7 @@ const App: React.FC = () => {
               <Route path="/admin-management" element={<AdminManagement />} />
               <Route path="/user-spaces" element={<UserSpaces />} />
               <Route path="/edit-space/:id" element={<EditSpace />} />
+              <Route path="/promote-space" element={<PromoteSpace />} />
             </Route>
             
             {/* Catch-all route */}

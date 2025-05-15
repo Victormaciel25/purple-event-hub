@@ -53,7 +53,27 @@ type FormValues = z.infer<typeof formSchema>;
 
 const RegisterSpace = () => {
   const [currentStep, setCurrentStep] = useState(1);
-  const [formData, setFormData] = useState<Partial<FormValues>>({});
+  const [formData, setFormData] = useState<FormValues>({
+    name: "",
+    phone: "",
+    state: "",
+    address: "",
+    zipCode: "",
+    number: "",
+    description: "",
+    price: "",
+    capacity: "",
+    parking: false,
+    wifi: false,
+    soundSystem: false,
+    airConditioning: false,
+    kitchen: false,
+    pool: false,
+    categoryWeddings: false,
+    categoryCorporate: false,
+    categoryBirthdays: false,
+    categoryGraduations: false,
+  });
   const [location, setLocation] = useState<{ lat: number, lng: number } | null>(null);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [submitting, setSubmitting] = useState(false);
@@ -226,7 +246,7 @@ const RegisterSpace = () => {
   };
 
   return (
-    <div className="container px-4 py-6 max-w-3xl mx-auto">
+    <div className="container px-4 py-6 max-w-3xl mx-auto mb-24">
       <div className="flex items-center mb-6">
         <Button variant="ghost" onClick={goBack} className="mr-2 p-0 h-auto">
           <ArrowLeft size={24} />
@@ -661,16 +681,17 @@ const RegisterSpace = () => {
             </div>
           )}
 
-          <div className="flex justify-end">
+          <div className="flex justify-end mt-8 mb-24">
             <Button 
               type="submit" 
-              className="bg-iparty"
+              variant="default"
+              className="bg-iparty hover:bg-iparty/90 text-white py-2 px-6 rounded flex items-center"
               disabled={submitting}
             >
               {currentStep < 4 ? (
                 <>
                   Próximo
-                  <ChevronRight size={16} />
+                  <ChevronRight className="ml-2" size={18} />
                 </>
               ) : submitting ? (
                 "Enviando..."

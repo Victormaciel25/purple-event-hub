@@ -1,7 +1,7 @@
-
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { APP_CONSTANTS, STORAGE } from '@/config/app-config';
 
 export type FavoriteSpace = {
   id: string;
@@ -73,6 +73,7 @@ export const useEventSpaceFavorites = () => {
     }
   }, [validFavoriteIds]);
   
+  // Fetch favorited spaces from the database
   const fetchFavoriteSpaces = useCallback(async () => {
     if (validFavoriteIds.length === 0) {
       setFavoriteSpaces([]);
@@ -100,13 +101,13 @@ export const useEventSpaceFavorites = () => {
       
       // Process spaces to include image URLs but with more reliable fallbacks
       const processedSpaces = await Promise.all((data || []).map(async (space) => {
-        let imageUrl = "https://images.unsplash.com/photo-1566681855366-282a74153321?q=80&w=600&auto=format&fit=crop";
+        let imageUrl = APP_CONSTANTS.PLACEHOLDER_IMAGE;
         
         // If there are photos, get the URL for the first one
         if (space.space_photos && space.space_photos.length > 0) {
           try {
             const { data: urlData } = await supabase.storage
-              .from('spaces')
+              .from(STORAGE.SPACES_BUCKET)
               .createSignedUrl(space.space_photos[0].storage_path, 3600);
               
             if (urlData?.signedUrl) {

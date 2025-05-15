@@ -15,7 +15,9 @@ import {
   Loader2,
   X,
   Maximize2,
-  MessageSquare
+  MessageSquare,
+  Trash2,
+  ZoomIn
 } from "lucide-react";
 import {
   Carousel,
@@ -33,6 +35,19 @@ import {
   DialogContent,
   DialogClose
 } from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
+import { useUserRoles } from "@/hooks/useUserRoles";
+import OptimizedImage from "@/components/OptimizedImage";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 // Define a type for the space details with all the fields
 type SpaceDetails = {
@@ -70,6 +85,10 @@ const EventSpaceDetails: React.FC = () => {
   const [spaceOwner, setSpaceOwner] = useState<{ id: string, name: string } | null>(null);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [processingChat, setProcessingChat] = useState(false);
+  const { isAdmin } = useUserRoles();
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deleteReason, setDeleteReason] = useState("");
+  const [deletingSpace, setDeletingSpace] = useState(false);
   
   useEffect(() => {
     // Obter o ID do usuário atual
@@ -269,7 +288,7 @@ const EventSpaceDetails: React.FC = () => {
         }
       }
       
-      if (!spaceOwner.id) {
+      if (!spaceOwner?.id) {
         console.error("Space owner ID is missing");
         toast.error("ID do proprietário não disponível");
         return;
@@ -277,10 +296,12 @@ const EventSpaceDetails: React.FC = () => {
       
       setProcessingChat(true);
       
+      // Get current user
       const { data: userData, error: userError } = await supabase.auth.getUser();
       if (userError) {
         console.error("Auth error:", userError);
-        throw userError;
+        toast.error("Erro de autenticação: " + userError.message);
+        return;
       }
       
       if (!userData.user) {
@@ -290,10 +311,11 @@ const EventSpaceDetails: React.FC = () => {
         return;
       }
 
-      // Verificando se o usuário atual é o proprietário do espaço
+      // Check if the user is the space owner
       if (userData.user.id === spaceOwner.id) {
         console.error("User is space owner");
         toast.error("Não é possível iniciar uma conversa consigo mesmo");
+        setProcessingChat(false);
         return;
       }
       
@@ -304,58 +326,31 @@ const EventSpaceDetails: React.FC = () => {
         current_space_id: space.id
       });
       
-      // Check if chat already exists, including previously deleted chats
+      // Check if chat already exists
       const { data: existingChats, error: chatQueryError } = await supabase.functions
         .invoke('get_chat_by_users_and_space', { 
-          body: JSON.stringify({ 
+          body: { 
             current_user_id: userData.user.id,
             space_owner_id: spaceOwner.id,
-            current_space_id: space.id,
-            include_deleted: true // Buscar também chats excluídos
-          })
+            current_space_id: space.id 
+          }
         });
       
       console.log("Existing chats response:", existingChats);
       
       if (chatQueryError) {
         console.error("Error checking for existing chats:", chatQueryError);
-        throw chatQueryError;
+        toast.error("Erro ao verificar conversas existentes: " + chatQueryError.message);
+        setProcessingChat(false);
+        return;
       }
       
       let chatId;
       
       if (existingChats && Array.isArray(existingChats) && existingChats.length > 0) {
-        const existingChat = existingChats[0];
-        
-        if (existingChat.deleted) {
-          // Se o chat existente estiver marcado como excluído, reativamos o chat
-          const { data: updatedChat, error: updateError } = await supabase
-            .from("chats")
-            .update({
-              deleted: false,
-              last_message: "Chat reativado",
-              last_message_time: new Date().toISOString(),
-              last_message_sender_id: userData.user.id,
-              has_unread: true
-            })
-            .eq("id", existingChat.id)
-            .select("id")
-            .single();
-            
-          if (updateError) {
-            console.error("Error reactivating chat:", updateError);
-            throw updateError;
-          }
-          
-          chatId = existingChat.id;
-          console.log("Chat reactivated:", chatId);
-          toast.success("Conversa retomada");
-        } else {
-          // Se o chat existir e não estiver excluído, usamos esse chat
-          chatId = existingChat.id;
-          console.log("Using existing chat:", chatId);
-          toast.info("Abrindo conversa existente");
-        }
+        chatId = existingChats[0].id;
+        console.log("Using existing chat:", chatId);
+        toast.info("Abrindo conversa existente");
       } else {
         console.log("Creating new chat...");
         // Create a new chat
@@ -368,20 +363,23 @@ const EventSpaceDetails: React.FC = () => {
             space_name: space.name,
             space_image: space.images[0] || null,
             last_message: "",
-            last_message_time: new Date().toISOString(),
-            deleted: false
+            last_message_time: new Date().toISOString()
           })
           .select("id")
           .single();
         
         if (insertError) {
           console.error("Insert error:", insertError);
-          throw insertError;
+          toast.error("Erro ao criar conversa: " + insertError.message);
+          setProcessingChat(false);
+          return;
         }
         
         if (!newChat || !newChat.id) {
           console.error("No new chat created");
-          throw new Error("Failed to create chat");
+          toast.error("Falha ao criar conversa");
+          setProcessingChat(false);
+          return;
         }
         
         chatId = newChat.id;
@@ -389,14 +387,60 @@ const EventSpaceDetails: React.FC = () => {
         toast.success("Nova conversa iniciada");
       }
       
-      // Agora navegamos para a página de mensagens com o chatId no state para abrir diretamente
-      navigate('/messages', { state: { chatId } });
-      
+      // Navigate to messages page with the chat ID as a query parameter
+      navigate(`/messages?chat=${chatId}`);
     } catch (error: any) {
       console.error("Error starting chat:", error);
       toast.error("Não foi possível iniciar a conversa: " + (error.message || "Erro desconhecido"));
     } finally {
       setProcessingChat(false);
+    }
+  };
+  
+  const handleDeleteSpace = async () => {
+    if (!deleteReason.trim()) {
+      toast.error("Por favor, forneça um motivo para a exclusão");
+      return;
+    }
+
+    try {
+      setDeletingSpace(true);
+
+      if (!space || !space.id || !space.user_id) {
+        toast.error("Não foi possível identificar o espaço");
+        return;
+      }
+
+      // Criar uma notificação para o proprietário do espaço
+      const { error: notificationError } = await supabase
+        .from("space_deletion_notifications")
+        .insert({
+          user_id: space.user_id,
+          space_name: space.name,
+          deletion_reason: deleteReason
+        });
+
+      if (notificationError) {
+        console.error("Erro ao criar notificação:", notificationError);
+        toast.error("Erro ao notificar o proprietário");
+      }
+
+      // Excluir o espaço usando a função existente
+      const { error } = await supabase.functions.invoke("delete_space_with_photos", {
+        body: { space_id: space.id }
+      });
+
+      if (error) throw error;
+
+      toast.success("Espaço excluído com sucesso");
+      setDeleteDialogOpen(false);
+      navigate("/explore");
+      
+    } catch (error) {
+      console.error("Erro ao excluir espaço:", error);
+      toast.error("Erro ao excluir espaço");
+    } finally {
+      setDeletingSpace(false);
     }
   };
   
@@ -426,13 +470,13 @@ const EventSpaceDetails: React.FC = () => {
   return (
     <div className="container px-4 py-6 pb-20 mx-auto">
       <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center">
-          <Button variant="ghost" size="sm" onClick={() => navigate(-1)} className="mr-2">
+        <div className="flex items-center flex-1 min-w-0">
+          <Button variant="ghost" size="sm" onClick={() => navigate(-1)} className="mr-2 flex-shrink-0">
             <ChevronLeft size={20} />
           </Button>
-          <h1 className="text-xl font-bold truncate">{space.name}</h1>
+          <h1 className="text-xl font-bold truncate" title={space.name}>{space.name}</h1>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-shrink-0">
           <Button 
             variant="ghost" 
             size="sm" 
@@ -464,7 +508,7 @@ const EventSpaceDetails: React.FC = () => {
             {space.images.map((image, index) => (
               <CarouselItem key={index} className="md:basis-auto">
                 <div className="h-64 md:h-80 w-full rounded-lg overflow-hidden relative group">
-                  <img 
+                  <OptimizedImage 
                     src={image} 
                     alt={`${space.name} - Imagem ${index + 1}`} 
                     className="w-full h-full object-cover cursor-pointer"
@@ -478,7 +522,7 @@ const EventSpaceDetails: React.FC = () => {
                       className="bg-black/70 text-white p-1 rounded opacity-0 group-hover:opacity-100 transition-opacity"
                       onClick={() => handleImageClick(image)}
                     >
-                      <Maximize2 size={16} />
+                      <ZoomIn size={16} />
                     </button>
                   </div>
                 </div>
@@ -494,7 +538,7 @@ const EventSpaceDetails: React.FC = () => {
       <Dialog open={isImageDialogOpen} onOpenChange={setIsImageDialogOpen}>
         <DialogContent className="max-w-screen-lg w-[95vw] h-[90vh] p-0 bg-black/95 border-none">
           <div className="flex items-center justify-center w-full h-full relative">
-            <img 
+            <OptimizedImage 
               src={selectedImage || ''} 
               alt="Visualização ampliada" 
               className="max-w-full max-h-full object-contain"
@@ -581,6 +625,56 @@ const EventSpaceDetails: React.FC = () => {
           Mensagem
         </Button>
       </div>
+      
+      {/* Delete Space Button for Admins */}
+      {isAdmin && (
+        <div className="mt-4">
+          <Button 
+            variant="destructive" 
+            className="w-full" 
+            size="lg"
+            onClick={() => setDeleteDialogOpen(true)}
+          >
+            <Trash2 size={18} className="mr-2" />
+            Excluir Espaço
+          </Button>
+        </div>
+      )}
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir Espaço</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja excluir este espaço? Esta ação não pode ser desfeita.
+              O proprietário será notificado sobre esta exclusão.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          
+          <Textarea
+            placeholder="Motivo da exclusão (obrigatório)"
+            value={deleteReason}
+            onChange={(e) => setDeleteReason(e.target.value)}
+            className="resize-none mt-4"
+            rows={3}
+          />
+          
+          <AlertDialogFooter className="mt-4">
+            <AlertDialogCancel disabled={deletingSpace}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={(e) => {
+                e.preventDefault();
+                handleDeleteSpace();
+              }}
+              disabled={deletingSpace}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              {deletingSpace ? "Excluindo..." : "Excluir"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

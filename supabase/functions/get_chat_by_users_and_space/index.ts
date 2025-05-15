@@ -1,94 +1,125 @@
 
-// Follow this setup guide to integrate the Deno runtime and your Edge Functions: https://deno.land/manual/runtime/manual/deploy_deno
-// Supabase Edge Function
-
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.7.1";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-}
+};
 
 serve(async (req) => {
-  // Handle CORS preflight request
+  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders })
+    return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')
-    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
-    const supabaseClient = createClient(supabaseUrl, supabaseKey)
-
-    // Parse the request body
-    const body = await req.json()
-    const { current_user_id, space_owner_id, current_space_id, include_deleted } = body
+    // Get authorization header
+    const authHeader = req.headers.get('Authorization');
     
-    console.log("Request body:", body)
-
-    // Validating required parameters
-    if (!current_user_id || !space_owner_id || !current_space_id) {
+    if (!authHeader) {
       return new Response(
-        JSON.stringify({ error: 'Missing required parameters' }),
+        JSON.stringify({ 
+          error: 'Missing Authorization header' 
+        }),
         { 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 401 
+        }
+      );
+    }
+    
+    // Create supabase client with user's auth token
+    const supabase = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+      { 
+        global: { 
+          headers: { Authorization: authHeader } 
+        } 
+      }
+    );
+
+    // Parse request body
+    let body;
+    try {
+      body = await req.json();
+    } catch (e) {
+      console.error("Error parsing request body:", e);
+      return new Response(
+        JSON.stringify({ 
+          error: 'Invalid JSON in request body' 
+        }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
           status: 400 
         }
-      )
+      );
     }
 
-    console.log("Querying for existing chats with:", { 
-      current_user_id, 
-      space_owner_id, 
-      current_space_id,
-      include_deleted
-    })
-
-    // Query para verificar se existe um chat entre esses usuários para esse espaço
-    let query = supabaseClient
-      .from('chats')
-      .select('id, deleted')
-      .eq('space_id', current_space_id)
-      .or(`and(user_id.eq.${current_user_id},owner_id.eq.${space_owner_id}),and(user_id.eq.${space_owner_id},owner_id.eq.${current_user_id})`)
+    console.log("Request body:", body);
     
-    // Se include_deleted não for true, então filtramos apenas os não excluídos
-    if (!include_deleted) {
-      query = query.is('deleted', false)
-    }
+    const { current_user_id, space_owner_id, current_space_id } = body;
     
-    const { data: chats, error } = await query
-
-    if (error) {
-      console.error("Database query error:", error)
+    // Must have all parameters
+    if (!current_user_id || !space_owner_id || !current_space_id) {
+      console.error("Missing required parameters:", { current_user_id, space_owner_id, current_space_id });
       return new Response(
-        JSON.stringify({ error: 'Error querying database' }),
+        JSON.stringify({ 
+          error: 'Missing required parameters' 
+        }),
         { 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }, 
-          status: 500 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 400 
         }
-      )
+      );
     }
 
-    console.log("Query result:", chats)
+    // Check for existing chat with better error handling
+    try {
+      console.log("Querying for existing chats with:", { current_user_id, space_owner_id, current_space_id });
+      
+      const { data, error } = await supabase
+        .from('chats')
+        .select('id')
+        .or(
+          `and(user_id.eq.${current_user_id},owner_id.eq.${space_owner_id}),` +
+          `and(user_id.eq.${space_owner_id},owner_id.eq.${current_user_id})`
+        )
+        .eq('space_id', current_space_id)
+        .limit(1);
 
-    return new Response(
-      JSON.stringify(chats),
-      { 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 200 
+      if (error) {
+        console.error("Database query error:", error);
+        throw error;
       }
-    )
+
+      console.log("Query result:", data);
+
+      return new Response(
+        JSON.stringify(data || []),
+        { 
+          headers: { 
+            ...corsHeaders, 
+            'Content-Type': 'application/json' 
+          },
+          status: 200 
+        }
+      );
+    } catch (queryError) {
+      console.error("Query execution error:", queryError);
+      throw queryError;
+    }
 
   } catch (error) {
-    console.error("Error:", error)
+    console.error('Error:', error);
     
     return new Response(
-      JSON.stringify({ error: error.message || 'Unknown error occurred' }),
+      JSON.stringify({ error: error.message || "Unknown error occurred" }),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 500 
       }
-    )
+    );
   }
-})
+});

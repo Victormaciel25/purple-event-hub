@@ -7,7 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Textarea } from "@/components/ui/textarea";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
-import { useSearchParams, useLocation } from "react-router-dom";
+import { useSearchParams } from "react-router-dom";
 import OptimizedImage from "@/components/OptimizedImage";
 import {
   AlertDialog,
@@ -101,8 +101,6 @@ const formatTime = (isoString: string): string => {
 const Messages = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const chatIdFromUrl = searchParams.get('chat');
-  const location = useLocation();
-  const chatIdFromState = location.state?.chatId;
 
   const [chats, setChats] = useState<ChatProps[]>([]);
   const [loading, setLoading] = useState(true);
@@ -191,6 +189,15 @@ const Messages = () => {
               }));
               
               setChats(formattedChats);
+              
+              // If there's a chat ID in the URL, select it
+              if (chatIdFromUrl) {
+                setSelectedChat(chatIdFromUrl);
+                
+                // Remove the chat parameter from the URL
+                searchParams.delete('chat');
+                setSearchParams(searchParams);
+              }
             }
           } else if (chatsData) {
             // Handle data if it's an array
@@ -243,21 +250,15 @@ const Messages = () => {
               }));
               
               setChats(formattedChats);
-            }
-          }
-          
-          // Priorizar o chatId que vem do state (do EventSpaceDetails)
-          // Se não houver um no state, usar o da URL
-          const chatIdToSelect = chatIdFromState || chatIdFromUrl;
-          
-          if (chatIdToSelect) {
-            console.log("Selecting chat from navigation:", chatIdToSelect);
-            setSelectedChat(chatIdToSelect);
-            
-            // Remover parâmetro da URL caso exista
-            if (chatIdFromUrl) {
-              searchParams.delete('chat');
-              setSearchParams(searchParams);
+              
+              // If there's a chat ID in the URL, select it
+              if (chatIdFromUrl) {
+                setSelectedChat(chatIdFromUrl);
+                
+                // Remove the chat parameter from the URL
+                searchParams.delete('chat');
+                setSearchParams(searchParams);
+              }
             }
           }
         }
@@ -302,7 +303,7 @@ const Messages = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [chatIdFromUrl, searchParams, setSearchParams, chatIdFromState, location.state]);
+  }, [chatIdFromUrl, searchParams, setSearchParams]);
   
   // Load messages when a chat is selected
   useEffect(() => {
@@ -316,41 +317,12 @@ const Messages = () => {
           .eq("id", selectedChat)
           .single();
           
-        if (chatError) {
-          // Provavelmente o chat foi excluído
-          console.error("Error fetching selected chat:", chatError);
-          setSelectedChat(null);
-          setChatInfo(null);
-          return;
-        }
+        if (chatError) throw chatError;
         
         if (selectedChatInfo) {
-          if (selectedChatInfo.deleted) {
-            // O chat foi marcado como excluído
-            setSelectedChat(null);
-            setChatInfo(null);
-            return;
-          }
-          
           const chatProps = chats.find(c => c.id === selectedChat);
           if (chatProps) {
             setChatInfo(chatProps);
-          } else {
-            // Chat não está na lista, vamos criá-lo na interface também
-            const newChatInfo = {
-              id: selectedChatInfo.id,
-              name: selectedChatInfo.space_name || "Conversa",
-              lastMessage: selectedChatInfo.last_message || "Iniciar conversa...",
-              time: formatTime(selectedChatInfo.last_message_time),
-              space_id: selectedChatInfo.space_id,
-              avatar: selectedChatInfo.space_image || "",
-              unread: selectedChatInfo.has_unread && selectedChatInfo.last_message_sender_id !== userId
-            };
-            
-            setChatInfo(newChatInfo);
-            
-            // Também adicionamos à lista de chats para consistência
-            setChats(prev => [newChatInfo, ...prev]);
           }
           
           // Mark messages as read
@@ -392,10 +364,6 @@ const Messages = () => {
       } catch (error) {
         console.error("Error fetching messages:", error);
         toast.error("Erro ao carregar mensagens");
-        
-        // Resetar o selectedChat para evitar problemas
-        setSelectedChat(null);
-        setChatInfo(null);
       }
     };
     

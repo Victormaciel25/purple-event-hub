@@ -1,20 +1,9 @@
 
-# Config file for Supabase CLI
+# This file configures Supabase deployment settings.
 project_id = "kfqorqjwbkxzrqhuvnyh"
 
-[api]
-port = 54321
-schemas = ["public", "storage", "graphql_public", "auth"]
-extra_search_path = ["public", "extensions"]
-max_rows = 1000
-
-[studio]
-port = 54323
-
 [functions]
-[functions.get_user_chats]
+[functions.process-payment]
 verify_jwt = false
-[functions.get_chat_by_users_and_space]
-verify_jwt = false
-[functions.get_user_by_email]
+[functions.get-mercado-pago-public-key]
 verify_jwt = false
