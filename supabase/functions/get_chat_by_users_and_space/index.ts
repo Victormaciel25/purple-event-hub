@@ -29,8 +29,30 @@ serve(async (req) => {
       );
     }
     
-    // Initialize Supabase client without using auth
-    const supabase = createClient(supabaseUrl, supabaseAnonKey);
+    // Get and verify authorization header
+    const authHeader = req.headers.get('Authorization');
+    
+    if (!authHeader) {
+      console.error("Missing Authorization header");
+      return new Response(
+        JSON.stringify({ error: 'Missing Authorization header' }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 401 
+        }
+      );
+    }
+    
+    // Create supabase client with the auth token
+    const supabase = createClient(
+      supabaseUrl,
+      supabaseAnonKey,
+      { 
+        global: { 
+          headers: { Authorization: authHeader } 
+        } 
+      }
+    );
 
     // Parse request body
     let body;
@@ -68,6 +90,7 @@ serve(async (req) => {
       console.log("Querying for existing chats with:", { current_user_id, space_owner_id, current_space_id });
       
       // Query without requiring user authentication validation
+      // This is safer for edge functions where auth can sometimes be inconsistent
       const { data, error } = await supabase
         .from('chats')
         .select('id')
