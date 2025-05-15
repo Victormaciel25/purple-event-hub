@@ -23,7 +23,6 @@ import UserSpaces from "./pages/UserSpaces";
 import EditSpace from "./pages/EditSpace";
 import PromoteSpace from "./pages/PromoteSpace";
 import Index from "./pages/Index";
-import SpaceDeletionAlert from "./components/SpaceDeletionAlert";
 
 // Create a QueryClient instance outside of the component
 const queryClient = new QueryClient();
@@ -67,12 +66,7 @@ const App: React.FC = () => {
   };
 
   const AuthenticatedLayout = () => {
-    return (
-      <>
-        {session && <SpaceDeletionAlert />}
-        <Layout />
-      </>
-    );
+    return <Layout />;
   };
 
   if (loading) {

@@ -1,8 +1,7 @@
 
 import React from "react";
 
-// Este componente foi substituído pelo SpaceDeletionAlert
-// Mantido para evitar quebras de referências, mas não faz mais nada
+// Component intentionally left empty as it's no longer needed
 const DeletionNotifications = () => {
   return null;
 };
