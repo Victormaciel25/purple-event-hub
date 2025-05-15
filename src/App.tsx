@@ -23,7 +23,6 @@ import UserSpaces from "./pages/UserSpaces";
 import EditSpace from "./pages/EditSpace";
 import PromoteSpace from "./pages/PromoteSpace";
 import Index from "./pages/Index";
-import { useSpaceDeletions } from "./hooks/useSpaceDeletions";
 
 // Create a QueryClient instance outside of the component
 const queryClient = new QueryClient();
@@ -35,7 +34,6 @@ import './index.css';
 const App: React.FC = () => {
   const [session, setSession] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const { fetchDeletions, showDeletionAlerts } = useSpaceDeletions();
 
   useEffect(() => {
     // Set up auth state listener first
@@ -43,16 +41,6 @@ const App: React.FC = () => {
       (_event, newSession) => {
         console.log("Auth state changed:", _event);
         setSession(newSession);
-        
-        // Check for deletion notifications on login
-        if (_event === "SIGNED_IN" && newSession) {
-          // Use setTimeout to avoid React state update conflicts
-          setTimeout(() => {
-            fetchDeletions().then(() => {
-              showDeletionAlerts();
-            });
-          }, 0);
-        }
       }
     );
 
@@ -61,12 +49,6 @@ const App: React.FC = () => {
       try {
         const { data } = await supabase.auth.getSession();
         setSession(data.session);
-        
-        // Check for deletion notifications if already logged in
-        if (data.session) {
-          await fetchDeletions();
-          showDeletionAlerts();
-        }
       } finally {
         setLoading(false);
       }
@@ -77,7 +59,7 @@ const App: React.FC = () => {
     return () => {
       authListener.subscription.unsubscribe();
     };
-  }, [fetchDeletions, showDeletionAlerts]);
+  }, []);
 
   const RequireAuth = ({ children }: { children: JSX.Element }) => {
     return session ? children : <Navigate to="/login" replace />;

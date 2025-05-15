@@ -1,6 +1,7 @@
 
-// This component has been replaced by the useSpaceDeletions hook and toast notifications
-// Intentionally left empty to avoid breaking any existing imports
+import React from "react";
+
+// Component intentionally left empty as it's no longer needed
 const DeletionNotifications = () => {
   return null;
 };
