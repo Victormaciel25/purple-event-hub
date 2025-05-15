@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import EventSpaceCard from "@/components/EventSpaceCard";
 import { Input } from "@/components/ui/input";
@@ -136,7 +135,6 @@ const Explore = () => {
       </div>
 
       <div className="space-y-2 mb-6">
-        <h2 className="text-lg font-medium">Categorias</h2>
         <div className="relative">
           <button 
             onClick={handleScrollLeft} 
