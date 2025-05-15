@@ -17,38 +17,19 @@ const Login = () => {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
-  const [initialAuthCheckDone, setInitialAuthCheckDone] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
 
   useEffect(() => {
     // Check if user is already logged in
     const checkUser = async () => {
-      try {
-        const { data } = await supabase.auth.getSession();
-        if (data.session) {
-          navigate("/explore");
-        }
-      } finally {
-        setInitialAuthCheckDone(true);
+      const { data } = await supabase.auth.getSession();
+      if (data.session) {
+        navigate("/explore");
       }
     };
     
     checkUser();
-
-    // Set up auth state listener
-    const { data: authListener } = supabase.auth.onAuthStateChange(
-      (event, session) => {
-        // Only handle navigation when a user signs in
-        if (event === 'SIGNED_IN' && session) {
-          navigate("/explore");
-        }
-      }
-    );
-
-    return () => {
-      authListener.subscription.unsubscribe();
-    };
   }, [navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -70,7 +51,7 @@ const Login = () => {
           description: "Bem-vindo de volta!",
         });
         
-        // Navigation will be handled by onAuthStateChange
+        navigate("/explore");
       } else {
         // Handle signup
         if (password !== confirmPassword) {
@@ -166,15 +147,6 @@ const Login = () => {
       setLoading(false);
     }
   };
-
-  // Return loading state until the initial auth check is complete
-  if (!initialAuthCheckDone) {
-    return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-background p-4">
-        <div>Carregando...</div>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-background p-4">

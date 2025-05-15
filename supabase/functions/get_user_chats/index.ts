@@ -14,74 +14,59 @@ serve(async (req) => {
   }
 
   try {
-    // Get supabase client
-    const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
-    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY') ?? '';
+    // Create supabase client with user's auth token
+    const authHeader = req.headers.get('Authorization');
     
-    if (!supabaseUrl || !supabaseAnonKey) {
+    if (!authHeader) {
       return new Response(
-        JSON.stringify({ error: 'Missing environment variables' }),
+        JSON.stringify({ 
+          error: 'Missing Authorization header' 
+        }),
         { 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 500 
+          status: 401 
         }
       );
     }
 
-    // Extract user ID from request - We'll parse it from the request body now instead of using auth
-    let userId;
-    try {
-      const body = await req.json();
-      userId = body.userId;
-      
-      if (!userId) {
-        console.error("No userId provided in request body");
-        return new Response(
-          JSON.stringify({ error: 'Missing userId in request body' }),
-          { 
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-            status: 400 
-          }
-        );
+    const supabase = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+      { 
+        global: { 
+          headers: { Authorization: authHeader } 
+        } 
       }
-      
-      console.log("Processing request for userId:", userId);
-    } catch (e) {
-      console.error("Error parsing request body:", e);
+    );
+
+    // Get the current user
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    
+    if (userError || !user) {
       return new Response(
-        JSON.stringify({ error: 'Invalid JSON in request body' }),
+        JSON.stringify({ 
+          error: 'Unauthorized' 
+        }),
         { 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 400 
+          status: 401 
         }
       );
     }
 
-    // Initialize Supabase client without auth
-    const supabase = createClient(supabaseUrl, supabaseAnonKey);
-    
-    // Fetch chats for this user using the provided userId
-    // No need for auth validation - we'll trust the provided userId
+    // Fetch chats for this user
+    // Filter to exclude deleted chats (where deleted = true)
     const { data, error } = await supabase
       .from('chats')
       .select('*')
-      .or(`user_id.eq.${userId},owner_id.eq.${userId}`)
+      .or(`user_id.eq.${user.id},owner_id.eq.${user.id}`)
       .eq('deleted', false) // Only get non-deleted chats
       .order('last_message_time', { ascending: false });
 
-    if (error) {
-      console.error("Database error:", error);
-      return new Response(
-        JSON.stringify({ error: 'Database error: ' + error.message }),
-        { 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 500 
-        }
-      );
-    }
+    if (error) throw error;
 
     return new Response(
-      JSON.stringify(data || []),
+      JSON.stringify(data),
       { 
         headers: { 
           ...corsHeaders, 
@@ -95,7 +80,7 @@ serve(async (req) => {
     console.error('Error:', error);
     
     return new Response(
-      JSON.stringify({ error: error.message || "Unknown error occurred" }),
+      JSON.stringify({ error: error.message }),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 500 

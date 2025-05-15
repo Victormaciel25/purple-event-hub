@@ -121,33 +121,6 @@ export type Database = {
         }
         Relationships: []
       }
-      space_deletion_notifications: {
-        Row: {
-          created_at: string
-          deletion_reason: string
-          id: string
-          space_name: string
-          user_id: string
-          viewed: boolean
-        }
-        Insert: {
-          created_at?: string
-          deletion_reason: string
-          id?: string
-          space_name: string
-          user_id: string
-          viewed?: boolean
-        }
-        Update: {
-          created_at?: string
-          deletion_reason?: string
-          id?: string
-          space_name?: string
-          user_id?: string
-          viewed?: boolean
-        }
-        Relationships: []
-      }
       space_photos: {
         Row: {
           created_at: string | null
@@ -170,56 +143,6 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "space_photos_space_id_fkey"
-            columns: ["space_id"]
-            isOneToOne: false
-            referencedRelation: "spaces"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      space_promotions: {
-        Row: {
-          active: boolean
-          amount: number
-          created_at: string
-          expires_at: string | null
-          id: string
-          payment_id: string | null
-          payment_status: string
-          plan_id: string
-          preference_id: string | null
-          space_id: string
-          user_id: string
-        }
-        Insert: {
-          active?: boolean
-          amount: number
-          created_at?: string
-          expires_at?: string | null
-          id?: string
-          payment_id?: string | null
-          payment_status: string
-          plan_id: string
-          preference_id?: string | null
-          space_id: string
-          user_id: string
-        }
-        Update: {
-          active?: boolean
-          amount?: number
-          created_at?: string
-          expires_at?: string | null
-          id?: string
-          payment_id?: string | null
-          payment_status?: string
-          plan_id?: string
-          preference_id?: string | null
-          space_id?: string
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "space_promotions_space_id_fkey"
             columns: ["space_id"]
             isOneToOne: false
             referencedRelation: "spaces"
@@ -354,10 +277,6 @@ export type Database = {
       has_role: {
         Args: { requested_role: string }
         Returns: boolean
-      }
-      mark_notification_viewed: {
-        Args: { notification_id: string }
-        Returns: undefined
       }
     }
     Enums: {

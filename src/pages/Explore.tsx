@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import EventSpaceCard from "@/components/EventSpaceCard";
 import { Input } from "@/components/ui/input";
@@ -5,7 +6,6 @@ import { Search, Circle, Heart, Briefcase, Cake, GraduationCap, ChevronLeft, Che
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { APP_CONSTANTS, STORAGE, SPACE_CATEGORIES } from "@/config/app-config";
 
 type EventSpace = {
   id: string;
@@ -23,7 +23,7 @@ const Explore = () => {
   const [spaces, setSpaces] = useState<EventSpace[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
-  const [activeCategory, setActiveCategory] = useState(SPACE_CATEGORIES.ALL);
+  const [activeCategory, setActiveCategory] = useState("all");
   const scrollContainerRef = React.useRef<HTMLDivElement>(null);
   
   useEffect(() => {
@@ -54,12 +54,12 @@ const Explore = () => {
       
       // Process data to match our component's format
       const processedSpaces = await Promise.all((data || []).map(async (space) => {
-        let photoUrl = APP_CONSTANTS.DEFAULT_SPACE_IMAGE;
+        let photoUrl = "https://source.unsplash.com/random/600x400?event";
         
         // If there are photos, get the URL for the first one
         if (space.space_photos && space.space_photos.length > 0) {
           const { data: urlData } = await supabase.storage
-            .from(STORAGE.SPACES_BUCKET)
+            .from('spaces')
             .createSignedUrl(space.space_photos[0].storage_path, 3600);
             
           if (urlData) {
@@ -92,7 +92,7 @@ const Explore = () => {
   // Filter spaces based on search term across multiple fields and by category
   const filteredSpaces = spaces.filter(space => {
     // First filter by category if not "all"
-    if (activeCategory !== SPACE_CATEGORIES.ALL && 
+    if (activeCategory !== "all" && 
         (!space.categories || !space.categories.includes(activeCategory))) {
       return false;
     }
@@ -135,6 +135,7 @@ const Explore = () => {
       </div>
 
       <div className="space-y-2 mb-6">
+        <h2 className="text-lg font-medium">Categorias</h2>
         <div className="relative">
           <button 
             onClick={handleScrollLeft} 
@@ -150,45 +151,45 @@ const Explore = () => {
               style={{ scrollbarWidth: 'none' }}
             >
               <button 
-                className={`${activeCategory === SPACE_CATEGORIES.ALL ? 'bg-iparty text-white' : 'bg-secondary text-foreground'} 
+                className={`${activeCategory === 'all' ? 'bg-iparty text-white' : 'bg-secondary text-foreground'} 
                   rounded-lg px-3 py-1 text-xs flex flex-col items-center min-w-[70px] transition-all`}
-                onClick={() => setActiveCategory(SPACE_CATEGORIES.ALL)}
+                onClick={() => setActiveCategory('all')}
               >
                 <Circle className="mb-1" size={20} />
                 <span>Todos</span>
               </button>
               
               <button 
-                className={`${activeCategory === SPACE_CATEGORIES.WEDDINGS ? 'bg-iparty text-white' : 'bg-secondary text-foreground'} 
+                className={`${activeCategory === 'weddings' ? 'bg-iparty text-white' : 'bg-secondary text-foreground'} 
                   rounded-lg px-3 py-1 text-xs flex flex-col items-center min-w-[70px] transition-all`}
-                onClick={() => setActiveCategory(SPACE_CATEGORIES.WEDDINGS)}
+                onClick={() => setActiveCategory('weddings')}
               >
                 <Heart className="mb-1" size={20} />
                 <span>Casamentos</span>
               </button>
               
               <button 
-                className={`${activeCategory === SPACE_CATEGORIES.CORPORATE ? 'bg-iparty text-white' : 'bg-secondary text-foreground'} 
+                className={`${activeCategory === 'corporate' ? 'bg-iparty text-white' : 'bg-secondary text-foreground'} 
                   rounded-lg px-3 py-1 text-xs flex flex-col items-center min-w-[70px] transition-all`}
-                onClick={() => setActiveCategory(SPACE_CATEGORIES.CORPORATE)}
+                onClick={() => setActiveCategory('corporate')}
               >
                 <Briefcase className="mb-1" size={20} />
                 <span>Corporativo</span>
               </button>
               
               <button 
-                className={`${activeCategory === SPACE_CATEGORIES.BIRTHDAYS ? 'bg-iparty text-white' : 'bg-secondary text-foreground'} 
+                className={`${activeCategory === 'birthdays' ? 'bg-iparty text-white' : 'bg-secondary text-foreground'} 
                   rounded-lg px-3 py-1 text-xs flex flex-col items-center min-w-[70px] transition-all`}
-                onClick={() => setActiveCategory(SPACE_CATEGORIES.BIRTHDAYS)}
+                onClick={() => setActiveCategory('birthdays')}
               >
                 <Cake className="mb-1" size={20} />
                 <span>Aniversários</span>
               </button>
               
               <button 
-                className={`${activeCategory === SPACE_CATEGORIES.GRADUATIONS ? 'bg-iparty text-white' : 'bg-secondary text-foreground'} 
+                className={`${activeCategory === 'graduations' ? 'bg-iparty text-white' : 'bg-secondary text-foreground'} 
                   rounded-lg px-3 py-1 text-xs flex flex-col items-center min-w-[70px] transition-all`}
-                onClick={() => setActiveCategory(SPACE_CATEGORIES.GRADUATIONS)}
+                onClick={() => setActiveCategory('graduations')}
               >
                 <GraduationCap className="mb-1" size={20} />
                 <span>Formaturas</span>
@@ -214,7 +215,7 @@ const Explore = () => {
           <p className="text-gray-500">Nenhum espaço encontrado.</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pb-20">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {filteredSpaces.map((space) => (
             <EventSpaceCard 
               key={space.id} 
@@ -222,7 +223,7 @@ const Explore = () => {
               name={space.name}
               address={`${space.address}, ${space.number} - ${space.state}`}
               price={parseFloat(space.price)}
-              image={space.photo_url || APP_CONSTANTS.DEFAULT_SPACE_IMAGE}
+              image={space.photo_url || "https://source.unsplash.com/random/600x400?event"}
             />
           ))}
         </div>

@@ -14,23 +14,16 @@ serve(async (req) => {
   }
 
   try {
-    // Get supabase client
-    const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
-    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY') ?? '';
-    
-    if (!supabaseUrl || !supabaseAnonKey) {
-      console.error("Missing Supabase environment variables");
-      return new Response(
-        JSON.stringify({ error: 'Server configuration error' }),
-        { 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 500 
-        }
-      );
-    }
-    
-    // Initialize Supabase client without using auth
-    const supabase = createClient(supabaseUrl, supabaseAnonKey);
+    // Create supabase client
+    const supabase = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+      { 
+        global: { 
+          headers: { Authorization: req.headers.get('Authorization')! } 
+        } 
+      }
+    );
 
     // Parse request body
     let body;
@@ -39,7 +32,9 @@ serve(async (req) => {
     } catch (e) {
       console.error("Error parsing request body:", e);
       return new Response(
-        JSON.stringify({ error: 'Invalid JSON in request body' }),
+        JSON.stringify({ 
+          error: 'Invalid JSON in request body' 
+        }),
         { 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
           status: 400 
@@ -55,7 +50,9 @@ serve(async (req) => {
     if (!current_user_id || !space_owner_id || !current_space_id) {
       console.error("Missing required parameters:", { current_user_id, space_owner_id, current_space_id });
       return new Response(
-        JSON.stringify({ error: 'Missing required parameters' }),
+        JSON.stringify({ 
+          error: 'Missing required parameters' 
+        }),
         { 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
           status: 400 
@@ -63,30 +60,23 @@ serve(async (req) => {
       );
     }
 
-    // Query for existing chats
+    // Check for existing chat with better error handling
     try {
       console.log("Querying for existing chats with:", { current_user_id, space_owner_id, current_space_id });
       
-      // Query without requiring user authentication validation
       const { data, error } = await supabase
         .from('chats')
         .select('id')
         .or(
-          `and(user_id.eq.${current_user_id},owner_id.eq.${space_owner_id},space_id.eq.${current_space_id}),` +
-          `and(user_id.eq.${space_owner_id},owner_id.eq.${current_user_id},space_id.eq.${current_space_id})`
+          `and(user_id.eq.${current_user_id},owner_id.eq.${space_owner_id}),` +
+          `and(user_id.eq.${space_owner_id},owner_id.eq.${current_user_id})`
         )
-        .eq('deleted', false)
+        .eq('space_id', current_space_id)
         .limit(1);
 
       if (error) {
         console.error("Database query error:", error);
-        return new Response(
-          JSON.stringify({ error: 'Database error: ' + error.message }),
-          { 
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-            status: 500 
-          }
-        );
+        throw error;
       }
 
       console.log("Query result:", data);
@@ -103,13 +93,7 @@ serve(async (req) => {
       );
     } catch (queryError) {
       console.error("Query execution error:", queryError);
-      return new Response(
-        JSON.stringify({ error: 'Query error: ' + queryError.message }),
-        { 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 500 
-        }
-      );
+      throw queryError;
     }
 
   } catch (error) {

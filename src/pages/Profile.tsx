@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Heart, Calendar, HelpCircle, Plus, Home, Shield, CheckSquare, Users } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -14,14 +14,12 @@ import SignOutButton from "@/components/profile/SignOutButton";
 const Profile = () => {
   const [showFavorites, setShowFavorites] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [signingOut, setSigningOut] = useState(false);
   const [profile, setProfile] = useState<any>(null);
   const [session, setSession] = useState<any>(null);
   const [showEditProfile, setShowEditProfile] = useState(false);
   const navigate = useNavigate();
   const { toast: toastUI } = useToast();
   const { isAdmin, isSuperAdmin, loading: roleLoading, userId } = useUserRoles();
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     // Check authentication and fetch profile data
@@ -60,7 +58,7 @@ const Profile = () => {
     const { data: authListener } = supabase.auth.onAuthStateChange(
       async (event, newSession) => {
         if (event === "SIGNED_OUT") {
-          navigate("/", { replace: true });
+          navigate("/");
         } else if (newSession && event === "SIGNED_IN") {
           setSession(newSession);
         }
@@ -73,51 +71,25 @@ const Profile = () => {
   }, [navigate]);
 
   const handleSignOut = async () => {
-    if (signingOut) return; // Prevent multiple sign-out attempts
-    
-    setSigningOut(true);
+    setLoading(true);
     try {
-      // First check if we still have a valid session
-      const { data: sessionData } = await supabase.auth.getSession();
-      
-      if (!sessionData.session) {
-        // No session found, just redirect to login
-        toastUI({
-          title: "Sessão expirada",
-          description: "Sua sessão expirou. Redirecionando para login.",
-        });
-        navigate("/", { replace: true });
-        return;
-      }
-      
-      // We have a session, attempt to sign out
       const { error } = await supabase.auth.signOut();
-      
-      if (error) {
-        console.error("Sign out error:", error);
-        throw error;
-      }
+      if (error) throw error;
       
       toastUI({
         title: "Desconectado",
         description: "Você saiu da sua conta com sucesso",
       });
       
-      navigate("/", { replace: true });
+      navigate("/");
     } catch (error: any) {
-      console.error("Sign out error:", error);
       toastUI({
         title: "Erro ao sair",
-        description: error.message || "Ocorreu um erro ao sair da conta",
+        description: error.message,
         variant: "destructive",
       });
-      
-      // If we can't sign out properly, force navigate to login
-      if (error.message === "Auth session missing!" || error.message.includes("session")) {
-        navigate("/", { replace: true });
-      }
     } finally {
-      setSigningOut(false);
+      setLoading(false);
     }
   };
 
@@ -158,37 +130,6 @@ const Profile = () => {
     }
   };
 
-  const handleDeletePhoto = async () => {
-    if (!session?.user?.id) return;
-    
-    setLoading(true);
-    
-    try {
-      // Update user metadata with null avatar_url
-      const { error: updateError } = await supabase.auth.updateUser({
-        data: { avatar_url: null }
-      });
-      
-      if (updateError) throw updateError;
-      
-      // Update profile in database
-      const { error: profileError } = await supabase
-        .from("profiles")
-        .update({ avatar_url: null })
-        .eq("id", session.user.id);
-      
-      if (profileError) throw profileError;
-      
-      toast.success("Foto de perfil removida com sucesso");
-      refreshProfile();
-    } catch (error: any) {
-      console.error("Error deleting profile photo:", error);
-      toast.error(error.message || "Erro ao remover foto de perfil");
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const firstName = profile?.first_name || session?.user?.user_metadata?.first_name || '';
   const lastName = profile?.last_name || session?.user?.user_metadata?.last_name || '';
   const avatarUrl = profile?.avatar_url || session?.user?.user_metadata?.avatar_url || null;
@@ -223,8 +164,7 @@ const Profile = () => {
     },
     { 
       icon: Shield, 
-      label: "Promover Espaço",
-      onClick: () => navigate("/promote-space")
+      label: "Promover Espaço" 
     }
   ];
 
@@ -271,7 +211,6 @@ const Profile = () => {
         email={session?.user?.email}
         avatarUrl={avatarUrl}
         onEditProfile={() => setShowEditProfile(true)}
-        onUpdatePhoto={() => {}}
       />
 
       {showFavorites ? (
@@ -299,10 +238,7 @@ const Profile = () => {
           
           {/* Sign Out Button - Make sure it's visible */}
           <div className="mt-6 mb-20">
-            <SignOutButton 
-              onSignOut={handleSignOut} 
-              loading={signingOut}
-            />
+            <SignOutButton onSignOut={handleSignOut} loading={loading} />
           </div>
         </>
       )}
@@ -312,7 +248,6 @@ const Profile = () => {
         onOpenChange={setShowEditProfile}
         userId={userId}
         onProfileUpdated={refreshProfile}
-        onDeletePhoto={handleDeletePhoto}
       />
     </div>
   );

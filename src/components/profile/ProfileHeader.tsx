@@ -10,7 +10,6 @@ interface ProfileHeaderProps {
   email: string | undefined;
   avatarUrl: string | null;
   onEditProfile: () => void;
-  onUpdatePhoto: () => void;
 }
 
 const ProfileHeader: React.FC<ProfileHeaderProps> = ({
@@ -24,20 +23,17 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({
 
   return (
     <div className="flex flex-col items-center mb-8">
-      <div className="relative">
-        <Avatar className="h-24 w-24 mb-4">
-          {avatarUrl ? (
-            <AvatarImage src={avatarUrl} alt="Foto de perfil" />
-          ) : (
-            <AvatarFallback className="bg-iparty">
-              <User size={50} className="text-white" />
-            </AvatarFallback>
-          )}
-        </Avatar>
-      </div>
-      
+      <Avatar className="h-24 w-24 mb-4">
+        {avatarUrl ? (
+          <AvatarImage src={avatarUrl} alt="Foto de perfil" />
+        ) : (
+          <AvatarFallback className="bg-iparty">
+            <User size={50} className="text-white" />
+          </AvatarFallback>
+        )}
+      </Avatar>
       {fullName && (
-        <h2 className="text-xl font-bold mb-1 mt-2">
+        <h2 className="text-xl font-bold mb-1">
           {fullName}
         </h2>
       )}

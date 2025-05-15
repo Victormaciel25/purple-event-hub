@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Search, MessageSquare, ArrowLeft, Trash2 } from "lucide-react";
@@ -6,7 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Textarea } from "@/components/ui/textarea";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
-import { useSearchParams, useLocation } from "react-router-dom";
+import { useSearchParams } from "react-router-dom";
 import OptimizedImage from "@/components/OptimizedImage";
 import {
   AlertDialog,
@@ -98,12 +99,8 @@ const formatTime = (isoString: string): string => {
 };
 
 const Messages = () => {
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const chatIdFromUrl = searchParams.get('chat');
-  const location = useLocation();
-  
-  // Get selectedChatId from location state if available
-  const stateSelectedChatId = location.state?.selectedChatId;
 
   const [chats, setChats] = useState<ChatProps[]>([]);
   const [loading, setLoading] = useState(true);
@@ -127,108 +124,149 @@ const Messages = () => {
         if (userData?.user?.id) {
           setUserId(userData.user.id);
           
-          try {
-            // Use our updated edge function with userId in the request body
-            const { data: chatsData, error } = await supabase.functions
-              .invoke('get_user_chats', {
-                body: { userId: userData.user.id }
-              });
+          // Fetch chats using direct query instead of RPC
+          const { data: chatsData, error } = await supabase.functions
+            .invoke('get_user_chats');
+            
+          if (error) {
+            console.error("Error fetching chats:", error);
+            // Fallback query if RPC is not available
+            const { data: fallbackChatsData, error: fallbackError } = await supabase
+              .from("chats")
+              .select("*")
+              .or(`user_id.eq.${userData.user.id},owner_id.eq.${userData.user.id}`)
+              .is('deleted', false)
+              .order('last_message_time', { ascending: false });
               
-            if (error) {
-              console.error("Error fetching chats:", error);
-              toast.error("Erro ao carregar conversas: " + (error.message || "Tente novamente mais tarde"));
+            if (fallbackError) throw fallbackError;
+            
+            if (fallbackChatsData) {
+              // Collect all space IDs to fetch their images
+              const spaceIds = fallbackChatsData
+                .filter(chat => chat.space_id)
+                .map(chat => chat.space_id);
               
-              // Fallback query if Edge Function fails
-              const { data: fallbackChatsData, error: fallbackError } = await supabase
-                .from("chats")
-                .select("*")
-                .or(`user_id.eq.${userData.user.id},owner_id.eq.${userData.user.id}`)
-                .is('deleted', false)
-                .order('last_message_time', { ascending: false });
+              // Initialize empty image map
+              let localImageMap: Record<string, string> = {};
+              
+              // Fetch space photos for all spaces at once
+              if (spaceIds.length > 0) {
+                const { data: spacesData } = await supabase
+                  .from("spaces")
+                  .select("id, space_photos(storage_path)")
+                  .in("id", spaceIds);
                 
-              if (fallbackError) {
-                console.error("Fallback query error:", fallbackError);
-                throw fallbackError;
+                // Get signed URLs for all spaces with photos
+                if (spacesData) {
+                  await Promise.all(spacesData.map(async (space) => {
+                    if (space.space_photos && space.space_photos.length > 0) {
+                      try {
+                        const { data: urlData } = await supabase.storage
+                          .from('spaces')
+                          .createSignedUrl(space.space_photos[0].storage_path, 3600);
+                          
+                        if (urlData?.signedUrl) {
+                          localImageMap[space.id] = urlData.signedUrl;
+                        }
+                      } catch (err) {
+                        console.error("Error getting signed URL for space:", space.id, err);
+                      }
+                    }
+                  }));
+                }
+                
+                setSpaceImages(localImageMap);
               }
               
-              await processChatsData(fallbackChatsData, userData.user.id);
-            } else if (chatsData) {
-              await processChatsData(chatsData, userData.user.id);
+              const formattedChats = fallbackChatsData.map(chat => ({
+                id: chat.id,
+                name: chat.space_name || "Conversa",
+                lastMessage: chat.last_message || "Iniciar conversa...",
+                time: formatTime(chat.last_message_time),
+                space_id: chat.space_id,
+                avatar: chat.space_id && localImageMap[chat.space_id] ? localImageMap[chat.space_id] : chat.space_image || "",
+                unread: chat.has_unread && chat.last_message_sender_id !== userData.user.id
+              }));
+              
+              setChats(formattedChats);
+              
+              // If there's a chat ID in the URL, select it
+              if (chatIdFromUrl) {
+                setSelectedChat(chatIdFromUrl);
+                
+                // Remove the chat parameter from the URL
+                searchParams.delete('chat');
+                setSearchParams(searchParams);
+              }
             }
-          } catch (error) {
-            console.error("Error processing chats:", error);
-            toast.error("Erro ao processar conversas: " + (error.message || "Tente novamente mais tarde"));
+          } else if (chatsData) {
+            // Handle data if it's an array
+            if (Array.isArray(chatsData)) {
+              // Collect all space IDs to fetch their images
+              const spaceIds = chatsData
+                .filter(chat => chat.space_id)
+                .map(chat => chat.space_id);
+              
+              // Initialize empty image map
+              let localImageMap: Record<string, string> = {};
+              
+              // Fetch space photos for all spaces at once
+              if (spaceIds.length > 0) {
+                const { data: spacesData } = await supabase
+                  .from("spaces")
+                  .select("id, space_photos(storage_path)")
+                  .in("id", spaceIds);
+                
+                // Get signed URLs for all spaces with photos
+                if (spacesData) {
+                  await Promise.all(spacesData.map(async (space) => {
+                    if (space.space_photos && space.space_photos.length > 0) {
+                      try {
+                        const { data: urlData } = await supabase.storage
+                          .from('spaces')
+                          .createSignedUrl(space.space_photos[0].storage_path, 3600);
+                          
+                        if (urlData?.signedUrl) {
+                          localImageMap[space.id] = urlData.signedUrl;
+                        }
+                      } catch (err) {
+                        console.error("Error getting signed URL for space:", space.id, err);
+                      }
+                    }
+                  }));
+                }
+                
+                setSpaceImages(localImageMap);
+              }
+              
+              const formattedChats = chatsData.map(chat => ({
+                id: chat.id,
+                name: chat.space_name || "Conversa",
+                lastMessage: chat.last_message || "Iniciar conversa...",
+                time: formatTime(chat.last_message_time),
+                space_id: chat.space_id,
+                avatar: chat.space_id && localImageMap[chat.space_id] ? localImageMap[chat.space_id] : chat.space_image || "",
+                unread: chat.has_unread && chat.last_message_sender_id !== userData.user.id
+              }));
+              
+              setChats(formattedChats);
+              
+              // If there's a chat ID in the URL, select it
+              if (chatIdFromUrl) {
+                setSelectedChat(chatIdFromUrl);
+                
+                // Remove the chat parameter from the URL
+                searchParams.delete('chat');
+                setSearchParams(searchParams);
+              }
+            }
           }
         }
       } catch (error) {
-        console.error("Error in fetchUserAndChats:", error);
-        toast.error("Erro ao carregar conversas: " + (error.message || "Tente novamente mais tarde"));
+        console.error("Error fetching chats:", error);
+        toast.error("Erro ao carregar conversas");
       } finally {
         setLoading(false);
-      }
-    };
-    
-    // New helper function to process chats data
-    const processChatsData = async (chatsData, userId) => {
-      if (Array.isArray(chatsData)) {
-        // Collect all space IDs to fetch their images
-        const spaceIds = chatsData
-          .filter(chat => chat.space_id)
-          .map(chat => chat.space_id);
-        
-        // Initialize empty image map
-        let localImageMap = {};
-        
-        // Fetch space photos for all spaces at once
-        if (spaceIds.length > 0) {
-          const { data: spacesData } = await supabase
-            .from("spaces")
-            .select("id, space_photos(storage_path)")
-            .in("id", spaceIds);
-          
-          // Get signed URLs for all spaces with photos
-          if (spacesData) {
-            await Promise.all(spacesData.map(async (space) => {
-              if (space.space_photos && space.space_photos.length > 0) {
-                try {
-                  const { data: urlData } = await supabase.storage
-                    .from('spaces')
-                    .createSignedUrl(space.space_photos[0].storage_path, 3600);
-                    
-                  if (urlData?.signedUrl) {
-                    localImageMap[space.id] = urlData.signedUrl;
-                  }
-                } catch (err) {
-                  console.error("Error getting signed URL for space:", space.id, err);
-                }
-              }
-            }));
-          }
-          
-          setSpaceImages(localImageMap);
-        }
-        
-        const formattedChats = chatsData.map(chat => ({
-          id: chat.id,
-          name: chat.space_name || "Conversa",
-          lastMessage: chat.last_message || "Iniciar conversa...",
-          time: formatTime(chat.last_message_time),
-          space_id: chat.space_id,
-          avatar: chat.space_id && localImageMap[chat.space_id] ? localImageMap[chat.space_id] : chat.space_image || "",
-          unread: chat.has_unread && chat.last_message_sender_id !== userId
-        }));
-        
-        setChats(formattedChats);
-        
-        // Priority for selecting chat: 
-        // 1. stateSelectedChatId (from navigation state)
-        // 2. chatIdFromUrl (from URL parameter)
-        const chatToSelect = stateSelectedChatId || chatIdFromUrl;
-        
-        if (chatToSelect) {
-          console.log("Setting selected chat from parameters:", chatToSelect);
-          setSelectedChat(chatToSelect);
-        }
       }
     };
     
@@ -265,7 +303,7 @@ const Messages = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [chatIdFromUrl, stateSelectedChatId]); // Include stateSelectedChatId in dependencies
+  }, [chatIdFromUrl, searchParams, setSearchParams]);
   
   // Load messages when a chat is selected
   useEffect(() => {
@@ -273,34 +311,18 @@ const Messages = () => {
       if (!selectedChat) return;
       
       try {
-        console.log("Fetching messages for chat:", selectedChat);
-        
         const { data: selectedChatInfo, error: chatError } = await supabase
           .from("chats")
           .select("*")
           .eq("id", selectedChat)
           .single();
           
-        if (chatError) {
-          console.error("Error fetching chat info:", chatError);
-          throw chatError;
-        }
+        if (chatError) throw chatError;
         
         if (selectedChatInfo) {
-          // Find the chat in our local state to get the UI info
           const chatProps = chats.find(c => c.id === selectedChat);
           if (chatProps) {
             setChatInfo(chatProps);
-          } else {
-            // If not found in local state, create basic info from DB
-            setChatInfo({
-              id: selectedChatInfo.id,
-              name: selectedChatInfo.space_name || "Conversa",
-              lastMessage: selectedChatInfo.last_message || "",
-              time: formatTime(selectedChatInfo.last_message_time),
-              avatar: selectedChatInfo.space_image || "",
-              space_id: selectedChatInfo.space_id
-            });
           }
           
           // Mark messages as read
@@ -326,14 +348,9 @@ const Messages = () => {
           .eq("chat_id", selectedChat)
           .order("created_at", { ascending: true });
           
-        if (error) {
-          console.error("Error fetching messages:", error);
-          throw error;
-        }
+        if (error) throw error;
         
         if (messagesData) {
-          console.log("Loaded messages:", messagesData.length);
-          
           const formattedMessages = messagesData.map(msg => ({
             id: msg.id,
             content: msg.content,

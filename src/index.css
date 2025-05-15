@@ -52,11 +52,4 @@
   .bottom-nav-item.active {
     @apply text-iparty font-medium;
   }
-  
-  /* Hide any Mercado Pago overlay elements */
-  .mercadopago-overlay {
-    display: none !important;
-    opacity: 0 !important;
-    visibility: hidden !important;
-  }
 }
