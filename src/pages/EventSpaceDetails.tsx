@@ -16,7 +16,8 @@ import {
   X,
   Maximize2,
   MessageSquare,
-  Trash2
+  Trash2,
+  ZoomIn
 } from "lucide-react";
 import {
   Carousel,
@@ -36,6 +37,7 @@ import {
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { useUserRoles } from "@/hooks/useUserRoles";
+import OptimizedImage from "@/components/OptimizedImage";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -497,7 +499,7 @@ const EventSpaceDetails: React.FC = () => {
             {space.images.map((image, index) => (
               <CarouselItem key={index} className="md:basis-auto">
                 <div className="h-64 md:h-80 w-full rounded-lg overflow-hidden relative group">
-                  <img 
+                  <OptimizedImage 
                     src={image} 
                     alt={`${space.name} - Imagem ${index + 1}`} 
                     className="w-full h-full object-cover cursor-pointer"
@@ -511,7 +513,7 @@ const EventSpaceDetails: React.FC = () => {
                       className="bg-black/70 text-white p-1 rounded opacity-0 group-hover:opacity-100 transition-opacity"
                       onClick={() => handleImageClick(image)}
                     >
-                      <Maximize2 size={16} />
+                      <ZoomIn size={16} />
                     </button>
                   </div>
                 </div>
@@ -527,7 +529,7 @@ const EventSpaceDetails: React.FC = () => {
       <Dialog open={isImageDialogOpen} onOpenChange={setIsImageDialogOpen}>
         <DialogContent className="max-w-screen-lg w-[95vw] h-[90vh] p-0 bg-black/95 border-none">
           <div className="flex items-center justify-center w-full h-full relative">
-            <img 
+            <OptimizedImage 
               src={selectedImage || ''} 
               alt="Visualização ampliada" 
               className="max-w-full max-h-full object-contain"
