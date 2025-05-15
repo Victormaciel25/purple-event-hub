@@ -1,3 +1,4 @@
+
 import React, { useEffect, useRef, useState } from "react";
 import { MapPin, Loader2 } from "lucide-react";
 import { GoogleMap, useJsApiLoader, Marker, InfoWindow } from "@react-google-maps/api";
@@ -261,7 +262,8 @@ const LocationMap = ({
               streetViewControl: false,
               mapTypeControl: false,
               zoomControl: true,
-              styles: hidePOIsStyle // Aplicando o estilo para esconder POIs
+              styles: hidePOIsStyle, // Aplicando o estilo para esconder POIs
+              gestureHandling: 'greedy' // Permite navegação com um dedo no mobile
             }}
             onLoad={handleMapLoad}
           >
