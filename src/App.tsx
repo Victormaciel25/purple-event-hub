@@ -71,7 +71,6 @@ const App: React.FC = () => {
     return (
       <>
         {session && <SpaceDeletionAlert />}
-        {session && <DeletionNotifications />}
         <Layout />
       </>
     );

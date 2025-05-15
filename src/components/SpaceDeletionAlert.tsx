@@ -4,6 +4,7 @@ import { X, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/components/ui/use-toast";
 
 type SpaceDeletionNotification = {
   id: string;
@@ -15,6 +16,7 @@ type SpaceDeletionNotification = {
 const SpaceDeletionAlert = () => {
   const [notification, setNotification] = useState<SpaceDeletionNotification | null>(null);
   const [loading, setLoading] = useState(true);
+  const { toast } = useToast();
 
   useEffect(() => {
     checkForDeletionNotifications();
@@ -25,6 +27,7 @@ const SpaceDeletionAlert = () => {
       const { data: sessionData } = await supabase.auth.getSession();
       
       if (!sessionData.session) {
+        setLoading(false);
         return;
       }
       
@@ -39,6 +42,13 @@ const SpaceDeletionAlert = () => {
       
       if (data && data.length > 0) {
         setNotification(data[0]);
+        
+        // Show toast notification when the alert appears
+        toast({
+          title: "Aviso importante",
+          description: `Seu espaço "${data[0].space_name}" foi excluído.`,
+          variant: "destructive",
+        });
       }
     } catch (error) {
       console.error("Erro ao verificar notificações:", error);
