@@ -387,8 +387,8 @@ const EventSpaceDetails: React.FC = () => {
         toast.success("Nova conversa iniciada");
       }
       
-      // Navigate to messages page with the chat ID as a query parameter
-      navigate(`/messages?chat=${chatId}`);
+      // Navigate to messages page with the chat ID in the state
+      navigate("/messages", { state: { chatId } });
     } catch (error: any) {
       console.error("Error starting chat:", error);
       toast.error("Não foi possível iniciar a conversa: " + (error.message || "Erro desconhecido"));

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Search, MessageSquare, ArrowLeft, Trash2 } from "lucide-react";
@@ -7,7 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Textarea } from "@/components/ui/textarea";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
-import { useSearchParams, useLocation } from "react-router-dom";
+import { useSearchParams, useLocation, useNavigate } from "react-router-dom";
 import OptimizedImage from "@/components/OptimizedImage";
 import {
   AlertDialog,
@@ -99,9 +98,10 @@ const formatTime = (isoString: string): string => {
 };
 
 const Messages = () => {
-  const [searchParams, setSearchParams] = useSearchParams();
+  const [searchParams] = useSearchParams();
   const chatIdFromUrl = searchParams.get('chat');
   const location = useLocation();
+  const navigate = useNavigate();
   const chatIdFromState = location.state?.chatId;
 
   const [chats, setChats] = useState<ChatProps[]>([]);
@@ -246,18 +246,24 @@ const Messages = () => {
             }
           }
           
-          // Priorizar o chatId que vem do state (do EventSpaceDetails)
-          // Se não houver um no state, usar o da URL
+          // Important: Check the state for chatId first, then URL parameter as fallback
           const chatIdToSelect = chatIdFromState || chatIdFromUrl;
           
           if (chatIdToSelect) {
             console.log("Selecting chat from navigation:", chatIdToSelect);
             setSelectedChat(chatIdToSelect);
             
-            // Remover parâmetro da URL caso exista
+            // Clear navigation state after using it
+            if (location.state?.chatId) {
+              // Replace state without the chatId but keep other state if any
+              const newState = { ...location.state };
+              delete newState.chatId;
+              navigate(".", { state: newState, replace: true });
+            }
+            
+            // Remove URL parameter if present
             if (chatIdFromUrl) {
-              searchParams.delete('chat');
-              setSearchParams(searchParams);
+              navigate("/messages", { replace: true });
             }
           }
         }
@@ -302,7 +308,7 @@ const Messages = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [chatIdFromUrl, searchParams, setSearchParams, chatIdFromState, location.state]);
+  }, [chatIdFromUrl, location, navigate, chatIdFromState]);
   
   // Load messages when a chat is selected
   useEffect(() => {
