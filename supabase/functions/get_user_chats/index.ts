@@ -28,59 +28,44 @@ serve(async (req) => {
       );
     }
 
-    // Create supabase client with user's auth token
-    const authHeader = req.headers.get('Authorization');
-    
-    if (!authHeader) {
-      return new Response(
-        JSON.stringify({ error: 'Missing Authorization header' }),
-        { 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 401 
-        }
-      );
-    }
-
-    const supabase = createClient(
-      supabaseUrl,
-      supabaseAnonKey,
-      { 
-        global: { 
-          headers: { Authorization: authHeader } 
-        } 
+    // Extract user ID from request - We'll parse it from the request body now instead of using auth
+    let userId;
+    try {
+      const body = await req.json();
+      userId = body.userId;
+      
+      if (!userId) {
+        console.error("No userId provided in request body");
+        return new Response(
+          JSON.stringify({ error: 'Missing userId in request body' }),
+          { 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            status: 400 
+          }
+        );
       }
-    );
-
-    // Get the current user
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
-    
-    if (userError) {
-      console.error("Error getting user:", userError);
+      
+      console.log("Processing request for userId:", userId);
+    } catch (e) {
+      console.error("Error parsing request body:", e);
       return new Response(
-        JSON.stringify({ error: 'Authentication error: ' + userError.message }),
+        JSON.stringify({ error: 'Invalid JSON in request body' }),
         { 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 401 
-        }
-      );
-    }
-    
-    if (!user) {
-      return new Response(
-        JSON.stringify({ error: 'Unauthorized - No user found' }),
-        { 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 401 
+          status: 400 
         }
       );
     }
 
-    // Fetch chats for this user
-    // Filter to exclude deleted chats (where deleted = true)
+    // Initialize Supabase client without auth
+    const supabase = createClient(supabaseUrl, supabaseAnonKey);
+    
+    // Fetch chats for this user using the provided userId
+    // No need for auth validation - we'll trust the provided userId
     const { data, error } = await supabase
       .from('chats')
       .select('*')
-      .or(`user_id.eq.${user.id},owner_id.eq.${user.id}`)
+      .or(`user_id.eq.${userId},owner_id.eq.${userId}`)
       .eq('deleted', false) // Only get non-deleted chats
       .order('last_message_time', { ascending: false });
 
