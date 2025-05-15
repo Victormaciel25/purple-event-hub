@@ -191,12 +191,8 @@ const Messages = () => {
               setChats(formattedChats);
               
               // If there's a chat ID in the URL, select it
-              if (chatIdFromUrl) {
+                if (chatIdFromUrl !== selectedChat) {
                 setSelectedChat(chatIdFromUrl);
-                
-                // Remove the chat parameter from the URL
-                searchParams.delete('chat');
-                setSearchParams(searchParams);
               }
             }
           } else if (chatsData) {
