@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Search, MessageSquare, ArrowLeft, Trash2 } from "lucide-react";
@@ -124,13 +123,15 @@ const Messages = () => {
         if (userData?.user?.id) {
           setUserId(userData.user.id);
           
-          // Fetch chats using direct query instead of RPC
+          // Fetch chats using Edge Function
           const { data: chatsData, error } = await supabase.functions
             .invoke('get_user_chats');
             
           if (error) {
             console.error("Error fetching chats:", error);
-            // Fallback query if RPC is not available
+            toast.error("Erro ao carregar conversas: " + error.message);
+            
+            // Fallback query if Edge Function fails
             const { data: fallbackChatsData, error: fallbackError } = await supabase
               .from("chats")
               .select("*")
@@ -193,6 +194,7 @@ const Messages = () => {
               // If there's a chat ID in the URL, select it
               if (chatIdFromUrl) {
                 setSelectedChat(chatIdFromUrl);
+                // Don't remove the chat parameter from the URL here
               }
             }
           } else if (chatsData) {
@@ -247,13 +249,11 @@ const Messages = () => {
               
               setChats(formattedChats);
               
-              // If there's a chat ID in the URL, select it
+              // If there's a chat ID in the URL, select it immediately
               if (chatIdFromUrl) {
+                console.log("Setting selected chat from URL parameter:", chatIdFromUrl);
                 setSelectedChat(chatIdFromUrl);
-                
-                // Remove the chat parameter from the URL
-                searchParams.delete('chat');
-                setSearchParams(searchParams);
+                // We don't want to remove the chat parameter here
               }
             }
           }
@@ -299,7 +299,7 @@ const Messages = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [chatIdFromUrl, searchParams, setSearchParams]);
+  }, [chatIdFromUrl]); // Only depend on chatIdFromUrl, we don't need setSearchParams
   
   // Load messages when a chat is selected
   useEffect(() => {
@@ -307,18 +307,34 @@ const Messages = () => {
       if (!selectedChat) return;
       
       try {
+        console.log("Fetching messages for chat:", selectedChat);
+        
         const { data: selectedChatInfo, error: chatError } = await supabase
           .from("chats")
           .select("*")
           .eq("id", selectedChat)
           .single();
           
-        if (chatError) throw chatError;
+        if (chatError) {
+          console.error("Error fetching chat info:", chatError);
+          throw chatError;
+        }
         
         if (selectedChatInfo) {
+          // Find the chat in our local state to get the UI info
           const chatProps = chats.find(c => c.id === selectedChat);
           if (chatProps) {
             setChatInfo(chatProps);
+          } else {
+            // If not found in local state, create basic info from DB
+            setChatInfo({
+              id: selectedChatInfo.id,
+              name: selectedChatInfo.space_name || "Conversa",
+              lastMessage: selectedChatInfo.last_message || "",
+              time: formatTime(selectedChatInfo.last_message_time),
+              avatar: selectedChatInfo.space_image || "",
+              space_id: selectedChatInfo.space_id
+            });
           }
           
           // Mark messages as read
@@ -344,9 +360,14 @@ const Messages = () => {
           .eq("chat_id", selectedChat)
           .order("created_at", { ascending: true });
           
-        if (error) throw error;
+        if (error) {
+          console.error("Error fetching messages:", error);
+          throw error;
+        }
         
         if (messagesData) {
+          console.log("Loaded messages:", messagesData.length);
+          
           const formattedMessages = messagesData.map(msg => ({
             id: msg.id,
             content: msg.content,

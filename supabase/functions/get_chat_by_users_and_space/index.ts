@@ -79,14 +79,45 @@ serve(async (req) => {
     try {
       console.log("Querying for existing chats with:", { current_user_id, space_owner_id, current_space_id });
       
+      // First, verify that the user making the request matches the current_user_id
+      const { data: userData, error: userError } = await supabase.auth.getUser();
+      
+      if (userError || !userData.user) {
+        console.error("Error getting authenticated user:", userError);
+        return new Response(
+          JSON.stringify({ 
+            error: 'Unauthorized request' 
+          }),
+          { 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            status: 401 
+          }
+        );
+      }
+      
+      // Verify that the current_user_id matches the authenticated user
+      if (userData.user.id !== current_user_id) {
+        console.error("User ID mismatch:", userData.user.id, current_user_id);
+        return new Response(
+          JSON.stringify({ 
+            error: 'User ID mismatch' 
+          }),
+          { 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            status: 403 
+          }
+        );
+      }
+      
+      // Now query for existing chats
       const { data, error } = await supabase
         .from('chats')
         .select('id')
         .or(
-          `and(user_id.eq.${current_user_id},owner_id.eq.${space_owner_id}),` +
-          `and(user_id.eq.${space_owner_id},owner_id.eq.${current_user_id})`
+          `and(user_id.eq.${current_user_id},owner_id.eq.${space_owner_id},space_id.eq.${current_space_id}),` +
+          `and(user_id.eq.${space_owner_id},owner_id.eq.${current_user_id},space_id.eq.${current_space_id})`
         )
-        .eq('space_id', current_space_id)
+        .eq('deleted', false)
         .limit(1);
 
       if (error) {

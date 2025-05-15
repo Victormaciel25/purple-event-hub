@@ -388,6 +388,7 @@ const EventSpaceDetails: React.FC = () => {
       }
       
       // Navigate to messages page with the chat ID as a query parameter
+      // Ensure we use the proper path here
       navigate(`/messages?chat=${chatId}`);
     } catch (error: any) {
       console.error("Error starting chat:", error);
