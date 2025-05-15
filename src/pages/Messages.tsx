@@ -114,7 +114,7 @@ const Messages = () => {
 
   const sendMessage = async () => {
     if (!selectedChat) {
-      toast.error("Selecione um chat para enviar a mensagem");
+      toast.error("Selecione um conversa para enviar a mensagem");
       return;
     }
 
@@ -265,18 +265,38 @@ const Messages = () => {
             <div>
               <h2 className="text-lg font-semibold mb-2">{selectedChat.space_name}</h2>
               <div className="space-y-2">
-                {messages.map((message) => (
-                  <div
-                    key={message.id}
-                    className={`p-3 rounded-lg ${message.sender_id === supabase.auth.user()?.id
-                      ? 'bg-blue-100 ml-auto text-right'
-                      : 'bg-gray-100 mr-auto'
+                {messages.map((message) => {
+                  // Get current user ID to determine message alignment
+                  const getCurrentUserId = async () => {
+                    const { data } = await supabase.auth.getUser();
+                    return data.user?.id;
+                  };
+                  
+                  // Use isCurrentUser state for message alignment
+                  const [isCurrentUser, setIsCurrentUser] = useState(false);
+                  
+                  useEffect(() => {
+                    const checkUser = async () => {
+                      const userId = await getCurrentUserId();
+                      setIsCurrentUser(message.sender_id === userId);
+                    };
+                    checkUser();
+                  }, [message.sender_id]);
+                  
+                  return (
+                    <div
+                      key={message.id}
+                      className={`p-3 rounded-lg ${
+                        isCurrentUser
+                          ? 'bg-blue-100 ml-auto text-right'
+                          : 'bg-gray-100 mr-auto'
                       }`}
-                  >
-                    <p>{message.content}</p>
-                    <span className="text-xs text-gray-500">{new Date(message.created_at).toLocaleString()}</span>
-                  </div>
-                ))}
+                    >
+                      <p>{message.content}</p>
+                      <span className="text-xs text-gray-500">{new Date(message.created_at).toLocaleString()}</span>
+                    </div>
+                  );
+                })}
               </div>
 
               <div className="mt-4">
