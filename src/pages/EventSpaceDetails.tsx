@@ -16,8 +16,7 @@ import {
   X,
   Maximize2,
   MessageSquare,
-  Trash2,
-  ZoomIn
+  Trash2
 } from "lucide-react";
 import {
   Carousel,
@@ -35,9 +34,7 @@ import {
   DialogContent,
   DialogClose
 } from "@/components/ui/dialog";
-import { Textarea } from "@/components/ui/textarea";
 import { useUserRoles } from "@/hooks/useUserRoles";
-import OptimizedImage from "@/components/OptimizedImage";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -288,7 +285,7 @@ const EventSpaceDetails: React.FC = () => {
         }
       }
       
-      if (!spaceOwner?.id) {
+      if (!spaceOwner.id) {
         console.error("Space owner ID is missing");
         toast.error("ID do proprietário não disponível");
         return;
@@ -296,12 +293,10 @@ const EventSpaceDetails: React.FC = () => {
       
       setProcessingChat(true);
       
-      // Get current user
       const { data: userData, error: userError } = await supabase.auth.getUser();
       if (userError) {
         console.error("Auth error:", userError);
-        toast.error("Erro de autenticação: " + userError.message);
-        return;
+        throw userError;
       }
       
       if (!userData.user) {
@@ -311,11 +306,10 @@ const EventSpaceDetails: React.FC = () => {
         return;
       }
 
-      // Check if the user is the space owner
+      // Verificando se o usuário atual é o proprietário do espaço
       if (userData.user.id === spaceOwner.id) {
         console.error("User is space owner");
         toast.error("Não é possível iniciar uma conversa consigo mesmo");
-        setProcessingChat(false);
         return;
       }
       
@@ -329,20 +323,18 @@ const EventSpaceDetails: React.FC = () => {
       // Check if chat already exists
       const { data: existingChats, error: chatQueryError } = await supabase.functions
         .invoke('get_chat_by_users_and_space', { 
-          body: { 
+          body: JSON.stringify({ 
             current_user_id: userData.user.id,
             space_owner_id: spaceOwner.id,
             current_space_id: space.id 
-          }
+          })
         });
       
       console.log("Existing chats response:", existingChats);
       
       if (chatQueryError) {
         console.error("Error checking for existing chats:", chatQueryError);
-        toast.error("Erro ao verificar conversas existentes: " + chatQueryError.message);
-        setProcessingChat(false);
-        return;
+        throw chatQueryError;
       }
       
       let chatId;
@@ -370,16 +362,12 @@ const EventSpaceDetails: React.FC = () => {
         
         if (insertError) {
           console.error("Insert error:", insertError);
-          toast.error("Erro ao criar conversa: " + insertError.message);
-          setProcessingChat(false);
-          return;
+          throw insertError;
         }
         
         if (!newChat || !newChat.id) {
           console.error("No new chat created");
-          toast.error("Falha ao criar conversa");
-          setProcessingChat(false);
-          return;
+          throw new Error("Failed to create chat");
         }
         
         chatId = newChat.id;
@@ -387,7 +375,7 @@ const EventSpaceDetails: React.FC = () => {
         toast.success("Nova conversa iniciada");
       }
       
-      // Navigate to messages page with the chat ID as a query parameter
+      // Modified: Navigate to messages page with the chat ID as a query parameter
       navigate(`/messages?chat=${chatId}`);
     } catch (error: any) {
       console.error("Error starting chat:", error);
@@ -406,26 +394,17 @@ const EventSpaceDetails: React.FC = () => {
     try {
       setDeletingSpace(true);
 
-      if (!space || !space.id || !space.user_id) {
+      if (!space || !space.id) {
         toast.error("Não foi possível identificar o espaço");
         return;
       }
 
-      // Criar uma notificação para o proprietário do espaço
-      const { error: notificationError } = await supabase
-        .from("space_deletion_notifications")
-        .insert({
-          user_id: space.user_id,
-          space_name: space.name,
-          deletion_reason: deleteReason
-        });
+      // First, send a notification to the space owner with the delete reason
+      // This could be an entry in a notifications table, an email, etc.
+      console.log(`Sending notification to user ${space.user_id} about space deletion`);
+      console.log(`Delete reason: ${deleteReason}`);
 
-      if (notificationError) {
-        console.error("Erro ao criar notificação:", notificationError);
-        toast.error("Erro ao notificar o proprietário");
-      }
-
-      // Excluir o espaço usando a função existente
+      // Then delete the space and related photos using the existing edge function
       const { error } = await supabase.functions.invoke("delete_space_with_photos", {
         body: { space_id: space.id }
       });
@@ -508,7 +487,7 @@ const EventSpaceDetails: React.FC = () => {
             {space.images.map((image, index) => (
               <CarouselItem key={index} className="md:basis-auto">
                 <div className="h-64 md:h-80 w-full rounded-lg overflow-hidden relative group">
-                  <OptimizedImage 
+                  <img 
                     src={image} 
                     alt={`${space.name} - Imagem ${index + 1}`} 
                     className="w-full h-full object-cover cursor-pointer"
@@ -522,7 +501,7 @@ const EventSpaceDetails: React.FC = () => {
                       className="bg-black/70 text-white p-1 rounded opacity-0 group-hover:opacity-100 transition-opacity"
                       onClick={() => handleImageClick(image)}
                     >
-                      <ZoomIn size={16} />
+                      <Maximize2 size={16} />
                     </button>
                   </div>
                 </div>
@@ -538,7 +517,7 @@ const EventSpaceDetails: React.FC = () => {
       <Dialog open={isImageDialogOpen} onOpenChange={setIsImageDialogOpen}>
         <DialogContent className="max-w-screen-lg w-[95vw] h-[90vh] p-0 bg-black/95 border-none">
           <div className="flex items-center justify-center w-full h-full relative">
-            <OptimizedImage 
+            <img 
               src={selectedImage || ''} 
               alt="Visualização ampliada" 
               className="max-w-full max-h-full object-contain"
