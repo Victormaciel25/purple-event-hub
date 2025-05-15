@@ -115,11 +115,13 @@ const Messages = () => {
   const [chatInfo, setChatInfo] = useState<ChatProps | null>(null);
   const [chatToDelete, setChatToDelete] = useState<string | null>(null);
   const [spaceImages, setSpaceImages] = useState<Record<string, string>>({});
+  const [chatLoadError, setChatLoadError] = useState<boolean>(false);
 
   useEffect(() => {
     const fetchUserAndChats = async () => {
       try {
         setLoading(true);
+        setChatLoadError(false);
         
         // Get current user
         const { data: userData } = await supabase.auth.getUser();
@@ -270,6 +272,7 @@ const Messages = () => {
       } catch (error) {
         console.error("Error fetching chats:", error);
         toast.error("Erro ao carregar conversas");
+        setChatLoadError(true);
       } finally {
         setLoading(false);
       }
@@ -316,6 +319,7 @@ const Messages = () => {
       if (!selectedChat) return;
       
       try {
+        console.log("Fetching selected chat info:", selectedChat);
         const { data: selectedChatInfo, error: chatError } = await supabase
           .from("chats")
           .select("*")
@@ -323,16 +327,42 @@ const Messages = () => {
           .single();
           
         if (chatError) {
-          // Provavelmente o chat foi excluído
+          // Log error but don't immediately reset selectedChat
           console.error("Error fetching selected chat:", chatError);
-          setSelectedChat(null);
-          setChatInfo(null);
-          return;
+          
+          // Check if the chat might have been deleted
+          const { data: deletedChatInfo, error: deletedChatError } = await supabase
+            .from("chats")
+            .select("*")
+            .eq("id", selectedChat)
+            .eq("deleted", true)
+            .single();
+            
+          if (!deletedChatError && deletedChatInfo) {
+            console.log("Chat was found but is marked as deleted");
+            toast.error("Esta conversa foi excluída");
+            setSelectedChat(null);
+            setChatInfo(null);
+            return;
+          }
+          
+          // If we can't find the chat at all (neither active nor deleted)
+          if (deletedChatError) {
+            console.error("Chat not found (active or deleted):", deletedChatError);
+            toast.error("Chat não encontrado");
+            setSelectedChat(null);
+            setChatInfo(null);
+            return;
+          }
         }
         
         if (selectedChatInfo) {
+          console.log("Selected chat info loaded:", selectedChatInfo);
+          
           if (selectedChatInfo.deleted) {
             // O chat foi marcado como excluído
+            console.log("Chat is marked as deleted");
+            toast.error("Esta conversa foi excluída");
             setSelectedChat(null);
             setChatInfo(null);
             return;
@@ -340,9 +370,11 @@ const Messages = () => {
           
           const chatProps = chats.find(c => c.id === selectedChat);
           if (chatProps) {
+            console.log("Found chat in list:", chatProps);
             setChatInfo(chatProps);
           } else {
             // Chat não está na lista, vamos criá-lo na interface também
+            console.log("Chat not in list, creating UI entry");
             const newChatInfo = {
               id: selectedChatInfo.id,
               name: selectedChatInfo.space_name || "Conversa",
@@ -376,15 +408,22 @@ const Messages = () => {
         }
         
         // Fetch messages for selected chat
+        console.log("Fetching messages for chat:", selectedChat);
         const { data: messagesData, error } = await supabase
           .from("messages")
           .select("*")
           .eq("chat_id", selectedChat)
           .order("created_at", { ascending: true });
           
-        if (error) throw error;
+        if (error) {
+          console.error("Error fetching messages:", error);
+          toast.error("Erro ao carregar mensagens");
+          // Don't reset selectedChat here - keep trying to show the chat
+          return;
+        }
         
         if (messagesData) {
+          console.log("Messages loaded:", messagesData.length);
           const formattedMessages = messagesData.map(msg => ({
             id: msg.id,
             content: msg.content,
@@ -396,12 +435,12 @@ const Messages = () => {
           setMessages(formattedMessages);
         }
       } catch (error) {
-        console.error("Error fetching messages:", error);
-        toast.error("Erro ao carregar mensagens");
+        console.error("Error in fetchMessages:", error);
+        toast.error("Erro ao carregar dados do chat");
         
-        // Resetar o selectedChat para evitar problemas
-        setSelectedChat(null);
-        setChatInfo(null);
+        // Don't automatically reset selectedChat anymore
+        // Instead, show an error state in the UI
+        setChatLoadError(true);
       }
     };
     
@@ -560,7 +599,10 @@ const Messages = () => {
                 variant="ghost" 
                 size="sm" 
                 className="mr-2 p-1"
-                onClick={() => setSelectedChat(null)}
+                onClick={() => {
+                  setSelectedChat(null);
+                  setChatLoadError(false);
+                }}
               >
                 <ArrowLeft size={20} />
               </Button>
@@ -595,7 +637,26 @@ const Messages = () => {
           
           {/* Messages */}
           <div className="flex-grow overflow-y-auto p-4 bg-gray-50">
-            {messages.length > 0 ? (
+            {chatLoadError ? (
+              <div className="h-full flex flex-col items-center justify-center text-center">
+                <MessageSquare className="h-12 w-12 text-red-400 mb-3" />
+                <p className="text-red-500">Erro ao carregar o chat</p>
+                <p className="text-sm text-muted-foreground/70 mt-2">
+                  Tente voltar e selecionar o chat novamente
+                </p>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => {
+                    setSelectedChat(null);
+                    setChatLoadError(false);
+                  }}
+                  className="mt-4"
+                >
+                  Voltar para lista de chats
+                </Button>
+              </div>
+            ) : messages.length > 0 ? (
               messages.map(message => (
                 <div 
                   key={message.id} 
