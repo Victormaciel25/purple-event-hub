@@ -304,13 +304,14 @@ const EventSpaceDetails: React.FC = () => {
         current_space_id: space.id
       });
       
-      // Check if chat already exists
+      // Check if chat already exists, including previously deleted chats
       const { data: existingChats, error: chatQueryError } = await supabase.functions
         .invoke('get_chat_by_users_and_space', { 
           body: JSON.stringify({ 
             current_user_id: userData.user.id,
             space_owner_id: spaceOwner.id,
-            current_space_id: space.id 
+            current_space_id: space.id,
+            include_deleted: true // Buscar também chats excluídos
           })
         });
       
@@ -324,9 +325,37 @@ const EventSpaceDetails: React.FC = () => {
       let chatId;
       
       if (existingChats && Array.isArray(existingChats) && existingChats.length > 0) {
-        chatId = existingChats[0].id;
-        console.log("Using existing chat:", chatId);
-        toast.info("Abrindo conversa existente");
+        const existingChat = existingChats[0];
+        
+        if (existingChat.deleted) {
+          // Se o chat existente estiver marcado como excluído, reativamos o chat
+          const { data: updatedChat, error: updateError } = await supabase
+            .from("chats")
+            .update({
+              deleted: false,
+              last_message: "Chat reativado",
+              last_message_time: new Date().toISOString(),
+              last_message_sender_id: userData.user.id,
+              has_unread: true
+            })
+            .eq("id", existingChat.id)
+            .select("id")
+            .single();
+            
+          if (updateError) {
+            console.error("Error reactivating chat:", updateError);
+            throw updateError;
+          }
+          
+          chatId = existingChat.id;
+          console.log("Chat reactivated:", chatId);
+          toast.success("Conversa retomada");
+        } else {
+          // Se o chat existir e não estiver excluído, usamos esse chat
+          chatId = existingChat.id;
+          console.log("Using existing chat:", chatId);
+          toast.info("Abrindo conversa existente");
+        }
       } else {
         console.log("Creating new chat...");
         // Create a new chat
@@ -339,7 +368,8 @@ const EventSpaceDetails: React.FC = () => {
             space_name: space.name,
             space_image: space.images[0] || null,
             last_message: "",
-            last_message_time: new Date().toISOString()
+            last_message_time: new Date().toISOString(),
+            deleted: false
           })
           .select("id")
           .single();
@@ -359,8 +389,9 @@ const EventSpaceDetails: React.FC = () => {
         toast.success("Nova conversa iniciada");
       }
       
-      // Modified: Navigate to messages page with the chat ID as a query parameter
-      navigate(`/messages?chat=${chatId}`);
+      // Agora navegamos para a página de mensagens com o chatId no state para abrir diretamente
+      navigate('/messages', { state: { chatId } });
+      
     } catch (error: any) {
       console.error("Error starting chat:", error);
       toast.error("Não foi possível iniciar a conversa: " + (error.message || "Erro desconhecido"));

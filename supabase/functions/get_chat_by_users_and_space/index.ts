@@ -1,110 +1,94 @@
 
-import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.7.1";
+// Follow this setup guide to integrate the Deno runtime and your Edge Functions: https://deno.land/manual/runtime/manual/deploy_deno
+// Supabase Edge Function
+
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
+}
 
 serve(async (req) => {
-  // Handle CORS preflight requests
+  // Handle CORS preflight request
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return new Response('ok', { headers: corsHeaders })
   }
 
   try {
-    // Create supabase client
-    const supabase = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
-      { 
-        global: { 
-          headers: { Authorization: req.headers.get('Authorization')! } 
-        } 
-      }
-    );
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')
+    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
+    const supabaseClient = createClient(supabaseUrl, supabaseKey)
 
-    // Parse request body
-    let body;
-    try {
-      body = await req.json();
-    } catch (e) {
-      console.error("Error parsing request body:", e);
-      return new Response(
-        JSON.stringify({ 
-          error: 'Invalid JSON in request body' 
-        }),
-        { 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 400 
-        }
-      );
-    }
+    // Parse the request body
+    const body = await req.json()
+    const { current_user_id, space_owner_id, current_space_id, include_deleted } = body
+    
+    console.log("Request body:", body)
 
-    console.log("Request body:", body);
-    
-    const { current_user_id, space_owner_id, current_space_id } = body;
-    
-    // Must have all parameters
+    // Validating required parameters
     if (!current_user_id || !space_owner_id || !current_space_id) {
-      console.error("Missing required parameters:", { current_user_id, space_owner_id, current_space_id });
       return new Response(
-        JSON.stringify({ 
-          error: 'Missing required parameters' 
-        }),
+        JSON.stringify({ error: 'Missing required parameters' }),
         { 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }, 
           status: 400 
         }
-      );
+      )
     }
 
-    // Check for existing chat with better error handling
-    try {
-      console.log("Querying for existing chats with:", { current_user_id, space_owner_id, current_space_id });
-      
-      const { data, error } = await supabase
-        .from('chats')
-        .select('id')
-        .or(
-          `and(user_id.eq.${current_user_id},owner_id.eq.${space_owner_id}),` +
-          `and(user_id.eq.${space_owner_id},owner_id.eq.${current_user_id})`
-        )
-        .eq('space_id', current_space_id)
-        .limit(1);
+    console.log("Querying for existing chats with:", { 
+      current_user_id, 
+      space_owner_id, 
+      current_space_id,
+      include_deleted
+    })
 
-      if (error) {
-        console.error("Database query error:", error);
-        throw error;
-      }
+    // Query para verificar se existe um chat entre esses usuários para esse espaço
+    let query = supabaseClient
+      .from('chats')
+      .select('id, deleted')
+      .eq('space_id', current_space_id)
+      .or(`and(user_id.eq.${current_user_id},owner_id.eq.${space_owner_id}),and(user_id.eq.${space_owner_id},owner_id.eq.${current_user_id})`)
+    
+    // Se include_deleted não for true, então filtramos apenas os não excluídos
+    if (!include_deleted) {
+      query = query.is('deleted', false)
+    }
+    
+    const { data: chats, error } = await query
 
-      console.log("Query result:", data);
-
+    if (error) {
+      console.error("Database query error:", error)
       return new Response(
-        JSON.stringify(data || []),
+        JSON.stringify({ error: 'Error querying database' }),
         { 
-          headers: { 
-            ...corsHeaders, 
-            'Content-Type': 'application/json' 
-          },
-          status: 200 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }, 
+          status: 500 
         }
-      );
-    } catch (queryError) {
-      console.error("Query execution error:", queryError);
-      throw queryError;
+      )
     }
+
+    console.log("Query result:", chats)
+
+    return new Response(
+      JSON.stringify(chats),
+      { 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 200 
+      }
+    )
 
   } catch (error) {
-    console.error('Error:', error);
+    console.error("Error:", error)
     
     return new Response(
-      JSON.stringify({ error: error.message || "Unknown error occurred" }),
+      JSON.stringify({ error: error.message || 'Unknown error occurred' }),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 500 
       }
-    );
+    )
   }
-});
+})

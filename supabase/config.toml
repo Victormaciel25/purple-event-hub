@@ -1,23 +1,20 @@
 
+# Config file for Supabase CLI
 project_id = "kfqorqjwbkxzrqhuvnyh"
 
-[functions.get_user_by_email]
-verify_jwt = true
+[api]
+port = 54321
+schemas = ["public", "storage", "graphql_public", "auth"]
+extra_search_path = ["public", "extensions"]
+max_rows = 1000
 
-[functions.get_user_id_by_email]
-verify_jwt = true
+[studio]
+port = 54323
 
-[functions.check_user_role]
-verify_jwt = true
-
-[functions.has_role]
-verify_jwt = true
-
-[functions.delete_space_with_photos]
-verify_jwt = true
-
-[functions.get_chat_by_users_and_space]
-verify_jwt = true
-
+[functions]
 [functions.get_user_chats]
-verify_jwt = true
+verify_jwt = false
+[functions.get_chat_by_users_and_space]
+verify_jwt = false
+[functions.get_user_by_email]
+verify_jwt = false
