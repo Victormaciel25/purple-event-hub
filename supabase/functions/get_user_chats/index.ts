@@ -40,9 +40,9 @@ serve(async (req) => {
       );
     }
 
-    // Get URL parameters for the query
-    const url = new URL(req.url);
-    const includeDeleted = url.searchParams.get('include_deleted') === 'true';
+    // Get parameters from request body
+    const requestData = await req.json().catch(() => ({}));
+    const includeDeleted = requestData.include_deleted === true;
     
     // Build the query including deleted status if requested
     let query = supabase

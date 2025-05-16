@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { Input } from "@/components/ui/input";
 import { Search, MessageSquare, ArrowLeft, Trash2, Loader2 } from "lucide-react";
@@ -215,7 +214,7 @@ const Messages = () => {
           console.log("Fetching chats using edge function...");
           const { data: chatsData, error } = await supabase.functions
             .invoke('get_user_chats', {
-              params: { include_deleted: includeDeleted.toString() }
+              body: { include_deleted: includeDeleted }
             });
           
           if (error) {
