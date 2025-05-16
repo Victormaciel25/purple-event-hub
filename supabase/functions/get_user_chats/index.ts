@@ -40,27 +40,21 @@ serve(async (req) => {
       );
     }
 
-    // Query both active and deleted chats, but mark them accordingly
+    // Query both active chats only that are not deleted
     const { data, error } = await supabase
       .from('chats')
       .select('*')
       .or(`user_id.eq.${user.id},owner_id.eq.${user.id}`)
+      .eq('deleted', false)
       .order('last_message_time', { ascending: false });
 
     if (error) {
+      console.error('Database error:', error);
       throw error;
     }
     
-    // Filter and process the chats
-    const processedData = data
-      .filter(chat => !chat.deleted) // Filter out deleted chats for the main list
-      .map(chat => ({
-        ...chat,
-        // Add any additional processing here if needed
-      }));
-
     return new Response(
-      JSON.stringify(processedData),
+      JSON.stringify(data),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
     );
 

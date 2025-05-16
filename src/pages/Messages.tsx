@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { Input } from "@/components/ui/input";
 import { Search, MessageSquare, ArrowLeft, Trash2, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -18,7 +18,6 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
-import { EDGE_FUNCTIONS } from "@/config/app-config";
 
 // Types
 interface ChatProps {
@@ -139,12 +138,18 @@ const formatTime = (isoString: string): string => {
 
 // Main component
 const Messages = () => {
+  // Refs
+  const messageEndRef = useRef<HTMLDivElement>(null);
+
+  // Router
   const [searchParams] = useSearchParams();
-  const chatIdFromUrl = searchParams.get('chat');
   const location = useLocation();
   const navigate = useNavigate();
+  
+  // Extract chatId from different sources with clear priority
+  const chatIdFromParams = searchParams.get('chat');
   const chatIdFromState = location.state?.chatId;
-
+  
   // State
   const [chats, setChats] = useState<ChatProps[]>([]);
   const [loading, setLoading] = useState(true);
@@ -158,6 +163,7 @@ const Messages = () => {
   const [chatToDelete, setChatToDelete] = useState<string | null>(null);
   const [spaceImages, setSpaceImages] = useState<Record<string, string>>({});
   const [chatLoadError, setChatLoadError] = useState<boolean>(false);
+  const [initialLoadComplete, setInitialLoadComplete] = useState<boolean>(false);
 
   // Function to fetch user chats
   const fetchChats = useCallback(async () => {
@@ -171,29 +177,38 @@ const Messages = () => {
         setUserId(userData.user.id);
         
         try {
-          // Try to use the edge function first
+          // Use edge function to get chats
+          console.log("Fetching chats using edge function...");
           const { data: chatsData, error } = await supabase.functions
             .invoke('get_user_chats');
           
-          if (error) throw error;
+          if (error) {
+            console.error("Edge function error:", error);
+            throw error;
+          }
           
           if (chatsData) {
+            console.log("Chats data received:", chatsData);
             await processChatsData(chatsData, userData.user.id);
           }
         } catch (error) {
-          console.error("Error with edge function, falling back:", error);
+          console.error("Error with edge function, falling back to direct query:", error);
           
           // Fallback query if edge function fails
           const { data: fallbackChatsData, error: fallbackError } = await supabase
             .from("chats")
             .select("*")
             .or(`user_id.eq.${userData.user.id},owner_id.eq.${userData.user.id}`)
-            .is('deleted', false)
+            .eq('deleted', false)
             .order('last_message_time', { ascending: false });
             
-          if (fallbackError) throw fallbackError;
+          if (fallbackError) {
+            console.error("Fallback query error:", fallbackError);
+            throw fallbackError;
+          }
           
           if (fallbackChatsData) {
+            console.log("Fallback chats data received:", fallbackChatsData);
             await processChatsData(fallbackChatsData, userData.user.id);
           }
         }
@@ -204,6 +219,7 @@ const Messages = () => {
       setChatLoadError(true);
     } finally {
       setLoading(false);
+      setInitialLoadComplete(true);
     }
   }, []);
 
@@ -261,6 +277,7 @@ const Messages = () => {
 
   // Function to load chat details and messages
   const loadChatDetails = useCallback(async (chatId: string) => {
+    console.log("Loading chat details for:", chatId);
     try {
       setChatLoadError(false);
       
@@ -271,27 +288,33 @@ const Messages = () => {
         .eq("id", chatId)
         .maybeSingle();
       
-      if (chatError) throw chatError;
+      if (chatError) {
+        console.error("Chat query error:", chatError);
+        throw chatError;
+      }
       
       if (!chatData) {
+        console.error("Chat not found");
         toast.error("Chat não encontrado");
-        setSelectedChat(null);
-        setChatInfo(null);
+        setChatLoadError(true);
         return;
       }
       
       if (chatData.deleted) {
+        console.error("Chat is deleted");
         toast.error("Esta conversa foi excluída");
-        setSelectedChat(null);
-        setChatInfo(null);
+        setChatLoadError(true);
         return;
       }
+      
+      console.log("Chat data loaded:", chatData);
       
       // Find chat info in the existing list or create a new entry
       const existingChat = chats.find(c => c.id === chatId);
       
       if (existingChat) {
         setChatInfo(existingChat);
+        console.log("Using existing chat info:", existingChat);
       } else {
         const newChatInfo = {
           id: chatData.id,
@@ -304,7 +327,8 @@ const Messages = () => {
         };
         
         setChatInfo(newChatInfo);
-        setChats(prev => [newChatInfo, ...prev]);
+        console.log("Created new chat info:", newChatInfo);
+        setChats(prev => [newChatInfo, ...prev.filter(c => c.id !== chatId)]);
       }
       
       // Mark messages as read if needed
@@ -319,6 +343,8 @@ const Messages = () => {
             chat.id === chatId ? { ...chat, unread: false } : chat
           )
         );
+        
+        console.log("Marked chat as read");
       }
       
       // Load messages
@@ -328,7 +354,10 @@ const Messages = () => {
         .eq("chat_id", chatId)
         .order("created_at", { ascending: true });
       
-      if (messagesError) throw messagesError;
+      if (messagesError) {
+        console.error("Messages query error:", messagesError);
+        throw messagesError;
+      }
       
       if (messagesData) {
         const formattedMessages = messagesData.map(msg => ({
@@ -340,6 +369,12 @@ const Messages = () => {
         }));
         
         setMessages(formattedMessages);
+        console.log("Loaded messages:", formattedMessages.length);
+        
+        // Scroll to bottom after messages are loaded
+        setTimeout(() => {
+          messageEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+        }, 100);
       }
       
     } catch (error) {
@@ -350,7 +385,8 @@ const Messages = () => {
   }, [chats, userId]);
 
   // Function to send a message
-  const handleSendMessage = async () => {
+  const handleSendMessage = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
     if (!newMessage.trim() || !selectedChat || !userId) return;
     
     try {
@@ -382,6 +418,11 @@ const Messages = () => {
       
       // Clear message input
       setNewMessage("");
+      
+      // Scroll to bottom
+      setTimeout(() => {
+        messageEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+      }, 100);
     } catch (error) {
       console.error("Error sending message:", error);
       toast.error("Erro ao enviar mensagem");
@@ -423,30 +464,40 @@ const Messages = () => {
     }
   };
   
-  // Effect to load chats and handle URL parameters
+  // Effect to handle chat selection from navigation params
   useEffect(() => {
-    fetchChats().then(() => {
-      // Important: Check the state for chatId first, then URL parameter as fallback
-      const chatIdToSelect = chatIdFromState || chatIdFromUrl;
+    // Only run after initial data is loaded
+    if (!initialLoadComplete) return;
+    
+    // Clear URL param but keep the state
+    if (chatIdFromParams && !chatIdFromState) {
+      navigate('/messages', { replace: true });
+    }
+    
+    // Use chatId from state first (highest priority), then from URL params
+    const chatIdToSelect = chatIdFromState || chatIdFromParams;
+    
+    if (chatIdToSelect && chatIdToSelect !== selectedChat) {
+      console.log("Setting selected chat from navigation:", chatIdToSelect);
+      setSelectedChat(chatIdToSelect);
       
-      if (chatIdToSelect) {
-        console.log("Selecting chat from navigation:", chatIdToSelect);
-        setSelectedChat(chatIdToSelect);
-        
-        // Clear navigation state after using it
-        if (location.state?.chatId) {
-          // Replace state without the chatId but keep other state if any
-          const newState = { ...location.state };
-          delete newState.chatId;
-          navigate(".", { state: newState, replace: true });
-        }
-        
-        // Remove URL parameter if present
-        if (chatIdFromUrl) {
-          navigate("/messages", { replace: true });
-        }
-      }
-    });
+      // Load chat details immediately
+      loadChatDetails(chatIdToSelect);
+    }
+    
+    // Clear navigation state after using it
+    if (location.state?.chatId) {
+      // Create a new state object without chatId
+      const newState = { ...location.state };
+      delete newState.chatId;
+      navigate(".", { state: newState, replace: true });
+    }
+  }, [chatIdFromParams, chatIdFromState, initialLoadComplete, location.state, navigate, selectedChat, loadChatDetails]);
+  
+  // Effect to load chats and set up subscriptions
+  useEffect(() => {
+    // Fetch chats
+    fetchChats();
     
     // Set up real-time subscription for chat updates
     const chatsChannel = supabase
@@ -473,17 +524,41 @@ const Messages = () => {
           }
           
           setChats(currentChats => {
-            return currentChats.map(chat => {
-              if (chat.id === updatedChat.id) {
-                return {
-                  ...chat,
-                  lastMessage: updatedChat.last_message || chat.lastMessage,
-                  time: formatTime(updatedChat.last_message_time),
-                  unread: updatedChat.has_unread && updatedChat.last_message_sender_id !== userId
-                };
-              }
-              return chat;
-            });
+            const chatExists = currentChats.some(c => c.id === updatedChat.id);
+            
+            if (chatExists) {
+              // Update existing chat
+              return currentChats
+                .map(chat => {
+                  if (chat.id === updatedChat.id) {
+                    return {
+                      ...chat,
+                      lastMessage: updatedChat.last_message || chat.lastMessage,
+                      time: formatTime(updatedChat.last_message_time),
+                      unread: updatedChat.has_unread && updatedChat.last_message_sender_id !== userId
+                    };
+                  }
+                  return chat;
+                })
+                // Move the updated chat to the top
+                .sort((a, b) => 
+                  a.id === updatedChat.id ? -1 : b.id === updatedChat.id ? 1 : 0
+                );
+            } else if (!updatedChat.deleted) {
+              // Add new chat if it's not in the list
+              const newChat = {
+                id: updatedChat.id,
+                name: updatedChat.space_name || "Conversa",
+                lastMessage: updatedChat.last_message || "Iniciar conversa...",
+                time: formatTime(updatedChat.last_message_time),
+                space_id: updatedChat.space_id,
+                avatar: updatedChat.space_image || "",
+                unread: updatedChat.has_unread && updatedChat.last_message_sender_id !== userId
+              };
+              return [newChat, ...currentChats];
+            }
+            
+            return currentChats;
           });
         }
       )
@@ -492,13 +567,11 @@ const Messages = () => {
     return () => {
       supabase.removeChannel(chatsChannel);
     };
-  }, [fetchChats, chatIdFromUrl, chatIdFromState, location, navigate, userId]);
+  }, [fetchChats, userId]);
 
-  // Effect to load messages when a chat is selected
+  // Effect to set up message subscription when a chat is selected
   useEffect(() => {
     if (selectedChat) {
-      loadChatDetails(selectedChat);
-      
       // Set up real-time subscription for new messages
       const messagesChannel = supabase
         .channel(`messages_${selectedChat}`)
@@ -511,6 +584,8 @@ const Messages = () => {
           }, 
           payload => {
             const newMsg = payload.new as any;
+            
+            // Add new message
             setMessages(currentMsgs => [
               ...currentMsgs, 
               {
@@ -521,6 +596,11 @@ const Messages = () => {
                 is_mine: newMsg.sender_id === userId
               }
             ]);
+            
+            // Scroll to bottom
+            setTimeout(() => {
+              messageEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+            }, 100);
           }
         )
         .subscribe();
@@ -529,7 +609,7 @@ const Messages = () => {
         supabase.removeChannel(messagesChannel);
       };
     }
-  }, [selectedChat, userId, loadChatDetails]);
+  }, [selectedChat, userId]);
   
   // Filter chats by search query
   const filteredChats = chats.filter(chat => 
@@ -559,7 +639,10 @@ const Messages = () => {
                 <ChatItem 
                   key={chat.id} 
                   chat={chat}
-                  onClick={() => setSelectedChat(chat.id)}
+                  onClick={() => {
+                    setSelectedChat(chat.id);
+                    loadChatDetails(chat.id);
+                  }}
                 />
               ))
             ) : (
@@ -621,36 +704,39 @@ const Messages = () => {
                 setChatLoadError(false);
               }} />
             ) : messages.length > 0 ? (
-              messages.map(message => (
-                <div 
-                  key={message.id} 
-                  className={cn(
-                    "mb-4 flex",
-                    message.is_mine ? "justify-end" : "justify-start"
-                  )}
-                >
-                  <div className="max-w-[80%] inline-block">
-                    <div 
-                      className={cn(
-                        "rounded-2xl p-3 px-4 inline-block", 
-                        message.is_mine 
-                          ? "bg-iparty text-white rounded-tr-none" 
-                          : "bg-white rounded-tl-none"
-                      )}
-                    >
-                      {message.content}
-                    </div>
-                    <div 
-                      className={cn(
-                        "text-xs mt-1 text-muted-foreground",
-                        message.is_mine ? "text-right" : ""
-                      )}
-                    >
-                      {formatTime(message.timestamp)}
+              <>
+                {messages.map(message => (
+                  <div 
+                    key={message.id} 
+                    className={cn(
+                      "mb-4 flex",
+                      message.is_mine ? "justify-end" : "justify-start"
+                    )}
+                  >
+                    <div className="max-w-[80%] inline-block">
+                      <div 
+                        className={cn(
+                          "rounded-2xl p-3 px-4 inline-block", 
+                          message.is_mine 
+                            ? "bg-iparty text-white rounded-tr-none" 
+                            : "bg-white rounded-tl-none"
+                        )}
+                      >
+                        {message.content}
+                      </div>
+                      <div 
+                        className={cn(
+                          "text-xs mt-1 text-muted-foreground",
+                          message.is_mine ? "text-right" : ""
+                        )}
+                      >
+                        {formatTime(message.timestamp)}
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))
+                ))}
+                <div ref={messageEndRef} />
+              </>
             ) : (
               <EmptyState />
             )}
@@ -660,10 +746,7 @@ const Messages = () => {
           <div className="p-4 pt-2 bg-white border-t">
             <form 
               className="flex items-end gap-2"
-              onSubmit={(e) => {
-                e.preventDefault();
-                handleSendMessage();
-              }}
+              onSubmit={handleSendMessage}
             >
               <Textarea 
                 placeholder="Digite sua mensagem..." 
