@@ -322,6 +322,52 @@ const Messages = () => {
     }
   }, [processChatsData]);
 
+  // Function to create a new chat for the same space
+  const createOrFindChat = useCallback(async (spaceId: string, spaceOwnerId: string) => {
+    if (!userId || !spaceId || !spaceOwnerId) {
+      console.error("Missing required parameters for creating chat");
+      return null;
+    }
+
+    try {
+      setCreatingNewChat(true);
+      
+      // Check if there's an existing chat or create a new one using edge function
+      console.log("Creating or finding chat for space:", spaceId);
+      const { data: chatData, error } = await supabase.functions
+        .invoke('get_chat_by_users_and_space', {
+          body: { 
+            current_user_id: userId, 
+            space_owner_id: spaceOwnerId, 
+            current_space_id: spaceId
+          }
+        });
+      
+      if (error) {
+        console.error("Error creating/finding chat:", error);
+        toast.error("Erro ao criar nova conversa");
+        return null;
+      }
+      
+      console.log("Chat creation/lookup result:", chatData);
+      
+      if (chatData && chatData.length > 0) {
+        // Refresh the chats list
+        await fetchChats(true);
+        
+        // Return the first chat ID
+        return chatData[0].id;
+      }
+      
+      return null;
+    } catch (error) {
+      console.error("Error in createOrFindChat:", error);
+      return null;
+    } finally {
+      setCreatingNewChat(false);
+    }
+  }, [userId, fetchChats]);
+
   // Function to load chat details and messages
   const loadChatDetails = useCallback(async (chatId: string) => {
     console.log("Loading chat details for:", chatId);
