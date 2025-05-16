@@ -40,13 +40,23 @@ serve(async (req) => {
       );
     }
 
-    // Query both active chats only that are not deleted
-    const { data, error } = await supabase
+    // Get URL parameters for the query
+    const url = new URL(req.url);
+    const includeDeleted = url.searchParams.get('include_deleted') === 'true';
+    
+    // Build the query including deleted status if requested
+    let query = supabase
       .from('chats')
       .select('*')
       .or(`user_id.eq.${user.id},owner_id.eq.${user.id}`)
-      .eq('deleted', false)
-      .order('last_message_time', { ascending: false });
+      
+    // Only apply deleted filter if not including deleted chats
+    if (!includeDeleted) {
+      query = query.eq('deleted', false);
+    }
+    
+    // Get the chats
+    const { data, error } = await query.order('last_message_time', { ascending: false });
 
     if (error) {
       console.error('Database error:', error);

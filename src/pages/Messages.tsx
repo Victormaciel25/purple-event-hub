@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { Input } from "@/components/ui/input";
 import { Search, MessageSquare, ArrowLeft, Trash2, Loader2 } from "lucide-react";
@@ -28,6 +29,7 @@ interface ChatProps {
   avatar: string;
   unread?: boolean;
   space_id?: string;
+  deleted?: boolean;
 }
 
 interface MessageProps {
@@ -97,10 +99,10 @@ const LoadingState = () => (
   </div>
 );
 
-const ErrorState = ({ onBack }: { onBack: () => void }) => (
+const ErrorState = ({ message = "Erro ao carregar o chat", onBack }: { message?: string; onBack: () => void }) => (
   <div className="h-full flex flex-col items-center justify-center text-center">
     <MessageSquare className="h-12 w-12 text-red-400 mb-3" />
-    <p className="text-red-500">Erro ao carregar o chat</p>
+    <p className="text-red-500">{message}</p>
     <p className="text-sm text-muted-foreground/70 mt-2">
       Tente voltar e selecionar o chat novamente
     </p>
@@ -163,10 +165,42 @@ const Messages = () => {
   const [chatToDelete, setChatToDelete] = useState<string | null>(null);
   const [spaceImages, setSpaceImages] = useState<Record<string, string>>({});
   const [chatLoadError, setChatLoadError] = useState<boolean>(false);
+  const [chatErrorMessage, setChatErrorMessage] = useState<string>("");
   const [initialLoadComplete, setInitialLoadComplete] = useState<boolean>(false);
+  const [chatDeleted, setChatDeleted] = useState<boolean>(false);
+
+  // Function to check if a chat exists and is accessible
+  const checkChatExists = useCallback(async (chatId: string) => {
+    try {
+      // Check if the chat exists and is not deleted
+      const { data, error } = await supabase
+        .from("chats")
+        .select("*")
+        .eq("id", chatId)
+        .maybeSingle();
+      
+      if (error) {
+        console.error("Error checking chat:", error);
+        return { exists: false, isDeleted: false, error: error.message };
+      }
+      
+      if (!data) {
+        return { exists: false, isDeleted: false, error: "Chat not found" };
+      }
+      
+      return { 
+        exists: true, 
+        isDeleted: data.deleted || false,
+        data
+      };
+    } catch (error) {
+      console.error("Exception checking chat:", error);
+      return { exists: false, isDeleted: false, error: "Error checking chat" };
+    }
+  }, []);
 
   // Function to fetch user chats
-  const fetchChats = useCallback(async () => {
+  const fetchChats = useCallback(async (includeDeleted = false) => {
     try {
       setLoading(true);
       setChatLoadError(false);
@@ -177,10 +211,12 @@ const Messages = () => {
         setUserId(userData.user.id);
         
         try {
-          // Use edge function to get chats
+          // Use edge function to get chats with includeDeleted parameter
           console.log("Fetching chats using edge function...");
           const { data: chatsData, error } = await supabase.functions
-            .invoke('get_user_chats');
+            .invoke('get_user_chats', {
+              params: { include_deleted: includeDeleted.toString() }
+            });
           
           if (error) {
             console.error("Edge function error:", error);
@@ -195,12 +231,18 @@ const Messages = () => {
           console.error("Error with edge function, falling back to direct query:", error);
           
           // Fallback query if edge function fails
-          const { data: fallbackChatsData, error: fallbackError } = await supabase
+          let query = supabase
             .from("chats")
             .select("*")
             .or(`user_id.eq.${userData.user.id},owner_id.eq.${userData.user.id}`)
-            .eq('deleted', false)
             .order('last_message_time', { ascending: false });
+            
+          // Only apply deleted filter if not including deleted chats  
+          if (!includeDeleted) {
+            query = query.eq('deleted', false);
+          }
+          
+          const { data: fallbackChatsData, error: fallbackError } = await query;
             
           if (fallbackError) {
             console.error("Fallback query error:", fallbackError);
@@ -269,10 +311,13 @@ const Messages = () => {
       time: formatTime(chat.last_message_time),
       space_id: chat.space_id,
       avatar: chat.space_id && localImageMap[chat.space_id] ? localImageMap[chat.space_id] : chat.space_image || "",
-      unread: chat.has_unread && chat.last_message_sender_id !== currentUserId
+      unread: chat.has_unread && chat.last_message_sender_id !== currentUserId,
+      deleted: chat.deleted || false
     }));
     
     setChats(formattedChats);
+    
+    return formattedChats;
   };
 
   // Function to load chat details and messages
@@ -280,33 +325,30 @@ const Messages = () => {
     console.log("Loading chat details for:", chatId);
     try {
       setChatLoadError(false);
+      setChatErrorMessage("");
+      setChatDeleted(false);
       
       // Check if the chat exists and is not deleted
-      const { data: chatData, error: chatError } = await supabase
-        .from("chats")
-        .select("*")
-        .eq("id", chatId)
-        .maybeSingle();
+      const chatStatus = await checkChatExists(chatId);
       
-      if (chatError) {
-        console.error("Chat query error:", chatError);
-        throw chatError;
-      }
-      
-      if (!chatData) {
+      if (!chatStatus.exists) {
         console.error("Chat not found");
         toast.error("Chat não encontrado");
         setChatLoadError(true);
+        setChatErrorMessage("Chat não encontrado");
         return;
       }
       
-      if (chatData.deleted) {
+      if (chatStatus.isDeleted) {
         console.error("Chat is deleted");
         toast.error("Esta conversa foi excluída");
         setChatLoadError(true);
+        setChatDeleted(true);
+        setChatErrorMessage("Esta conversa foi excluída");
         return;
       }
       
+      const chatData = chatStatus.data;
       console.log("Chat data loaded:", chatData);
       
       // Find chat info in the existing list or create a new entry
@@ -323,7 +365,8 @@ const Messages = () => {
           time: formatTime(chatData.last_message_time),
           space_id: chatData.space_id,
           avatar: chatData.space_image || "",
-          unread: chatData.has_unread && chatData.last_message_sender_id !== userId
+          unread: chatData.has_unread && chatData.last_message_sender_id !== userId,
+          deleted: chatData.deleted || false
         };
         
         setChatInfo(newChatInfo);
@@ -380,9 +423,10 @@ const Messages = () => {
     } catch (error) {
       console.error("Error loading chat details:", error);
       setChatLoadError(true);
+      setChatErrorMessage("Erro ao carregar detalhes do chat");
       toast.error("Erro ao carregar detalhes do chat");
     }
-  }, [chats, userId]);
+  }, [chats, userId, checkChatExists]);
 
   // Function to send a message
   const handleSendMessage = async (e?: React.FormEvent) => {
@@ -391,6 +435,18 @@ const Messages = () => {
     
     try {
       setSendingMessage(true);
+      
+      // Check if chat exists and is not deleted before sending
+      const chatStatus = await checkChatExists(selectedChat);
+      
+      if (!chatStatus.exists || chatStatus.isDeleted) {
+        toast.error(chatStatus.isDeleted ? "Esta conversa foi excluída" : "Chat não encontrado");
+        setChatLoadError(true);
+        setChatDeleted(chatStatus.isDeleted);
+        setChatErrorMessage(chatStatus.isDeleted ? "Esta conversa foi excluída" : "Chat não encontrado");
+        setSendingMessage(false);
+        return;
+      }
       
       // Insert new message
       const { error: messageError } = await supabase
@@ -481,8 +537,11 @@ const Messages = () => {
       console.log("Setting selected chat from navigation:", chatIdToSelect);
       setSelectedChat(chatIdToSelect);
       
-      // Load chat details immediately
-      loadChatDetails(chatIdToSelect);
+      // Check if we should include deleted chats in our fetch to allow viewing chat history
+      fetchChats(true).then(() => {
+        // Load chat details after chats are fetched
+        loadChatDetails(chatIdToSelect);
+      });
     }
     
     // Clear navigation state after using it
@@ -492,12 +551,12 @@ const Messages = () => {
       delete newState.chatId;
       navigate(".", { state: newState, replace: true });
     }
-  }, [chatIdFromParams, chatIdFromState, initialLoadComplete, location.state, navigate, selectedChat, loadChatDetails]);
+  }, [chatIdFromParams, chatIdFromState, initialLoadComplete, location.state, navigate, selectedChat, loadChatDetails, fetchChats]);
   
   // Effect to load chats and set up subscriptions
   useEffect(() => {
-    // Fetch chats
-    fetchChats();
+    // Fetch chats (not including deleted by default)
+    fetchChats(false);
     
     // Set up real-time subscription for chat updates
     const chatsChannel = supabase
@@ -507,19 +566,11 @@ const Messages = () => {
         payload => {
           const updatedChat = payload.new as any;
           
-          // Ignore updates for deleted chats
-          if (updatedChat.deleted) {
+          // Ignore updates for deleted chats unless it's the selected chat
+          if (updatedChat.deleted && updatedChat.id !== selectedChat) {
             setChats(currentChats => 
               currentChats.filter(chat => chat.id !== updatedChat.id)
             );
-            
-            // If the deleted chat was selected, clear the selection
-            if (selectedChat === updatedChat.id) {
-              setSelectedChat(null);
-              setMessages([]);
-              setChatInfo(null);
-            }
-            
             return;
           }
           
@@ -535,7 +586,8 @@ const Messages = () => {
                       ...chat,
                       lastMessage: updatedChat.last_message || chat.lastMessage,
                       time: formatTime(updatedChat.last_message_time),
-                      unread: updatedChat.has_unread && updatedChat.last_message_sender_id !== userId
+                      unread: updatedChat.has_unread && updatedChat.last_message_sender_id !== userId,
+                      deleted: updatedChat.deleted || false
                     };
                   }
                   return chat;
@@ -544,7 +596,7 @@ const Messages = () => {
                 .sort((a, b) => 
                   a.id === updatedChat.id ? -1 : b.id === updatedChat.id ? 1 : 0
                 );
-            } else if (!updatedChat.deleted) {
+            } else if ((!updatedChat.deleted || updatedChat.id === selectedChat)) {
               // Add new chat if it's not in the list
               const newChat = {
                 id: updatedChat.id,
@@ -553,7 +605,8 @@ const Messages = () => {
                 time: formatTime(updatedChat.last_message_time),
                 space_id: updatedChat.space_id,
                 avatar: updatedChat.space_image || "",
-                unread: updatedChat.has_unread && updatedChat.last_message_sender_id !== userId
+                unread: updatedChat.has_unread && updatedChat.last_message_sender_id !== userId,
+                deleted: updatedChat.deleted || false
               };
               return [newChat, ...currentChats];
             }
@@ -567,7 +620,7 @@ const Messages = () => {
     return () => {
       supabase.removeChannel(chatsChannel);
     };
-  }, [fetchChats, userId]);
+  }, [fetchChats, userId, selectedChat]);
 
   // Effect to set up message subscription when a chat is selected
   useEffect(() => {
@@ -611,9 +664,19 @@ const Messages = () => {
     }
   }, [selectedChat, userId]);
   
-  // Filter chats by search query
+  // Handle back button click
+  const handleBackToChats = useCallback(() => {
+    setSelectedChat(null);
+    setChatLoadError(false);
+    setChatErrorMessage("");
+    setChatDeleted(false);
+    // Re-fetch non-deleted chats
+    fetchChats(false);
+  }, [fetchChats]);
+  
+  // Filter chats by search query and exclude deleted chats
   const filteredChats = chats.filter(chat => 
-    chat.name.toLowerCase().includes(searchQuery.toLowerCase())
+    !chat.deleted && chat.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
   
   return (
@@ -660,10 +723,7 @@ const Messages = () => {
                 variant="ghost" 
                 size="sm" 
                 className="mr-2 p-1"
-                onClick={() => {
-                  setSelectedChat(null);
-                  setChatLoadError(false);
-                }}
+                onClick={handleBackToChats}
               >
                 <ArrowLeft size={20} />
               </Button>
@@ -686,23 +746,25 @@ const Messages = () => {
             </div>
 
             {/* Delete chat button */}
-            <Button
-              variant="ghost"
-              size="sm"
-              className="text-muted-foreground hover:text-destructive"
-              onClick={() => setChatToDelete(selectedChat)}
-            >
-              <Trash2 size={18} />
-            </Button>
+            {!chatDeleted && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-muted-foreground hover:text-destructive"
+                onClick={() => setChatToDelete(selectedChat)}
+              >
+                <Trash2 size={18} />
+              </Button>
+            )}
           </div>
           
           {/* Messages area */}
           <div className="flex-grow overflow-y-auto p-4 bg-gray-50">
             {chatLoadError ? (
-              <ErrorState onBack={() => {
-                setSelectedChat(null);
-                setChatLoadError(false);
-              }} />
+              <ErrorState 
+                message={chatErrorMessage || "Erro ao carregar o chat"} 
+                onBack={handleBackToChats} 
+              />
             ) : messages.length > 0 ? (
               <>
                 {messages.map(message => (
@@ -742,34 +804,36 @@ const Messages = () => {
             )}
           </div>
           
-          {/* Message input */}
-          <div className="p-4 pt-2 bg-white border-t">
-            <form 
-              className="flex items-end gap-2"
-              onSubmit={handleSendMessage}
-            >
-              <Textarea 
-                placeholder="Digite sua mensagem..." 
-                className="resize-none"
-                value={newMessage}
-                onChange={(e) => setNewMessage(e.target.value)}
-                rows={1}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && !e.shiftKey) {
-                    e.preventDefault();
-                    handleSendMessage();
-                  }
-                }}
-              />
-              <Button 
-                type="submit" 
-                disabled={sendingMessage || !newMessage.trim()}
-                className="bg-iparty hover:bg-iparty-dark"
+          {/* Message input - only show if chat is not deleted */}
+          {!chatDeleted && !chatLoadError && (
+            <div className="p-4 pt-2 bg-white border-t">
+              <form 
+                className="flex items-end gap-2"
+                onSubmit={handleSendMessage}
               >
-                {sendingMessage ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Enviar'}
-              </Button>
-            </form>
-          </div>
+                <Textarea 
+                  placeholder="Digite sua mensagem..." 
+                  className="resize-none"
+                  value={newMessage}
+                  onChange={(e) => setNewMessage(e.target.value)}
+                  rows={1}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      e.preventDefault();
+                      handleSendMessage();
+                    }
+                  }}
+                />
+                <Button 
+                  type="submit" 
+                  disabled={sendingMessage || !newMessage.trim()}
+                  className="bg-iparty hover:bg-iparty-dark"
+                >
+                  {sendingMessage ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Enviar'}
+                </Button>
+              </form>
+            </div>
+          )}
         </div>
       )}
       
