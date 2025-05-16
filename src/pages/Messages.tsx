@@ -150,6 +150,8 @@ const Messages = () => {
   // Extract chatId from different sources with clear priority
   const chatIdFromParams = searchParams.get('chat');
   const chatIdFromState = location.state?.chatId;
+  const spaceIdFromState = location.state?.spaceId;
+  const spaceOwnerFromState = location.state?.spaceOwnerId;
   
   // State
   const [chats, setChats] = useState<ChatProps[]>([]);
@@ -167,6 +169,7 @@ const Messages = () => {
   const [chatErrorMessage, setChatErrorMessage] = useState<string>("");
   const [initialLoadComplete, setInitialLoadComplete] = useState<boolean>(false);
   const [chatDeleted, setChatDeleted] = useState<boolean>(false);
+  const [creatingNewChat, setCreatingNewChat] = useState<boolean>(false);
 
   // Function to check if a chat exists and is accessible
   const checkChatExists = useCallback(async (chatId: string) => {
@@ -197,6 +200,52 @@ const Messages = () => {
       return { exists: false, isDeleted: false, error: "Error checking chat" };
     }
   }, []);
+
+  // Function to create a new chat for the same space
+  const createOrFindChat = useCallback(async (spaceId: string, spaceOwnerId: string) => {
+    if (!userId || !spaceId || !spaceOwnerId) {
+      console.error("Missing required parameters for creating chat");
+      return null;
+    }
+
+    try {
+      setCreatingNewChat(true);
+      
+      // Check if there's an existing chat or create a new one using edge function
+      console.log("Creating or finding chat for space:", spaceId);
+      const { data: chatData, error } = await supabase.functions
+        .invoke('get_chat_by_users_and_space', {
+          body: { 
+            current_user_id: userId, 
+            space_owner_id: spaceOwnerId, 
+            current_space_id: spaceId
+          }
+        });
+      
+      if (error) {
+        console.error("Error creating/finding chat:", error);
+        toast.error("Erro ao criar nova conversa");
+        return null;
+      }
+      
+      console.log("Chat creation/lookup result:", chatData);
+      
+      if (chatData && chatData.length > 0) {
+        // Refresh the chats list
+        await fetchChats(true);
+        
+        // Return the first chat ID
+        return chatData[0].id;
+      }
+      
+      return null;
+    } catch (error) {
+      console.error("Error in createOrFindChat:", error);
+      return null;
+    } finally {
+      setCreatingNewChat(false);
+    }
+  }, [userId, fetchChats]);
 
   // Function to fetch user chats
   const fetchChats = useCallback(async (includeDeleted = false) => {
@@ -340,6 +389,24 @@ const Messages = () => {
       
       if (chatStatus.isDeleted) {
         console.error("Chat is deleted");
+        
+        // If we have space details, try to create a new chat
+        if (spaceIdFromState && spaceOwnerFromState) {
+          console.log("Attempting to create new chat for deleted chat");
+          const newChatId = await createOrFindChat(spaceIdFromState, spaceOwnerFromState);
+          
+          if (newChatId) {
+            // Update the selected chat and navigate to it
+            setSelectedChat(newChatId);
+            navigate(`/messages?chat=${newChatId}`, { replace: true });
+            
+            // Load the new chat details
+            await loadChatDetails(newChatId);
+            return;
+          }
+        }
+        
+        // If creating a new chat failed or we don't have space details
         toast.error("Esta conversa foi excluída");
         setChatLoadError(true);
         setChatDeleted(true);
@@ -425,7 +492,7 @@ const Messages = () => {
       setChatErrorMessage("Erro ao carregar detalhes do chat");
       toast.error("Erro ao carregar detalhes do chat");
     }
-  }, [chats, userId, checkChatExists]);
+  }, [chats, userId, checkChatExists, createOrFindChat, navigate, spaceIdFromState, spaceOwnerFromState]);
 
   // Function to send a message
   const handleSendMessage = async (e?: React.FormEvent) => {
@@ -545,9 +612,11 @@ const Messages = () => {
     
     // Clear navigation state after using it
     if (location.state?.chatId) {
-      // Create a new state object without chatId
-      const newState = { ...location.state };
-      delete newState.chatId;
+      // Create a new state object without chatId but keeping spaceId and spaceOwnerId
+      const newState = { 
+        spaceId: location.state.spaceId,
+        spaceOwnerId: location.state.spaceOwnerId
+      };
       navigate(".", { state: newState, replace: true });
     }
   }, [chatIdFromParams, chatIdFromState, initialLoadComplete, location.state, navigate, selectedChat, loadChatDetails, fetchChats]);
@@ -680,7 +749,12 @@ const Messages = () => {
   
   return (
     <div className="container px-4 pb-16 max-w-4xl mx-auto">
-      {!selectedChat ? (
+      {creatingNewChat ? (
+        <div className="flex flex-col items-center justify-center h-[60vh]">
+          <Loader2 className="h-10 w-10 animate-spin text-iparty mb-4" />
+          <p className="text-lg">Criando nova conversa...</p>
+        </div>
+      ) : !selectedChat ? (
         // Chat list view
         <>
           <div className="relative mb-6 mt-6">
