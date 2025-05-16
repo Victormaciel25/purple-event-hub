@@ -19,24 +19,15 @@ serve(async (req) => {
     
     if (!authHeader) {
       return new Response(
-        JSON.stringify({ 
-          error: 'Missing Authorization header' 
-        }),
-        { 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 401 
-        }
+        JSON.stringify({ error: 'Missing Authorization header' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 401 }
       );
     }
 
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_ANON_KEY') ?? '',
-      { 
-        global: { 
-          headers: { Authorization: authHeader } 
-        } 
-      }
+      { global: { headers: { Authorization: authHeader } } }
     );
 
     // Get the current user
@@ -44,36 +35,33 @@ serve(async (req) => {
     
     if (userError || !user) {
       return new Response(
-        JSON.stringify({ 
-          error: 'Unauthorized' 
-        }),
-        { 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 401 
-        }
+        JSON.stringify({ error: 'Unauthorized' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 401 }
       );
     }
 
-    // Fetch chats for this user
-    // Filter to exclude deleted chats (where deleted = true)
+    // Query both active and deleted chats, but mark them accordingly
     const { data, error } = await supabase
       .from('chats')
       .select('*')
       .or(`user_id.eq.${user.id},owner_id.eq.${user.id}`)
-      .eq('deleted', false) // Only get non-deleted chats
       .order('last_message_time', { ascending: false });
 
-    if (error) throw error;
+    if (error) {
+      throw error;
+    }
+    
+    // Filter and process the chats
+    const processedData = data
+      .filter(chat => !chat.deleted) // Filter out deleted chats for the main list
+      .map(chat => ({
+        ...chat,
+        // Add any additional processing here if needed
+      }));
 
     return new Response(
-      JSON.stringify(data),
-      { 
-        headers: { 
-          ...corsHeaders, 
-          'Content-Type': 'application/json' 
-        },
-        status: 200 
-      }
+      JSON.stringify(processedData),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
     );
 
   } catch (error) {
@@ -81,10 +69,7 @@ serve(async (req) => {
     
     return new Response(
       JSON.stringify({ error: error.message }),
-      { 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 500 
-      }
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
     );
   }
 });

@@ -1,10 +1,9 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { Input } from "@/components/ui/input";
-import { Search, MessageSquare, ArrowLeft, Trash2 } from "lucide-react";
+import { Search, MessageSquare, ArrowLeft, Trash2, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { useSearchParams, useLocation, useNavigate } from "react-router-dom";
 import OptimizedImage from "@/components/OptimizedImage";
@@ -19,7 +18,9 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
+import { EDGE_FUNCTIONS } from "@/config/app-config";
 
+// Types
 interface ChatProps {
   id: string;
   name: string;
@@ -38,16 +39,8 @@ interface MessageProps {
   is_mine: boolean;
 }
 
-const MessageItem: React.FC<ChatProps & { onClick: () => void }> = ({
-  id,
-  name,
-  lastMessage,
-  time,
-  avatar,
-  unread,
-  onClick,
-  space_id,
-}) => {
+// Helper Components
+const ChatItem = ({ chat, onClick }: { chat: ChatProps; onClick: () => void }) => {
   return (
     <div 
       className="flex items-center p-4 border-b border-gray-100 hover:bg-gray-50 cursor-pointer" 
@@ -55,28 +48,75 @@ const MessageItem: React.FC<ChatProps & { onClick: () => void }> = ({
     >
       <div className="h-12 w-12 rounded-full overflow-hidden mr-4">
         <OptimizedImage 
-          src={avatar || ""}
-          alt={name} 
+          src={chat.avatar || ""}
+          alt={chat.name} 
           className="w-full h-full"
           fallbackSrc="https://images.unsplash.com/photo-1566681855366-282a74153321?q=80&w=200&auto=format&fit=crop"
         />
       </div>
       <div className="flex-1">
         <div className="flex justify-between">
-          <h3 className={`font-medium truncate max-w-[160px] ${unread ? "text-black" : ""}`} title={name}>{name}</h3>
-          <span className="text-xs text-muted-foreground">{time}</span>
+          <h3 className={`font-medium truncate max-w-[160px] ${chat.unread ? "text-black" : ""}`} title={chat.name}>{chat.name}</h3>
+          <span className="text-xs text-muted-foreground">{chat.time}</span>
         </div>
-        <p className={`text-sm truncate ${unread ? "font-medium text-foreground" : "text-muted-foreground"}`}>
-          {lastMessage}
+        <p className={`text-sm truncate ${chat.unread ? "font-medium text-foreground" : "text-muted-foreground"}`}>
+          {chat.lastMessage}
         </p>
       </div>
-      {unread && (
+      {chat.unread && (
         <div className="ml-2 h-2 w-2 bg-iparty rounded-full"></div>
       )}
     </div>
   );
 };
 
+const EmptyState = ({ searchQuery = "", onBack }: { searchQuery?: string; onBack?: () => void }) => (
+  <div className="p-8 text-center">
+    <MessageSquare className="mx-auto h-12 w-12 text-muted-foreground/40" />
+    <p className="mt-2 text-muted-foreground">
+      {searchQuery ? 'Nenhuma conversa encontrada' : 'Nenhuma conversa iniciada'}
+    </p>
+    <p className="text-sm text-muted-foreground/70">
+      {searchQuery ? 'Tente outro termo de busca' : 'Visite um espaço e clique no botão de mensagem para começar'}
+    </p>
+    {onBack && (
+      <Button 
+        variant="outline" 
+        size="sm" 
+        onClick={onBack}
+        className="mt-4"
+      >
+        Voltar para lista de chats
+      </Button>
+    )}
+  </div>
+);
+
+const LoadingState = () => (
+  <div className="flex justify-center items-center p-8">
+    <Loader2 className="animate-spin h-6 w-6 text-iparty" />
+  </div>
+);
+
+const ErrorState = ({ onBack }: { onBack: () => void }) => (
+  <div className="h-full flex flex-col items-center justify-center text-center">
+    <MessageSquare className="h-12 w-12 text-red-400 mb-3" />
+    <p className="text-red-500">Erro ao carregar o chat</p>
+    <p className="text-sm text-muted-foreground/70 mt-2">
+      Tente voltar e selecionar o chat novamente
+    </p>
+    <Button 
+      variant="outline" 
+      size="sm" 
+      onClick={onBack}
+      className="mt-4"
+    >
+      Voltar para lista de chats
+    </Button>
+  </div>
+);
+
+// Helper functions
 const formatTime = (isoString: string): string => {
   const date = new Date(isoString);
   const now = new Date();
@@ -97,6 +137,7 @@ const formatTime = (isoString: string): string => {
   }
 };
 
+// Main component
 const Messages = () => {
   const [searchParams] = useSearchParams();
   const chatIdFromUrl = searchParams.get('chat');
@@ -104,6 +145,7 @@ const Messages = () => {
   const navigate = useNavigate();
   const chatIdFromState = location.state?.chatId;
 
+  // State
   const [chats, setChats] = useState<ChatProps[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
@@ -117,361 +159,197 @@ const Messages = () => {
   const [spaceImages, setSpaceImages] = useState<Record<string, string>>({});
   const [chatLoadError, setChatLoadError] = useState<boolean>(false);
 
-  useEffect(() => {
-    const fetchUserAndChats = async () => {
-      try {
-        setLoading(true);
-        setChatLoadError(false);
+  // Function to fetch user chats
+  const fetchChats = useCallback(async () => {
+    try {
+      setLoading(true);
+      setChatLoadError(false);
+      
+      // Get current user
+      const { data: userData } = await supabase.auth.getUser();
+      if (userData?.user?.id) {
+        setUserId(userData.user.id);
         
-        // Get current user
-        const { data: userData } = await supabase.auth.getUser();
-        if (userData?.user?.id) {
-          setUserId(userData.user.id);
-          
-          // Fetch chats using direct query instead of RPC
+        try {
+          // Try to use the edge function first
           const { data: chatsData, error } = await supabase.functions
             .invoke('get_user_chats');
-            
-          if (error) {
-            console.error("Error fetching chats:", error);
-            // Fallback query if RPC is not available
-            const { data: fallbackChatsData, error: fallbackError } = await supabase
-              .from("chats")
-              .select("*")
-              .or(`user_id.eq.${userData.user.id},owner_id.eq.${userData.user.id}`)
-              .is('deleted', false)
-              .order('last_message_time', { ascending: false });
-              
-            if (fallbackError) throw fallbackError;
-            
-            if (fallbackChatsData) {
-              // Collect all space IDs to fetch their images
-              const spaceIds = fallbackChatsData
-                .filter(chat => chat.space_id)
-                .map(chat => chat.space_id);
-              
-              // Initialize empty image map
-              let localImageMap: Record<string, string> = {};
-              
-              // Fetch space photos for all spaces at once
-              if (spaceIds.length > 0) {
-                const { data: spacesData } = await supabase
-                  .from("spaces")
-                  .select("id, space_photos(storage_path)")
-                  .in("id", spaceIds);
-                
-                // Get signed URLs for all spaces with photos
-                if (spacesData) {
-                  await Promise.all(spacesData.map(async (space) => {
-                    if (space.space_photos && space.space_photos.length > 0) {
-                      try {
-                        const { data: urlData } = await supabase.storage
-                          .from('spaces')
-                          .createSignedUrl(space.space_photos[0].storage_path, 3600);
-                          
-                        if (urlData?.signedUrl) {
-                          localImageMap[space.id] = urlData.signedUrl;
-                        }
-                      } catch (err) {
-                        console.error("Error getting signed URL for space:", space.id, err);
-                      }
-                    }
-                  }));
-                }
-                
-                setSpaceImages(localImageMap);
-              }
-              
-              const formattedChats = fallbackChatsData.map(chat => ({
-                id: chat.id,
-                name: chat.space_name || "Conversa",
-                lastMessage: chat.last_message || "Iniciar conversa...",
-                time: formatTime(chat.last_message_time),
-                space_id: chat.space_id,
-                avatar: chat.space_id && localImageMap[chat.space_id] ? localImageMap[chat.space_id] : chat.space_image || "",
-                unread: chat.has_unread && chat.last_message_sender_id !== userData.user.id
-              }));
-              
-              setChats(formattedChats);
-            }
-          } else if (chatsData) {
-            // Handle data if it's an array
-            if (Array.isArray(chatsData)) {
-              // Collect all space IDs to fetch their images
-              const spaceIds = chatsData
-                .filter(chat => chat.space_id)
-                .map(chat => chat.space_id);
-              
-              // Initialize empty image map
-              let localImageMap: Record<string, string> = {};
-              
-              // Fetch space photos for all spaces at once
-              if (spaceIds.length > 0) {
-                const { data: spacesData } = await supabase
-                  .from("spaces")
-                  .select("id, space_photos(storage_path)")
-                  .in("id", spaceIds);
-                
-                // Get signed URLs for all spaces with photos
-                if (spacesData) {
-                  await Promise.all(spacesData.map(async (space) => {
-                    if (space.space_photos && space.space_photos.length > 0) {
-                      try {
-                        const { data: urlData } = await supabase.storage
-                          .from('spaces')
-                          .createSignedUrl(space.space_photos[0].storage_path, 3600);
-                          
-                        if (urlData?.signedUrl) {
-                          localImageMap[space.id] = urlData.signedUrl;
-                        }
-                      } catch (err) {
-                        console.error("Error getting signed URL for space:", space.id, err);
-                      }
-                    }
-                  }));
-                }
-                
-                setSpaceImages(localImageMap);
-              }
-              
-              const formattedChats = chatsData.map(chat => ({
-                id: chat.id,
-                name: chat.space_name || "Conversa",
-                lastMessage: chat.last_message || "Iniciar conversa...",
-                time: formatTime(chat.last_message_time),
-                space_id: chat.space_id,
-                avatar: chat.space_id && localImageMap[chat.space_id] ? localImageMap[chat.space_id] : chat.space_image || "",
-                unread: chat.has_unread && chat.last_message_sender_id !== userData.user.id
-              }));
-              
-              setChats(formattedChats);
-            }
+          
+          if (error) throw error;
+          
+          if (chatsData) {
+            await processChatsData(chatsData, userData.user.id);
           }
+        } catch (error) {
+          console.error("Error with edge function, falling back:", error);
           
-          // Important: Check the state for chatId first, then URL parameter as fallback
-          const chatIdToSelect = chatIdFromState || chatIdFromUrl;
-          
-          if (chatIdToSelect) {
-            console.log("Selecting chat from navigation:", chatIdToSelect);
-            setSelectedChat(chatIdToSelect);
-            
-            // Clear navigation state after using it
-            if (location.state?.chatId) {
-              // Replace state without the chatId but keep other state if any
-              const newState = { ...location.state };
-              delete newState.chatId;
-              navigate(".", { state: newState, replace: true });
-            }
-            
-            // Remove URL parameter if present
-            if (chatIdFromUrl) {
-              navigate("/messages", { replace: true });
-            }
-          }
-        }
-      } catch (error) {
-        console.error("Error fetching chats:", error);
-        toast.error("Erro ao carregar conversas");
-        setChatLoadError(true);
-      } finally {
-        setLoading(false);
-      }
-    };
-    
-    fetchUserAndChats();
-    
-    // Setup subscription for real-time updates
-    const channel = supabase
-      .channel('public:chats')
-      .on('postgres_changes', 
-        { event: 'UPDATE', schema: 'public', table: 'chats' }, 
-        payload => {
-          setChats(currentChats => {
-            const updatedChat = payload.new as any;
-            // Ignore updates for deleted chats
-            if (updatedChat.deleted) {
-              return currentChats.filter(chat => chat.id !== updatedChat.id);
-            }
-            return currentChats.map(chat => {
-              if (chat.id === updatedChat.id) {
-                return {
-                  ...chat,
-                  lastMessage: updatedChat.last_message || chat.lastMessage,
-                  time: formatTime(updatedChat.last_message_time),
-                  unread: updatedChat.has_unread && updatedChat.last_message_sender_id !== userId
-                };
-              }
-              return chat;
-            });
-          });
-        }
-      )
-      .subscribe();
-      
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [chatIdFromUrl, location, navigate, chatIdFromState]);
-  
-  // Load messages when a chat is selected
-  useEffect(() => {
-    const fetchMessages = async () => {
-      if (!selectedChat) return;
-      
-      try {
-        console.log("Fetching selected chat info:", selectedChat);
-        const { data: selectedChatInfo, error: chatError } = await supabase
-          .from("chats")
-          .select("*")
-          .eq("id", selectedChat)
-          .single();
-          
-        if (chatError) {
-          // Log error but don't immediately reset selectedChat
-          console.error("Error fetching selected chat:", chatError);
-          
-          // Check if the chat might have been deleted
-          const { data: deletedChatInfo, error: deletedChatError } = await supabase
+          // Fallback query if edge function fails
+          const { data: fallbackChatsData, error: fallbackError } = await supabase
             .from("chats")
             .select("*")
-            .eq("id", selectedChat)
-            .eq("deleted", true)
-            .single();
+            .or(`user_id.eq.${userData.user.id},owner_id.eq.${userData.user.id}`)
+            .is('deleted', false)
+            .order('last_message_time', { ascending: false });
             
-          if (!deletedChatError && deletedChatInfo) {
-            console.log("Chat was found but is marked as deleted");
-            toast.error("Esta conversa foi excluída");
-            setSelectedChat(null);
-            setChatInfo(null);
-            return;
-          }
+          if (fallbackError) throw fallbackError;
           
-          // If we can't find the chat at all (neither active nor deleted)
-          if (deletedChatError) {
-            console.error("Chat not found (active or deleted):", deletedChatError);
-            toast.error("Chat não encontrado");
-            setSelectedChat(null);
-            setChatInfo(null);
-            return;
+          if (fallbackChatsData) {
+            await processChatsData(fallbackChatsData, userData.user.id);
           }
         }
-        
-        if (selectedChatInfo) {
-          console.log("Selected chat info loaded:", selectedChatInfo);
-          
-          if (selectedChatInfo.deleted) {
-            // O chat foi marcado como excluído
-            console.log("Chat is marked as deleted");
-            toast.error("Esta conversa foi excluída");
-            setSelectedChat(null);
-            setChatInfo(null);
-            return;
-          }
-          
-          const chatProps = chats.find(c => c.id === selectedChat);
-          if (chatProps) {
-            console.log("Found chat in list:", chatProps);
-            setChatInfo(chatProps);
-          } else {
-            // Chat não está na lista, vamos criá-lo na interface também
-            console.log("Chat not in list, creating UI entry");
-            const newChatInfo = {
-              id: selectedChatInfo.id,
-              name: selectedChatInfo.space_name || "Conversa",
-              lastMessage: selectedChatInfo.last_message || "Iniciar conversa...",
-              time: formatTime(selectedChatInfo.last_message_time),
-              space_id: selectedChatInfo.space_id,
-              avatar: selectedChatInfo.space_image || "",
-              unread: selectedChatInfo.has_unread && selectedChatInfo.last_message_sender_id !== userId
-            };
-            
-            setChatInfo(newChatInfo);
-            
-            // Também adicionamos à lista de chats para consistência
-            setChats(prev => [newChatInfo, ...prev]);
-          }
-          
-          // Mark messages as read
-          if (selectedChatInfo.has_unread && selectedChatInfo.last_message_sender_id !== userId) {
-            await supabase
-              .from("chats")
-              .update({ has_unread: false })
-              .eq("id", selectedChat);
-              
-            // Update local state to remove unread indicator
-            setChats(currentChats => 
-              currentChats.map(chat => 
-                chat.id === selectedChat ? { ...chat, unread: false } : chat
-              )
-            );
-          }
-        }
-        
-        // Fetch messages for selected chat
-        console.log("Fetching messages for chat:", selectedChat);
-        const { data: messagesData, error } = await supabase
-          .from("messages")
-          .select("*")
-          .eq("chat_id", selectedChat)
-          .order("created_at", { ascending: true });
-          
-        if (error) {
-          console.error("Error fetching messages:", error);
-          toast.error("Erro ao carregar mensagens");
-          // Don't reset selectedChat here - keep trying to show the chat
-          return;
-        }
-        
-        if (messagesData) {
-          console.log("Messages loaded:", messagesData.length);
-          const formattedMessages = messagesData.map(msg => ({
-            id: msg.id,
-            content: msg.content,
-            sender_id: msg.sender_id,
-            timestamp: msg.created_at,
-            is_mine: msg.sender_id === userId
-          }));
-          
-          setMessages(formattedMessages);
-        }
-      } catch (error) {
-        console.error("Error in fetchMessages:", error);
-        toast.error("Erro ao carregar dados do chat");
-        
-        // Don't automatically reset selectedChat anymore
-        // Instead, show an error state in the UI
-        setChatLoadError(true);
       }
-    };
+    } catch (error) {
+      console.error("Error fetching chats:", error);
+      toast.error("Erro ao carregar conversas");
+      setChatLoadError(true);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  // Function to process chats data
+  const processChatsData = async (chatsData: any[], currentUserId: string) => {
+    // Collect all space IDs to fetch their images
+    const spaceIds = chatsData
+      .filter(chat => chat.space_id)
+      .map(chat => chat.space_id);
     
-    fetchMessages();
+    // Initialize empty image map
+    let localImageMap: Record<string, string> = {};
     
-    // Setup subscription for real-time message updates
-    const messagesChannel = supabase
-      .channel('public:messages')
-      .on('postgres_changes', 
-        { event: 'INSERT', schema: 'public', table: 'messages', filter: `chat_id=eq.${selectedChat}` }, 
-        payload => {
-          const newMsg = payload.new as any;
-          setMessages(currentMsgs => [
-            ...currentMsgs, 
-            {
-              id: newMsg.id,
-              content: newMsg.content,
-              sender_id: newMsg.sender_id,
-              timestamp: newMsg.created_at,
-              is_mine: newMsg.sender_id === userId
-            }
-          ]);
-        }
-      )
-      .subscribe();
+    // Fetch space photos for all spaces at once
+    if (spaceIds.length > 0) {
+      const { data: spacesData } = await supabase
+        .from("spaces")
+        .select("id, space_photos(storage_path)")
+        .in("id", spaceIds);
       
-    return () => {
-      supabase.removeChannel(messagesChannel);
-    };
-  }, [selectedChat, userId, chats]);
-  
+      // Get signed URLs for all spaces with photos
+      if (spacesData) {
+        await Promise.all(spacesData.map(async (space) => {
+          if (space.space_photos && space.space_photos.length > 0) {
+            try {
+              const { data: urlData } = await supabase.storage
+                .from('spaces')
+                .createSignedUrl(space.space_photos[0].storage_path, 3600);
+                
+              if (urlData?.signedUrl) {
+                localImageMap[space.id] = urlData.signedUrl;
+              }
+            } catch (err) {
+              console.error("Error getting signed URL for space:", space.id, err);
+            }
+          }
+        }));
+      }
+      
+      setSpaceImages(localImageMap);
+    }
+    
+    const formattedChats = chatsData.map(chat => ({
+      id: chat.id,
+      name: chat.space_name || "Conversa",
+      lastMessage: chat.last_message || "Iniciar conversa...",
+      time: formatTime(chat.last_message_time),
+      space_id: chat.space_id,
+      avatar: chat.space_id && localImageMap[chat.space_id] ? localImageMap[chat.space_id] : chat.space_image || "",
+      unread: chat.has_unread && chat.last_message_sender_id !== currentUserId
+    }));
+    
+    setChats(formattedChats);
+  };
+
+  // Function to load chat details and messages
+  const loadChatDetails = useCallback(async (chatId: string) => {
+    try {
+      setChatLoadError(false);
+      
+      // Check if the chat exists and is not deleted
+      const { data: chatData, error: chatError } = await supabase
+        .from("chats")
+        .select("*")
+        .eq("id", chatId)
+        .maybeSingle();
+      
+      if (chatError) throw chatError;
+      
+      if (!chatData) {
+        toast.error("Chat não encontrado");
+        setSelectedChat(null);
+        setChatInfo(null);
+        return;
+      }
+      
+      if (chatData.deleted) {
+        toast.error("Esta conversa foi excluída");
+        setSelectedChat(null);
+        setChatInfo(null);
+        return;
+      }
+      
+      // Find chat info in the existing list or create a new entry
+      const existingChat = chats.find(c => c.id === chatId);
+      
+      if (existingChat) {
+        setChatInfo(existingChat);
+      } else {
+        const newChatInfo = {
+          id: chatData.id,
+          name: chatData.space_name || "Conversa",
+          lastMessage: chatData.last_message || "Iniciar conversa...",
+          time: formatTime(chatData.last_message_time),
+          space_id: chatData.space_id,
+          avatar: chatData.space_image || "",
+          unread: chatData.has_unread && chatData.last_message_sender_id !== userId
+        };
+        
+        setChatInfo(newChatInfo);
+        setChats(prev => [newChatInfo, ...prev]);
+      }
+      
+      // Mark messages as read if needed
+      if (chatData.has_unread && chatData.last_message_sender_id !== userId) {
+        await supabase
+          .from("chats")
+          .update({ has_unread: false })
+          .eq("id", chatId);
+          
+        setChats(currentChats => 
+          currentChats.map(chat => 
+            chat.id === chatId ? { ...chat, unread: false } : chat
+          )
+        );
+      }
+      
+      // Load messages
+      const { data: messagesData, error: messagesError } = await supabase
+        .from("messages")
+        .select("*")
+        .eq("chat_id", chatId)
+        .order("created_at", { ascending: true });
+      
+      if (messagesError) throw messagesError;
+      
+      if (messagesData) {
+        const formattedMessages = messagesData.map(msg => ({
+          id: msg.id,
+          content: msg.content,
+          sender_id: msg.sender_id,
+          timestamp: msg.created_at,
+          is_mine: msg.sender_id === userId
+        }));
+        
+        setMessages(formattedMessages);
+      }
+      
+    } catch (error) {
+      console.error("Error loading chat details:", error);
+      setChatLoadError(true);
+      toast.error("Erro ao carregar detalhes do chat");
+    }
+  }, [chats, userId]);
+
+  // Function to send a message
   const handleSendMessage = async () => {
     if (!newMessage.trim() || !selectedChat || !userId) return;
     
@@ -512,6 +390,7 @@ const Messages = () => {
     }
   };
   
+  // Function to handle chat deletion
   const handleDeleteChat = async () => {
     if (!chatToDelete) return;
 
@@ -544,6 +423,115 @@ const Messages = () => {
     }
   };
   
+  // Effect to load chats and handle URL parameters
+  useEffect(() => {
+    fetchChats().then(() => {
+      // Important: Check the state for chatId first, then URL parameter as fallback
+      const chatIdToSelect = chatIdFromState || chatIdFromUrl;
+      
+      if (chatIdToSelect) {
+        console.log("Selecting chat from navigation:", chatIdToSelect);
+        setSelectedChat(chatIdToSelect);
+        
+        // Clear navigation state after using it
+        if (location.state?.chatId) {
+          // Replace state without the chatId but keep other state if any
+          const newState = { ...location.state };
+          delete newState.chatId;
+          navigate(".", { state: newState, replace: true });
+        }
+        
+        // Remove URL parameter if present
+        if (chatIdFromUrl) {
+          navigate("/messages", { replace: true });
+        }
+      }
+    });
+    
+    // Set up real-time subscription for chat updates
+    const chatsChannel = supabase
+      .channel('public:chats')
+      .on('postgres_changes', 
+        { event: 'UPDATE', schema: 'public', table: 'chats' }, 
+        payload => {
+          const updatedChat = payload.new as any;
+          
+          // Ignore updates for deleted chats
+          if (updatedChat.deleted) {
+            setChats(currentChats => 
+              currentChats.filter(chat => chat.id !== updatedChat.id)
+            );
+            
+            // If the deleted chat was selected, clear the selection
+            if (selectedChat === updatedChat.id) {
+              setSelectedChat(null);
+              setMessages([]);
+              setChatInfo(null);
+            }
+            
+            return;
+          }
+          
+          setChats(currentChats => {
+            return currentChats.map(chat => {
+              if (chat.id === updatedChat.id) {
+                return {
+                  ...chat,
+                  lastMessage: updatedChat.last_message || chat.lastMessage,
+                  time: formatTime(updatedChat.last_message_time),
+                  unread: updatedChat.has_unread && updatedChat.last_message_sender_id !== userId
+                };
+              }
+              return chat;
+            });
+          });
+        }
+      )
+      .subscribe();
+      
+    return () => {
+      supabase.removeChannel(chatsChannel);
+    };
+  }, [fetchChats, chatIdFromUrl, chatIdFromState, location, navigate, userId]);
+
+  // Effect to load messages when a chat is selected
+  useEffect(() => {
+    if (selectedChat) {
+      loadChatDetails(selectedChat);
+      
+      // Set up real-time subscription for new messages
+      const messagesChannel = supabase
+        .channel(`messages_${selectedChat}`)
+        .on('postgres_changes', 
+          { 
+            event: 'INSERT', 
+            schema: 'public', 
+            table: 'messages',
+            filter: `chat_id=eq.${selectedChat}`
+          }, 
+          payload => {
+            const newMsg = payload.new as any;
+            setMessages(currentMsgs => [
+              ...currentMsgs, 
+              {
+                id: newMsg.id,
+                content: newMsg.content,
+                sender_id: newMsg.sender_id,
+                timestamp: newMsg.created_at,
+                is_mine: newMsg.sender_id === userId
+              }
+            ]);
+          }
+        )
+        .subscribe();
+        
+      return () => {
+        supabase.removeChannel(messagesChannel);
+      };
+    }
+  }, [selectedChat, userId, loadChatDetails]);
+  
+  // Filter chats by search query
   const filteredChats = chats.filter(chat => 
     chat.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
@@ -565,27 +553,17 @@ const Messages = () => {
 
           <div className="bg-white rounded-xl shadow-sm overflow-hidden">
             {loading ? (
-              <div className="flex justify-center items-center p-8">
-                <Loader2 className="animate-spin h-6 w-6 text-iparty" />
-              </div>
+              <LoadingState />
             ) : filteredChats.length > 0 ? (
               filteredChats.map((chat) => (
-                <MessageItem 
+                <ChatItem 
                   key={chat.id} 
-                  {...chat}
+                  chat={chat}
                   onClick={() => setSelectedChat(chat.id)}
                 />
               ))
             ) : (
-              <div className="p-8 text-center">
-                <MessageSquare className="mx-auto h-12 w-12 text-muted-foreground/40" />
-                <p className="mt-2 text-muted-foreground">
-                  {searchQuery ? 'Nenhuma conversa encontrada' : 'Nenhuma conversa iniciada'}
-                </p>
-                <p className="text-sm text-muted-foreground/70">
-                  {searchQuery ? 'Tente outro termo de busca' : 'Visite um espaço e clique no botão de mensagem para começar'}
-                </p>
-              </div>
+              <EmptyState searchQuery={searchQuery} />
             )}
           </div>
         </>
@@ -611,7 +589,7 @@ const Messages = () => {
                 <div className="flex items-center">
                   <div className="h-10 w-10 rounded-full overflow-hidden mr-3">
                     <OptimizedImage 
-                      src={chatInfo.space_id ? spaceImages[chatInfo.space_id] || "" : chatInfo.avatar || ""}
+                      src={chatInfo.space_id ? spaceImages[chatInfo.space_id] || chatInfo.avatar : chatInfo.avatar}
                       alt={chatInfo.name} 
                       className="w-full h-full"
                       fallbackSrc="https://images.unsplash.com/photo-1566681855366-282a74153321?q=80&w=200&auto=format&fit=crop"
@@ -624,7 +602,7 @@ const Messages = () => {
               )}
             </div>
 
-            {/* Delete chat button in top right corner */}
+            {/* Delete chat button */}
             <Button
               variant="ghost"
               size="sm"
@@ -635,27 +613,13 @@ const Messages = () => {
             </Button>
           </div>
           
-          {/* Messages */}
+          {/* Messages area */}
           <div className="flex-grow overflow-y-auto p-4 bg-gray-50">
             {chatLoadError ? (
-              <div className="h-full flex flex-col items-center justify-center text-center">
-                <MessageSquare className="h-12 w-12 text-red-400 mb-3" />
-                <p className="text-red-500">Erro ao carregar o chat</p>
-                <p className="text-sm text-muted-foreground/70 mt-2">
-                  Tente voltar e selecionar o chat novamente
-                </p>
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={() => {
-                    setSelectedChat(null);
-                    setChatLoadError(false);
-                  }}
-                  className="mt-4"
-                >
-                  Voltar para lista de chats
-                </Button>
-              </div>
+              <ErrorState onBack={() => {
+                setSelectedChat(null);
+                setChatLoadError(false);
+              }} />
             ) : messages.length > 0 ? (
               messages.map(message => (
                 <div 
@@ -688,11 +652,7 @@ const Messages = () => {
                 </div>
               ))
             ) : (
-              <div className="h-full flex flex-col items-center justify-center text-center">
-                <MessageSquare className="h-12 w-12 text-muted-foreground/40 mb-3" />
-                <p className="text-muted-foreground">Inicie uma conversa</p>
-                <p className="text-sm text-muted-foreground/70">Envie uma mensagem para começar</p>
-              </div>
+              <EmptyState />
             )}
           </div>
           
