@@ -172,7 +172,7 @@ const Messages = () => {
   const [creatingNewChat, setCreatingNewChat] = useState<boolean>(false);
 
   // Function to process chats data
-  const processChatsData = async (chatsData: any[], currentUserId: string) => {
+  const processChatsData = useCallback(async (chatsData: any[], currentUserId: string) => {
     // Collect all space IDs to fetch their images
     const spaceIds = chatsData
       .filter(chat => chat.space_id)
@@ -224,7 +224,7 @@ const Messages = () => {
     setChats(formattedChats);
     
     return formattedChats;
-  };
+  }, []);
 
   // Function to check if a chat exists and is accessible
   const checkChatExists = useCallback(async (chatId: string) => {
@@ -352,10 +352,7 @@ const Messages = () => {
       console.log("Chat creation/lookup result:", chatData);
       
       if (chatData && chatData.length > 0) {
-        // Refresh the chats list
-        await fetchChats(true);
-        
-        // Return the first chat ID
+        // Return the first chat ID without triggering another fetch first
         return chatData[0].id;
       }
       
@@ -366,7 +363,7 @@ const Messages = () => {
     } finally {
       setCreatingNewChat(false);
     }
-  }, [userId, fetchChats]);
+  }, [userId]);
 
   // Function to load chat details and messages
   const loadChatDetails = useCallback(async (chatId: string) => {
@@ -603,11 +600,8 @@ const Messages = () => {
       console.log("Setting selected chat from navigation:", chatIdToSelect);
       setSelectedChat(chatIdToSelect);
       
-      // Check if we should include deleted chats in our fetch to allow viewing chat history
-      fetchChats(true).then(() => {
-        // Load chat details after chats are fetched
-        loadChatDetails(chatIdToSelect);
-      });
+      // Load chat details without triggering another fetch first
+      loadChatDetails(chatIdToSelect);
     }
     
     // Clear navigation state after using it
@@ -619,9 +613,9 @@ const Messages = () => {
       };
       navigate(".", { state: newState, replace: true });
     }
-  }, [chatIdFromParams, chatIdFromState, initialLoadComplete, location.state, navigate, selectedChat, loadChatDetails, fetchChats]);
+  }, [chatIdFromParams, chatIdFromState, initialLoadComplete, location.state, navigate, selectedChat, loadChatDetails]);
   
-  // Effect to load chats and set up subscriptions
+  // Effect to load chats and set up subscriptions - only runs once at component mount
   useEffect(() => {
     // Fetch chats (not including deleted by default)
     fetchChats(false);
