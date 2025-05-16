@@ -171,6 +171,61 @@ const Messages = () => {
   const [chatDeleted, setChatDeleted] = useState<boolean>(false);
   const [creatingNewChat, setCreatingNewChat] = useState<boolean>(false);
 
+  // Function to process chats data
+  const processChatsData = async (chatsData: any[], currentUserId: string) => {
+    // Collect all space IDs to fetch their images
+    const spaceIds = chatsData
+      .filter(chat => chat.space_id)
+      .map(chat => chat.space_id);
+    
+    // Initialize empty image map
+    let localImageMap: Record<string, string> = {};
+    
+    // Fetch space photos for all spaces at once
+    if (spaceIds.length > 0) {
+      const { data: spacesData } = await supabase
+        .from("spaces")
+        .select("id, space_photos(storage_path)")
+        .in("id", spaceIds);
+      
+      // Get signed URLs for all spaces with photos
+      if (spacesData) {
+        await Promise.all(spacesData.map(async (space) => {
+          if (space.space_photos && space.space_photos.length > 0) {
+            try {
+              const { data: urlData } = await supabase.storage
+                .from('spaces')
+                .createSignedUrl(space.space_photos[0].storage_path, 3600);
+                
+              if (urlData?.signedUrl) {
+                localImageMap[space.id] = urlData.signedUrl;
+              }
+            } catch (err) {
+              console.error("Error getting signed URL for space:", space.id, err);
+            }
+          }
+        }));
+      }
+      
+      setSpaceImages(localImageMap);
+    }
+    
+    const formattedChats = chatsData.map(chat => ({
+      id: chat.id,
+      name: chat.space_name || "Conversa",
+      lastMessage: chat.last_message || "Iniciar conversa...",
+      time: formatTime(chat.last_message_time),
+      space_id: chat.space_id,
+      avatar: chat.space_id && localImageMap[chat.space_id] ? localImageMap[chat.space_id] : chat.space_image || "",
+      unread: chat.has_unread && chat.last_message_sender_id !== currentUserId,
+      deleted: chat.deleted || false
+    }));
+    
+    setChats(formattedChats);
+    
+    return formattedChats;
+  };
+
   // Function to check if a chat exists and is accessible
   const checkChatExists = useCallback(async (chatId: string) => {
     try {
@@ -312,61 +367,6 @@ const Messages = () => {
       setInitialLoadComplete(true);
     }
   }, []);
-
-  // Function to process chats data
-  const processChatsData = async (chatsData: any[], currentUserId: string) => {
-    // Collect all space IDs to fetch their images
-    const spaceIds = chatsData
-      .filter(chat => chat.space_id)
-      .map(chat => chat.space_id);
-    
-    // Initialize empty image map
-    let localImageMap: Record<string, string> = {};
-    
-    // Fetch space photos for all spaces at once
-    if (spaceIds.length > 0) {
-      const { data: spacesData } = await supabase
-        .from("spaces")
-        .select("id, space_photos(storage_path)")
-        .in("id", spaceIds);
-      
-      // Get signed URLs for all spaces with photos
-      if (spacesData) {
-        await Promise.all(spacesData.map(async (space) => {
-          if (space.space_photos && space.space_photos.length > 0) {
-            try {
-              const { data: urlData } = await supabase.storage
-                .from('spaces')
-                .createSignedUrl(space.space_photos[0].storage_path, 3600);
-                
-              if (urlData?.signedUrl) {
-                localImageMap[space.id] = urlData.signedUrl;
-              }
-            } catch (err) {
-              console.error("Error getting signed URL for space:", space.id, err);
-            }
-          }
-        }));
-      }
-      
-      setSpaceImages(localImageMap);
-    }
-    
-    const formattedChats = chatsData.map(chat => ({
-      id: chat.id,
-      name: chat.space_name || "Conversa",
-      lastMessage: chat.last_message || "Iniciar conversa...",
-      time: formatTime(chat.last_message_time),
-      space_id: chat.space_id,
-      avatar: chat.space_id && localImageMap[chat.space_id] ? localImageMap[chat.space_id] : chat.space_image || "",
-      unread: chat.has_unread && chat.last_message_sender_id !== currentUserId,
-      deleted: chat.deleted || false
-    }));
-    
-    setChats(formattedChats);
-    
-    return formattedChats;
-  };
 
   // Function to load chat details and messages
   const loadChatDetails = useCallback(async (chatId: string) => {
