@@ -1,9 +1,16 @@
+
 import React, { useState, useEffect, useRef } from "react";
 import { Input } from "@/components/ui/input";
-import { Search, Loader2 } from "lucide-react";
+import { Search, Loader2, X } from "lucide-react";
 import LocationMap from "@/components/LocationMap";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Command, CommandInput, CommandEmpty, CommandGroup, CommandItem } from "@/components/ui/command";
 
 type Space = {
   id: string;
@@ -23,6 +30,13 @@ type GeocodingResult = {
   locationName: string;
 };
 
+type SearchSuggestion = {
+  description: string;
+  placeId?: string;
+  mainText?: string;
+  secondaryText?: string;
+};
+
 const Map = () => {
   const [spaces, setSpaces] = useState<Space[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
@@ -31,8 +45,11 @@ const Map = () => {
   const [mapCenter, setMapCenter] = useState<{lat: number, lng: number} | null>(null);
   const [searchLoading, setSearchLoading] = useState<boolean>(false);
   const [searchError, setSearchError] = useState<string | null>(null);
+  const [suggestions, setSuggestions] = useState<SearchSuggestion[]>([]);
+  const [popoverOpen, setPopoverOpen] = useState(false);
   const mapRef = useRef<any>(null);
   const navigate = useNavigate();
+  const searchDebounceRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     fetchSpaces();
@@ -41,16 +58,79 @@ const Map = () => {
   useEffect(() => {
     if (searchValue.trim() === "") {
       setFilteredSpaces(spaces);
-    } else {
-      const lowercaseSearch = searchValue.toLowerCase();
-      const filtered = spaces.filter(space => 
-        space.name.toLowerCase().includes(lowercaseSearch) || 
-        `${space.address}, ${space.number} - ${space.state}`.toLowerCase().includes(lowercaseSearch) ||
-        (space.zipCode && space.zipCode.toLowerCase().includes(lowercaseSearch))
-      );
-      setFilteredSpaces(filtered);
+      setSuggestions([]);
+      return;
     }
+    
+    const lowercaseSearch = searchValue.toLowerCase();
+    
+    // Filter spaces based on search
+    const filtered = spaces.filter(space => 
+      space.name.toLowerCase().includes(lowercaseSearch) || 
+      `${space.address}, ${space.number} - ${space.state}`.toLowerCase().includes(lowercaseSearch) ||
+      (space.zipCode && space.zipCode.toLowerCase().includes(lowercaseSearch))
+    );
+    setFilteredSpaces(filtered);
+    
+    // Set up debounced geocoding search for location suggestions
+    if (searchDebounceRef.current) {
+      clearTimeout(searchDebounceRef.current);
+    }
+    
+    searchDebounceRef.current = setTimeout(() => {
+      if (searchValue.trim().length > 2) {
+        fetchLocationSuggestions(searchValue);
+      } else {
+        setSuggestions([]);
+      }
+    }, 300);
+    
+    return () => {
+      if (searchDebounceRef.current) {
+        clearTimeout(searchDebounceRef.current);
+      }
+    };
   }, [searchValue, spaces]);
+
+  const fetchLocationSuggestions = async (query: string) => {
+    if (!query || query.length < 3) {
+      setSuggestions([]);
+      return;
+    }
+    
+    try {
+      setSearchLoading(true);
+      
+      // Call the Google Maps Places API to get suggestions
+      const response = await fetch(
+        `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(query)}&key=AIzaSyDmquKmV6OtKkJCG2eEe4NIPE8MzcrkUyw`
+      );
+      
+      const data = await response.json();
+      
+      if (data.status === "OK" && data.results && data.results.length > 0) {
+        const newSuggestions = data.results.map((result: any) => ({
+          description: result.formatted_address,
+          placeId: result.place_id,
+          // Extract main components (locality, administrative_area, country)
+          mainText: result.address_components.find((c: any) => 
+            c.types.includes("locality") || 
+            c.types.includes("administrative_area_level_1")
+          )?.long_name || result.formatted_address.split(',')[0],
+          secondaryText: result.formatted_address
+        }));
+        
+        setSuggestions(newSuggestions);
+        setPopoverOpen(true);
+      } else {
+        setSuggestions([]);
+      }
+    } catch (error) {
+      console.error("Error fetching location suggestions:", error);
+    } finally {
+      setSearchLoading(false);
+    }
+  };
 
   const fetchSpaces = async () => {
     setLoading(true);
@@ -117,6 +197,7 @@ const Map = () => {
     
     setSearchLoading(true);
     setSearchError(null);
+    setPopoverOpen(false);
     
     try {
       const geocodingResult = await geocodeAddress(searchValue);
@@ -124,23 +205,43 @@ const Map = () => {
       if (geocodingResult) {
         setMapCenter({ lat: geocodingResult.lat, lng: geocodingResult.lng });
         
-        // Se o mapa já foi carregado, ajusta a visualização para a nova localização
+        // If the map already loaded, adjust the view to the new location
         if (mapRef.current) {
           mapRef.current.panTo({ lat: geocodingResult.lat, lng: geocodingResult.lng });
-          mapRef.current.setZoom(14); // Ajusta para um nível de zoom apropriado
-          
-          // Importante: Não estamos modificando keepPinsVisible na busca
-          // A visibilidade dos pins será controlada pelo zoom atual, conforme a regra
+          mapRef.current.setZoom(14);
         }
-        
-        // Limpar o input de pesquisa após a busca bem-sucedida
-        setSearchValue("");
       } else {
         setSearchError("Localização não encontrada");
       }
     } catch (error) {
       console.error("Erro na pesquisa de localização:", error);
       setSearchError("Erro ao buscar localização");
+    } finally {
+      setSearchLoading(false);
+    }
+  };
+
+  const handleSuggestionSelect = async (suggestion: SearchSuggestion) => {
+    setSearchValue(suggestion.description);
+    setPopoverOpen(false);
+    
+    try {
+      setSearchLoading(true);
+      setSearchError(null);
+      
+      const geocodingResult = await geocodeAddress(suggestion.description);
+      
+      if (geocodingResult) {
+        setMapCenter({ lat: geocodingResult.lat, lng: geocodingResult.lng });
+        
+        if (mapRef.current) {
+          mapRef.current.panTo({ lat: geocodingResult.lat, lng: geocodingResult.lng });
+          mapRef.current.setZoom(14);
+        }
+      }
+    } catch (error) {
+      console.error("Error selecting suggestion:", error);
+      setSearchError("Erro ao selecionar localização");
     } finally {
       setSearchLoading(false);
     }
@@ -181,6 +282,12 @@ const Map = () => {
     }
   };
 
+  const clearSearch = () => {
+    setSearchValue("");
+    setSuggestions([]);
+    setPopoverOpen(false);
+  };
+
   return (
     <div className="container px-4 py-6 max-w-4xl mx-auto h-full">
       <div className="relative mb-6">
@@ -189,13 +296,53 @@ const Map = () => {
           size={18} 
           onClick={handleSearch}
         />
-        <Input 
-          placeholder="Buscar por nome, endereço, CEP ou localidade..." 
-          className="pl-10 pr-10"
-          value={searchValue}
-          onChange={(e) => setSearchValue(e.target.value)}
-          onKeyDown={handleKeyPress}
-        />
+        
+        <Popover open={popoverOpen && suggestions.length > 0} onOpenChange={setPopoverOpen}>
+          <PopoverTrigger asChild>
+            <div className="relative">
+              <Input 
+                placeholder="Buscar por nome, endereço, CEP ou localidade..." 
+                className="pl-10 pr-10"
+                value={searchValue}
+                onChange={(e) => setSearchValue(e.target.value)}
+                onKeyDown={handleKeyPress}
+              />
+              {searchValue && (
+                <button
+                  onClick={clearSearch}
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground cursor-pointer hover:text-foreground"
+                >
+                  <X size={16} />
+                </button>
+              )}
+            </div>
+          </PopoverTrigger>
+          
+          <PopoverContent className="p-0 w-[var(--radix-popover-trigger-width)]" align="start">
+            <Command>
+              <CommandGroup className="max-h-[300px] overflow-auto">
+                {suggestions.map((suggestion, index) => (
+                  <CommandItem
+                    key={suggestion.placeId || index}
+                    onSelect={() => handleSuggestionSelect(suggestion)}
+                    className="cursor-pointer py-2 px-2"
+                  >
+                    <div className="flex flex-col">
+                      <span className="font-medium">{suggestion.mainText}</span>
+                      <span className="text-sm text-muted-foreground truncate">{suggestion.secondaryText}</span>
+                    </div>
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+              {suggestions.length === 0 && searchValue.length >= 3 && (
+                <CommandEmpty className="py-2 px-2 text-sm text-muted-foreground">
+                  Nenhuma sugestão encontrada
+                </CommandEmpty>
+              )}
+            </Command>
+          </PopoverContent>
+        </Popover>
+        
         {searchLoading && (
           <Loader2 className="absolute right-3 top-1/2 transform -translate-y-1/2 w-5 h-5 animate-spin text-iparty" />
         )}
@@ -216,7 +363,7 @@ const Map = () => {
           isLoading={loading}
           initialLocation={mapCenter}
           onMapLoad={(map) => { mapRef.current = map; }}
-          keepPinsVisible={false} // Mudado para false para permitir que a lógica de zoom funcione
+          keepPinsVisible={false}
         />
       </div>
     </div>
