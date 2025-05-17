@@ -1,20 +1,12 @@
-
 import React, { useState, useEffect, useRef } from "react";
 import { Input } from "@/components/ui/input";
 import { Search, Loader2, X } from "lucide-react";
 import LocationMap from "@/components/LocationMap";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
-import { 
-  Command, 
-  CommandEmpty, 
-  CommandGroup, 
-  CommandInput, 
-  CommandItem, 
-  CommandList 
-} from "@/components/ui/command";
 import { toast } from "sonner";
 import { GOOGLE_MAPS_API_KEY } from "@/config/app-config";
+import { Wrapper } from "@googlemaps/react-wrapper";
 
 type Space = {
   id: string;
@@ -34,15 +26,6 @@ type GeocodingResult = {
   locationName: string;
 };
 
-type LocationSuggestion = {
-  description: string;
-  placeId: string;
-  structuredFormatting: {
-    mainText: string;
-    secondaryText: string;
-  };
-};
-
 const Map = () => {
   const [spaces, setSpaces] = useState<Space[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
@@ -51,11 +34,9 @@ const Map = () => {
   const [mapCenter, setMapCenter] = useState<{lat: number, lng: number} | null>(null);
   const [searchLoading, setSearchLoading] = useState<boolean>(false);
   const [searchError, setSearchError] = useState<string | null>(null);
-  const [suggestions, setSuggestions] = useState<LocationSuggestion[]>([]);
-  const [showSuggestions, setShowSuggestions] = useState<boolean>(false);
   const mapRef = useRef<google.maps.Map | null>(null);
-  const placesServiceRef = useRef<google.maps.places.PlacesService | null>(null);
-  const autocompleteRef = useRef<HTMLDivElement | null>(null);
+  const autocompleteRef = useRef<google.maps.places.Autocomplete | null>(null);
+  const inputRef = useRef<HTMLInputElement | null>(null);
   const navigate = useNavigate();
 
   // Efeito para carregar espaços ao montar o componente
@@ -63,25 +44,10 @@ const Map = () => {
     fetchSpaces();
   }, []);
 
-  // Efeito para inicializar o PlacesService
-  useEffect(() => {
-    if (window.google && window.google.maps && window.google.maps.places) {
-      // Cria um elemento temporário para o serviço de Places
-      const placesDiv = document.createElement('div');
-      placesDiv.style.display = 'none';
-      document.body.appendChild(placesDiv);
-      
-      // O placesService pode ser usado para obter detalhes de lugar
-      placesServiceRef.current = new window.google.maps.places.PlacesService(placesDiv);
-    }
-  }, []);
-
-  // Efeito para filtrar espaços e exibir sugestões com base na busca
+  // Efeito para filtrar espaços com base na busca
   useEffect(() => {
     if (searchValue.trim() === "") {
       setFilteredSpaces(spaces);
-      setSuggestions([]);
-      setShowSuggestions(false);
     } else {
       // Filtra espaços com base na busca
       const lowercaseSearch = searchValue.toLowerCase();
@@ -154,6 +120,34 @@ const Map = () => {
   const handleSpaceClick = (spaceId: string) => {
     // Navegar para a página de detalhes do espaço com a rota correta
     navigate(`/event-space/${spaceId}`);
+  };
+
+  // Inicializar o Google Places Autocomplete no input quando o Google Maps API estiver carregado
+  const initializeAutocomplete = () => {
+    if (inputRef.current && window.google && window.google.maps && window.google.maps.places) {
+      const options = {
+        componentRestrictions: { country: 'br' },
+        fields: ['geometry', 'formatted_address', 'name', 'place_id'],
+        types: ['geocode', 'establishment', 'address'],
+      };
+
+      autocompleteRef.current = new window.google.maps.places.Autocomplete(
+        inputRef.current,
+        options
+      );
+
+      // Evento quando um lugar é selecionado
+      autocompleteRef.current.addListener('place_changed', () => {
+        if (!autocompleteRef.current) return;
+        
+        const place = autocompleteRef.current.getPlace();
+        if (place && place.geometry && place.geometry.location) {
+          handlePlaceSelected(place);
+        }
+      });
+    } else {
+      console.error("Google Maps Places API not available");
+    }
   };
 
   // Função para lidar com a seleção de um lugar a partir do Autocomplete
@@ -250,91 +244,74 @@ const Map = () => {
 
   const clearSearch = () => {
     setSearchValue("");
-    setShowSuggestions(false);
     setSearchError(null);
+    
+    // Clear the autocomplete input
+    if (inputRef.current) {
+      inputRef.current.value = "";
+    }
   };
 
-  // Efeito para inicializar o Google Places Autocomplete
-  useEffect(() => {
-    if (
-      window.google &&
-      window.google.maps &&
-      window.google.maps.places &&
-      autocompleteRef.current
-    ) {
-      const options = {
-        componentRestrictions: { country: 'br' },
-        fields: ['geometry', 'formatted_address', 'name', 'place_id'],
-        types: ['geocode', 'establishment', 'address'],
-        language: 'pt-BR'
-      };
-
-      const autocomplete = new window.google.maps.places.Autocomplete(
-        autocompleteRef.current.querySelector('input') as HTMLInputElement,
-        options
-      );
-
-      // Evento quando um lugar é selecionado
-      autocomplete.addListener('place_changed', () => {
-        const place = autocomplete.getPlace();
-        if (place) {
-          handlePlaceSelected(place);
-        }
-      });
-
-      return () => {
-        // Limpeza do listener (Google Maps não fornece uma API direta para isso)
-        google.maps.event.clearInstanceListeners(autocomplete);
-      };
-    }
-  }, []);
-
   return (
-    <div className="container px-4 py-6 max-w-4xl mx-auto h-full">
-      <div className="relative mb-6" ref={autocompleteRef}>
-        <Search 
-          className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground cursor-pointer" 
-          size={18} 
-          onClick={handleSearch}
-        />
-        <Input 
-          placeholder="Buscar por nome, endereço, CEP ou localidade..." 
-          className="pl-10 pr-10"
-          value={searchValue}
-          onChange={(e) => setSearchValue(e.target.value)}
-          onKeyDown={handleKeyPress}
-        />
-        {searchValue && (
-          <X 
-            className="absolute right-10 top-1/2 transform -translate-y-1/2 cursor-pointer text-muted-foreground hover:text-foreground"
-            size={16}
-            onClick={clearSearch}
+    <Wrapper
+      apiKey={GOOGLE_MAPS_API_KEY}
+      libraries={["places"]}
+      callback={() => {
+        console.log("Google Maps API loaded with Places library");
+        initializeAutocomplete();
+      }}
+    >
+      <div className="container px-4 py-6 max-w-4xl mx-auto h-full">
+        <div className="relative mb-6">
+          <Search 
+            className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground cursor-pointer" 
+            size={18} 
+            onClick={handleSearch}
           />
-        )}
-        {searchLoading && (
-          <Loader2 className="absolute right-3 top-1/2 transform -translate-y-1/2 w-5 h-5 animate-spin text-iparty" />
-        )}
-      </div>
-
-      {searchError && (
-        <div className="mb-2 p-2 bg-red-100 text-red-700 rounded-md text-sm">
-          {searchError}
+          <div className="pl-10 pr-10 relative">
+            {/* Using native HTML input instead of the ShadCN UI Input component */}
+            <input
+              ref={inputRef}
+              type="text"
+              placeholder="Buscar por nome, endereço, CEP ou localidade..."
+              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-base ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 md:text-sm"
+              value={searchValue}
+              onChange={(e) => setSearchValue(e.target.value)}
+              onKeyDown={handleKeyPress}
+            />
+          </div>
+          {searchValue && (
+            <X 
+              className="absolute right-10 top-1/2 transform -translate-y-1/2 cursor-pointer text-muted-foreground hover:text-foreground"
+              size={16}
+              onClick={clearSearch}
+            />
+          )}
+          {searchLoading && (
+            <Loader2 className="absolute right-3 top-1/2 transform -translate-y-1/2 w-5 h-5 animate-spin text-iparty" />
+          )}
         </div>
-      )}
 
-      <div className="bg-gray-200 rounded-xl h-[calc(100vh-200px)] flex items-center justify-center">
-        <LocationMap 
-          onLocationSelected={() => {}} 
-          viewOnly={true}
-          spaces={filteredSpaces}
-          onSpaceClick={handleSpaceClick}
-          isLoading={loading}
-          initialLocation={mapCenter}
-          onMapLoad={(map) => { mapRef.current = map; }}
-          keepPinsVisible={false}
-        />
+        {searchError && (
+          <div className="mb-2 p-2 bg-red-100 text-red-700 rounded-md text-sm">
+            {searchError}
+          </div>
+        )}
+
+        <div className="bg-gray-200 rounded-xl h-[calc(100vh-200px)] flex items-center justify-center">
+          <LocationMap 
+            onLocationSelected={() => {}} 
+            viewOnly={true}
+            spaces={filteredSpaces}
+            onSpaceClick={handleSpaceClick}
+            isLoading={loading}
+            initialLocation={mapCenter}
+            onMapLoad={(map) => { mapRef.current = map; }}
+            keepPinsVisible={false}
+          />
+        </div>
       </div>
-    </div>
+    </Wrapper>
   );
 };
 
