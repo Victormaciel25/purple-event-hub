@@ -64,12 +64,13 @@ const Map = () => {
     
     const lowercaseSearch = searchValue.toLowerCase();
     
-    // Filter spaces based on search
-    const filtered = spaces.filter(space => 
+    // Filter spaces based on search - add null check to ensure spaces is defined
+    const filtered = spaces ? spaces.filter(space => 
       space.name.toLowerCase().includes(lowercaseSearch) || 
       `${space.address}, ${space.number} - ${space.state}`.toLowerCase().includes(lowercaseSearch) ||
       (space.zipCode && space.zipCode.toLowerCase().includes(lowercaseSearch))
-    );
+    ) : [];
+    
     setFilteredSpaces(filtered);
     
     // Set up debounced geocoding search for location suggestions
@@ -150,7 +151,7 @@ const Map = () => {
       if (spacesData) {
         // Processar os espaços para incluir URLs de imagens
         const spacesWithImages = await Promise.all(
-          spacesData.map(async (space) => {
+          (spacesData || []).map(async (space) => {
             let imageUrl = undefined;
 
             if (space.space_photos && space.space_photos.length > 0) {
@@ -182,6 +183,9 @@ const Map = () => {
       }
     } catch (error) {
       console.error("Erro ao buscar espaços:", error);
+      // Initialize with empty arrays to prevent undefined errors
+      setSpaces([]);
+      setFilteredSpaces([]);
     } finally {
       setLoading(false);
     }
@@ -321,7 +325,7 @@ const Map = () => {
           <PopoverContent className="p-0 w-[var(--radix-popover-trigger-width)]" align="start">
             <Command>
               <CommandGroup className="max-h-[300px] overflow-auto">
-                {suggestions.map((suggestion, index) => (
+                {suggestions && suggestions.map((suggestion, index) => (
                   <CommandItem
                     key={suggestion.placeId || index}
                     onSelect={() => handleSuggestionSelect(suggestion)}
@@ -334,7 +338,7 @@ const Map = () => {
                   </CommandItem>
                 ))}
               </CommandGroup>
-              {suggestions.length === 0 && searchValue.length >= 3 && (
+              {suggestions && suggestions.length === 0 && searchValue.length >= 3 && (
                 <CommandEmpty className="py-2 px-2 text-sm text-muted-foreground">
                   Nenhuma sugestão encontrada
                 </CommandEmpty>
@@ -358,7 +362,7 @@ const Map = () => {
         <LocationMap 
           onLocationSelected={() => {}} 
           viewOnly={true}
-          spaces={filteredSpaces}
+          spaces={filteredSpaces || []}
           onSpaceClick={handleSpaceClick}
           isLoading={loading}
           initialLocation={mapCenter}
