@@ -1,9 +1,18 @@
+
 import React, { useState, useEffect, useRef } from "react";
 import { Input } from "@/components/ui/input";
-import { Search, Loader2 } from "lucide-react";
+import { Search, Loader2, X } from "lucide-react";
 import LocationMap from "@/components/LocationMap";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
+import { 
+  Command, 
+  CommandEmpty, 
+  CommandGroup, 
+  CommandInput, 
+  CommandItem, 
+  CommandList 
+} from "@/components/ui/command";
 
 type Space = {
   id: string;
@@ -23,6 +32,15 @@ type GeocodingResult = {
   locationName: string;
 };
 
+type LocationSuggestion = {
+  description: string;
+  placeId: string;
+  structuredFormatting: {
+    mainText: string;
+    secondaryText: string;
+  };
+};
+
 const Map = () => {
   const [spaces, setSpaces] = useState<Space[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
@@ -31,7 +49,10 @@ const Map = () => {
   const [mapCenter, setMapCenter] = useState<{lat: number, lng: number} | null>(null);
   const [searchLoading, setSearchLoading] = useState<boolean>(false);
   const [searchError, setSearchError] = useState<string | null>(null);
+  const [suggestions, setSuggestions] = useState<LocationSuggestion[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState<boolean>(false);
   const mapRef = useRef<any>(null);
+  const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -41,6 +62,8 @@ const Map = () => {
   useEffect(() => {
     if (searchValue.trim() === "") {
       setFilteredSpaces(spaces);
+      setSuggestions([]);
+      setShowSuggestions(false);
     } else {
       const lowercaseSearch = searchValue.toLowerCase();
       const filtered = spaces.filter(space => 
@@ -49,8 +72,67 @@ const Map = () => {
         (space.zipCode && space.zipCode.toLowerCase().includes(lowercaseSearch))
       );
       setFilteredSpaces(filtered);
+      
+      // Debounce the API call for location suggestions
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current);
+      }
+      
+      searchTimeoutRef.current = setTimeout(() => {
+        fetchLocationSuggestions(searchValue);
+      }, 300);
     }
   }, [searchValue, spaces]);
+
+  const fetchLocationSuggestions = async (query: string) => {
+    if (query.length < 3) {
+      setSuggestions([]);
+      setShowSuggestions(false);
+      return;
+    }
+
+    setSearchLoading(true);
+    
+    try {
+      // Use Google Places Autocomplete API through our geocoding function
+      const response = await fetch(
+        `https://maps.googleapis.com/maps/api/place/autocomplete/json?input=${encodeURIComponent(
+          query
+        )}&types=geocode&language=pt-BR&key=AIzaSyDmquKmV6OtKkJCG2eEe4NIPE8MzcrkUyw`,
+        { 
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+      
+      const data = await response.json();
+      
+      // Process the suggestions from the API
+      if (data.status === "OK" && data.predictions) {
+        const locationSuggestions = data.predictions.map((prediction: any) => ({
+          description: prediction.description,
+          placeId: prediction.place_id,
+          structuredFormatting: {
+            mainText: prediction.structured_formatting?.main_text || prediction.description,
+            secondaryText: prediction.structured_formatting?.secondary_text || ""
+          }
+        }));
+        
+        setSuggestions(locationSuggestions);
+        setShowSuggestions(true);
+      } else {
+        setSuggestions([]);
+        setShowSuggestions(!!searchValue.trim());
+      }
+    } catch (error) {
+      console.error("Erro ao buscar sugestões:", error);
+      setSuggestions([]);
+    } finally {
+      setSearchLoading(false);
+    }
+  };
 
   const fetchSpaces = async () => {
     setLoading(true);
@@ -117,6 +199,7 @@ const Map = () => {
     
     setSearchLoading(true);
     setSearchError(null);
+    setShowSuggestions(false);
     
     try {
       const geocodingResult = await geocodeAddress(searchValue);
@@ -128,13 +211,7 @@ const Map = () => {
         if (mapRef.current) {
           mapRef.current.panTo({ lat: geocodingResult.lat, lng: geocodingResult.lng });
           mapRef.current.setZoom(14); // Ajusta para um nível de zoom apropriado
-          
-          // Importante: Não estamos modificando keepPinsVisible na busca
-          // A visibilidade dos pins será controlada pelo zoom atual, conforme a regra
         }
-        
-        // Limpar o input de pesquisa após a busca bem-sucedida
-        setSearchValue("");
       } else {
         setSearchError("Localização não encontrada");
       }
@@ -175,10 +252,40 @@ const Map = () => {
     }
   };
 
+  const handleSuggestionSelect = async (suggestion: LocationSuggestion) => {
+    setSearchValue(suggestion.description);
+    setShowSuggestions(false);
+
+    // Geocode the selected suggestion to get its coordinates
+    try {
+      setSearchLoading(true);
+      const result = await geocodeAddress(suggestion.description);
+      
+      if (result) {
+        setMapCenter({ lat: result.lat, lng: result.lng });
+        
+        if (mapRef.current) {
+          mapRef.current.panTo({ lat: result.lat, lng: result.lng });
+          mapRef.current.setZoom(14);
+        }
+      }
+    } catch (error) {
+      console.error("Erro ao processar sugestão:", error);
+    } finally {
+      setSearchLoading(false);
+    }
+  };
+
   const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
       handleSearch();
     }
+  };
+
+  const clearSearch = () => {
+    setSearchValue("");
+    setShowSuggestions(false);
+    setSearchError(null);
   };
 
   return (
@@ -193,11 +300,51 @@ const Map = () => {
           placeholder="Buscar por nome, endereço, CEP ou localidade..." 
           className="pl-10 pr-10"
           value={searchValue}
-          onChange={(e) => setSearchValue(e.target.value)}
+          onChange={(e) => {
+            setSearchValue(e.target.value);
+            setShowSuggestions(e.target.value.length > 2);
+          }}
           onKeyDown={handleKeyPress}
+          onFocus={() => {
+            if (searchValue.trim().length > 2) {
+              setShowSuggestions(true);
+            }
+          }}
         />
+        {searchValue && (
+          <X 
+            className="absolute right-10 top-1/2 transform -translate-y-1/2 cursor-pointer text-muted-foreground hover:text-foreground"
+            size={16}
+            onClick={clearSearch}
+          />
+        )}
         {searchLoading && (
           <Loader2 className="absolute right-3 top-1/2 transform -translate-y-1/2 w-5 h-5 animate-spin text-iparty" />
+        )}
+        
+        {/* Suggestions dropdown */}
+        {showSuggestions && suggestions.length > 0 && (
+          <div className="absolute z-50 w-full mt-1 bg-white rounded-md shadow-lg border">
+            <Command className="rounded-md border shadow-md">
+              <CommandList>
+                <CommandGroup heading="Sugestões de localização">
+                  {suggestions.map((suggestion, index) => (
+                    <CommandItem
+                      key={`${suggestion.placeId}-${index}`}
+                      onSelect={() => handleSuggestionSelect(suggestion)}
+                      className="cursor-pointer"
+                    >
+                      <div className="flex flex-col">
+                        <span className="font-medium">{suggestion.structuredFormatting.mainText}</span>
+                        <span className="text-sm text-muted-foreground">{suggestion.structuredFormatting.secondaryText}</span>
+                      </div>
+                    </CommandItem>
+                  ))}
+                </CommandGroup>
+              </CommandList>
+              <CommandEmpty>Nenhum resultado encontrado</CommandEmpty>
+            </Command>
+          </div>
         )}
       </div>
 
