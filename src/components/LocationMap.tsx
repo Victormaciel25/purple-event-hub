@@ -53,6 +53,9 @@ const PIN_VISIBILITY_ZOOM_THRESHOLD = 10.0;
 
 const GOOGLE_MAPS_API_KEY = "AIzaSyDmquKmV6OtKkJCG2eEe4NIPE8MzcrkUyw";
 
+// Libraries to load with Google Maps
+const libraries = ["places"];
+
 const LocationMap = ({ 
   onLocationSelected, 
   initialLocation, 
@@ -74,7 +77,8 @@ const LocationMap = ({
 
   const { isLoaded, loadError } = useJsApiLoader({
     id: 'google-map-script',
-    googleMapsApiKey: GOOGLE_MAPS_API_KEY
+    googleMapsApiKey: GOOGLE_MAPS_API_KEY,
+    libraries: libraries as any
   });
 
   // Atualiza o estado de visibilidade dos pinos quando o zoom mudar
@@ -284,7 +288,7 @@ const LocationMap = ({
             )}
             
             {/* Renderize os marcadores de espaço APENAS se showPins for true */}
-            {showPins && spaces.map((space) => (
+            {showPins && spaces && spaces.map((space) => (
               <Marker
                 key={space.id}
                 position={{ lat: space.latitude, lng: space.longitude }}

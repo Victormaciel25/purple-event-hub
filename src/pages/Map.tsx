@@ -13,6 +13,7 @@ import {
   CommandItem, 
   CommandList 
 } from "@/components/ui/command";
+import { toast } from "sonner";
 
 type Space = {
   id: string;
@@ -79,7 +80,9 @@ const Map = () => {
       }
       
       searchTimeoutRef.current = setTimeout(() => {
-        fetchLocationSuggestions(searchValue);
+        if (searchValue.trim().length >= 3) {
+          fetchLocationSuggestions(searchValue);
+        }
       }, 300);
     }
   }, [searchValue, spaces]);
@@ -94,43 +97,65 @@ const Map = () => {
     setSearchLoading(true);
     
     try {
-      // Use Google Places Autocomplete API through our geocoding function
-      const response = await fetch(
-        `https://maps.googleapis.com/maps/api/place/autocomplete/json?input=${encodeURIComponent(
-          query
-        )}&types=geocode&language=pt-BR&key=AIzaSyDmquKmV6OtKkJCG2eEe4NIPE8MzcrkUyw`,
-        { 
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json'
-          }
-        }
-      );
-      
-      const data = await response.json();
-      
-      // Process the suggestions from the API
-      if (data.status === "OK" && data.predictions) {
-        const locationSuggestions = data.predictions.map((prediction: any) => ({
-          description: prediction.description,
-          placeId: prediction.place_id,
-          structuredFormatting: {
-            mainText: prediction.structured_formatting?.main_text || prediction.description,
-            secondaryText: prediction.structured_formatting?.secondary_text || ""
-          }
-        }));
+      // Use Google Maps JavaScript API directly instead of fetching from Places API endpoint
+      // This avoids CORS issues with direct calls to the Places API
+      if (window.google && window.google.maps && window.google.maps.places) {
+        const autocompleteService = new window.google.maps.places.AutocompleteService();
         
-        setSuggestions(locationSuggestions);
-        setShowSuggestions(true);
+        autocompleteService.getPlacePredictions({
+          input: query,
+          types: ['geocode'],
+          language: 'pt-BR'
+        }, (predictions, status) => {
+          if (status === google.maps.places.PlacesServiceStatus.OK && predictions && predictions.length > 0) {
+            const locationSuggestions: LocationSuggestion[] = predictions.map(prediction => ({
+              description: prediction.description,
+              placeId: prediction.place_id,
+              structuredFormatting: {
+                mainText: prediction.structured_formatting?.main_text || prediction.description,
+                secondaryText: prediction.structured_formatting?.secondary_text || ""
+              }
+            }));
+            
+            setSuggestions(locationSuggestions);
+            setShowSuggestions(true);
+          } else {
+            setSuggestions([]);
+            setShowSuggestions(!!query.trim());
+          }
+          setSearchLoading(false);
+        });
       } else {
-        setSuggestions([]);
-        setShowSuggestions(!!searchValue.trim());
+        // Fallback to geocoding API if Places API is not available
+        const response = await fetch(
+          `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(query)}&key=AIzaSyDmquKmV6OtKkJCG2eEe4NIPE8MzcrkUyw`
+        );
+        
+        const data = await response.json();
+        
+        if (data.status === "OK" && data.results && data.results.length > 0) {
+          const locationSuggestions: LocationSuggestion[] = data.results.map((result: any) => ({
+            description: result.formatted_address,
+            placeId: result.place_id || "",
+            structuredFormatting: {
+              mainText: result.formatted_address.split(',')[0] || result.formatted_address,
+              secondaryText: result.formatted_address.split(',').slice(1).join(',') || ""
+            }
+          }));
+          
+          setSuggestions(locationSuggestions);
+          setShowSuggestions(true);
+        } else {
+          setSuggestions([]);
+          setShowSuggestions(!!query.trim());
+        }
+        setSearchLoading(false);
       }
     } catch (error) {
       console.error("Erro ao buscar sugestões:", error);
       setSuggestions([]);
-    } finally {
       setSearchLoading(false);
+      toast.error("Erro ao buscar sugestões de localização");
     }
   };
 
@@ -184,6 +209,7 @@ const Map = () => {
       }
     } catch (error) {
       console.error("Erro ao buscar espaços:", error);
+      toast.error("Erro ao carregar espaços");
     } finally {
       setLoading(false);
     }
@@ -214,10 +240,12 @@ const Map = () => {
         }
       } else {
         setSearchError("Localização não encontrada");
+        toast.error("Localização não encontrada");
       }
     } catch (error) {
       console.error("Erro na pesquisa de localização:", error);
       setSearchError("Erro ao buscar localização");
+      toast.error("Erro ao buscar localização");
     } finally {
       setSearchLoading(false);
     }
@@ -268,9 +296,12 @@ const Map = () => {
           mapRef.current.panTo({ lat: result.lat, lng: result.lng });
           mapRef.current.setZoom(14);
         }
+        
+        toast.success("Localização encontrada!");
       }
     } catch (error) {
       console.error("Erro ao processar sugestão:", error);
+      toast.error("Erro ao processar sugestão");
     } finally {
       setSearchLoading(false);
     }
@@ -302,11 +333,15 @@ const Map = () => {
           value={searchValue}
           onChange={(e) => {
             setSearchValue(e.target.value);
-            setShowSuggestions(e.target.value.length > 2);
+            if (e.target.value.length >= 3) {
+              setShowSuggestions(true);
+            } else {
+              setShowSuggestions(false);
+            }
           }}
           onKeyDown={handleKeyPress}
           onFocus={() => {
-            if (searchValue.trim().length > 2) {
+            if (searchValue.trim().length >= 3) {
               setShowSuggestions(true);
             }
           }}
@@ -330,7 +365,7 @@ const Map = () => {
                 <CommandGroup heading="Sugestões de localização">
                   {suggestions.map((suggestion, index) => (
                     <CommandItem
-                      key={`${suggestion.placeId}-${index}`}
+                      key={`${suggestion.placeId || index}-${index}`}
                       onSelect={() => handleSuggestionSelect(suggestion)}
                       className="cursor-pointer"
                     >
@@ -363,7 +398,7 @@ const Map = () => {
           isLoading={loading}
           initialLocation={mapCenter}
           onMapLoad={(map) => { mapRef.current = map; }}
-          keepPinsVisible={false} // Mudado para false para permitir que a lógica de zoom funcione
+          keepPinsVisible={false}
         />
       </div>
     </div>
