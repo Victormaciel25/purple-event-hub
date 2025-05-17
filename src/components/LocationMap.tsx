@@ -51,8 +51,6 @@ const defaultCenter = {
 // Limite de zoom para mostrar/ocultar pinos
 const PIN_VISIBILITY_ZOOM_THRESHOLD = 10.0;
 
-const GOOGLE_MAPS_API_KEY = "AIzaSyA5P5mbDieTYIeczsRTS1TSxR005fDnScc";
-
 // Libraries to load with Google Maps
 const libraries = ["places"];
 
