@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from "react";
 import { Input } from "@/components/ui/input";
 import { Search, Loader2, X } from "lucide-react";
@@ -52,41 +53,37 @@ const Map = () => {
   const [searchError, setSearchError] = useState<string | null>(null);
   const [suggestions, setSuggestions] = useState<LocationSuggestion[]>([]);
   const [showSuggestions, setShowSuggestions] = useState<boolean>(false);
-  const mapRef = useRef<any>(null);
-  const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const mapRef = useRef<google.maps.Map | null>(null);
   const placesServiceRef = useRef<google.maps.places.PlacesService | null>(null);
+  const autocompleteRef = useRef<HTMLDivElement | null>(null);
   const navigate = useNavigate();
-  const autoCompleteServiceRef = useRef<google.maps.places.AutocompleteService | null>(null);
 
+  // Efeito para carregar espaços ao montar o componente
   useEffect(() => {
     fetchSpaces();
   }, []);
 
+  // Efeito para inicializar o PlacesService
   useEffect(() => {
-    if (
-      window.google &&
-      window.google.maps &&
-      window.google.maps.places &&
-      !autoCompleteServiceRef.current
-    ) {
-      autoCompleteServiceRef.current = new window.google.maps.places.AutocompleteService();
-
+    if (window.google && window.google.maps && window.google.maps.places) {
       // Cria um elemento temporário para o serviço de Places
       const placesDiv = document.createElement('div');
       placesDiv.style.display = 'none';
       document.body.appendChild(placesDiv);
       
-      // Mesmo que o mapa ainda não tenha carregado, o placesService pode ser usado com qualquer div
+      // O placesService pode ser usado para obter detalhes de lugar
       placesServiceRef.current = new window.google.maps.places.PlacesService(placesDiv);
     }
   }, []);
 
+  // Efeito para filtrar espaços e exibir sugestões com base na busca
   useEffect(() => {
     if (searchValue.trim() === "") {
       setFilteredSpaces(spaces);
       setSuggestions([]);
       setShowSuggestions(false);
     } else {
+      // Filtra espaços com base na busca
       const lowercaseSearch = searchValue.toLowerCase();
       const filtered = spaces.filter(space => 
         space.name.toLowerCase().includes(lowercaseSearch) || 
@@ -94,100 +91,10 @@ const Map = () => {
         (space.zipCode && space.zipCode.toLowerCase().includes(lowercaseSearch))
       );
       setFilteredSpaces(filtered);
-      
-      // Debounce the API call for location suggestions
-      if (searchTimeoutRef.current) {
-        clearTimeout(searchTimeoutRef.current);
-      }
-      
-      searchTimeoutRef.current = setTimeout(() => {
-        if (searchValue.trim().length >= 2) {
-          fetchLocationSuggestions(searchValue);
-        } else {
-          setSuggestions([]);
-          setShowSuggestions(false);
-        }
-      }, 300);
     }
   }, [searchValue, spaces]);
 
-  const fetchLocationSuggestions = async (query: string) => {
-    if (query.length < 2) {
-      setSuggestions([]);
-      setShowSuggestions(false);
-      return;
-    }
-
-    setSearchLoading(true);
-    setSearchError(null);
-    
-    try {
-      // Verifica se o serviço AutocompleteService está disponível
-      if (autoCompleteServiceRef.current) {
-        autoCompleteServiceRef.current.getPlacePredictions({
-          input: query,
-          componentRestrictions: { country: 'br' }, // Restringe para Brasil
-          types: ['geocode', 'establishment', 'address'],
-          language: 'pt-BR'
-        }, (predictions, status) => {
-          if (status === google.maps.places.PlacesServiceStatus.OK && predictions && predictions.length > 0) {
-            const locationSuggestions: LocationSuggestion[] = predictions.map(prediction => ({
-              description: prediction.description,
-              placeId: prediction.place_id,
-              structuredFormatting: {
-                mainText: prediction.structured_formatting?.main_text || prediction.description,
-                secondaryText: prediction.structured_formatting?.secondary_text || ""
-              }
-            }));
-            
-            setSuggestions(locationSuggestions);
-            setShowSuggestions(true);
-          } else {
-            setSuggestions([]);
-            // Mostra o dropdown vazio apenas se houver texto de busca
-            setShowSuggestions(!!query.trim());
-          }
-          setSearchLoading(false);
-        });
-      } else {
-        // Fallback para o método de geocoding se o AutocompleteService não estiver disponível
-        const response = await fetch(
-          `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(query)}&region=br&key=AIzaSyDmquKmV6OtKkJCG2eEe4NIPE8MzcrkUyw`
-        );
-        
-        const data = await response.json();
-        
-        if (data.status === "OK" && data.results && data.results.length > 0) {
-          const locationSuggestions: LocationSuggestion[] = data.results.map((result: any) => ({
-            description: result.formatted_address,
-            placeId: result.place_id || "",
-            structuredFormatting: {
-              mainText: result.formatted_address.split(',')[0] || result.formatted_address,
-              secondaryText: result.formatted_address.split(',').slice(1).join(',') || ""
-            }
-          }));
-          
-          setSuggestions(locationSuggestions);
-          setShowSuggestions(true);
-        } else {
-          setSuggestions([]);
-          // Mostra o dropdown vazio apenas se houver texto de busca
-          setShowSuggestions(!!query.trim());
-          
-          if (data.status === "ZERO_RESULTS") {
-            setSearchError("Nenhuma localização encontrada para esta busca");
-          }
-        }
-        setSearchLoading(false);
-      }
-    } catch (error) {
-      console.error("Erro ao buscar sugestões:", error);
-      setSuggestions([]);
-      setSearchLoading(false);
-      toast.error("Erro ao buscar sugestões de localização. Por favor, tente novamente.");
-    }
-  };
-
+  // Função para buscar espaços no Supabase
   const fetchSpaces = async () => {
     setLoading(true);
     try {
@@ -249,54 +156,33 @@ const Map = () => {
     navigate(`/event-space/${spaceId}`);
   };
 
-  const handleSearch = async () => {
-    if (!searchValue.trim()) return;
-    
-    setSearchLoading(true);
-    setSearchError(null);
-    setShowSuggestions(false);
-    
-    try {
-      // Primeiro tenta com PlacesService se disponível
-      if (placesServiceRef.current && suggestions.length > 0) {
-        const placeId = suggestions[0].placeId;
-        placesServiceRef.current.getDetails({
-          placeId: placeId,
-          fields: ['geometry', 'formatted_address', 'name']
-        }, (place, status) => {
-          if (status === google.maps.places.PlacesServiceStatus.OK && place && place.geometry && place.geometry.location) {
-            const lat = place.geometry.location.lat();
-            const lng = place.geometry.location.lng();
-            
-            setMapCenter({ lat, lng });
-            
-            // Se o mapa já foi carregado, ajusta a visualização para a nova localização
-            if (mapRef.current) {
-              mapRef.current.panTo({ lat, lng });
-              mapRef.current.setZoom(14); // Ajusta para um nível de zoom apropriado
-            }
-            
-            toast.success("Localização encontrada!");
-          } else {
-            // Fallback para geocodificação se o PlacesService falhar
-            geocodeAddressAndUpdateMap(searchValue);
-          }
-          setSearchLoading(false);
-        });
-      } else {
-        // Usa geocodificação se o PlacesService não estiver disponível
-        geocodeAddressAndUpdateMap(searchValue);
+  // Função para lidar com a seleção de um lugar a partir do Autocomplete
+  const handlePlaceSelected = (place: google.maps.places.PlaceResult) => {
+    if (place && place.geometry && place.geometry.location) {
+      const lat = place.geometry.location.lat();
+      const lng = place.geometry.location.lng();
+      
+      setMapCenter({ lat, lng });
+      
+      // Se o mapa já foi carregado, ajusta a visualização para a nova localização
+      if (mapRef.current) {
+        mapRef.current.panTo({ lat, lng });
+        mapRef.current.setZoom(14);
       }
-    } catch (error) {
-      console.error("Erro na pesquisa de localização:", error);
-      setSearchError("Erro ao buscar localização");
-      toast.error("Erro ao buscar localização. Por favor, tente novamente.");
-      setSearchLoading(false);
+      
+      // Atualiza o valor de busca com o nome do lugar
+      if (place.formatted_address) {
+        setSearchValue(place.formatted_address);
+      }
+      
+      toast.success("Localização encontrada!");
     }
   };
 
+  // Função para geocodificar um endereço e atualizar o mapa
   const geocodeAddressAndUpdateMap = async (address: string) => {
     try {
+      setSearchLoading(true);
       const geocodingResult = await geocodeAddress(address);
       
       if (geocodingResult) {
@@ -322,6 +208,7 @@ const Map = () => {
     }
   };
 
+  // Função para geocodificar um endereço usando a API do Google Maps
   const geocodeAddress = async (address: string): Promise<GeocodingResult | null> => {
     try {
       // Usar a API de Geocoding do Google com a API key do config
@@ -349,40 +236,10 @@ const Map = () => {
     }
   };
 
-  const handleSuggestionSelect = async (suggestion: LocationSuggestion) => {
-    setSearchValue(suggestion.description);
-    setShowSuggestions(false);
-
-    // Se tivermos o PlacesService disponível, use-o para obter os detalhes do local
-    if (placesServiceRef.current) {
-      setSearchLoading(true);
-      placesServiceRef.current.getDetails({
-        placeId: suggestion.placeId,
-        fields: ['geometry', 'formatted_address', 'name']
-      }, (place, status) => {
-        if (status === google.maps.places.PlacesServiceStatus.OK && place && place.geometry && place.geometry.location) {
-          const lat = place.geometry.location.lat();
-          const lng = place.geometry.location.lng();
-          
-          setMapCenter({ lat, lng });
-          
-          if (mapRef.current) {
-            mapRef.current.panTo({ lat, lng });
-            mapRef.current.setZoom(14);
-          }
-          
-          toast.success("Localização encontrada!");
-        } else {
-          // Se falhar, use geocodificação como fallback
-          geocodeAddressAndUpdateMap(suggestion.description);
-        }
-        setSearchLoading(false);
-      });
-    } else {
-      // Geocode a sugestão selecionada para obter suas coordenadas
-      setSearchLoading(true);
-      geocodeAddressAndUpdateMap(suggestion.description);
-    }
+  // Função para lidar com a busca manual
+  const handleSearch = () => {
+    if (!searchValue.trim()) return;
+    geocodeAddressAndUpdateMap(searchValue);
   };
 
   const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -397,9 +254,44 @@ const Map = () => {
     setSearchError(null);
   };
 
+  // Efeito para inicializar o Google Places Autocomplete
+  useEffect(() => {
+    if (
+      window.google &&
+      window.google.maps &&
+      window.google.maps.places &&
+      autocompleteRef.current
+    ) {
+      const options = {
+        componentRestrictions: { country: 'br' },
+        fields: ['geometry', 'formatted_address', 'name', 'place_id'],
+        types: ['geocode', 'establishment', 'address'],
+        language: 'pt-BR'
+      };
+
+      const autocomplete = new window.google.maps.places.Autocomplete(
+        autocompleteRef.current.querySelector('input') as HTMLInputElement,
+        options
+      );
+
+      // Evento quando um lugar é selecionado
+      autocomplete.addListener('place_changed', () => {
+        const place = autocomplete.getPlace();
+        if (place) {
+          handlePlaceSelected(place);
+        }
+      });
+
+      return () => {
+        // Limpeza do listener (Google Maps não fornece uma API direta para isso)
+        google.maps.event.clearInstanceListeners(autocomplete);
+      };
+    }
+  }, []);
+
   return (
     <div className="container px-4 py-6 max-w-4xl mx-auto h-full">
-      <div className="relative mb-6">
+      <div className="relative mb-6" ref={autocompleteRef}>
         <Search 
           className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground cursor-pointer" 
           size={18} 
@@ -409,20 +301,8 @@ const Map = () => {
           placeholder="Buscar por nome, endereço, CEP ou localidade..." 
           className="pl-10 pr-10"
           value={searchValue}
-          onChange={(e) => {
-            setSearchValue(e.target.value);
-            if (e.target.value.length >= 2) {
-              setShowSuggestions(true);
-            } else {
-              setShowSuggestions(false);
-            }
-          }}
+          onChange={(e) => setSearchValue(e.target.value)}
           onKeyDown={handleKeyPress}
-          onFocus={() => {
-            if (searchValue.trim().length >= 2) {
-              setShowSuggestions(true);
-            }
-          }}
         />
         {searchValue && (
           <X 
@@ -433,40 +313,6 @@ const Map = () => {
         )}
         {searchLoading && (
           <Loader2 className="absolute right-3 top-1/2 transform -translate-y-1/2 w-5 h-5 animate-spin text-iparty" />
-        )}
-        
-        {/* Suggestions dropdown */}
-        {showSuggestions && (
-          <div className="absolute z-50 w-full mt-1 bg-white rounded-md shadow-lg border">
-            <Command className="rounded-md border shadow-md">
-              <CommandList>
-                {suggestions.length > 0 ? (
-                  <CommandGroup heading="Sugestões de localização">
-                    {suggestions.map((suggestion, index) => (
-                      <CommandItem
-                        key={`${suggestion.placeId || index}-${index}`}
-                        onSelect={() => handleSuggestionSelect(suggestion)}
-                        className="cursor-pointer"
-                      >
-                        <div className="flex flex-col">
-                          <span className="font-medium">{suggestion.structuredFormatting.mainText}</span>
-                          <span className="text-sm text-muted-foreground">{suggestion.structuredFormatting.secondaryText}</span>
-                        </div>
-                      </CommandItem>
-                    ))}
-                  </CommandGroup>
-                ) : (
-                  <CommandEmpty>
-                    {searchLoading 
-                      ? "Buscando sugestões..." 
-                      : searchValue.length < 2 
-                        ? "Digite pelo menos 2 caracteres" 
-                        : "Nenhuma sugestão encontrada"}
-                  </CommandEmpty>
-                )}
-              </CommandList>
-            </Command>
-          </div>
         )}
       </div>
 
