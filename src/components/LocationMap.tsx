@@ -194,15 +194,25 @@ const LocationMap = ({
   // Efeito para ajustar a visualização para incluir todos os marcadores se houver espaços
   useEffect(() => {
     if (spaces && spaces.length > 0 && mapRef.current && !initialLocation) {
-      const bounds = new google.maps.LatLngBounds();
-      spaces.forEach(space => {
-        bounds.extend(new google.maps.LatLng(space.latitude, space.longitude));
-      });
-      mapRef.current.fitBounds(bounds);
-      
-      // Não aproxima demais em áreas pequenas
-      if (mapRef.current.getZoom() > 15) {
-        mapRef.current.setZoom(15);
+      try {
+        const bounds = new google.maps.LatLngBounds();
+        spaces.forEach(space => {
+          if (space && typeof space.latitude === 'number' && typeof space.longitude === 'number') {
+            bounds.extend(new google.maps.LatLng(space.latitude, space.longitude));
+          }
+        });
+        
+        // Só ajustar o mapa se tivermos coordenadas válidas
+        if (!bounds.isEmpty()) {
+          mapRef.current.fitBounds(bounds);
+          
+          // Não aproxima demais em áreas pequenas
+          if (mapRef.current.getZoom() > 15) {
+            mapRef.current.setZoom(15);
+          }
+        }
+      } catch (error) {
+        console.error("Erro ao ajustar visualização do mapa:", error);
       }
     }
   }, [spaces, isLoaded, initialLocation]);
@@ -289,19 +299,21 @@ const LocationMap = ({
             
             {/* Renderize os marcadores de espaço APENAS se showPins for true */}
             {showPins && spaces && spaces.map((space) => (
-              <Marker
-                key={space.id}
-                position={{ lat: space.latitude, lng: space.longitude }}
-                onClick={() => handleMarkerClick(space)}
-                animation={google.maps.Animation.DROP}
-                icon={{
-                  url: `data:image/svg+xml;utf8,${encodeURIComponent(
-                    '<svg xmlns="http://www.w3.org/2000/svg" width="40" height="46" viewBox="0 0 24 24" fill="#9b87f5" stroke="#6e61b8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"></path><circle cx="12" cy="10" r="3" fill="white"></circle></svg>'
-                  )}`,
-                  scaledSize: new google.maps.Size(40, 46),
-                  anchor: new google.maps.Point(20, 46),
-                }}
-              />
+              space && typeof space.latitude === 'number' && typeof space.longitude === 'number' && (
+                <Marker
+                  key={space.id}
+                  position={{ lat: space.latitude, lng: space.longitude }}
+                  onClick={() => handleMarkerClick(space)}
+                  animation={google.maps.Animation.DROP}
+                  icon={{
+                    url: `data:image/svg+xml;utf8,${encodeURIComponent(
+                      '<svg xmlns="http://www.w3.org/2000/svg" width="40" height="46" viewBox="0 0 24 24" fill="#9b87f5" stroke="#6e61b8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"></path><circle cx="12" cy="10" r="3" fill="white"></circle></svg>'
+                    )}`,
+                    scaledSize: new google.maps.Size(40, 46),
+                    anchor: new google.maps.Point(20, 46),
+                  }}
+                />
+              )
             ))}
             
             {/* Mostra a janela de informações para o espaço selecionado */}

@@ -54,11 +54,29 @@ const Map = () => {
   const [showSuggestions, setShowSuggestions] = useState<boolean>(false);
   const mapRef = useRef<any>(null);
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const placesServiceRef = useRef<google.maps.places.PlacesService | null>(null);
   const navigate = useNavigate();
+  const autoCompleteServiceRef = useRef<google.maps.places.AutocompleteService | null>(null);
 
   useEffect(() => {
     fetchSpaces();
   }, []);
+
+  useEffect(() => {
+    // Inicializa o serviço de AutoComplete quando o Google Maps API é carregado
+    if (window.google && window.google.maps && window.google.maps.places && !autoCompleteServiceRef.current) {
+      autoCompleteServiceRef.current = new window.google.maps.places.AutocompleteService();
+      
+      // Cria um elemento temporário para o serviço de Places
+      const placesDiv = document.createElement('div');
+      placesDiv.style.display = 'none';
+      document.body.appendChild(placesDiv);
+      
+      if (mapRef.current) {
+        placesServiceRef.current = new window.google.maps.places.PlacesService(placesDiv);
+      }
+    }
+  }, [mapRef.current]);
 
   useEffect(() => {
     if (searchValue.trim() === "") {
@@ -80,31 +98,33 @@ const Map = () => {
       }
       
       searchTimeoutRef.current = setTimeout(() => {
-        if (searchValue.trim().length >= 3) {
+        if (searchValue.trim().length >= 2) {
           fetchLocationSuggestions(searchValue);
+        } else {
+          setSuggestions([]);
+          setShowSuggestions(false);
         }
       }, 300);
     }
   }, [searchValue, spaces]);
 
   const fetchLocationSuggestions = async (query: string) => {
-    if (query.length < 3) {
+    if (query.length < 2) {
       setSuggestions([]);
       setShowSuggestions(false);
       return;
     }
 
     setSearchLoading(true);
+    setSearchError(null);
     
     try {
-      // Use Google Maps JavaScript API directly instead of fetching from Places API endpoint
-      // This avoids CORS issues with direct calls to the Places API
-      if (window.google && window.google.maps && window.google.maps.places) {
-        const autocompleteService = new window.google.maps.places.AutocompleteService();
-        
-        autocompleteService.getPlacePredictions({
+      // Verifica se o serviço AutocompleteService está disponível
+      if (autoCompleteServiceRef.current) {
+        autoCompleteServiceRef.current.getPlacePredictions({
           input: query,
-          types: ['geocode'],
+          componentRestrictions: { country: 'br' }, // Restringe para Brasil
+          types: ['geocode', 'establishment', 'address'],
           language: 'pt-BR'
         }, (predictions, status) => {
           if (status === google.maps.places.PlacesServiceStatus.OK && predictions && predictions.length > 0) {
@@ -121,14 +141,15 @@ const Map = () => {
             setShowSuggestions(true);
           } else {
             setSuggestions([]);
+            // Mostra o dropdown vazio apenas se houver texto de busca
             setShowSuggestions(!!query.trim());
           }
           setSearchLoading(false);
         });
       } else {
-        // Fallback to geocoding API if Places API is not available
+        // Fallback para o método de geocoding se o AutocompleteService não estiver disponível
         const response = await fetch(
-          `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(query)}&key=AIzaSyDmquKmV6OtKkJCG2eEe4NIPE8MzcrkUyw`
+          `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(query)}&region=br&key=AIzaSyDmquKmV6OtKkJCG2eEe4NIPE8MzcrkUyw`
         );
         
         const data = await response.json();
@@ -147,7 +168,12 @@ const Map = () => {
           setShowSuggestions(true);
         } else {
           setSuggestions([]);
+          // Mostra o dropdown vazio apenas se houver texto de busca
           setShowSuggestions(!!query.trim());
+          
+          if (data.status === "ZERO_RESULTS") {
+            setSearchError("Nenhuma localização encontrada para esta busca");
+          }
         }
         setSearchLoading(false);
       }
@@ -155,7 +181,7 @@ const Map = () => {
       console.error("Erro ao buscar sugestões:", error);
       setSuggestions([]);
       setSearchLoading(false);
-      toast.error("Erro ao buscar sugestões de localização");
+      toast.error("Erro ao buscar sugestões de localização. Por favor, tente novamente.");
     }
   };
 
@@ -228,7 +254,47 @@ const Map = () => {
     setShowSuggestions(false);
     
     try {
-      const geocodingResult = await geocodeAddress(searchValue);
+      // Primeiro tenta com PlacesService se disponível
+      if (placesServiceRef.current && suggestions.length > 0) {
+        const placeId = suggestions[0].placeId;
+        placesServiceRef.current.getDetails({
+          placeId: placeId,
+          fields: ['geometry', 'formatted_address', 'name']
+        }, (place, status) => {
+          if (status === google.maps.places.PlacesServiceStatus.OK && place && place.geometry && place.geometry.location) {
+            const lat = place.geometry.location.lat();
+            const lng = place.geometry.location.lng();
+            
+            setMapCenter({ lat, lng });
+            
+            // Se o mapa já foi carregado, ajusta a visualização para a nova localização
+            if (mapRef.current) {
+              mapRef.current.panTo({ lat, lng });
+              mapRef.current.setZoom(14); // Ajusta para um nível de zoom apropriado
+            }
+            
+            toast.success("Localização encontrada!");
+          } else {
+            // Fallback para geocodificação se o PlacesService falhar
+            geocodeAddressAndUpdateMap(searchValue);
+          }
+          setSearchLoading(false);
+        });
+      } else {
+        // Usa geocodificação se o PlacesService não estiver disponível
+        geocodeAddressAndUpdateMap(searchValue);
+      }
+    } catch (error) {
+      console.error("Erro na pesquisa de localização:", error);
+      setSearchError("Erro ao buscar localização");
+      toast.error("Erro ao buscar localização. Por favor, tente novamente.");
+      setSearchLoading(false);
+    }
+  };
+
+  const geocodeAddressAndUpdateMap = async (address: string) => {
+    try {
+      const geocodingResult = await geocodeAddress(address);
       
       if (geocodingResult) {
         setMapCenter({ lat: geocodingResult.lat, lng: geocodingResult.lng });
@@ -238,14 +304,16 @@ const Map = () => {
           mapRef.current.panTo({ lat: geocodingResult.lat, lng: geocodingResult.lng });
           mapRef.current.setZoom(14); // Ajusta para um nível de zoom apropriado
         }
+        
+        toast.success("Localização encontrada!");
       } else {
         setSearchError("Localização não encontrada");
-        toast.error("Localização não encontrada");
+        toast.error("Localização não encontrada. Tente uma busca mais específica.");
       }
     } catch (error) {
-      console.error("Erro na pesquisa de localização:", error);
+      console.error("Erro na geocodificação:", error);
       setSearchError("Erro ao buscar localização");
-      toast.error("Erro ao buscar localização");
+      toast.error("Erro ao buscar localização. Por favor, tente novamente.");
     } finally {
       setSearchLoading(false);
     }
@@ -255,9 +323,7 @@ const Map = () => {
     try {
       // Usar a API de Geocoding do Google
       const response = await fetch(
-        `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(
-          address
-        )}&key=AIzaSyDmquKmV6OtKkJCG2eEe4NIPE8MzcrkUyw`
+        `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(address)}&region=br&key=AIzaSyDmquKmV6OtKkJCG2eEe4NIPE8MzcrkUyw`
       );
 
       const data = await response.json();
@@ -284,26 +350,35 @@ const Map = () => {
     setSearchValue(suggestion.description);
     setShowSuggestions(false);
 
-    // Geocode the selected suggestion to get its coordinates
-    try {
+    // Se tivermos o PlacesService disponível, use-o para obter os detalhes do local
+    if (placesServiceRef.current) {
       setSearchLoading(true);
-      const result = await geocodeAddress(suggestion.description);
-      
-      if (result) {
-        setMapCenter({ lat: result.lat, lng: result.lng });
-        
-        if (mapRef.current) {
-          mapRef.current.panTo({ lat: result.lat, lng: result.lng });
-          mapRef.current.setZoom(14);
+      placesServiceRef.current.getDetails({
+        placeId: suggestion.placeId,
+        fields: ['geometry', 'formatted_address', 'name']
+      }, (place, status) => {
+        if (status === google.maps.places.PlacesServiceStatus.OK && place && place.geometry && place.geometry.location) {
+          const lat = place.geometry.location.lat();
+          const lng = place.geometry.location.lng();
+          
+          setMapCenter({ lat, lng });
+          
+          if (mapRef.current) {
+            mapRef.current.panTo({ lat, lng });
+            mapRef.current.setZoom(14);
+          }
+          
+          toast.success("Localização encontrada!");
+        } else {
+          // Se falhar, use geocodificação como fallback
+          geocodeAddressAndUpdateMap(suggestion.description);
         }
-        
-        toast.success("Localização encontrada!");
-      }
-    } catch (error) {
-      console.error("Erro ao processar sugestão:", error);
-      toast.error("Erro ao processar sugestão");
-    } finally {
-      setSearchLoading(false);
+        setSearchLoading(false);
+      });
+    } else {
+      // Geocode a sugestão selecionada para obter suas coordenadas
+      setSearchLoading(true);
+      geocodeAddressAndUpdateMap(suggestion.description);
     }
   };
 
@@ -333,7 +408,7 @@ const Map = () => {
           value={searchValue}
           onChange={(e) => {
             setSearchValue(e.target.value);
-            if (e.target.value.length >= 3) {
+            if (e.target.value.length >= 2) {
               setShowSuggestions(true);
             } else {
               setShowSuggestions(false);
@@ -341,7 +416,7 @@ const Map = () => {
           }}
           onKeyDown={handleKeyPress}
           onFocus={() => {
-            if (searchValue.trim().length >= 3) {
+            if (searchValue.trim().length >= 2) {
               setShowSuggestions(true);
             }
           }}
@@ -358,26 +433,35 @@ const Map = () => {
         )}
         
         {/* Suggestions dropdown */}
-        {showSuggestions && suggestions.length > 0 && (
+        {showSuggestions && (
           <div className="absolute z-50 w-full mt-1 bg-white rounded-md shadow-lg border">
             <Command className="rounded-md border shadow-md">
               <CommandList>
-                <CommandGroup heading="Sugestões de localização">
-                  {suggestions.map((suggestion, index) => (
-                    <CommandItem
-                      key={`${suggestion.placeId || index}-${index}`}
-                      onSelect={() => handleSuggestionSelect(suggestion)}
-                      className="cursor-pointer"
-                    >
-                      <div className="flex flex-col">
-                        <span className="font-medium">{suggestion.structuredFormatting.mainText}</span>
-                        <span className="text-sm text-muted-foreground">{suggestion.structuredFormatting.secondaryText}</span>
-                      </div>
-                    </CommandItem>
-                  ))}
-                </CommandGroup>
+                {suggestions.length > 0 ? (
+                  <CommandGroup heading="Sugestões de localização">
+                    {suggestions.map((suggestion, index) => (
+                      <CommandItem
+                        key={`${suggestion.placeId || index}-${index}`}
+                        onSelect={() => handleSuggestionSelect(suggestion)}
+                        className="cursor-pointer"
+                      >
+                        <div className="flex flex-col">
+                          <span className="font-medium">{suggestion.structuredFormatting.mainText}</span>
+                          <span className="text-sm text-muted-foreground">{suggestion.structuredFormatting.secondaryText}</span>
+                        </div>
+                      </CommandItem>
+                    ))}
+                  </CommandGroup>
+                ) : (
+                  <CommandEmpty>
+                    {searchLoading 
+                      ? "Buscando sugestões..." 
+                      : searchValue.length < 2 
+                        ? "Digite pelo menos 2 caracteres" 
+                        : "Nenhuma sugestão encontrada"}
+                  </CommandEmpty>
+                )}
               </CommandList>
-              <CommandEmpty>Nenhum resultado encontrado</CommandEmpty>
             </Command>
           </div>
         )}
