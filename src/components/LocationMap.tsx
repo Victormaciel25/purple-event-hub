@@ -1,7 +1,7 @@
-
 import React, { useEffect, useRef, useState } from "react";
 import { MapPin, Loader2 } from "lucide-react";
 import { GoogleMap, useJsApiLoader, Marker, InfoWindow } from "@react-google-maps/api";
+import { GOOGLE_MAPS_API_KEY } from "@/config/app-config";
 
 interface Space {
   id: string;
@@ -51,7 +51,7 @@ const defaultCenter = {
 // Limite de zoom para mostrar/ocultar pinos
 const PIN_VISIBILITY_ZOOM_THRESHOLD = 10.0;
 
-const GOOGLE_MAPS_API_KEY = "AIzaSyDmquKmV6OtKkJCG2eEe4NIPE8MzcrkUyw";
+const GOOGLE_MAPS_API_KEY = "AIzaSyA5P5mbDieTYIeczsRTS1TSxR005fDnScc";
 
 // Libraries to load with Google Maps
 const libraries = ["places"];

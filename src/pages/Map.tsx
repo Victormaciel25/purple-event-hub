@@ -13,6 +13,7 @@ import {
   CommandList 
 } from "@/components/ui/command";
 import { toast } from "sonner";
+import { GOOGLE_MAPS_API_KEY } from "@/config/app-config";
 
 type Space = {
   id: string;
@@ -323,9 +324,9 @@ const Map = () => {
 
   const geocodeAddress = async (address: string): Promise<GeocodingResult | null> => {
     try {
-      // Usar a API de Geocoding do Google
+      // Usar a API de Geocoding do Google com a API key do config
       const response = await fetch(
-        `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(address)}&region=br&key=AIzaSyDmquKmV6OtKkJCG2eEe4NIPE8MzcrkUyw`
+        `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(address)}&region=br&key=${GOOGLE_MAPS_API_KEY}`
       );
 
       const data = await response.json();

@@ -21,6 +21,9 @@ export const EDGE_FUNCTIONS = {
   GET_MERCADO_PAGO_PUBLIC_KEY: `${SUPABASE_CONFIG.URL}/functions/v1/get-mercado-pago-public-key`,
 };
 
+// Google Maps API Key
+export const GOOGLE_MAPS_API_KEY = "AIzaSyA5P5mbDieTYIeczsRTS1TSxR005fDnScc";
+
 // Storage buckets
 export const STORAGE = {
   SPACES_BUCKET: 'spaces'
