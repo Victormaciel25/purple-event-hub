@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useRef } from "react";
-import { Input } from "@/components/ui/input";
 import { Search, Loader2, X } from "lucide-react";
 import LocationMap from "@/components/LocationMap";
 import { supabase } from "@/integrations/supabase/client";
@@ -42,6 +41,20 @@ const Map = () => {
   // Efeito para carregar espaços ao montar o componente
   useEffect(() => {
     fetchSpaces();
+  }, []);
+
+  // Novo useEffect para inicializar o Autocomplete quando o Google Maps API estiver carregado
+  useEffect(() => {
+    if (
+      window.google &&
+      window.google.maps &&
+      window.google.maps.places &&
+      inputRef.current &&
+      !autocompleteRef.current
+    ) {
+      console.log("Inicializando Autocomplete...");
+      initializeAutocomplete();
+    }
   }, []);
 
   // Efeito para filtrar espaços com base na busca
@@ -145,6 +158,8 @@ const Map = () => {
           handlePlaceSelected(place);
         }
       });
+      
+      console.log("Autocomplete inicializado com sucesso!");
     } else {
       console.error("Google Maps Places API not available");
     }
@@ -256,10 +271,6 @@ const Map = () => {
     <Wrapper
       apiKey={GOOGLE_MAPS_API_KEY}
       libraries={["places"]}
-      callback={() => {
-        console.log("Google Maps API loaded with Places library");
-        initializeAutocomplete();
-      }}
     >
       <div className="container px-4 py-6 max-w-4xl mx-auto h-full">
         <div className="relative mb-6">
