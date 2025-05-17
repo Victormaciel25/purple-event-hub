@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from "react";
 import { Input } from "@/components/ui/input";
 import { Search, Loader2, X } from "lucide-react";
@@ -63,20 +62,23 @@ const Map = () => {
   }, []);
 
   useEffect(() => {
-    // Inicializa o serviço de AutoComplete quando o Google Maps API é carregado
-    if (window.google && window.google.maps && window.google.maps.places && !autoCompleteServiceRef.current) {
+    if (
+      window.google &&
+      window.google.maps &&
+      window.google.maps.places &&
+      !autoCompleteServiceRef.current
+    ) {
       autoCompleteServiceRef.current = new window.google.maps.places.AutocompleteService();
-      
+
       // Cria um elemento temporário para o serviço de Places
       const placesDiv = document.createElement('div');
       placesDiv.style.display = 'none';
       document.body.appendChild(placesDiv);
       
-      if (mapRef.current) {
-        placesServiceRef.current = new window.google.maps.places.PlacesService(placesDiv);
-      }
+      // Mesmo que o mapa ainda não tenha carregado, o placesService pode ser usado com qualquer div
+      placesServiceRef.current = new window.google.maps.places.PlacesService(placesDiv);
     }
-  }, [mapRef.current]);
+  }, []);
 
   useEffect(() => {
     if (searchValue.trim() === "") {
