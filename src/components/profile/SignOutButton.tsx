@@ -1,10 +1,20 @@
 
-import React from "react";
+import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { LogOut } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface SignOutButtonProps {
   onSignOut: () => void;
@@ -13,9 +23,15 @@ interface SignOutButtonProps {
 
 const SignOutButton: React.FC<SignOutButtonProps> = ({ onSignOut, loading }) => {
   const navigate = useNavigate();
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+
+  const handleSignOutClick = () => {
+    if (loading) return; // Prevent multiple clicks
+    setShowConfirmDialog(true);
+  };
 
   const handleSignOut = async () => {
-    if (loading) return; // Prevent multiple clicks
+    if (loading) return;
     
     try {
       onSignOut(); // Set loading state in parent
@@ -52,15 +68,34 @@ const SignOutButton: React.FC<SignOutButtonProps> = ({ onSignOut, loading }) => 
   };
 
   return (
-    <Button 
-      variant="outline" 
-      className="w-full flex items-center justify-center text-destructive"
-      onClick={handleSignOut}
-      disabled={loading}
-    >
-      <LogOut size={16} className="mr-2" />
-      {loading ? "Processando..." : "Sair"}
-    </Button>
+    <>
+      <Button 
+        variant="outline" 
+        className="w-full flex items-center justify-center text-destructive"
+        onClick={handleSignOutClick}
+        disabled={loading}
+      >
+        <LogOut size={16} className="mr-2" />
+        {loading ? "Processando..." : "Sair"}
+      </Button>
+
+      <AlertDialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmar saída</AlertDialogTitle>
+            <AlertDialogDescription>
+              Você realmente deseja sair da sua conta?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleSignOut}>
+              Confirmar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 };
 
