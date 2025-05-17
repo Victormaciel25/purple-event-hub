@@ -40,12 +40,8 @@ const FavoriteSpaces: React.FC = () => {
     );
   }
   
-  // Make sure favorites is always an array before checking length
-  const safeFavorites = Array.isArray(favorites) ? favorites : [];
-  const safeFavoriteSpaces = Array.isArray(favoriteSpaces) ? favoriteSpaces : [];
-  
   // Verificamos se o usuário não tem nenhum favorito
-  if (safeFavorites.length === 0) {
+  if (favorites.length === 0) {
     return (
       <div className="text-center py-8">
         <p className="text-muted-foreground">Você ainda não adicionou nenhum espaço aos favoritos.</p>
@@ -56,7 +52,7 @@ const FavoriteSpaces: React.FC = () => {
   
   // Verificamos se há problema de conectividade
   // (há IDs de favoritos mas não conseguimos carregar os dados)
-  if (safeFavorites.length > 0 && safeFavoriteSpaces.length === 0) {
+  if (favorites.length > 0 && favoriteSpaces.length === 0) {
     return (
       <div className="text-center py-8 space-y-4">
         <p className="text-muted-foreground">Não foi possível carregar seus espaços favoritos. Verifique sua conexão ou tente novamente mais tarde.</p>
@@ -74,7 +70,7 @@ const FavoriteSpaces: React.FC = () => {
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-      {safeFavoriteSpaces.map(space => (
+      {favoriteSpaces.map(space => (
         <EventSpaceCard 
           key={space.id} 
           id={space.id}

@@ -77,9 +77,6 @@ const LocationMap = ({
     googleMapsApiKey: GOOGLE_MAPS_API_KEY
   });
 
-  // Ensure spaces is always an array
-  const safeSpaces = Array.isArray(spaces) ? spaces : [];
-
   // Atualiza o estado de visibilidade dos pinos quando o zoom mudar
   useEffect(() => {
     if (keepPinsVisible) {
@@ -192,25 +189,19 @@ const LocationMap = ({
 
   // Efeito para ajustar a visualização para incluir todos os marcadores se houver espaços
   useEffect(() => {
-    if (safeSpaces.length > 0 && mapRef.current && !initialLocation) {
+    if (spaces && spaces.length > 0 && mapRef.current && !initialLocation) {
       const bounds = new google.maps.LatLngBounds();
-      safeSpaces.forEach(space => {
-        if (space && typeof space.latitude === 'number' && typeof space.longitude === 'number') {
-          bounds.extend(new google.maps.LatLng(space.latitude, space.longitude));
-        }
+      spaces.forEach(space => {
+        bounds.extend(new google.maps.LatLng(space.latitude, space.longitude));
       });
+      mapRef.current.fitBounds(bounds);
       
-      // Check if bounds are valid (not empty) before applying
-      if (bounds.isEmpty() === false) {
-        mapRef.current.fitBounds(bounds);
-        
-        // Não aproxima demais em áreas pequenas
-        if (mapRef.current.getZoom() > 15) {
-          mapRef.current.setZoom(15);
-        }
+      // Não aproxima demais em áreas pequenas
+      if (mapRef.current.getZoom() > 15) {
+        mapRef.current.setZoom(15);
       }
     }
-  }, [safeSpaces, isLoaded, initialLocation]);
+  }, [spaces, isLoaded, initialLocation]);
 
   const handleMarkerClick = (space: Space) => {
     setSelectedSpace(space);
@@ -293,7 +284,7 @@ const LocationMap = ({
             )}
             
             {/* Renderize os marcadores de espaço APENAS se showPins for true */}
-            {showPins && safeSpaces.map((space) => (
+            {showPins && spaces.map((space) => (
               <Marker
                 key={space.id}
                 position={{ lat: space.latitude, lng: space.longitude }}
