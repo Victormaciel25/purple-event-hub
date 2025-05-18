@@ -43,18 +43,23 @@ const Map = () => {
     fetchSpaces();
   }, []);
 
-  // Novo useEffect para inicializar o Autocomplete quando o Google Maps API estiver carregado
+  // Novo useEffect com intervalo para inicializar o Autocomplete quando o Google Maps API estiver carregado
   useEffect(() => {
-    if (
-      window.google &&
-      window.google.maps &&
-      window.google.maps.places &&
-      inputRef.current &&
-      !autocompleteRef.current
-    ) {
-      console.log("Inicializando Autocomplete...");
-      initializeAutocomplete();
-    }
+    const interval = setInterval(() => {
+      if (
+        window.google &&
+        window.google.maps &&
+        window.google.maps.places &&
+        inputRef.current &&
+        !autocompleteRef.current
+      ) {
+        console.log("Inicializando Autocomplete...");
+        initializeAutocomplete();
+        clearInterval(interval);
+      }
+    }, 300);
+
+    return () => clearInterval(interval);
   }, []);
 
   // Efeito para filtrar espaços com base na busca
