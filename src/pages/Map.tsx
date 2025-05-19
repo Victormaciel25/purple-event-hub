@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from "react";
 import { Loader2 } from "lucide-react";
 import LocationMap from "@/components/LocationMap";
@@ -120,12 +121,9 @@ const Map = () => {
   };
 
   // Handler para quando um local é selecionado pelo componente AddressAutoComplete
-const handleLocationSelected = (location: GeocodingResult) => {
-  setMapCenter({ lat: location.lat, lng: location.lng });
-  // 👇 NÃO atualizar searchValue para não filtrar os pins
-  toast.success("Localização encontrada!");
-  setSearchError(null);
-};
+  const handleLocationSelected = (location: GeocodingResult) => {
+    setMapCenter({ lat: location.lat, lng: location.lng });
+    // 👇 NÃO atualizar searchValue para não filtrar os pins
     
     // Se o mapa já foi carregado, ajusta a visualização para a nova localização
     if (mapRef.current) {
