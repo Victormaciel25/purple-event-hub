@@ -23,35 +23,45 @@ serve(async (req) => {
       throw new Error('Google Maps API Key não está configurada');
     }
 
-    // Extrair endereço do corpo da requisição
-    const { address } = await req.json();
+    const requestData = await req.json();
     
-    if (!address) {
-      throw new Error('Endereço não fornecido');
+    // Handle autocomplete requests
+    if (requestData.type === 'autocomplete' && requestData.input) {
+      const input = requestData.input;
+      console.log(`Buscando sugestões para: ${input}`);
+      
+      const autocompleteUrl = `https://maps.googleapis.com/maps/api/place/autocomplete/json?input=${encodeURIComponent(input)}&types=geocode&language=pt_BR&components=country:br&key=${googleMapsApiKey}`;
+      
+      const response = await fetch(autocompleteUrl);
+      const data = await response.json();
+      
+      console.log(`Status da busca de sugestões: ${data.status}`);
+      
+      return new Response(
+        JSON.stringify(data),
+        { 
+          headers: { 
+            'Content-Type': 'application/json',
+            ...corsHeaders 
+          } 
+        }
+      );
     }
-
-    console.log(`Geocodificando endereço: ${address}`);
-
-    // Fazer requisição para API do Google Maps
-    const geocodeUrl = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(address)}&region=br&key=${googleMapsApiKey}`;
     
-    const response = await fetch(geocodeUrl);
-    const data = await response.json();
-
-    console.log(`Status da geocodificação: ${data.status}`);
-
-    if (data.status === "OK" && data.results && data.results.length > 0) {
-      const result = data.results[0];
-      const location = result.geometry.location;
+    // Handle place details requests
+    else if (requestData.type === 'placeDetails' && requestData.placeId) {
+      const placeId = requestData.placeId;
+      console.log(`Buscando detalhes para o lugar ID: ${placeId}`);
       
-      const geocodingResult = {
-        lat: location.lat,
-        lng: location.lng,
-        locationName: result.formatted_address
-      };
+      const detailsUrl = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${encodeURIComponent(placeId)}&fields=geometry,formatted_address,name&key=${googleMapsApiKey}`;
+      
+      const response = await fetch(detailsUrl);
+      const data = await response.json();
+      
+      console.log(`Status da busca de detalhes: ${data.status}`);
       
       return new Response(
-        JSON.stringify(geocodingResult),
+        JSON.stringify(data),
         { 
           headers: { 
             'Content-Type': 'application/json',
@@ -59,17 +69,58 @@ serve(async (req) => {
           } 
         }
       );
+    }
+    
+    // Handle geocoding requests (original functionality)
+    else if (requestData.address) {
+      const address = requestData.address;
+      
+      if (!address) {
+        throw new Error('Endereço não fornecido');
+      }
+
+      console.log(`Geocodificando endereço: ${address}`);
+
+      const geocodeUrl = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(address)}&region=br&key=${googleMapsApiKey}`;
+      
+      const response = await fetch(geocodeUrl);
+      const data = await response.json();
+
+      console.log(`Status da geocodificação: ${data.status}`);
+
+      if (data.status === "OK" && data.results && data.results.length > 0) {
+        const result = data.results[0];
+        const location = result.geometry.location;
+        
+        const geocodingResult = {
+          lat: location.lat,
+          lng: location.lng,
+          locationName: result.formatted_address
+        };
+        
+        return new Response(
+          JSON.stringify(geocodingResult),
+          { 
+            headers: { 
+              'Content-Type': 'application/json',
+              ...corsHeaders 
+            } 
+          }
+        );
+      } else {
+        return new Response(
+          JSON.stringify({ error: 'Localização não encontrada', status: data.status }),
+          { 
+            status: 404,
+            headers: { 
+              'Content-Type': 'application/json',
+              ...corsHeaders 
+            } 
+          }
+        );
+      }
     } else {
-      return new Response(
-        JSON.stringify({ error: 'Localização não encontrada', status: data.status }),
-        { 
-          status: 404,
-          headers: { 
-            'Content-Type': 'application/json',
-            ...corsHeaders 
-          } 
-        }
-      );
+      throw new Error('Requisição inválida. Tipo não especificado ou dados incompletos.');
     }
   } catch (error) {
     console.error("Erro na função geocode-address:", error);

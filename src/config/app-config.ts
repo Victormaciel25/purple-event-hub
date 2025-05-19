@@ -20,6 +20,8 @@ export const EDGE_FUNCTIONS = {
   GET_CHAT_BY_USERS_AND_SPACE: `${SUPABASE_CONFIG.URL}/functions/v1/get_chat_by_users_and_space`,
   GET_MERCADO_PAGO_PUBLIC_KEY: `${SUPABASE_CONFIG.URL}/functions/v1/get-mercado-pago-public-key`,
   GEOCODE_ADDRESS: `${SUPABASE_CONFIG.URL}/functions/v1/geocode-address`,
+  PLACES_AUTOCOMPLETE: `${SUPABASE_CONFIG.URL}/functions/v1/geocode-address`, // Reutilizamos a mesma função
+  PLACE_DETAILS: `${SUPABASE_CONFIG.URL}/functions/v1/geocode-address`, // Reutilizamos a mesma função
 };
 
 // Google Maps API Key
