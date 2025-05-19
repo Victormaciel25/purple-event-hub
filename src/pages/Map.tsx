@@ -120,9 +120,12 @@ const Map = () => {
   };
 
   // Handler para quando um local é selecionado pelo componente AddressAutoComplete
-  const handleLocationSelected = (location: GeocodingResult) => {
-    setMapCenter({ lat: location.lat, lng: location.lng });
-    setSearchValue(location.locationName);
+const handleLocationSelected = (location: GeocodingResult) => {
+  setMapCenter({ lat: location.lat, lng: location.lng });
+  // 👇 NÃO atualizar searchValue para não filtrar os pins
+  toast.success("Localização encontrada!");
+  setSearchError(null);
+};
     
     // Se o mapa já foi carregado, ajusta a visualização para a nova localização
     if (mapRef.current) {
