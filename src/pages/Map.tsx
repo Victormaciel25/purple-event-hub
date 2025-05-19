@@ -1,11 +1,10 @@
-
 import React, { useState, useEffect, useRef } from "react";
 import { Loader2 } from "lucide-react";
 import LocationMap from "@/components/LocationMap";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import { GOOGLE_MAPS_API_KEY, EDGE_FUNCTIONS } from "@/config/app-config";
+import { GOOGLE_MAPS_API_KEY } from "@/config/app-config";
 import { Wrapper } from "@googlemaps/react-wrapper";
 import AddressAutoComplete from "@/components/AddressAutoComplete";
 
@@ -33,7 +32,6 @@ const Map = () => {
   const [searchValue, setSearchValue] = useState<string>("");
   const [filteredSpaces, setFilteredSpaces] = useState<Space[]>([]);
   const [mapCenter, setMapCenter] = useState<{lat: number, lng: number} | null>(null);
-  const [searchLoading, setSearchLoading] = useState<boolean>(false);
   const [searchError, setSearchError] = useState<string | null>(null);
   const mapRef = useRef<google.maps.Map | null>(null);
   const navigate = useNavigate();
