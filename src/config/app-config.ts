@@ -19,6 +19,7 @@ export const EDGE_FUNCTIONS = {
   GET_USER_CHATS: `${SUPABASE_CONFIG.URL}/functions/v1/get_user_chats`,
   GET_CHAT_BY_USERS_AND_SPACE: `${SUPABASE_CONFIG.URL}/functions/v1/get_chat_by_users_and_space`,
   GET_MERCADO_PAGO_PUBLIC_KEY: `${SUPABASE_CONFIG.URL}/functions/v1/get-mercado-pago-public-key`,
+  GEOCODE_ADDRESS: `${SUPABASE_CONFIG.URL}/functions/v1/geocode-address`,
 };
 
 // Google Maps API Key

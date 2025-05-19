@@ -4,7 +4,7 @@ import LocationMap from "@/components/LocationMap";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import { GOOGLE_MAPS_API_KEY } from "@/config/app-config";
+import { GOOGLE_MAPS_API_KEY, EDGE_FUNCTIONS } from "@/config/app-config";
 import { Wrapper } from "@googlemaps/react-wrapper";
 
 type Space = {
@@ -193,6 +193,34 @@ const Map = () => {
     }
   };
 
+  // Função para geocodificar um endereço usando a edge function do Supabase
+  const geocodeAddress = async (address: string): Promise<GeocodingResult | null> => {
+    try {
+      console.log(`Chamando edge function para geocodificar: ${address}`);
+      
+      const response = await fetch(EDGE_FUNCTIONS.GEOCODE_ADDRESS, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ address }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        console.log('Resultado da geocodificação:', data);
+        return data;
+      } else {
+        console.error('Erro na resposta da geocodificação:', data);
+        return null;
+      }
+    } catch (error) {
+      console.error("Erro ao chamar a função de geocodificação:", error);
+      return null;
+    }
+  };
+
   // Função para geocodificar um endereço e atualizar o mapa
   const geocodeAddressAndUpdateMap = async (address: string) => {
     try {
@@ -219,34 +247,6 @@ const Map = () => {
       toast.error("Erro ao buscar localização. Por favor, tente novamente.");
     } finally {
       setSearchLoading(false);
-    }
-  };
-
-  // Função para geocodificar um endereço usando a API do Google Maps
-  const geocodeAddress = async (address: string): Promise<GeocodingResult | null> => {
-    try {
-      // Usar a API de Geocoding do Google com a API key do config
-      const response = await fetch(
-        `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(address)}&region=br&key=${GOOGLE_MAPS_API_KEY}`
-      );
-
-      const data = await response.json();
-
-      if (data.status === "OK" && data.results && data.results.length > 0) {
-        const result = data.results[0];
-        const location = result.geometry.location;
-        
-        return {
-          lat: location.lat,
-          lng: location.lng,
-          locationName: result.formatted_address
-        };
-      }
-      
-      return null;
-    } catch (error) {
-      console.error("Erro na geocodificação:", error);
-      return null;
     }
   };
 
