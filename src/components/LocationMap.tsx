@@ -1,3 +1,4 @@
+
 import React, { useEffect, useRef, useState } from "react";
 import { Loader2 } from "lucide-react";
 import { GoogleMap, useJsApiLoader, Marker, InfoWindow } from "@react-google-maps/api";
@@ -180,17 +181,17 @@ const LocationMap = ({
             >
               <div onClick={handleSpaceClick} className="cursor-pointer max-w-[300px]">
                 <div className="bg-white rounded-lg overflow-hidden shadow-md">
+                  <div className="p-2">
+                    <h3 className="font-bold text-base text-iparty">{selectedSpace.name}</h3>
+                  </div>
                   {selectedSpace.imageUrl && (
                     <img src={selectedSpace.imageUrl} alt={selectedSpace.name} className="w-full h-32 object-cover" />
                   )}
                   <div className="p-2">
-                    <h3 className="font-bold text-base text-iparty">{selectedSpace.name}</h3>
-                    <p className="text-sm text-gray-600 mt-1">
+                    <p className="text-sm text-gray-600 mt-1 line-clamp-2">
                       {selectedSpace.address}, {selectedSpace.number} - {selectedSpace.state}
+                      {selectedSpace.zipCode && `, ${selectedSpace.zipCode}`}
                     </p>
-                    {selectedSpace.zipCode && (
-                      <p className="text-sm text-gray-600">CEP: {selectedSpace.zipCode}</p>
-                    )}
                     <div className="mt-1 flex justify-end">
                       <div className="text-xs bg-iparty/10 text-iparty px-2 py-1 rounded-full">
                         Ver detalhes →
