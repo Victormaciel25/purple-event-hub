@@ -1,6 +1,5 @@
-
 import React, { useEffect, useRef, useState } from "react";
-import { Loader2 } from "lucide-react";
+import { Loader2, X } from "lucide-react";
 import { GoogleMap, useJsApiLoader, Marker, InfoWindow } from "@react-google-maps/api";
 import { GOOGLE_MAPS_API_KEY } from "@/config/app-config";
 
@@ -181,8 +180,17 @@ const LocationMap = ({
             >
               <div onClick={handleSpaceClick} className="cursor-pointer max-w-[300px]">
                 <div className="bg-white rounded-lg overflow-hidden shadow-md">
-                  <div className="p-2">
+                  <div className="p-2 flex justify-between items-center">
                     <h3 className="font-bold text-base text-iparty">{selectedSpace.name}</h3>
+                    <button 
+                      onClick={(e) => { 
+                        e.stopPropagation(); 
+                        handleInfoWindowClose(); 
+                      }} 
+                      className="text-gray-500 hover:text-gray-700"
+                    >
+                      <X size={16} />
+                    </button>
                   </div>
                   {selectedSpace.imageUrl && (
                     <img src={selectedSpace.imageUrl} alt={selectedSpace.name} className="w-full h-32 object-cover" />
