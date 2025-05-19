@@ -1,3 +1,4 @@
+
 import React, { useEffect, useRef, useState } from "react";
 import { Loader2 } from "lucide-react";
 import { GoogleMap, useJsApiLoader, Marker, InfoWindow } from "@react-google-maps/api";
@@ -72,6 +73,7 @@ const LocationMap = ({
   const [currentZoom, setCurrentZoom] = useState<number>(12);
   const [showPins, setShowPins] = useState<boolean>(true);
   const mapRef = useRef<google.maps.Map | null>(null);
+  const markersRef = useRef<google.maps.Marker[]>([]);
 
   // Use the useJsApiLoader hook to load the Google Maps API
   const { isLoaded, loadError } = useJsApiLoader({
@@ -191,6 +193,7 @@ const LocationMap = ({
   }, [initialLocation]);
 
   // Efeito para ajustar a visualização para incluir todos os marcadores se houver espaços
+  // e não houver uma localização inicial definida
   useEffect(() => {
     if (spaces && spaces.length > 0 && mapRef.current && !initialLocation) {
       try {
@@ -296,8 +299,7 @@ const LocationMap = ({
               />
             )}
             
-            {/* Renderize os marcadores de espaço APENAS se showPins for true */}
-            {showPins && spaces && spaces.map((space) => (
+            {spaces && spaces.map((space) => (
               space && typeof space.latitude === 'number' && typeof space.longitude === 'number' && (
                 <Marker
                   key={space.id}
