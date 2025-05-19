@@ -164,7 +164,7 @@ const Map = () => {
             isLoading={loading}
             initialLocation={mapCenter}
             onMapLoad={(map) => { mapRef.current = map; }}
-            keepPinsVisible={true}
+            keepPinsVisible={false}
           />
         </div>
       </div>

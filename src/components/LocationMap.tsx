@@ -1,3 +1,4 @@
+
 import React, { useEffect, useRef, useState } from "react";
 import { Loader2 } from "lucide-react";
 import { GoogleMap, useJsApiLoader, Marker, InfoWindow } from "@react-google-maps/api";
@@ -45,7 +46,8 @@ const defaultCenter = {
   lng: -46.6333
 };
 
-const PIN_VISIBILITY_ZOOM_THRESHOLD = 10.0;
+// Changed the threshold to 12 as per the requirement
+const PIN_VISIBILITY_ZOOM_THRESHOLD = 12.0;
 const libraries = ["places"];
 
 const LocationMap = ({
@@ -70,8 +72,9 @@ const LocationMap = ({
     libraries: libraries as any
   });
 
+  // Changed the condition to hide pins when zoom is greater than threshold
   useEffect(() => {
-    setShowPins(keepPinsVisible || currentZoom > PIN_VISIBILITY_ZOOM_THRESHOLD);
+    setShowPins(keepPinsVisible || currentZoom <= PIN_VISIBILITY_ZOOM_THRESHOLD);
   }, [currentZoom, keepPinsVisible]);
 
   useEffect(() => {
