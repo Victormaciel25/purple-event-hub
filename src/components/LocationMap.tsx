@@ -1,3 +1,4 @@
+
 import React, { useEffect, useRef, useState } from "react";
 import { Loader2, X } from "lucide-react";
 import { GoogleMap, useJsApiLoader, Marker, InfoWindow } from "@react-google-maps/api";
@@ -178,28 +179,31 @@ const LocationMap = ({
               onCloseClick={handleInfoWindowClose}
               options={{ pixelOffset: new google.maps.Size(0, -46), maxWidth: 300 }}
             >
-              <div onClick={handleSpaceClick} className="cursor-pointer max-w-[300px]">
-                <div className="bg-white rounded-lg overflow-hidden shadow-md">
-                  <div className="p-2 flex justify-between items-center">
-                    <h3 className="font-bold text-base text-iparty">{selectedSpace.name}</h3>
-                    <button 
-                      onClick={(e) => { 
-                        e.stopPropagation(); 
-                        handleInfoWindowClose(); 
-                      }} 
-                      className="text-gray-500 hover:text-gray-700"
-                    >
-                      <X size={16} />
-                    </button>
-                  </div>
+              <div 
+                className="cursor-pointer"
+                onClick={handleSpaceClick}
+                style={{ padding: 0, margin: 0 }}
+              >
+                <div className="overflow-hidden rounded-lg shadow">
                   {selectedSpace.imageUrl && (
-                    <img src={selectedSpace.imageUrl} alt={selectedSpace.name} className="w-full h-32 object-cover" />
+                    <div className="h-40 overflow-hidden">
+                      <img 
+                        src={selectedSpace.imageUrl} 
+                        alt={selectedSpace.name} 
+                        className="w-full h-full object-cover" 
+                      />
+                    </div>
                   )}
-                  <div className="p-2">
-                    <p className="text-sm text-gray-600 mt-1 line-clamp-2">
+                  <div className="p-2 bg-white">
+                    <h3 className="font-bold text-base text-iparty">{selectedSpace.name}</h3>
+                    <p className="text-sm text-gray-600 mt-1">
                       {selectedSpace.address}, {selectedSpace.number} - {selectedSpace.state}
-                      {selectedSpace.zipCode && `, ${selectedSpace.zipCode}`}
                     </p>
+                    {selectedSpace.zipCode && (
+                      <p className="text-sm text-gray-600">
+                        CEP: {selectedSpace.zipCode}
+                      </p>
+                    )}
                     <div className="mt-1 flex justify-end">
                       <div className="text-xs bg-iparty/10 text-iparty px-2 py-1 rounded-full">
                         Ver detalhes →
