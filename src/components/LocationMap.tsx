@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-import { Loader2, X } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { GoogleMap, useJsApiLoader, Marker, InfoWindow } from "@react-google-maps/api";
 import { GOOGLE_MAPS_API_KEY } from "@/config/app-config";
 
@@ -178,51 +178,23 @@ const LocationMap = ({
               onCloseClick={handleInfoWindowClose}
               options={{ pixelOffset: new google.maps.Size(0, -46), maxWidth: 300 }}
             >
-              <div 
-                className="cursor-pointer overflow-hidden rounded-lg shadow bg-white"
-                onClick={handleSpaceClick}
-                style={{ padding: 0, margin: 0 }}
-              >
-                {/* Cabeçalho com nome e botão de fechar (alinhados) */}
-                <div className="flex justify-between items-center px-3 py-2 border-b border-gray-200">
-                  <h3 className="font-bold text-base text-iparty truncate pr-2">
-                    {selectedSpace.name}
-                  </h3>
-                  <button 
-                    onClick={(e) => { 
-                      e.stopPropagation(); 
-                      handleInfoWindowClose(); 
-                    }} 
-                    className="text-gray-400 hover:text-gray-700"
-                  >
-                    <X size={18} />
-                  </button>
-                </div>
-
-                {/* Imagem */}
-                {selectedSpace.imageUrl && (
-                  <div className="h-40 overflow-hidden">
-                    <img 
-                      src={selectedSpace.imageUrl} 
-                      alt={selectedSpace.name} 
-                      className="w-full h-full object-cover" 
-                    />
-                  </div>
-                )}
-
-                {/* Endereço e botão - Added line-clamp-2 class to limit address to 2 lines with ellipsis */}
-                <div className="p-3">
-                  <p className="text-sm text-gray-600 line-clamp-2">
-                    {selectedSpace.address}, {selectedSpace.number} - {selectedSpace.state}
-                  </p>
-                  {selectedSpace.zipCode && (
-                    <p className="text-sm text-gray-600">
-                      CEP: {selectedSpace.zipCode}
-                    </p>
+              <div onClick={handleSpaceClick} className="cursor-pointer max-w-[300px]">
+                <div className="bg-white rounded-lg overflow-hidden shadow-md">
+                  {selectedSpace.imageUrl && (
+                    <img src={selectedSpace.imageUrl} alt={selectedSpace.name} className="w-full h-32 object-cover" />
                   )}
-                  <div className="mt-2 flex justify-end">
-                    <div className="text-xs bg-iparty/10 text-iparty px-2 py-1 rounded-full">
-                      Ver detalhes →
+                  <div className="p-2">
+                    <h3 className="font-bold text-base text-iparty">{selectedSpace.name}</h3>
+                    <p className="text-sm text-gray-600 mt-1">
+                      {selectedSpace.address}, {selectedSpace.number} - {selectedSpace.state}
+                    </p>
+                    {selectedSpace.zipCode && (
+                      <p className="text-sm text-gray-600">CEP: {selectedSpace.zipCode}</p>
+                    )}
+                    <div className="mt-1 flex justify-end">
+                      <div className="text-xs bg-iparty/10 text-iparty px-2 py-1 rounded-full">
+                        Ver detalhes →
+                      </div>
                     </div>
                   </div>
                 </div>
