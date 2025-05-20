@@ -1,4 +1,3 @@
-
 import React, { useEffect, useRef, useState } from "react";
 import { Loader2, X } from "lucide-react";
 import { GoogleMap, useJsApiLoader, Marker, OverlayView } from "@react-google-maps/api";
@@ -46,6 +45,12 @@ const defaultCenter = {
   lat: -23.5505,
   lng: -46.6333
 };
+
+// Define the getPixelPositionOffset function to position the OverlayView
+const getPixelPositionOffset = (width: number, height: number) => ({
+  x: -(width / 2),
+  y: -height - 10, // Position it above the pin with 10px offset
+});
 
 // Changed the threshold to 12 as per the requirement
 const PIN_VISIBILITY_ZOOM_THRESHOLD = 12.0;
