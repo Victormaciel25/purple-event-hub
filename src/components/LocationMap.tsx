@@ -180,7 +180,7 @@ const LocationMap = ({
             <InfoWindow
               position={{ lat: selectedSpace.latitude, lng: selectedSpace.longitude }}
               onCloseClick={handleInfoWindowClose}
-              options={{ pixelOffset: new google.maps.Size(0, -46), maxWidth: 320 }}
+              options={{ pixelOffset: new google.maps.Size(0, -46), maxWidth: 320, disableAutoPan: true }}
             >
               <div 
                 className="cursor-pointer overflow-hidden rounded-lg shadow-md bg-white transition-shadow duration-200 hover:shadow-lg"
