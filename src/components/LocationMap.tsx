@@ -1,4 +1,3 @@
-
 import React, { useEffect, useRef, useState } from "react";
 import { Loader2, X } from "lucide-react";
 import { GoogleMap, useJsApiLoader, Marker, InfoWindow } from "@react-google-maps/api";
@@ -184,7 +183,7 @@ const LocationMap = ({
                 onClick={handleSpaceClick}
                 style={{ padding: 0, margin: 0 }}
               >
-                {/* Cabeçalho com nome e botão de fechar */}
+                {/* Cabeçalho com nome e botão de fechar (alinhados) */}
                 <div className="flex justify-between items-center px-3 py-2 border-b border-gray-200">
                   <h3 className="font-bold text-base text-iparty truncate pr-2">
                     {selectedSpace.name}
@@ -211,7 +210,7 @@ const LocationMap = ({
                   </div>
                 )}
 
-                {/* Endereço e botão - ALTERADO PARA ADICIONAR line-clamp-2 */}
+                {/* Endereço e botão - Added line-clamp-2 class to limit address to 2 lines with ellipsis */}
                 <div className="p-3">
                   <p className="text-sm text-gray-600 line-clamp-2">
                     {selectedSpace.address}, {selectedSpace.number} - {selectedSpace.state}
