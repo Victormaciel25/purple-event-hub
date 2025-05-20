@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { Loader2, X } from "lucide-react";
 import { GoogleMap, useJsApiLoader, Marker, InfoWindow } from "@react-google-maps/api";
 import { GOOGLE_MAPS_API_KEY } from "@/config/app-config";
+import OptimizedImage from "./OptimizedImage";
 
 interface Space {
   id: string;
@@ -37,7 +38,7 @@ const hidePOIsStyle = [
 const mapContainerStyle = {
   width: '100%',
   height: '100%',
-  borderRadius: '0.5rem'
+  borderRadius: '0.75rem'
 };
 
 const defaultCenter = {
@@ -64,12 +65,6 @@ const LocationMap = ({
   const [currentZoom, setCurrentZoom] = useState<number>(12);
   const [showPins, setShowPins] = useState<boolean>(true);
   const mapRef = useRef<google.maps.Map | null>(null);
-
-  const { isLoaded, loadError } = useJsApiLoader({
-    id: 'google-map-script',
-    googleMapsApiKey: GOOGLE_MAPS_API_KEY,
-    libraries: libraries as any
-  });
 
   // Changed the condition to hide pins when zoom is less than threshold
   useEffect(() => {
@@ -130,14 +125,14 @@ const LocationMap = ({
   };
 
   if (loadError) {
-    return <div className="text-center text-red-500">Erro ao carregar o mapa</div>;
+    return <div className="text-center text-red-500 p-4 bg-red-50 rounded-lg shadow">Erro ao carregar o mapa</div>;
   }
 
   return (
-    <div className="relative w-full h-full rounded-lg overflow-hidden">
+    <div className="relative w-full h-full rounded-xl overflow-hidden shadow-md">
       {!isLoaded ? (
-        <div className="absolute inset-0 flex items-center justify-center bg-gray-200">
-          <p>Carregando mapa...</p>
+        <div className="absolute inset-0 flex items-center justify-center bg-gray-100 rounded-xl animate-pulse">
+          <div className="text-gray-600 font-medium">Carregando mapa...</div>
         </div>
       ) : (
         <GoogleMap
@@ -176,15 +171,15 @@ const LocationMap = ({
             <InfoWindow
               position={{ lat: selectedSpace.latitude, lng: selectedSpace.longitude }}
               onCloseClick={handleInfoWindowClose}
-              options={{ pixelOffset: new google.maps.Size(0, -46), maxWidth: 300 }}
+              options={{ pixelOffset: new google.maps.Size(0, -46), maxWidth: 320 }}
             >
               <div 
-                className="cursor-pointer overflow-hidden rounded-lg shadow bg-white"
+                className="cursor-pointer overflow-hidden rounded-lg shadow-md bg-white transition-shadow duration-200 hover:shadow-lg"
                 onClick={handleSpaceClick}
                 style={{ padding: 0, margin: 0 }}
               >
                 {/* Cabeçalho com nome e botão de fechar (alinhados) */}
-                <div className="flex justify-between items-center px-3 py-2 border-b border-gray-200">
+                <div className="flex justify-between items-center px-4 py-3 border-b border-gray-100">
                   <h3 className="font-bold text-base text-iparty truncate pr-2">
                     {selectedSpace.name}
                   </h3>
@@ -193,35 +188,37 @@ const LocationMap = ({
                       e.stopPropagation(); 
                       handleInfoWindowClose(); 
                     }} 
-                    className="text-gray-400 hover:text-gray-700"
+                    className="text-gray-400 hover:text-gray-700 transition-colors p-1 rounded-full hover:bg-gray-100"
+                    aria-label="Fechar"
                   >
-                    <X size={18} />
+                    <X size={16} />
                   </button>
                 </div>
 
-                {/* Imagem */}
+                {/* Imagem com OptimizedImage */}
                 {selectedSpace.imageUrl && (
-                  <div className="h-40 overflow-hidden">
-                    <img 
+                  <div className="h-44 overflow-hidden bg-gray-50">
+                    <OptimizedImage 
                       src={selectedSpace.imageUrl} 
                       alt={selectedSpace.name} 
-                      className="w-full h-full object-cover" 
+                      className="w-full h-full"
+                      loadingClassName="animate-pulse bg-gray-200 h-full w-full"
                     />
                   </div>
                 )}
 
                 {/* Endereço e botão */}
-                <div className="p-3">
-                  <p className="text-sm text-gray-600">
+                <div className="p-4">
+                  <p className="text-sm text-gray-600 line-clamp-2">
                     {selectedSpace.address}, {selectedSpace.number} - {selectedSpace.state}
                   </p>
                   {selectedSpace.zipCode && (
-                    <p className="text-sm text-gray-600">
+                    <p className="text-sm text-gray-500 mt-1">
                       CEP: {selectedSpace.zipCode}
                     </p>
                   )}
-                  <div className="mt-2 flex justify-end">
-                    <div className="text-xs bg-iparty/10 text-iparty px-2 py-1 rounded-full">
+                  <div className="mt-3 flex justify-end">
+                    <div className="text-xs bg-iparty/10 text-iparty px-3 py-1.5 rounded-full font-medium hover:bg-iparty/20 transition-colors">
                       Ver detalhes →
                     </div>
                   </div>
@@ -257,9 +254,9 @@ const LocationMap = ({
       )}
 
       {isLoading && (
-        <div className="absolute inset-0 bg-white/80 flex items-center justify-center">
-          <Loader2 className="h-5 w-5 animate-spin text-iparty" />
-          <span className="ml-2">Carregando espaços...</span>
+        <div className="absolute inset-0 bg-white/90 backdrop-blur-sm flex flex-col items-center justify-center gap-2">
+          <Loader2 className="h-6 w-6 animate-spin text-iparty" />
+          <span className="text-sm font-medium text-gray-700">Carregando espaços...</span>
         </div>
       )}
     </div>
