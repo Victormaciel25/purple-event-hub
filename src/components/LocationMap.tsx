@@ -1,3 +1,4 @@
+
 import React, { useEffect, useRef, useState } from "react";
 import { Loader2, X } from "lucide-react";
 import { GoogleMap, useJsApiLoader, Marker, InfoWindow } from "@react-google-maps/api";
@@ -48,7 +49,8 @@ const defaultCenter = {
 
 // Changed the threshold to 12 as per the requirement
 const PIN_VISIBILITY_ZOOM_THRESHOLD = 12.0;
-const libraries: ("places" | "drawing" | "geometry" | "localContext" | "visualization")[] = ["places"];
+// Define libraries correctly according to @react-google-maps/api types
+const libraries: ["places"] = ["places"];
 
 const LocationMap = ({
   onLocationSelected,
@@ -70,7 +72,7 @@ const LocationMap = ({
   const { isLoaded, loadError } = useJsApiLoader({
     id: 'google-map-script',
     googleMapsApiKey: GOOGLE_MAPS_API_KEY,
-    libraries: libraries
+    libraries
   });
 
   // Changed the condition to hide pins when zoom is less than threshold
