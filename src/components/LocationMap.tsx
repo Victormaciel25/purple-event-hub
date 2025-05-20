@@ -48,7 +48,7 @@ const defaultCenter = {
 
 // Changed the threshold to 12 as per the requirement
 const PIN_VISIBILITY_ZOOM_THRESHOLD = 12.0;
-const libraries = ["places"];
+const libraries: ("places" | "drawing" | "geometry" | "localContext" | "visualization")[] = ["places"];
 
 const LocationMap = ({
   onLocationSelected,
@@ -65,6 +65,13 @@ const LocationMap = ({
   const [currentZoom, setCurrentZoom] = useState<number>(12);
   const [showPins, setShowPins] = useState<boolean>(true);
   const mapRef = useRef<google.maps.Map | null>(null);
+  
+  // Add the useJsApiLoader hook to load the Google Maps API
+  const { isLoaded, loadError } = useJsApiLoader({
+    id: 'google-map-script',
+    googleMapsApiKey: GOOGLE_MAPS_API_KEY,
+    libraries: libraries
+  });
 
   // Changed the condition to hide pins when zoom is less than threshold
   useEffect(() => {
