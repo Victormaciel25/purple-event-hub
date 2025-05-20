@@ -210,9 +210,9 @@ const LocationMap = ({
                   </div>
                 )}
 
-                {/* Endereço e botão - Added line-clamp-2 class to limit address to 2 lines with ellipsis */}
+                {/* Endereço e botão */}
                 <div className="p-3">
-                  <p className="text-sm text-gray-600 line-clamp-2">
+                  <p className="text-sm text-gray-600">
                     {selectedSpace.address}, {selectedSpace.number} - {selectedSpace.state}
                   </p>
                   {selectedSpace.zipCode && (
