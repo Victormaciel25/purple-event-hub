@@ -188,6 +188,21 @@ const LocationMap = ({
                 style={{ padding: 0, margin: 0 }}
               >
                 <div className="overflow-hidden rounded-lg shadow">
+                  {/* Header with name and X button */}
+                  <div className="p-2 bg-white/90 flex justify-between items-center">
+                    <h3 className="font-bold text-base text-iparty">{selectedSpace.name}</h3>
+                    <button 
+                      onClick={(e) => { 
+                        e.stopPropagation(); 
+                        handleInfoWindowClose(); 
+                      }} 
+                      className="text-gray-500 hover:text-gray-700"
+                    >
+                      <X size={16} />
+                    </button>
+                  </div>
+                  
+                  {/* Image section */}
                   {selectedSpace.imageUrl && (
                     <div className="h-40 overflow-hidden">
                       <img 
@@ -197,9 +212,10 @@ const LocationMap = ({
                       />
                     </div>
                   )}
-                  <div className="p-2 bg-white">
-                    <h3 className="font-bold text-base text-iparty">{selectedSpace.name}</h3>
-                    <p className="text-sm text-gray-600 mt-1">
+                  
+                  {/* Content section with semi-transparent background */}
+                  <div className="p-2 bg-white/90">
+                    <p className="text-sm text-gray-600 mt-1 line-clamp-2">
                       {selectedSpace.address}, {selectedSpace.number} - {selectedSpace.state}
                     </p>
                     {selectedSpace.zipCode && (
