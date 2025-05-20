@@ -139,9 +139,9 @@ const LocationMap = ({
 
   // Calculate the pixel offset to position the OverlayView above the pin
   // The height of the marker is 46px, so we offset by at least that amount plus some padding
-  const getPixelPositionOffset = (width: number, height: number) => ({
+  const getPixelPositionOffset = (width: number, _height: number) => ({
     x: -(width / 2),
-    y: -height - 20, // Position above the pin with some padding
+    y: -260, // Posiciona acima do marcador com margem segura
   });
 
   return (
