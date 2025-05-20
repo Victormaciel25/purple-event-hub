@@ -1,7 +1,10 @@
-
 import React, { useEffect, useRef, useState } from "react";
 import { Loader2, X } from "lucide-react";
-import { GoogleMap, useJsApiLoader, Marker, OverlayView } from "@react-google-maps/api";
+import {
+  GoogleMap,
+  useJsApiLoader,
+  Marker
+} from "@react-google-maps/api";
 import { GOOGLE_MAPS_API_KEY } from "@/config/app-config";
 import OptimizedImage from "./OptimizedImage";
 
@@ -19,7 +22,7 @@ interface Space {
 
 interface LocationMapProps {
   onLocationSelected?: (lat: number, lng: number) => void;
-  initialLocation?: { lat: number, lng: number } | null;
+  initialLocation?: { lat: number; lng: number } | null;
   viewOnly?: boolean;
   spaces?: Space[];
   onSpaceClick?: (spaceId: string) => void;
@@ -27,30 +30,6 @@ interface LocationMapProps {
   onMapLoad?: (map: google.maps.Map) => void;
   keepPinsVisible?: boolean;
 }
-
-const hidePOIsStyle = [
-  {
-    featureType: "poi",
-    elementType: "all",
-    stylers: [{ visibility: "off" }]
-  }
-];
-
-const mapContainerStyle = {
-  width: '100%',
-  height: '100%',
-  borderRadius: '0.75rem'
-};
-
-const defaultCenter = {
-  lat: -23.5505,
-  lng: -46.6333
-};
-
-// Changed the threshold to 12 as per the requirement
-const PIN_VISIBILITY_ZOOM_THRESHOLD = 12.0;
-// Define libraries correctly according to @react-google-maps/api types
-const libraries: ["places"] = ["places"];
 
 const LocationMap = ({
   onLocationSelected,
@@ -62,23 +41,18 @@ const LocationMap = ({
   onMapLoad,
   keepPinsVisible = false
 }: LocationMapProps) => {
-  const [position, setPosition] = useState<{ lat: number, lng: number } | null>(initialLocation || null);
+  const [position, setPosition] = useState(initialLocation || null);
   const [selectedSpace, setSelectedSpace] = useState<Space | null>(null);
-  const [currentZoom, setCurrentZoom] = useState<number>(12);
-  const [showPins, setShowPins] = useState<boolean>(true);
-  const mapRef = useRef<google.maps.Map | null>(null);
-  
-  // Add the useJsApiLoader hook to load the Google Maps API
-  const { isLoaded, loadError } = useJsApiLoader({
-    id: 'google-map-script',
-    googleMapsApiKey: GOOGLE_MAPS_API_KEY,
-    libraries
-  });
+  const [mapInstance, setMapInstance] = useState<google.maps.Map | null>(null);
+  const [popupPixel, setPopupPixel] = useState<{ x: number; y: number } | null>(null);
 
-  // Changed the condition to hide pins when zoom is less than threshold
-  useEffect(() => {
-    setShowPins(keepPinsVisible || currentZoom >= PIN_VISIBILITY_ZOOM_THRESHOLD);
-  }, [currentZoom, keepPinsVisible]);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  const { isLoaded, loadError } = useJsApiLoader({
+    id: "google-map-script",
+    googleMapsApiKey: GOOGLE_MAPS_API_KEY,
+    libraries: ["places"]
+  });
 
   useEffect(() => {
     if (initialLocation) {
@@ -87,181 +61,117 @@ const LocationMap = ({
   }, [initialLocation]);
 
   useEffect(() => {
-    if (spaces.length > 0 && mapRef.current && !initialLocation) {
-      const bounds = new google.maps.LatLngBounds();
-      spaces.forEach(space => {
-        if (typeof space.latitude === 'number' && typeof space.longitude === 'number') {
-          bounds.extend({ lat: space.latitude, lng: space.longitude });
-        }
-      });
-      if (!bounds.isEmpty()) {
-        mapRef.current.fitBounds(bounds);
-        if (mapRef.current.getZoom() > 15) {
-          mapRef.current.setZoom(15);
-        }
-      }
-    }
-  }, [spaces, isLoaded, initialLocation]);
+    if (!selectedSpace || !mapInstance) return;
+    const projection = mapInstance.getProjection();
+    if (!projection) return;
+
+    const scale = Math.pow(2, mapInstance.getZoom() || 15);
+    const bounds = mapInstance.getBounds();
+    if (!bounds) return;
+
+    const topRight = projection.fromLatLngToPoint(bounds.getNorthEast());
+    const bottomLeft = projection.fromLatLngToPoint(bounds.getSouthWest());
+    const worldPoint = projection.fromLatLngToPoint(
+      new google.maps.LatLng(selectedSpace.latitude, selectedSpace.longitude)
+    );
+
+    const x = (worldPoint.x - bottomLeft.x) * scale;
+    const y = (worldPoint.y - topRight.y) * scale;
+
+    setPopupPixel({ x, y });
+  }, [selectedSpace, mapInstance]);
 
   const handleMapLoad = (map: google.maps.Map) => {
-    mapRef.current = map;
-    setCurrentZoom(map.getZoom() || 12);
-    map.addListener('zoom_changed', () => {
-      setCurrentZoom(map.getZoom() || 12);
-    });
+    setMapInstance(map);
     if (onMapLoad) onMapLoad(map);
   };
 
-  const handleMapClick = (event: google.maps.MapMouseEvent) => {
-    if (viewOnly || !event.latLng) return;
-    const newPosition = { lat: event.latLng.lat(), lng: event.latLng.lng() };
-    setPosition(newPosition);
-    onLocationSelected?.(newPosition.lat, newPosition.lng);
+  const handleMapClick = (e: google.maps.MapMouseEvent) => {
+    if (viewOnly || !e.latLng) return;
+    const newPos = {
+      lat: e.latLng.lat(),
+      lng: e.latLng.lng()
+    };
+    setPosition(newPos);
+    onLocationSelected?.(newPos.lat, newPos.lng);
   };
-
-  const handleMarkerClick = (space: Space) => {
-    setSelectedSpace(space);
-  };
-
-  const handleInfoWindowClose = () => {
-    setSelectedSpace(null);
-  };
-
-  const handleSpaceClick = () => {
-    if (selectedSpace && onSpaceClick) {
-      onSpaceClick(selectedSpace.id);
-    }
-  };
-
-  if (loadError) {
-    return <div className="text-center text-red-500 p-4 bg-red-50 rounded-lg shadow">Erro ao carregar o mapa</div>;
-  }
 
   return (
-    <div className="relative w-full h-full rounded-xl overflow-hidden shadow-md">
-      {!isLoaded ? (
-        <div className="absolute inset-0 flex items-center justify-center bg-gray-100 rounded-xl animate-pulse">
-          <div className="text-gray-600 font-medium">Carregando mapa...</div>
-        </div>
-      ) : (
+    <div ref={containerRef} className="relative w-full h-full rounded-xl overflow-hidden">
+      {isLoaded ? (
         <GoogleMap
-          mapContainerStyle={mapContainerStyle}
-          center={position || defaultCenter}
+          mapContainerStyle={{ width: "100%", height: "100%" }}
+          center={position || { lat: -23.5505, lng: -46.6333 }}
           zoom={15}
+          onLoad={handleMapLoad}
           onClick={handleMapClick}
           options={{
             fullscreenControl: false,
             streetViewControl: false,
             mapTypeControl: false,
             zoomControl: true,
-            styles: hidePOIsStyle,
-            gestureHandling: 'greedy'
+            styles: [
+              {
+                featureType: "poi",
+                elementType: "all",
+                stylers: [{ visibility: "off" }]
+              }
+            ],
+            gestureHandling: "greedy"
           }}
-          onLoad={handleMapLoad}
         >
-          {/* Espaços */}
-          {showPins && spaces.map(space => (
+          {spaces.map((space) => (
             <Marker
               key={space.id}
               position={{ lat: space.latitude, lng: space.longitude }}
-              onClick={() => handleMarkerClick(space)}
+              onClick={() => setSelectedSpace(space)}
               animation={google.maps.Animation.DROP}
-              icon={{
-                url: `data:image/svg+xml;utf8,${encodeURIComponent(
-                  '<svg xmlns="http://www.w3.org/2000/svg" width="40" height="46" viewBox="0 0 24 24" fill="#9b87f5" stroke="#6e61b8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"></path><circle cx="12" cy="10" r="3" fill="white"></circle></svg>'
-                )}`,
-                scaledSize: new google.maps.Size(40, 46),
-                anchor: new google.maps.Point(20, 46),
-              }}
             />
           ))}
-
-          {selectedSpace && (
-            <OverlayView
-              position={{ lat: selectedSpace.latitude, lng: selectedSpace.longitude }}
-              mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}
-            >
-              <div 
-                className="cursor-pointer overflow-hidden rounded-lg shadow-md bg-white transition-shadow duration-200 hover:shadow-lg"
-                onClick={handleSpaceClick}
-                style={{ width: 280 }}
-              >
-                <div className="flex justify-between items-center px-4 py-3 border-b border-gray-100">
-                  <h3 className="font-bold text-base text-iparty truncate pr-2">
-                    {selectedSpace.name}
-                  </h3>
-                  <button 
-                    onClick={(e) => { 
-                      e.stopPropagation(); 
-                      handleInfoWindowClose(); 
-                    }} 
-                    className="text-gray-400 hover:text-gray-700 transition-colors p-1 rounded-full hover:bg-gray-100"
-                    aria-label="Fechar"
-                  >
-                    <X size={16} />
-                  </button>
-                </div>
-
-                {selectedSpace.imageUrl && (
-                  <div className="h-44 overflow-hidden bg-gray-50">
-                    <OptimizedImage 
-                      src={selectedSpace.imageUrl} 
-                      alt={selectedSpace.name} 
-                      className="w-full h-full"
-                      loadingClassName="animate-pulse bg-gray-200 h-full w-full"
-                    />
-                  </div>
-                )}
-
-                <div className="p-4">
-                  <p className="text-sm text-gray-600 line-clamp-2">
-                    {selectedSpace.address}, {selectedSpace.number} - {selectedSpace.state}
-                  </p>
-                  {selectedSpace.zipCode && (
-                    <p className="text-sm text-gray-500 mt-1">
-                      CEP: {selectedSpace.zipCode}
-                    </p>
-                  )}
-                  <div className="mt-3 flex justify-end">
-                    <div className="text-xs bg-iparty/10 text-iparty px-3 py-1.5 rounded-full font-medium hover:bg-iparty/20 transition-colors">
-                      Ver detalhes →
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </OverlayView>
-          )}
-
-          {/* Marcador da posição manual */}
-          {position && !viewOnly && (
-            <Marker
-              position={position}
-              draggable={!viewOnly}
-              onDragEnd={(e) => {
-                const lat = e.latLng?.lat();
-                const lng = e.latLng?.lng();
-                if (lat && lng) {
-                  setPosition({ lat, lng });
-                  onLocationSelected?.(lat, lng);
-                }
-              }}
-              icon={{
-                path: google.maps.SymbolPath.CIRCLE,
-                scale: 8,
-                fillColor: "#FF4136",
-                fillOpacity: 1,
-                strokeWeight: 2,
-                strokeColor: "#FFFFFF",
-              }}
-            />
-          )}
         </GoogleMap>
+      ) : (
+        <div className="absolute inset-0 flex items-center justify-center bg-gray-100">
+          <Loader2 className="h-6 w-6 animate-spin text-iparty" />
+        </div>
       )}
 
-      {isLoading && (
-        <div className="absolute inset-0 bg-white/90 backdrop-blur-sm flex flex-col items-center justify-center gap-2">
-          <Loader2 className="h-6 w-6 animate-spin text-iparty" />
-          <span className="text-sm font-medium text-gray-700">Carregando espaços...</span>
+      {popupPixel && selectedSpace && (
+        <div
+          className="absolute z-50"
+          style={{
+            left: popupPixel.x,
+            top: popupPixel.y - 240,
+            transform: "translate(-50%, -100%)"
+          }}
+        >
+          <div className="bg-white rounded-lg shadow-lg w-[280px]">
+            <div className="flex justify-between items-center px-4 py-3 border-b">
+              <h3 className="font-bold text-base text-iparty truncate">
+                {selectedSpace.name}
+              </h3>
+              <button onClick={() => setSelectedSpace(null)}>
+                <X size={16} className="text-gray-500" />
+              </button>
+            </div>
+            {selectedSpace.imageUrl && (
+              <OptimizedImage
+                src={selectedSpace.imageUrl}
+                alt={selectedSpace.name}
+                className="w-full h-40 object-cover"
+              />
+            )}
+            <div className="p-4 text-sm text-gray-700">
+              <p>
+                {selectedSpace.address}, {selectedSpace.number} - {selectedSpace.state}
+              </p>
+              {selectedSpace.zipCode && <p>CEP: {selectedSpace.zipCode}</p>}
+              <div className="mt-2 text-right">
+                <span className="text-xs text-iparty font-medium cursor-pointer">
+                  Ver detalhes →
+                </span>
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </div>
