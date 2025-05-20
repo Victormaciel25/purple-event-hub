@@ -137,6 +137,13 @@ const LocationMap = ({
     return <div className="text-center text-red-500 p-4 bg-red-50 rounded-lg shadow">Erro ao carregar o mapa</div>;
   }
 
+  // Calculate the pixel offset to position the OverlayView above the pin
+  // The height of the marker is 46px, so we offset by at least that amount plus some padding
+  const getPixelPositionOffset = (width: number, height: number) => ({
+    x: -(width / 2),
+    y: -height - 20, // Position above the pin with some padding
+  });
+
   return (
     <div className="relative w-full h-full rounded-xl overflow-hidden shadow-md">
       {!isLoaded ? (
@@ -180,6 +187,7 @@ const LocationMap = ({
             <OverlayView
               position={{ lat: selectedSpace.latitude, lng: selectedSpace.longitude }}
               mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}
+              getPixelPositionOffset={getPixelPositionOffset}
             >
               <div 
                 className="cursor-pointer overflow-hidden rounded-lg shadow-md bg-white transition-shadow duration-200 hover:shadow-lg"
