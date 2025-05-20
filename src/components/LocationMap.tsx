@@ -1,7 +1,7 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import { Loader2, X } from "lucide-react";
-import { GoogleMap, useJsApiLoader, Marker, InfoWindow } from "@react-google-maps/api";
+import { GoogleMap, useJsApiLoader, Marker, OverlayView } from "@react-google-maps/api";
 import { GOOGLE_MAPS_API_KEY } from "@/config/app-config";
 import OptimizedImage from "./OptimizedImage";
 
@@ -177,17 +177,15 @@ const LocationMap = ({
           ))}
 
           {selectedSpace && (
-            <InfoWindow
+            <OverlayView
               position={{ lat: selectedSpace.latitude, lng: selectedSpace.longitude }}
-              onCloseClick={handleInfoWindowClose}
-              options={{ pixelOffset: new google.maps.Size(0, -46), maxWidth: 320, disableAutoPan: true }}
+              mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}
             >
               <div 
                 className="cursor-pointer overflow-hidden rounded-lg shadow-md bg-white transition-shadow duration-200 hover:shadow-lg"
                 onClick={handleSpaceClick}
-                style={{ padding: 0, margin: 0 }}
+                style={{ width: 280 }}
               >
-                {/* Cabeçalho com nome e botão de fechar (alinhados) */}
                 <div className="flex justify-between items-center px-4 py-3 border-b border-gray-100">
                   <h3 className="font-bold text-base text-iparty truncate pr-2">
                     {selectedSpace.name}
@@ -204,7 +202,6 @@ const LocationMap = ({
                   </button>
                 </div>
 
-                {/* Imagem com OptimizedImage */}
                 {selectedSpace.imageUrl && (
                   <div className="h-44 overflow-hidden bg-gray-50">
                     <OptimizedImage 
@@ -216,7 +213,6 @@ const LocationMap = ({
                   </div>
                 )}
 
-                {/* Endereço e botão */}
                 <div className="p-4">
                   <p className="text-sm text-gray-600 line-clamp-2">
                     {selectedSpace.address}, {selectedSpace.number} - {selectedSpace.state}
@@ -233,7 +229,7 @@ const LocationMap = ({
                   </div>
                 </div>
               </div>
-            </InfoWindow>
+            </OverlayView>
           )}
 
           {/* Marcador da posição manual */}
