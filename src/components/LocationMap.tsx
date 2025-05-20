@@ -139,13 +139,10 @@ const LocationMap = ({
 
   // Calculate the pixel offset to position the OverlayView above the pin
   // The height of the marker is 46px, so we offset by at least that amount plus some padding
-  const getPixelPositionOffset = (width: number, height: number) => {
-    const popupHeight = height || 240;
-    return {
-      x: -(width / 2),
-      y: -popupHeight - 20,
-    };
-  };
+  const getPixelPositionOffset = (width: number, height: number) => ({
+    x: -(width / 2),
+    y: -(height || 240) - 10, // sobe um pouco, mas não exagerado
+  });
   return (
     <div className="relative w-full h-full rounded-xl overflow-hidden shadow-md">
       {!isLoaded ? (
