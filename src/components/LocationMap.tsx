@@ -136,6 +136,7 @@ const LocationMap = ({
   if (loadError) {
     return <div className="text-center text-red-500 p-4 bg-red-50 rounded-lg shadow">Erro ao carregar o mapa</div>;
   }
+
   return (
     <div className="relative w-full h-full rounded-xl overflow-hidden shadow-md">
       {!isLoaded ? (
@@ -179,7 +180,6 @@ const LocationMap = ({
             <OverlayView
               position={{ lat: selectedSpace.latitude, lng: selectedSpace.longitude }}
               mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}
-              getPixelPositionOffset={getPixelPositionOffset}
             >
               <div 
                 className="cursor-pointer overflow-hidden rounded-lg shadow-md bg-white transition-shadow duration-200 hover:shadow-lg"
