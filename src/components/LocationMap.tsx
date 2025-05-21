@@ -1,4 +1,3 @@
-
 import React, { useEffect, useRef, useState } from "react";
 import { Loader2, X } from "lucide-react";
 import { GoogleMap, useJsApiLoader, Marker, OverlayView } from "@react-google-maps/api";
@@ -66,7 +65,6 @@ const LocationMap = ({
   const [selectedSpace, setSelectedSpace] = useState<Space | null>(null);
   const [currentZoom, setCurrentZoom] = useState<number>(12);
   const [showPins, setShowPins] = useState<boolean>(true);
-  const [previouslySelectedSpaceId, setPreviouslySelectedSpaceId] = useState<string | null>(null);
   const mapRef = useRef<google.maps.Map | null>(null);
   
   // Add the useJsApiLoader hook to load the Google Maps API
@@ -123,12 +121,12 @@ const LocationMap = ({
   const handleMarkerClick = (space: Space) => {
     setSelectedSpace(space);
     
-    // Only adjust the map if this is a different space than previously selected
-    if (mapRef.current && previouslySelectedSpaceId !== space.id) {
+    // Center the map on the selected space and shift it 30px down
+    if (mapRef.current) {
       const position = { lat: space.latitude, lng: space.longitude };
       mapRef.current.panTo(position);
       
-      // After centering, shift the map 130px down
+      // After centering, shift the map 30px down
       setTimeout(() => {
         if (mapRef.current) {
           const projection = mapRef.current.getProjection();
@@ -140,16 +138,11 @@ const LocationMap = ({
           }
         }
       }, 50); // Small delay to ensure the map is centered first
-      
-      // Update the previously selected space ID
-      setPreviouslySelectedSpaceId(space.id);
     }
   };
 
   const handleInfoWindowClose = () => {
     setSelectedSpace(null);
-    // Reset the previously selected space ID when closing the info window
-    setPreviouslySelectedSpaceId(null);
   };
 
   const handleSpaceClick = () => {
