@@ -1,4 +1,3 @@
-
 import React, { useEffect, useRef, useState } from "react";
 import { Loader2, X } from "lucide-react";
 import { GoogleMap, useJsApiLoader, Marker, OverlayView } from "@react-google-maps/api";
@@ -70,6 +69,8 @@ const LocationMap = ({
   
   // Track the moved spaces to prevent duplicate movements
   const [movedSpaces, setMovedSpaces] = useState<Record<string, boolean>>({});
+  // Track the offset positions for each space
+  const [offsetPositions, setOffsetPositions] = useState<Record<string, {lat: number, lng: number}>>({});
   
   // Add the useJsApiLoader hook to load the Google Maps API
   const { isLoaded, loadError } = useJsApiLoader({
@@ -125,14 +126,16 @@ const LocationMap = ({
   const handleMarkerClick = (space: Space) => {
     setSelectedSpace(space);
     
-    // Center the map on the selected space
     if (mapRef.current) {
-      const position = { lat: space.latitude, lng: space.longitude };
-      mapRef.current.panTo(position);
-      
-      // Only shift the map down if this space hasn't been shifted before
-      if (!movedSpaces[space.id]) {
-        // After centering, shift the map 130px down
+      // If we already have an offset position for this space, use it
+      if (offsetPositions[space.id]) {
+        mapRef.current.panTo(offsetPositions[space.id]);
+      } else {
+        // First center on the marker
+        const position = { lat: space.latitude, lng: space.longitude };
+        mapRef.current.panTo(position);
+        
+        // Then calculate and apply the offset position
         setTimeout(() => {
           if (mapRef.current) {
             const projection = mapRef.current.getProjection();
@@ -140,6 +143,14 @@ const LocationMap = ({
               const point = projection.fromLatLngToPoint(new google.maps.LatLng(position.lat, position.lng));
               point.y -= 130 / Math.pow(2, mapRef.current.getZoom() || 0);
               const newLatLng = projection.fromPointToLatLng(point);
+              
+              // Store the offset position for future use
+              setOffsetPositions(prev => ({
+                ...prev,
+                [space.id]: {lat: newLatLng.lat(), lng: newLatLng.lng()}
+              }));
+              
+              // Move to the offset position
               mapRef.current.panTo(newLatLng);
               
               // Mark this space as having been moved
@@ -149,7 +160,7 @@ const LocationMap = ({
               }));
             }
           }
-        }, 50); // Small delay to ensure the map is centered first
+        }, 50);
       }
     }
   };
