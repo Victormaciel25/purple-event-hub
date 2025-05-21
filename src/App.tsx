@@ -1,3 +1,4 @@
+
 import React from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -79,9 +80,9 @@ const App: React.FC = () => {
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
-        {/* Configure toasters with position="off-screen" to hide them */}
+        {/* Configure toasters with position="top-center" to hide them */}
         <Toaster />
-        <Sonner position="off-screen" closeButton={false} />
+        <Sonner position="top-right" closeButton={false} className="opacity-0 invisible" />
         <BrowserRouter>
           <Routes>
             {/* Root route redirects to the index component */}
