@@ -133,7 +133,7 @@ const LocationMap = ({
           if (projection) {
             const point = projection.fromLatLngToPoint(new google.maps.LatLng(position.lat, position.lng));
             // Move 30 pixels down
-            point.y += 30 / Math.pow(2, mapRef.current.getZoom() || 0);
+            point.y -= 130 / Math.pow(2, mapRef.current.getZoom() || 0);
             const newLatLng = projection.fromPointToLatLng(point);
             mapRef.current.panTo(newLatLng);
           }
