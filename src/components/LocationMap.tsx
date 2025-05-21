@@ -237,10 +237,10 @@ const LocationMap = ({
                       e.stopPropagation(); 
                       handleInfoWindowClose(); 
                     }} 
-                    className="text-gray-400 hover:text-gray-700 transition-colors p-1 rounded-full hover:bg-gray-100"
+                    className="text-gray-400 hover:text-gray-700 transition-colors p-2 rounded-full hover:bg-gray-100"
                     aria-label="Fechar"
                   >
-                    <X size={16} />
+                    <X size={20} />
                   </button>
                 </div>
 
