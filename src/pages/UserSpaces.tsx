@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -5,7 +6,6 @@ import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { ChevronLeft, Edit, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
@@ -24,6 +24,7 @@ const UserSpaces: React.FC = () => {
   const [spaces, setSpaces] = useState<UserSpace[]>([]);
   const [loading, setLoading] = useState(true);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const navigate = useNavigate();
   
   useEffect(() => {
@@ -37,7 +38,7 @@ const UserSpaces: React.FC = () => {
       const { data: sessionData } = await supabase.auth.getSession();
       
       if (!sessionData.session) {
-        toast.error("Você precisa estar logado para visualizar seus espaços");
+        // Instead of toast, set error message or redirect
         navigate("/");
         return;
       }
@@ -55,7 +56,7 @@ const UserSpaces: React.FC = () => {
       setSpaces(data || []);
     } catch (error) {
       console.error("Erro ao carregar espaços:", error);
-      toast.error("Erro ao carregar seus espaços");
+      setDeleteError("Erro ao carregar seus espaços");
     } finally {
       setLoading(false);
     }
@@ -87,14 +88,18 @@ const UserSpaces: React.FC = () => {
         throw error;
       }
       
-      toast.success("Espaço excluído com sucesso");
+      setSuccessMessage("Espaço excluído com sucesso");
+      
+      // Clear success message after 3 seconds
+      setTimeout(() => {
+        setSuccessMessage(null);
+      }, 3000);
       
       // Update local state to remove the deleted space
       setSpaces(spaces.filter(space => space.id !== spaceId));
     } catch (error: any) {
       console.error("Erro ao excluir espaço:", error);
       setDeleteError(error.message || "Erro ao excluir espaço");
-      toast.error("Erro ao excluir espaço");
     } finally {
       setLoading(false);
     }
@@ -141,6 +146,15 @@ const UserSpaces: React.FC = () => {
           </AlertDescription>
         </Alert>
       )}
+      
+      {successMessage && (
+        <Alert className="mb-4 bg-green-50 border-green-200">
+          <AlertDescription className="text-green-800">
+            {successMessage}
+          </AlertDescription>
+        </Alert>
+      )}
+      
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-1">
         {spaces.map((space) => (
           <Card key={space.id} className="border shadow-sm">

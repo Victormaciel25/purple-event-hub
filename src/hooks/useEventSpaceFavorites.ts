@@ -1,6 +1,6 @@
+
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { supabase } from "@/integrations/supabase/client";
-import { toast } from "sonner";
 import { APP_CONSTANTS, STORAGE } from '@/config/app-config';
 
 export type FavoriteSpace = {
@@ -150,7 +150,6 @@ export const useEventSpaceFavorites = () => {
     const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
     if (!uuidPattern.test(id) && !favorites.includes(id)) {
       console.error("Invalid UUID format for favorite:", id);
-      toast.error("Erro ao adicionar favorito: ID inválido");
       return;
     }
     
@@ -165,12 +164,7 @@ export const useEventSpaceFavorites = () => {
     // Update global state
     globalFavoriteIds = [...newFavorites];
     
-    // Fornecer feedback ao usuário
-    if (newFavorites.includes(id)) {
-      toast.success("Espaço adicionado aos favoritos");
-    } else {
-      toast.success("Espaço removido dos favoritos");
-    }
+    // Removed toast notifications
   }, [favorites]);
 
   return { 

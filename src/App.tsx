@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -36,8 +35,8 @@ const App: React.FC = () => {
   const [session, setSession] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   
-  // Use o hook para verificar e exibir notificações de exclusão de espaços
-  useSpaceDeletionNotifications();
+  // Disable space deletion notifications
+  // useSpaceDeletionNotifications();
 
   useEffect(() => {
     // Set up auth state listener first
@@ -80,8 +79,9 @@ const App: React.FC = () => {
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
+        {/* Configure toasters with position="off-screen" to hide them */}
         <Toaster />
-        <Sonner />
+        <Sonner position="off-screen" closeButton={false} />
         <BrowserRouter>
           <Routes>
             {/* Root route redirects to the index component */}

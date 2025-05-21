@@ -1,15 +1,15 @@
+
 import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { Heart, Calendar, HelpCircle, Plus, Home, Shield, CheckSquare, Users } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/components/ui/use-toast";
 import { useUserRoles } from "@/hooks/useUserRoles";
-import { toast } from "sonner";
 import FavoriteSpaces from "../components/FavoriteSpaces";
 import EditProfileDialog from "@/components/EditProfileDialog";
 import ProfileHeader from "@/components/profile/ProfileHeader";
 import MenuCard from "@/components/profile/MenuCard";
 import SignOutButton from "@/components/profile/SignOutButton";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 const Profile = () => {
   const [showFavorites, setShowFavorites] = useState(false);
@@ -18,8 +18,11 @@ const Profile = () => {
   const [profile, setProfile] = useState<any>(null);
   const [session, setSession] = useState<any>(null);
   const [showEditProfile, setShowEditProfile] = useState(false);
+  const [alert, setAlert] = useState<{message: string, type: 'success' | 'error' | 'info' | null}>({
+    message: '',
+    type: null
+  });
   const navigate = useNavigate();
-  const { toast: toastUI } = useToast();
   const { isAdmin, isSuperAdmin, loading: roleLoading, userId } = useUserRoles();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -82,10 +85,11 @@ const Profile = () => {
       
       if (!sessionData.session) {
         // No session found, just redirect to login
-        toastUI({
-          title: "Sessão expirada",
-          description: "Sua sessão expirou. Redirecionando para login.",
+        setAlert({
+          message: "Sua sessão expirou. Redirecionando para login.",
+          type: 'info'
         });
+        
         navigate("/", { replace: true });
         return;
       }
@@ -98,18 +102,17 @@ const Profile = () => {
         throw error;
       }
       
-      toastUI({
-        title: "Desconectado",
-        description: "Você saiu da sua conta com sucesso",
+      setAlert({
+        message: "Você saiu da sua conta com sucesso",
+        type: 'success'
       });
       
       navigate("/", { replace: true });
     } catch (error: any) {
       console.error("Sign out error:", error);
-      toastUI({
-        title: "Erro ao sair",
-        description: error.message || "Ocorreu um erro ao sair da conta",
-        variant: "destructive",
+      setAlert({
+        message: error.message || "Ocorreu um erro ao sair da conta",
+        type: 'error'
       });
       
       // If we can't sign out properly, force navigate to login
@@ -123,7 +126,16 @@ const Profile = () => {
 
   const handleAdminAccess = () => {
     if (!isAdmin && !isSuperAdmin) {
-      toast.error("Você não tem permissões de administrador");
+      setAlert({
+        message: "Você não tem permissões de administrador",
+        type: 'error'
+      });
+      
+      // Clear alert after 3 seconds
+      setTimeout(() => {
+        setAlert({ message: '', type: null });
+      }, 3000);
+      
       return;
     }
     
@@ -132,7 +144,16 @@ const Profile = () => {
   
   const handleSuperAdminAccess = () => {
     if (!isSuperAdmin) {
-      toast.error("Você não tem permissões de super administrador");
+      setAlert({
+        message: "Você não tem permissões de super administrador",
+        type: 'error'
+      });
+      
+      // Clear alert after 3 seconds
+      setTimeout(() => {
+        setAlert({ message: '', type: null });
+      }, 3000);
+      
       return;
     }
     
@@ -153,6 +174,17 @@ const Profile = () => {
       if (error) throw error;
       setProfile(data);
       console.log("Profile refreshed:", data);
+      
+      setAlert({
+        message: "Perfil atualizado com sucesso",
+        type: 'success'
+      });
+      
+      // Clear alert after 3 seconds
+      setTimeout(() => {
+        setAlert({ message: '', type: null });
+      }, 3000);
+      
     } catch (error) {
       console.error("Error refreshing profile:", error);
     }
@@ -179,11 +211,23 @@ const Profile = () => {
       
       if (profileError) throw profileError;
       
-      toast.success("Foto de perfil removida com sucesso");
+      setAlert({
+        message: "Foto de perfil removida com sucesso",
+        type: 'success'
+      });
+      
+      // Clear alert after 3 seconds
+      setTimeout(() => {
+        setAlert({ message: '', type: null });
+      }, 3000);
+      
       refreshProfile();
     } catch (error: any) {
       console.error("Error deleting profile photo:", error);
-      toast.error(error.message || "Erro ao remover foto de perfil");
+      setAlert({
+        message: error.message || "Erro ao remover foto de perfil",
+        type: 'error'
+      });
     } finally {
       setLoading(false);
     }
@@ -265,6 +309,30 @@ const Profile = () => {
 
   return (
     <div className="container px-4 py-6 max-w-4xl mx-auto">
+      {alert.type && (
+        <Alert 
+          className={`mb-4 ${
+            alert.type === 'error' 
+              ? 'bg-red-50 border-red-200' 
+              : alert.type === 'success' 
+                ? 'bg-green-50 border-green-200' 
+                : 'bg-blue-50 border-blue-200'
+          }`}
+        >
+          <AlertDescription 
+            className={`${
+              alert.type === 'error' 
+                ? 'text-red-800' 
+                : alert.type === 'success' 
+                  ? 'text-green-800' 
+                  : 'text-blue-800'
+            }`}
+          >
+            {alert.message}
+          </AlertDescription>
+        </Alert>
+      )}
+
       <ProfileHeader 
         firstName={firstName}
         lastName={lastName}

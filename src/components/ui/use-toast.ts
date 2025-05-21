@@ -3,26 +3,42 @@ import { useToast as useToastOriginal, toast as toastOriginal } from "@/hooks/us
 
 type ToastProps = Parameters<typeof toastOriginal>[0];
 
+// Create a non-functional toast wrapper
 const toast = Object.assign(
   (props: ToastProps) => toastOriginal(props),
   {
-    error: (description: string) => toastOriginal({
-      variant: "destructive",
-      title: "Erro",
-      description,
-    }),
-    success: (description: string) => toastOriginal({
-      title: "Sucesso",
-      description,
-    }),
-    warning: (description: string) => toastOriginal({
-      title: "Aviso",
-      description,
-    }),
-    info: (description: string) => toastOriginal({
-      title: "Informação",
-      description,
-    }),
+    error: (description: string) => {
+      // No-op implementation
+      return {
+        id: "",
+        dismiss: () => {},
+        update: () => {},
+      };
+    },
+    success: (description: string) => {
+      // No-op implementation
+      return {
+        id: "",
+        dismiss: () => {},
+        update: () => {},
+      };
+    },
+    warning: (description: string) => {
+      // No-op implementation
+      return {
+        id: "",
+        dismiss: () => {},
+        update: () => {},
+      };
+    },
+    info: (description: string) => {
+      // No-op implementation
+      return {
+        id: "",
+        dismiss: () => {},
+        update: () => {},
+      };
+    },
   }
 );
 

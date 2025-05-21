@@ -1,7 +1,6 @@
 
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { toast } from "sonner";
 
 interface SpaceDeletionNotification {
   id: string;
@@ -36,11 +35,8 @@ export function useSpaceDeletionNotifications() {
         }
 
         if (notifications && notifications.length > 0) {
-          // Exibir cada notificação como um toast
+          // Mark notifications as viewed without showing toasts
           notifications.forEach((notification: SpaceDeletionNotification) => {
-            toast.error(`O espaço "${notification.space_name}" foi excluído\nMotivo: ${notification.deletion_reason}`);
-
-            // Marcar notificação como visualizada
             markNotificationAsViewed(notification.id);
           });
         }
