@@ -121,17 +121,6 @@ const LocationMap = ({
 
   const handleMarkerClick = (space: Space) => {
     setSelectedSpace(space);
-    
-    // Nova funcionalidade: centralizar o mapa no pin selecionado
-    if (mapRef.current) {
-      const position = { lat: space.latitude, lng: space.longitude };
-      mapRef.current.panTo(position);
-      
-      // Opcionalmente, você pode ajustar o zoom para garantir que o pin seja bem visível
-      if (currentZoom < 15) {
-        mapRef.current.setZoom(15);
-      }
-    }
   };
 
   const handleInfoWindowClose = () => {
@@ -144,17 +133,16 @@ const LocationMap = ({
     }
   };
 
-  // Função para posicionar o OverlayView acima do pin
-  const getPixelPositionOffset = (width: number, height: number) => {
-    return {
-      x: -(width / 2),
-      y: -(height + 35) // Offset para posicionar acima do pin
-    };
-  };
-
   if (loadError) {
     return <div className="text-center text-red-500 p-4 bg-red-50 rounded-lg shadow">Erro ao carregar o mapa</div>;
   }
+
+  // Calculate the pixel offset to position the OverlayView above the pin
+  // The height of the marker is 46px, so we offset by at least that amount plus some padding
+  const getPixelPositionOffset = (width: number, height: number) => ({
+    x: -(width / 2),
+    y: -height - 20, // Position above the pin with some padding
+  });
 
   return (
     <div className="relative w-full h-full rounded-xl overflow-hidden shadow-md">
