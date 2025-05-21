@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -11,6 +10,7 @@ import Layout from "./components/Layout";
 import Login from "./pages/Login";
 import Explore from "./pages/Explore";
 import Vendors from "./pages/Vendors";
+import VendorDetails from "./pages/VendorDetails";
 import Map from "./pages/Map";
 import Messages from "./pages/Messages";
 import Profile from "./pages/Profile";
@@ -80,7 +80,7 @@ const App: React.FC = () => {
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
-        {/* Configure toasters with position="top-center" to hide them */}
+        {/* Configure toasters with position="top-right" to hide them */}
         <Toaster />
         <Sonner position="top-right" closeButton={false} className="opacity-0 invisible" />
         <BrowserRouter>
@@ -102,6 +102,7 @@ const App: React.FC = () => {
             }>
               <Route path="/explore" element={<Explore />} />
               <Route path="/vendors" element={<Vendors />} />
+              <Route path="/vendor/:id" element={<VendorDetails />} />
               <Route path="/map" element={<Map />} />
               <Route path="/messages" element={<Messages />} />
               <Route path="/profile" element={<Profile />} />
