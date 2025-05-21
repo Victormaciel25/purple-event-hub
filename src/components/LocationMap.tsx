@@ -121,6 +121,11 @@ const LocationMap = ({
 
   const handleMarkerClick = (space: Space) => {
     setSelectedSpace(space);
+    
+    // Center the map on the selected space
+    if (mapRef.current) {
+      mapRef.current.panTo({ lat: space.latitude, lng: space.longitude });
+    }
   };
 
   const handleInfoWindowClose = () => {
@@ -136,13 +141,6 @@ const LocationMap = ({
   if (loadError) {
     return <div className="text-center text-red-500 p-4 bg-red-50 rounded-lg shadow">Erro ao carregar o mapa</div>;
   }
-
-  // Calculate the pixel offset to position the OverlayView above the pin
-  // The height of the marker is 46px, so we offset by at least that amount plus some padding
-  const getPixelPositionOffset = (width: number, height: number) => ({
-    x: -(width / 2),
-    y: -height - 20, // Position above the pin with some padding
-  });
 
   return (
     <div className="relative w-full h-full rounded-xl overflow-hidden shadow-md">
@@ -187,12 +185,11 @@ const LocationMap = ({
             <OverlayView
               position={{ lat: selectedSpace.latitude, lng: selectedSpace.longitude }}
               mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}
-              getPixelPositionOffset={getPixelPositionOffset}
             >
               <div 
                 className="cursor-pointer overflow-hidden rounded-lg shadow-md bg-white transition-shadow duration-200 hover:shadow-lg"
                 onClick={handleSpaceClick}
-                style={{ width: 280 }}
+                style={{ width: 280, transform: 'translate(-50%, -100%) translateY(-10px)' }}
               >
                 <div className="flex justify-between items-center px-4 py-3 border-b border-gray-100">
                   <h3 className="font-bold text-base text-iparty truncate pr-2">
