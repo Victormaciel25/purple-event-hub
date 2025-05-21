@@ -1,4 +1,3 @@
-
 import React, { useEffect, useRef, useState } from "react";
 import { Loader2, X } from "lucide-react";
 import { GoogleMap, useJsApiLoader, Marker, OverlayView } from "@react-google-maps/api";
@@ -122,9 +121,24 @@ const LocationMap = ({
   const handleMarkerClick = (space: Space) => {
     setSelectedSpace(space);
     
-    // Center the map on the selected space
+    // Center the map on the selected space and shift it 30px down
     if (mapRef.current) {
-      mapRef.current.panTo({ lat: space.latitude, lng: space.longitude });
+      const position = { lat: space.latitude, lng: space.longitude };
+      mapRef.current.panTo(position);
+      
+      // After centering, shift the map 30px down
+      setTimeout(() => {
+        if (mapRef.current) {
+          const projection = mapRef.current.getProjection();
+          if (projection) {
+            const point = projection.fromLatLngToPoint(new google.maps.LatLng(position.lat, position.lng));
+            // Move 30 pixels down
+            point.y += 30 / Math.pow(2, mapRef.current.getZoom() || 0);
+            const newLatLng = projection.fromPointToLatLng(point);
+            mapRef.current.panTo(newLatLng);
+          }
+        }
+      }, 50); // Small delay to ensure the map is centered first
     }
   };
 
