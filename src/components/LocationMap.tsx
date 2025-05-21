@@ -1,3 +1,4 @@
+
 import React, { useEffect, useRef, useState } from "react";
 import { Loader2, X } from "lucide-react";
 import { GoogleMap, useJsApiLoader, Marker, OverlayView } from "@react-google-maps/api";
@@ -67,6 +68,9 @@ const LocationMap = ({
   const [showPins, setShowPins] = useState<boolean>(true);
   const mapRef = useRef<google.maps.Map | null>(null);
   
+  // Track the moved spaces to prevent duplicate movements
+  const [movedSpaces, setMovedSpaces] = useState<Record<string, boolean>>({});
+  
   // Add the useJsApiLoader hook to load the Google Maps API
   const { isLoaded, loadError } = useJsApiLoader({
     id: 'google-map-script',
@@ -121,23 +125,32 @@ const LocationMap = ({
   const handleMarkerClick = (space: Space) => {
     setSelectedSpace(space);
     
-    // Center the map on the selected space and shift it 30px down
+    // Center the map on the selected space
     if (mapRef.current) {
       const position = { lat: space.latitude, lng: space.longitude };
       mapRef.current.panTo(position);
       
-      // After centering, shift the map 30px down
-      setTimeout(() => {
-        if (mapRef.current) {
-          const projection = mapRef.current.getProjection();
-          if (projection) {
-            const point = projection.fromLatLngToPoint(new google.maps.LatLng(position.lat, position.lng));
-            point.y -= 130 / Math.pow(2, mapRef.current.getZoom() || 0);
-            const newLatLng = projection.fromPointToLatLng(point);
-            mapRef.current.panTo(newLatLng);
+      // Only shift the map down if this space hasn't been shifted before
+      if (!movedSpaces[space.id]) {
+        // After centering, shift the map 130px down
+        setTimeout(() => {
+          if (mapRef.current) {
+            const projection = mapRef.current.getProjection();
+            if (projection) {
+              const point = projection.fromLatLngToPoint(new google.maps.LatLng(position.lat, position.lng));
+              point.y -= 130 / Math.pow(2, mapRef.current.getZoom() || 0);
+              const newLatLng = projection.fromPointToLatLng(point);
+              mapRef.current.panTo(newLatLng);
+              
+              // Mark this space as having been moved
+              setMovedSpaces(prev => ({
+                ...prev,
+                [space.id]: true
+              }));
+            }
           }
-        }
-      }, 50); // Small delay to ensure the map is centered first
+        }, 50); // Small delay to ensure the map is centered first
+      }
     }
   };
 
