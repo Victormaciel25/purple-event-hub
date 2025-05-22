@@ -344,6 +344,8 @@ export type Database = {
           id: string
           images: string[] | null
           name: string
+          rejection_reason: string | null
+          status: Database["public"]["Enums"]["vendor_approval_status"]
           user_id: string
           working_hours: string | null
         }
@@ -356,6 +358,8 @@ export type Database = {
           id?: string
           images?: string[] | null
           name: string
+          rejection_reason?: string | null
+          status?: Database["public"]["Enums"]["vendor_approval_status"]
           user_id: string
           working_hours?: string | null
         }
@@ -368,6 +372,8 @@ export type Database = {
           id?: string
           images?: string[] | null
           name?: string
+          rejection_reason?: string | null
+          status?: Database["public"]["Enums"]["vendor_approval_status"]
           user_id?: string
           working_hours?: string | null
         }
@@ -401,6 +407,7 @@ export type Database = {
     }
     Enums: {
       space_approval_status: "pending" | "approved" | "rejected"
+      vendor_approval_status: "pending" | "approved" | "rejected"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -517,6 +524,7 @@ export const Constants = {
   public: {
     Enums: {
       space_approval_status: ["pending", "approved", "rejected"],
+      vendor_approval_status: ["pending", "approved", "rejected"],
     },
   },
 } as const

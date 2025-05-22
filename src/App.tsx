@@ -19,6 +19,7 @@ import EventSpaceDetails from "./pages/EventSpaceDetails";
 import RegisterSpace from "./pages/RegisterSpace";
 import RegisterVendor from "./pages/RegisterVendor";
 import SpaceApproval from "./pages/SpaceApproval";
+import VendorApproval from "./pages/VendorApproval";
 import AdminManagement from "./pages/AdminManagement";
 import UserSpaces from "./pages/UserSpaces";
 import EditSpace from "./pages/EditSpace";
@@ -112,6 +113,7 @@ const App: React.FC = () => {
               <Route path="/event-space/:id" element={<EventSpaceDetails />} />
               <Route path="/register-space" element={<RegisterSpace />} />
               <Route path="/space-approval" element={<SpaceApproval />} />
+              <Route path="/vendor-approval" element={<VendorApproval />} />
               <Route path="/admin-management" element={<AdminManagement />} />
               <Route path="/user-spaces" element={<UserSpaces />} />
               <Route path="/edit-space/:id" element={<EditSpace />} />

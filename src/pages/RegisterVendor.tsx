@@ -84,7 +84,8 @@ const RegisterVendor = () => {
           address: values.address,
           working_hours: values.workingHours,
           images: imageUrls,
-          user_id: userId
+          user_id: userId,
+          status: 'pending'
         });
         
       if (error) {
