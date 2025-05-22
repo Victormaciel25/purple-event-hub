@@ -33,7 +33,7 @@ type FormValues = z.infer<typeof formSchema>;
 
 const RegisterVendor = () => {
   const navigate = useNavigate();
-  const [imageUrl, setImageUrl] = useState<string | null>(null);
+  const [imageUrls, setImageUrls] = useState<string[]>([]);
   const [uploading, setUploading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
@@ -49,13 +49,13 @@ const RegisterVendor = () => {
     },
   });
 
-  const handleImageChange = (url: string | null) => {
-    setImageUrl(url);
+  const handleImageChange = (urls: string[]) => {
+    setImageUrls(urls);
   };
 
   const onSubmit = async (values: FormValues) => {
-    if (!imageUrl) {
-      toast.error("Por favor, faça o upload de uma imagem");
+    if (imageUrls.length === 0) {
+      toast.error("Por favor, faça o upload de pelo menos uma imagem");
       return;
     }
 
@@ -102,16 +102,17 @@ const RegisterVendor = () => {
       <h1 className="text-2xl font-bold mb-6">Cadastrar Fornecedor</h1>
       
       <div className="mb-6">
-        <p className="text-muted-foreground text-sm mb-2">Imagem do fornecedor</p>
+        <p className="text-muted-foreground text-sm mb-2">Imagens do fornecedor</p>
         <SingleImageUpload
           onImageChange={handleImageChange}
           uploadPath="vendors"
-          aspectRatio="1:1"
+          aspectRatio="16:9"
           maxSize={2}
-          initialImage={imageUrl}
+          initialImages={imageUrls}
           isUploading={uploading}
           setIsUploading={setUploading}
-          className="w-full h-48 rounded-lg"
+          className="w-full"
+          maxImages={5}
         />
       </div>
 

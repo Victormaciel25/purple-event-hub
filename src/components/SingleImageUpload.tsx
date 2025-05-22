@@ -1,19 +1,19 @@
 
 import React, { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Upload, X, Image } from "lucide-react";
+import { X, Images } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 
 interface SingleImageUploadProps {
-  onImageChange: (url: string | null) => void;
+  onImageChange: (urls: string[]) => void;
   uploadPath: string;
   aspectRatio?: string;
   maxSize?: number;
-  initialImage: string | null;
+  initialImages: string[];
   isUploading: boolean;
   setIsUploading: React.Dispatch<React.SetStateAction<boolean>>;
   className?: string;
+  maxImages?: number;
 }
 
 const SingleImageUpload: React.FC<SingleImageUploadProps> = ({
@@ -21,100 +21,137 @@ const SingleImageUpload: React.FC<SingleImageUploadProps> = ({
   uploadPath,
   aspectRatio = "1:1",
   maxSize = 5,
-  initialImage,
+  initialImages = [],
   isUploading,
   setIsUploading,
-  className = "w-full h-48",
+  className = "w-full",
+  maxImages = 5,
 }) => {
-  const [previewUrl, setPreviewUrl] = useState<string | null>(initialImage);
+  const [previewUrls, setPreviewUrls] = useState<string[]>(initialImages);
 
   const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     if (!event.target.files || event.target.files.length === 0) return;
     
-    const file = event.target.files[0];
-    const fileSizeInMB = file.size / (1024 * 1024);
+    const files = Array.from(event.target.files);
     
-    if (fileSizeInMB > maxSize) {
-      toast.error(`O arquivo é muito grande. Tamanho máximo: ${maxSize}MB`);
+    if (previewUrls.length + files.length > maxImages) {
+      toast.error(`Você pode enviar no máximo ${maxImages} imagens`);
       return;
     }
     
     setIsUploading(true);
     
     try {
-      // Create a local preview
-      const objectUrl = URL.createObjectURL(file);
-      setPreviewUrl(objectUrl);
+      const newUrls: string[] = [];
       
-      // Upload to Supabase Storage
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${Math.random().toString(36).substring(2, 15)}.${fileExt}`;
-      const filePath = `${uploadPath}/${fileName}`;
+      // Process each file
+      for (const file of files) {
+        const fileSizeInMB = file.size / (1024 * 1024);
+        
+        if (fileSizeInMB > maxSize) {
+          toast.error(`O arquivo ${file.name} é muito grande. Tamanho máximo: ${maxSize}MB`);
+          continue;
+        }
+        
+        // Create a local preview
+        const objectUrl = URL.createObjectURL(file);
+        
+        // Upload to Supabase Storage
+        const fileExt = file.name.split('.').pop();
+        const fileName = `${Math.random().toString(36).substring(2, 15)}.${fileExt}`;
+        const filePath = `${uploadPath}/${fileName}`;
+        
+        const { data, error } = await supabase.storage
+          .from(uploadPath)
+          .upload(filePath, file);
+        
+        if (error) {
+          console.error("Error uploading image:", error);
+          toast.error(`Erro ao enviar imagem ${file.name}.`);
+          URL.revokeObjectURL(objectUrl);
+          continue;
+        }
+        
+        // Get the public URL
+        const { data: publicURLData } = supabase.storage
+          .from(uploadPath)
+          .getPublicUrl(filePath);
+        
+        newUrls.push(publicURLData.publicUrl);
+      }
       
-      const { data, error } = await supabase.storage
-        .from(uploadPath)
-        .upload(filePath, file);
-      
-      if (error) throw error;
-      
-      // Get the public URL
-      const { data: publicURLData } = supabase.storage
-        .from(uploadPath)
-        .getPublicUrl(filePath);
-      
-      onImageChange(publicURLData.publicUrl);
-      toast.success("Imagem enviada com sucesso!");
+      if (newUrls.length > 0) {
+        const allUrls = [...previewUrls, ...newUrls];
+        setPreviewUrls(allUrls);
+        onImageChange(allUrls);
+        toast.success(`${newUrls.length} ${newUrls.length === 1 ? 'imagem enviada' : 'imagens enviadas'} com sucesso!`);
+      }
     } catch (error) {
-      console.error("Error uploading image:", error);
-      toast.error("Erro ao enviar a imagem. Tente novamente.");
-      setPreviewUrl(initialImage);
-      onImageChange(initialImage);
+      console.error("Error uploading images:", error);
+      toast.error("Erro ao enviar as imagens. Tente novamente.");
     } finally {
       setIsUploading(false);
+      // Reset the file input
+      if (event.target) {
+        event.target.value = '';
+      }
     }
   };
 
-  const removeImage = () => {
-    setPreviewUrl(null);
-    onImageChange(null);
+  const removeImage = (index: number) => {
+    const newPreviewUrls = [...previewUrls];
+    newPreviewUrls.splice(index, 1);
+    setPreviewUrls(newPreviewUrls);
+    onImageChange(newPreviewUrls);
   };
 
   return (
-    <div className={`relative border border-gray-200 rounded-lg flex items-center justify-center overflow-hidden ${className}`}>
-      {previewUrl ? (
-        <>
-          <img
-            src={previewUrl}
-            alt="Preview"
-            className="w-full h-full object-cover"
-          />
-          <button
-            type="button"
-            onClick={removeImage}
-            className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1.5 hover:bg-red-600 transition-colors"
-            disabled={isUploading}
+    <div className={className}>
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 mb-4">
+        {previewUrls.map((url, index) => (
+          <div 
+            key={`image-${index}`} 
+            className="relative aspect-square border border-gray-200 rounded-lg overflow-hidden"
           >
-            <X size={16} />
-          </button>
-        </>
-      ) : (
-        <label className="cursor-pointer flex flex-col items-center justify-center w-full h-full">
-          <Image size={48} className="text-gray-300 mb-2" />
-          <span className="text-sm text-gray-500">
-            {isUploading ? "Enviando..." : "Adicionar imagem"}
-          </span>
-          <span className="text-xs text-gray-400 mt-1">
-            ({aspectRatio}, max {maxSize}MB)
-          </span>
-          <input
-            type="file"
-            accept="image/*"
-            onChange={handleFileChange}
-            className="hidden"
-            disabled={isUploading}
-          />
-        </label>
-      )}
+            <img
+              src={url}
+              alt={`Preview ${index + 1}`}
+              className="w-full h-full object-cover"
+            />
+            <button
+              type="button"
+              onClick={() => removeImage(index)}
+              className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1.5 hover:bg-red-600 transition-colors"
+              disabled={isUploading}
+            >
+              <X size={16} />
+            </button>
+          </div>
+        ))}
+        
+        {previewUrls.length < maxImages && (
+          <label className="cursor-pointer aspect-square border-2 border-dashed border-gray-300 rounded-lg flex flex-col items-center justify-center">
+            <Images size={36} className="text-gray-300 mb-2" />
+            <span className="text-sm text-gray-500 text-center px-2">
+              {isUploading ? "Enviando..." : "Adicionar imagens"}
+            </span>
+            <span className="text-xs text-gray-400 mt-1 text-center px-2">
+              ({aspectRatio}, max {maxSize}MB)
+            </span>
+            <input
+              type="file"
+              accept="image/*"
+              onChange={handleFileChange}
+              className="hidden"
+              disabled={isUploading}
+              multiple
+            />
+          </label>
+        )}
+      </div>
+      <p className="text-xs text-gray-500">
+        {previewUrls.length} de {maxImages} imagens
+      </p>
     </div>
   );
 };
