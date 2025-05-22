@@ -1,112 +1,150 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import VendorCard from "@/components/VendorCard";
 import { Input } from "@/components/ui/input";
 import { Search } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
-const vendors = [
-  {
-    id: "1",
-    name: "Buffet Delicias",
-    category: "Buffet",
-    rating: 4.8,
-    contactNumber: "(11) 99999-8888",
-    image: "https://source.unsplash.com/random/200x200?food",
-  },
-  {
-    id: "2",
-    name: "DJ Master Sound",
-    category: "DJ",
-    rating: 4.7,
-    contactNumber: "(11) 98888-7777",
-    image: "https://source.unsplash.com/random/200x200?dj",
-  },
-  {
-    id: "3",
-    name: "Flor & Arte Decorações",
-    category: "Decoração",
-    rating: 5.0,
-    contactNumber: "(11) 97777-6666",
-    image: "https://source.unsplash.com/random/200x200?flowers",
-  },
-  {
-    id: "4",
-    name: "Click Fotografias",
-    category: "Fotografia",
-    rating: 4.9,
-    contactNumber: "(11) 96666-5555",
-    image: "https://source.unsplash.com/random/200x200?camera",
-  },
-];
+type Vendor = {
+  id: string;
+  name: string;
+  category: string;
+  contact_number: string;
+  images: string[];
+  rating?: number;
+};
 
 const Vendors = () => {
   const [searchTerm, setSearchTerm] = useState("");
+  const [vendors, setVendors] = useState<Vendor[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [categories, setCategories] = useState<string[]>([]);
 
-  const filteredVendors = vendors.filter(vendor => 
-    vendor.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    vendor.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    vendor.contactNumber.toLowerCase().includes(searchTerm.toLowerCase())
+  useEffect(() => {
+    fetchVendors();
+  }, []);
+
+  const fetchVendors = async () => {
+    try {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from("vendors")
+        .select("*")
+        .eq("status", "approved");
+
+      if (error) throw error;
+
+      if (data) {
+        // Processar os dados obtidos do Supabase
+        const processedVendors = data.map((vendor) => ({
+          id: vendor.id,
+          name: vendor.name,
+          category: vendor.category,
+          contact_number: vendor.contact_number,
+          images: vendor.images || [],
+          rating: 4.8, // Rating padrão enquanto não implementamos um sistema de avaliações
+        }));
+
+        // Extrair categorias únicas para as abas
+        const uniqueCategories = Array.from(
+          new Set(processedVendors.map((vendor) => vendor.category))
+        );
+
+        setVendors(processedVendors);
+        setCategories(uniqueCategories);
+      }
+    } catch (error) {
+      console.error("Erro ao buscar fornecedores:", error);
+      toast.error("Não foi possível carregar os fornecedores");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const filteredVendors = vendors.filter(
+    (vendor) =>
+      vendor.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      vendor.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      vendor.contact_number.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   return (
     <div className="container px-4 py-6 max-w-4xl mx-auto">
       <div className="relative mb-6">
-        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" size={18} />
-        <Input 
-          placeholder="Buscar fornecedores..." 
+        <Search
+          className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground"
+          size={18}
+        />
+        <Input
+          placeholder="Buscar fornecedores..."
           className="pl-10"
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
         />
       </div>
 
-      <Tabs defaultValue="all" className="mb-6">
-        <TabsList className="w-full bg-secondary">
-          <TabsTrigger value="all" className="flex-1">Todos</TabsTrigger>
-          <TabsTrigger value="buffet" className="flex-1">Buffet</TabsTrigger>
-          <TabsTrigger value="dj" className="flex-1">DJ</TabsTrigger>
-          <TabsTrigger value="decoration" className="flex-1">Decoração</TabsTrigger>
-        </TabsList>
-        
-        <TabsContent value="all" className="mt-4">
-          <div className="space-y-4">
-            {filteredVendors.map((vendor) => (
-              <VendorCard key={vendor.id} {...vendor} />
+      {loading ? (
+        <div className="text-center py-10">Carregando fornecedores...</div>
+      ) : vendors.length === 0 ? (
+        <div className="text-center py-10">
+          Nenhum fornecedor aprovado encontrado.
+        </div>
+      ) : (
+        <Tabs defaultValue="all" className="mb-6">
+          <TabsList className="w-full bg-secondary">
+            <TabsTrigger value="all" className="flex-1">
+              Todos
+            </TabsTrigger>
+            {categories.map((category) => (
+              <TabsTrigger
+                key={category}
+                value={category.toLowerCase()}
+                className="flex-1"
+              >
+                {category}
+              </TabsTrigger>
             ))}
-          </div>
-        </TabsContent>
-        
-        <TabsContent value="buffet" className="mt-4">
-          <div className="space-y-4">
-            {filteredVendors
-              .filter((vendor) => vendor.category === "Buffet")
-              .map((vendor) => (
-                <VendorCard key={vendor.id} {...vendor} />
-              ))}
-          </div>
-        </TabsContent>
+          </TabsList>
 
-        <TabsContent value="dj" className="mt-4">
-          <div className="space-y-4">
-            {filteredVendors
-              .filter((vendor) => vendor.category === "DJ")
-              .map((vendor) => (
-                <VendorCard key={vendor.id} {...vendor} />
+          <TabsContent value="all" className="mt-4">
+            <div className="space-y-4">
+              {filteredVendors.map((vendor) => (
+                <VendorCard
+                  key={vendor.id}
+                  id={vendor.id}
+                  name={vendor.name}
+                  category={vendor.category}
+                  rating={vendor.rating || 4.5}
+                  contactNumber={vendor.contact_number}
+                  image={vendor.images[0] || "https://source.unsplash.com/random/200x200?food"}
+                />
               ))}
-          </div>
-        </TabsContent>
+            </div>
+          </TabsContent>
 
-        <TabsContent value="decoration" className="mt-4">
-          <div className="space-y-4">
-            {filteredVendors
-              .filter((vendor) => vendor.category === "Decoração")
-              .map((vendor) => (
-                <VendorCard key={vendor.id} {...vendor} />
-              ))}
-          </div>
-        </TabsContent>
-      </Tabs>
+          {categories.map((category) => (
+            <TabsContent key={category} value={category.toLowerCase()} className="mt-4">
+              <div className="space-y-4">
+                {filteredVendors
+                  .filter((vendor) => vendor.category === category)
+                  .map((vendor) => (
+                    <VendorCard
+                      key={vendor.id}
+                      id={vendor.id}
+                      name={vendor.name}
+                      category={vendor.category}
+                      rating={vendor.rating || 4.5}
+                      contactNumber={vendor.contact_number}
+                      image={vendor.images[0] || "https://source.unsplash.com/random/200x200?food"}
+                    />
+                  ))}
+              </div>
+            </TabsContent>
+          ))}
+        </Tabs>
+      )}
     </div>
   );
 };
