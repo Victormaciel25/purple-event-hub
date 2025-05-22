@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
@@ -139,15 +138,34 @@ const VendorApproval = () => {
     if (!selectedVendor) return;
 
     try {
+      console.log("Approving vendor with ID:", selectedVendor.id);
+      
       const { error } = await supabase
         .from("vendors")
         .update({ status: "approved" })
         .eq("id", selectedVendor.id);
 
-      if (error) throw error;
+      if (error) {
+        console.error("Error approving vendor:", error);
+        throw error;
+      }
       
+      console.log("Vendor approved successfully");
       toast.success("Fornecedor aprovado com sucesso!");
+      
+      // Update the local state to reflect the approval
+      setVendors(prevVendors => 
+        prevVendors.map(vendor => 
+          vendor.id === selectedVendor.id 
+            ? { ...vendor, status: 'approved' as const } 
+            : vendor
+        )
+      );
+      
+      // Close the details panel
       setSheetOpen(false);
+      
+      // Refresh vendor list
       fetchVendors();
     } catch (error) {
       console.error("Erro ao aprovar fornecedor:", error);

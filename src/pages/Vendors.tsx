@@ -29,25 +29,34 @@ const Vendors = () => {
   const fetchVendors = async () => {
     try {
       setLoading(true);
+      console.log("Fetching approved vendors...");
+      
       const { data, error } = await supabase
         .from("vendors")
         .select("*")
         .eq("status", "approved");
 
-      if (error) throw error;
+      if (error) {
+        console.error("Error fetching vendors:", error);
+        throw error;
+      }
+
+      console.log("Vendors fetched:", data);
 
       if (data) {
-        // Processar os dados obtidos do Supabase
+        // Process the data obtained from Supabase
         const processedVendors = data.map((vendor) => ({
           id: vendor.id,
           name: vendor.name,
           category: vendor.category,
           contact_number: vendor.contact_number,
           images: vendor.images || [],
-          rating: 4.8, // Rating padrão enquanto não implementamos um sistema de avaliações
+          rating: 4.8, // Default rating until we implement a rating system
         }));
 
-        // Extrair categorias únicas para as abas
+        console.log("Processed vendors:", processedVendors);
+
+        // Extract unique categories for tabs
         const uniqueCategories = Array.from(
           new Set(processedVendors.map((vendor) => vendor.category))
         );
