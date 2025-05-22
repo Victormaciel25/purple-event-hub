@@ -49,7 +49,6 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
-// Define a type for the space details with all the fields
 type SpaceDetails = {
   id: string;
   name: string;
@@ -70,137 +69,86 @@ type SpaceDetails = {
   images: string[];
   latitude?: number;
   longitude?: number;
-  user_id?: string; // Adicionado para verificar o proprietário
+  user_id?: string;
 };
 
 const EventSpaceDetails: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { isFavorite, toggleFavorite } = useEventSpaceFavorites();
+  const { isAdmin } = useUserRoles();
+
   const [space, setSpace] = useState<SpaceDetails | null>(null);
   const [loading, setLoading] = useState(true);
   const [imageUrls, setImageUrls] = useState<string[]>([]);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [isImageDialogOpen, setIsImageDialogOpen] = useState(false);
-  const [spaceOwner, setSpaceOwner] = useState<{ id: string, name: string } | null>(null);
+  const [spaceOwner, setSpaceOwner] = useState<{ id: string; name: string } | null>(null);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [processingChat, setProcessingChat] = useState(false);
-  const { isAdmin } = useUserRoles();
+
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleteReason, setDeleteReason] = useState("");
   const [deletingSpace, setDeletingSpace] = useState(false);
-  
+
   useEffect(() => {
-    // Obter o ID do usuário atual
-    const getCurrentUser = async () => {
+    // Pega ID do usuário
+    (async () => {
       const { data } = await supabase.auth.getUser();
-      if (data.user) {
-        setCurrentUserId(data.user.id);
-      }
-    };
-    
-    getCurrentUser();
-    
-    if (id) {
-      fetchSpaceDetails(id);
-    }
+      if (data.user) setCurrentUserId(data.user.id);
+    })();
+    if (id) fetchSpaceDetails(id);
   }, [id]);
-  
+
   const fetchSpaceDetails = async (spaceId: string) => {
     try {
       setLoading(true);
-      
-      // Fetch space details with user profile information
+      // Busca dados do espaço
       const { data: spaceData, error: spaceError } = await supabase
         .from("spaces")
         .select("*")
         .eq("id", spaceId)
         .single();
-      
-      if (spaceError) {
-        console.error("Error fetching space details:", spaceError);
-        throw spaceError;
-      }
-      
+      if (spaceError) throw spaceError;
       if (!spaceData) {
-        console.error("No space data found");
         toast.error("Espaço não encontrado");
         navigate("/explore");
         return;
       }
-      
-      console.log("Space data fetched:", spaceData);
-      
-      // Now fetch the owner's profile information directly
+      // Busca profile do dono
       if (spaceData.user_id) {
-        const { data: profileData, error: profileError } = await supabase
+        const { data: profileData } = await supabase
           .from("profiles")
           .select("id, first_name, last_name")
           .eq("id", spaceData.user_id)
           .single();
-          
-        if (profileError) {
-          console.error("Error fetching owner profile:", profileError);
-          // Continue execution even if profile fetch fails
-        }
-        
         if (profileData) {
-          const ownerName = profileData.first_name && profileData.last_name 
-            ? `${profileData.first_name} ${profileData.last_name}` 
+          const name = profileData.first_name && profileData.last_name
+            ? `${profileData.first_name} ${profileData.last_name}`
             : "Proprietário";
-          
-          setSpaceOwner({
-            id: profileData.id,
-            name: ownerName
-          });
-          
-          console.log("Space owner set:", { id: profileData.id, name: ownerName });
+          setSpaceOwner({ id: profileData.id, name });
         } else {
-          // If no profile found, at least set the ID from space data
-          setSpaceOwner({
-            id: spaceData.user_id,
-            name: "Proprietário"
-          });
-          console.log("Space owner set with default name:", { id: spaceData.user_id, name: "Proprietário" });
+          setSpaceOwner({ id: spaceData.user_id, name: "Proprietário" });
         }
-      } else {
-        console.error("Space has no user_id");
       }
-      
-      // Fetch photos related to this space
-      const { data: photoData, error: photoError } = await supabase
+      // Busca fotos
+      const { data: photoData } = await supabase
         .from("space_photos")
         .select("storage_path")
         .eq("space_id", spaceId);
-      
-      if (photoError) {
-        console.error("Error fetching photo data:", photoError);
-        throw photoError;
-      }
-      
-      // Get signed URLs for all photos
-      const photos = photoData || [];
       const urls: string[] = [];
-      
-      if (photos.length > 0) {
-        for (const photo of photos) {
+      if (photoData?.length) {
+        for (const p of photoData) {
           const { data: urlData } = await supabase.storage
-            .from('spaces')
-            .createSignedUrl(photo.storage_path, 3600);
-            
-          if (urlData) {
-            urls.push(urlData.signedUrl);
-          }
+            .from("spaces")
+            .createSignedUrl(p.storage_path, 3600);
+          if (urlData) urls.push(urlData.signedUrl);
         }
-      } 
-      
-      // Use default image if no images were found
-      if (urls.length === 0) {
-        urls.push("https://source.unsplash.com/random/600x400?event");
       }
-      
-      // Create the space details object
-      const spaceDetails: SpaceDetails = {
+      if (!urls.length) urls.push("https://source.unsplash.com/random/600x400?event");
+
+      setImageUrls(urls);
+      setSpace({
         id: spaceData.id,
         name: spaceData.name,
         address: spaceData.address,
@@ -211,150 +159,64 @@ const EventSpaceDetails: React.FC = () => {
         price: spaceData.price,
         capacity: spaceData.capacity,
         phone: spaceData.phone,
-        parking: spaceData.parking || false,
-        wifi: spaceData.wifi || false,
-        sound_system: spaceData.sound_system || false,
-        air_conditioning: spaceData.air_conditioning || false,
-        kitchen: spaceData.kitchen || false,
-        pool: spaceData.pool || false,
+        parking: spaceData.parking,
+        wifi: spaceData.wifi,
+        sound_system: spaceData.sound_system,
+        air_conditioning: spaceData.air_conditioning,
+        kitchen: spaceData.kitchen,
+        pool: spaceData.pool,
         images: urls,
         latitude: spaceData.latitude,
         longitude: spaceData.longitude,
-        user_id: spaceData.user_id
-      };
-      
-      console.log("Space details created:", spaceDetails);
-      setSpace(spaceDetails);
-      setImageUrls(urls);
-      
-    } catch (error) {
-      console.error("Error fetching space details:", error);
+        user_id: spaceData.user_id,
+      });
+    } catch (err) {
+      console.error(err);
       toast.error("Erro ao carregar detalhes do espaço");
     } finally {
       setLoading(false);
     }
   };
-  
+
   const handleWhatsAppContact = () => {
-    if (space) {
-      const message = `Olá, estou interessado no espaço ${space.name} para um evento`;
-      // Clean the phone number to ensure it's in the correct format and add +55 prefix
-      const cleanPhone = space.phone.replace(/\D/g, "");
-      const phoneWithPrefix = `+55${cleanPhone}`;
-      const whatsappUrl = `https://wa.me/${phoneWithPrefix}?text=${encodeURIComponent(message)}`;
-      window.open(whatsappUrl, '_blank');
-    }
+    if (!space) return;
+    const clean = space.phone.replace(/\D/g, "");
+    const url = `https://wa.me/+55${clean}?text=${encodeURIComponent(
+      `Olá, estou interessado no espaço ${space.name}`
+    )}`;
+    window.open(url, "_blank");
   };
-  
-  // Format price as Brazilian currency
-  const formatPrice = (value: string) => {
-    const numValue = parseFloat(value);
-    return numValue.toLocaleString('pt-BR', {
-      style: 'currency',
-      currency: 'BRL',
-    });
-  };
-  
-  const handleImageClick = (imageUrl: string) => {
-    setSelectedImage(imageUrl);
-    setIsImageDialogOpen(true);
-  };
-  
+
   const startChat = async () => {
+    if (!space || !spaceOwner) return;
+    if (currentUserId === spaceOwner.id) {
+      toast.error("Não é possível iniciar conversa consigo mesmo");
+      return;
+    }
+    setProcessingChat(true);
     try {
-      console.log("Starting chat with space:", space);
-      console.log("Space owner:", spaceOwner);
-      
-      // Ensure space data is available
-      if (!space) {
-        console.error("Space data is missing");
-        toast.error("Informações do espaço não disponíveis");
-        return;
-      }
-      
-      // Ensure space owner data is available
-      if (!spaceOwner) {
-        // If spaceOwner is not set but space.user_id exists, use it
-        if (space.user_id) {
-          setSpaceOwner({
-            id: space.user_id,
-            name: "Proprietário"
-          });
-          console.log("Set fallback space owner from user_id:", space.user_id);
-        } else {
-          console.error("Space owner data is missing and no fallback available");
-          toast.error("Informações do proprietário não disponíveis");
-          return;
-        }
-      }
-      
-      if (!spaceOwner?.id) {
-        console.error("Space owner ID is missing");
-        toast.error("ID do proprietário não disponível");
-        return;
-      }
-      
-      setProcessingChat(true);
-      
-      // Get current user
-      const { data: userData, error: userError } = await supabase.auth.getUser();
-      if (userError) {
-        console.error("Auth error:", userError);
-        toast.error("Erro de autenticação: " + userError.message);
-        return;
-      }
-      
+      const { data: userData } = await supabase.auth.getUser();
       if (!userData.user) {
-        console.error("No user data");
-        toast.error("Você precisa estar logado para enviar mensagens");
+        toast.error("Faça login para enviar mensagens");
         navigate("/login");
         return;
       }
-
-      // Check if the user is the space owner
-      if (userData.user.id === spaceOwner.id) {
-        console.error("User is space owner");
-        toast.error("Não é possível iniciar uma conversa consigo mesmo");
-        setProcessingChat(false);
-        return;
-      }
-      
-      console.log("Checking for existing chats...");
-      console.log("Parameters:", {
-        current_user_id: userData.user.id,
-        space_owner_id: spaceOwner.id,
-        current_space_id: space.id
-      });
-      
-      // Check if chat already exists
-      const { data: existingChats, error: chatQueryError } = await supabase.functions
-        .invoke('get_chat_by_users_and_space', { 
-          body: { 
+      // Checa conversa existente via edge function
+      const { data: existing, error: qErr } = await supabase.functions.invoke(
+        "get_chat_by_users_and_space",
+        {
+          body: JSON.stringify({
             current_user_id: userData.user.id,
             space_owner_id: spaceOwner.id,
-            current_space_id: space.id 
-          }
-        });
-      
-      console.log("Existing chats response:", existingChats);
-      
-      if (chatQueryError) {
-        console.error("Error checking for existing chats:", chatQueryError);
-        toast.error("Erro ao verificar conversas existentes: " + chatQueryError.message);
-        setProcessingChat(false);
-        return;
-      }
-      
-      let chatId;
-      
-      if (existingChats && Array.isArray(existingChats) && existingChats.length > 0) {
-        chatId = existingChats[0].id;
-        console.log("Using existing chat:", chatId);
-        toast.info("Abrindo conversa existente");
+            current_space_id: space.id,
+          }),
+        }
+      );
+      let chatId: string;
+      if (!qErr && Array.isArray(existing) && existing.length > 0) {
+        chatId = existing[0].id;
       } else {
-        console.log("Creating new chat...");
-        // Create a new chat
-        const { data: newChat, error: insertError } = await supabase
+        const { data: newChat } = await supabase
           .from("chats")
           .insert({
             user_id: userData.user.id,
@@ -363,164 +225,107 @@ const EventSpaceDetails: React.FC = () => {
             space_name: space.name,
             space_image: space.images[0] || null,
             last_message: "",
-            last_message_time: new Date().toISOString()
+            last_message_time: new Date().toISOString(),
           })
           .select("id")
           .single();
-        
-        if (insertError) {
-          console.error("Insert error:", insertError);
-          toast.error("Erro ao criar conversa: " + insertError.message);
-          setProcessingChat(false);
-          return;
-        }
-        
-        if (!newChat || !newChat.id) {
-          console.error("No new chat created");
-          toast.error("Falha ao criar conversa");
-          setProcessingChat(false);
-          return;
-        }
-        
-        chatId = newChat.id;
-        console.log("New chat created:", chatId);
-        toast.success("Nova conversa iniciada");
+        chatId = newChat!.id;
       }
-      
-      // Navigate to messages page with the chat ID in the state
       navigate("/messages", { state: { chatId } });
-    } catch (error: any) {
-      console.error("Error starting chat:", error);
-      toast.error("Não foi possível iniciar a conversa: " + (error.message || "Erro desconhecido"));
+    } catch (err: any) {
+      console.error(err);
+      toast.error("Não foi possível iniciar a conversa");
     } finally {
       setProcessingChat(false);
     }
   };
-  
+
+  const formatPrice = (value: string) =>
+    parseFloat(value).toLocaleString("pt-BR", {
+      style: "currency",
+      currency: "BRL",
+    });
+
+  const handleImageClick = (url: string) => {
+    setSelectedImage(url);
+    setIsImageDialogOpen(true);
+  };
+
   const handleDeleteSpace = async () => {
     if (!deleteReason.trim()) {
-      toast.error("Por favor, forneça um motivo para a exclusão");
+      toast.error("Preencha o motivo da exclusão");
       return;
     }
-
+    setDeletingSpace(true);
     try {
-      setDeletingSpace(true);
-
-      if (!space || !space.id || !space.user_id) {
-        toast.error("Não foi possível identificar o espaço");
-        return;
-      }
-
-      // Criar uma notificação para o proprietário do espaço
-      const { error: notificationError } = await supabase
-        .from("space_deletion_notifications")
-        .insert({
+      if (space && space.user_id) {
+        await supabase.from("space_deletion_notifications").insert({
           user_id: space.user_id,
           space_name: space.name,
-          deletion_reason: deleteReason
+          deletion_reason: deleteReason,
         });
-
-      if (notificationError) {
-        console.error("Erro ao criar notificação:", notificationError);
-        toast.error("Erro ao notificar o proprietário");
       }
-
-      // Excluir o espaço usando a função existente
-      const { error } = await supabase.functions.invoke("delete_space_with_photos", {
-        body: { space_id: space.id }
+      await supabase.functions.invoke("delete_space_with_photos", {
+        body: JSON.stringify({ space_id: space!.id }),
       });
-
-      if (error) throw error;
-
       toast.success("Espaço excluído com sucesso");
       setDeleteDialogOpen(false);
       navigate("/explore");
-      
-    } catch (error) {
-      console.error("Erro ao excluir espaço:", error);
+    } catch (err) {
+      console.error(err);
       toast.error("Erro ao excluir espaço");
     } finally {
       setDeletingSpace(false);
     }
   };
-  
+
   if (loading) {
     return (
-      <div className="container px-4 py-6 flex flex-col items-center justify-center h-[70vh]">
-        <Loader2 className="h-8 w-8 animate-spin text-iparty" />
-        <p className="mt-4 text-muted-foreground">Carregando detalhes do espaço...</p>
+      <div className="container px-4 py-6 flex items-center justify-center h-[70vh]">
+        <Loader2 className="animate-spin text-iparty h-8 w-8" />
       </div>
     );
   }
-  
   if (!space) {
     return (
-      <div className="container px-4 py-6 max-w-4xl mx-auto">
-        <div className="flex items-center mb-6">
-          <Button variant="ghost" size="sm" onClick={() => navigate(-1)} className="mr-2">
-            <ChevronLeft size={20} />
-          </Button>
-          <h1 className="text-xl font-bold">Espaço não encontrado</h1>
-        </div>
-        <p>O espaço solicitado não foi encontrado.</p>
+      <div className="container px-4 py-6">
+        <Button variant="ghost" onClick={() => navigate(-1)}>
+          <ChevronLeft />
+        </Button>
+        <p>Espaço não encontrado</p>
       </div>
     );
   }
-  
+
   return (
     <div className="container px-4 py-6 pb-20 mx-auto">
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center flex-1 min-w-0">
-          <Button variant="ghost" size="sm" onClick={() => navigate(-1)} className="mr-2 flex-shrink-0">
-            <ChevronLeft size={20} />
-          </Button>
-          <h1 className="text-xl font-bold truncate" title={space.name}>{space.name}</h1>
-        </div>
-        <div className="flex items-center gap-2 flex-shrink-0">
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            onClick={startChat}
-            className="p-2 rounded-full hover:bg-gray-100"
-            title="Enviar mensagem"
-            disabled={currentUserId === spaceOwner?.id || processingChat}
-          >
-            <MessageSquare size={24} className={currentUserId === spaceOwner?.id ? "text-gray-300" : "text-iparty"} />
-          </Button>
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            onClick={() => toggleFavorite(space.id)}
-            className="p-2 rounded-full hover:bg-gray-100"
-          >
-            <Heart 
-              size={24} 
-              className={isFavorite(space.id) ? "fill-red-500 text-red-500" : "text-gray-500"} 
-            />
-          </Button>
-        </div>
+      {/* Voltar */}
+      <div className="mb-4">
+        <Button variant="ghost" size="sm" onClick={() => navigate(-1)}>
+          <ChevronLeft size={20} />
+        </Button>
       </div>
-      
-      {/* Carrossel de imagens */}
+
+      {/* Carrossel */}
       <div className="mb-6">
-        <Carousel className="w-full">
+        <Carousel>
           <CarouselContent>
-            {space.images.map((image, index) => (
-              <CarouselItem key={index} className="md:basis-auto">
-                <div className="h-64 md:h-80 w-full rounded-lg overflow-hidden relative group">
-                  <OptimizedImage 
-                    src={image} 
-                    alt={`${space.name} - Imagem ${index + 1}`} 
-                    className="w-full h-full object-cover cursor-pointer"
-                    onClick={() => handleImageClick(image)}
+            {space.images.map((img, idx) => (
+              <CarouselItem key={idx}>
+                <div className="relative group rounded-lg overflow-hidden h-64 md:h-80">
+                  <OptimizedImage
+                    src={img}
+                    alt={`${space.name} ${idx + 1}`}
+                    className="object-cover w-full h-full cursor-pointer"
+                    onClick={() => handleImageClick(img)}
                   />
-                  <div className="absolute bottom-2 right-2 flex gap-2">
-                    <span className="bg-black/70 text-white text-xs px-2 py-1 rounded">
-                      {index + 1}/{space.images.length}
+                  <div className="absolute bottom-2 right-2 flex items-center gap-2">
+                    <span className="bg-black/70 text-white px-2 py-1 rounded text-xs">
+                      {idx + 1}/{space.images.length}
                     </span>
-                    <button 
-                      className="bg-black/70 text-white p-1 rounded opacity-0 group-hover:opacity-100 transition-opacity"
-                      onClick={() => handleImageClick(image)}
+                    <button
+                      className="opacity-0 group-hover:opacity-100 bg-black/70 p-1 rounded text-white"
+                      onClick={() => handleImageClick(img)}
                     >
                       <ZoomIn size={16} />
                     </button>
@@ -529,18 +334,129 @@ const EventSpaceDetails: React.FC = () => {
               </CarouselItem>
             ))}
           </CarouselContent>
-          <CarouselPrevious className="left-2 bg-white/70" />
-          <CarouselNext className="right-2 bg-white/70" />
+          <CarouselPrevious className="bg-white/70 left-2" />
+          <CarouselNext className="bg-white/70 right-2" />
         </Carousel>
       </div>
-      
-      {/* Dialog para visualizar imagem ampliada */}
+
+      {/* **Título abaixo da imagem** */}
+      <h1 className="text-2xl font-bold mb-6 truncate" title={space.name}>
+        {space.name}
+      </h1>
+
+      {/* Preço e endereço */}
+      <div className="mb-6">
+        <div className="flex justify-between items-center mb-2">
+          <h2 className="text-2xl font-bold">{formatPrice(space.price)}</h2>
+          <Badge variant="secondary">
+            <Users className="mr-1" size={14} />
+            Até {space.capacity} pessoas
+          </Badge>
+        </div>
+        <p className="text-muted-foreground">
+          {space.address}, {space.number} – {space.state}
+        </p>
+        <p className="text-muted-foreground">CEP: {space.zip_code}</p>
+      </div>
+
+      {/* Sobre */}
+      <div className="mb-6">
+        <h3 className="text-lg font-semibold mb-2">Sobre o espaço</h3>
+        <p className="text-muted-foreground">{space.description}</p>
+      </div>
+
+      {/* Comodidades */}
+      <div className="mb-8">
+        <h3 className="text-lg font-semibold mb-3">Comodidades</h3>
+        <div className="grid grid-cols-2 gap-4">
+          <div className={space.parking ? "" : "text-muted-foreground/50"}>
+            <ParkingMeter className="mr-2" size={18} />
+            {space.parking ? "Estacionamento" : "Sem estacionamento"}
+          </div>
+          <div className={space.wifi ? "" : "text-muted-foreground/50"}>
+            <Wifi className="mr-2" size={18} />
+            {space.wifi ? "Wi-Fi" : "Sem Wi-Fi"}
+          </div>
+          <div className={space.sound_system ? "" : "text-muted-foreground/50"}>
+            <Speaker className="mr-2" size={18} />
+            {space.sound_system ? "Sistema de som" : "Sem sistema de som"}
+          </div>
+          <div className={space.air_conditioning ? "" : "text-muted-foreground/50"}>
+            <AirVent className="mr-2" size={18} />
+            {space.air_conditioning ? "Ar condicionado" : "Sem ar condicionado"}
+          </div>
+          <div className={space.kitchen ? "" : "text-muted-foreground/50"}>
+            <Utensils className="mr-2" size={18} />
+            {space.kitchen ? "Cozinha" : "Sem cozinha"}
+          </div>
+          <div className={space.pool ? "" : "text-muted-foreground/50"}>
+            <Waves className="mr-2" size={18} />
+            {space.pool ? "Piscina" : "Sem piscina"}
+          </div>
+        </div>
+      </div>
+
+      {/* Contato */}
+      <div className="grid grid-cols-2 gap-4 mb-6">
+        <Button
+          className="bg-green-600 hover:bg-green-700"
+          size="lg"
+          onClick={handleWhatsAppContact}
+        >
+          <Phone className="mr-2" size={18} />
+          WhatsApp
+        </Button>
+        <Button
+          className="bg-iparty hover:bg-iparty-dark"
+          size="lg"
+          onClick={startChat}
+          disabled={currentUserId === spaceOwner?.id || processingChat}
+        >
+          {processingChat ? (
+            <Loader2 className="mr-2 animate-spin" size={18} />
+          ) : (
+            <MessageSquare className="mr-2" size={18} />
+          )}
+          Mensagem
+        </Button>
+      </div>
+
+      {/* Favorito */}
+      <div className="mb-6">
+        <Button
+          variant="ghost"
+          onClick={() => toggleFavorite(space.id)}
+          className="flex items-center"
+        >
+          <Heart
+            className={isFavorite(space.id) ? "fill-red-500 text-red-500" : "text-gray-500"}
+            size={24}
+          />
+          <span className="ml-2">
+            {isFavorite(space.id) ? "Remover dos favoritos" : "Adicionar aos favoritos"}
+          </span>
+        </Button>
+      </div>
+
+      {/* Botão de excluir para admins */}
+      {isAdmin && (
+        <Button
+          variant="destructive"
+          className="w-full mb-6"
+          onClick={() => setDeleteDialogOpen(true)}
+        >
+          <Trash2 className="mr-2" size={18} />
+          Excluir Espaço
+        </Button>
+      )}
+
+      {/* Dialog de visualização de imagem */}
       <Dialog open={isImageDialogOpen} onOpenChange={setIsImageDialogOpen}>
         <DialogContent className="max-w-screen-lg w-[95vw] h-[90vh] p-0 bg-black/95 border-none">
           <div className="flex items-center justify-center w-full h-full relative">
-            <OptimizedImage 
-              src={selectedImage || ''} 
-              alt="Visualização ampliada" 
+            <OptimizedImage
+              src={selectedImage || ""}
+              alt="Visualização ampliada"
               className="max-w-full max-h-full object-contain"
             />
             <DialogClose className="absolute top-4 right-4 bg-black/50 rounded-full p-1 hover:bg-black/70">
@@ -549,124 +465,27 @@ const EventSpaceDetails: React.FC = () => {
           </div>
         </DialogContent>
       </Dialog>
-      
-      {/* Preço e endereço */}
-      <div className="mb-6">
-        <div className="flex justify-between items-center mb-2">
-          <h2 className="text-2xl font-bold">{formatPrice(space.price)}</h2>
-          <Badge variant="secondary">
-            <Users size={14} className="mr-1" />
-            Até {space.capacity} pessoas
-          </Badge>
-        </div>
-        <p className="text-muted-foreground">{space.address}, {space.number} - {space.state}</p>
-        <p className="text-muted-foreground">CEP: {space.zip_code}</p>
-      </div>
-      
-      {/* Descrição */}
-      <div className="mb-6">
-        <h3 className="text-lg font-semibold mb-2">Sobre o espaço</h3>
-        <p className="text-muted-foreground">{space.description}</p>
-      </div>
-      
-      {/* Comodidades */}
-      <div className="mb-8">
-        <h3 className="text-lg font-semibold mb-3">Comodidades</h3>
-        <div className="grid grid-cols-2 gap-4">
-          <div className={`flex items-center ${space.parking ? 'text-foreground' : 'text-muted-foreground/50'}`}>
-            <ParkingMeter size={18} className="mr-2" />
-            <span>{space.parking ? 'Estacionamento' : 'Sem estacionamento'}</span>
-          </div>
-          <div className={`flex items-center ${space.wifi ? 'text-foreground' : 'text-muted-foreground/50'}`}>
-            <Wifi size={18} className="mr-2" />
-            <span>{space.wifi ? 'Wi-Fi' : 'Sem Wi-Fi'}</span>
-          </div>
-          <div className={`flex items-center ${space.sound_system ? 'text-foreground' : 'text-muted-foreground/50'}`}>
-            <Speaker size={18} className="mr-2" />
-            <span>{space.sound_system ? 'Sistema de som' : 'Sem sistema de som'}</span>
-          </div>
-          <div className={`flex items-center ${space.air_conditioning ? 'text-foreground' : 'text-muted-foreground/50'}`}>
-            <AirVent size={18} className="mr-2" />
-            <span>{space.air_conditioning ? 'Ar condicionado' : 'Sem ar condicionado'}</span>
-          </div>
-          <div className={`flex items-center ${space.kitchen ? 'text-foreground' : 'text-muted-foreground/50'}`}>
-            <Utensils size={18} className="mr-2" />
-            <span>{space.kitchen ? 'Cozinha' : 'Sem cozinha'}</span>
-          </div>
-          <div className={`flex items-center ${space.pool ? 'text-foreground' : 'text-muted-foreground/50'}`}>
-            <Waves size={18} className="mr-2" />
-            <span>{space.pool ? 'Piscina' : 'Sem piscina'}</span>
-          </div>
-        </div>
-      </div>
-      
-      {/* Botões de contato */}
-      <div className="grid grid-cols-2 gap-4">
-        <Button 
-          className="w-full bg-green-600 hover:bg-green-700" 
-          size="lg"
-          onClick={handleWhatsAppContact}
-        >
-          <Phone size={18} className="mr-2" />
-          WhatsApp
-        </Button>
-        
-        <Button 
-          className="w-full bg-iparty hover:bg-iparty-dark" 
-          size="lg"
-          onClick={startChat}
-          disabled={currentUserId === spaceOwner?.id || processingChat}
-        >
-          {processingChat ? (
-            <Loader2 size={18} className="mr-2 animate-spin" />
-          ) : (
-            <MessageSquare size={18} className="mr-2" />
-          )}
-          Mensagem
-        </Button>
-      </div>
-      
-      {/* Delete Space Button for Admins */}
-      {isAdmin && (
-        <div className="mt-4">
-          <Button 
-            variant="destructive" 
-            className="w-full" 
-            size="lg"
-            onClick={() => setDeleteDialogOpen(true)}
-          >
-            <Trash2 size={18} className="mr-2" />
-            Excluir Espaço
-          </Button>
-        </div>
-      )}
 
-      {/* Delete Confirmation Dialog */}
+      {/* Dialog de confirmação de exclusão */}
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Excluir Espaço</AlertDialogTitle>
             <AlertDialogDescription>
               Tem certeza que deseja excluir este espaço? Esta ação não pode ser desfeita.
-              O proprietário será notificado sobre esta exclusão.
             </AlertDialogDescription>
           </AlertDialogHeader>
-          
           <Textarea
             placeholder="Motivo da exclusão (obrigatório)"
             value={deleteReason}
             onChange={(e) => setDeleteReason(e.target.value)}
-            className="resize-none mt-4"
+            className="mt-4"
             rows={3}
           />
-          
           <AlertDialogFooter className="mt-4">
             <AlertDialogCancel disabled={deletingSpace}>Cancelar</AlertDialogCancel>
-            <AlertDialogAction 
-              onClick={(e) => {
-                e.preventDefault();
-                handleDeleteSpace();
-              }}
+            <AlertDialogAction
+              onClick={() => handleDeleteSpace()}
               disabled={deletingSpace}
               className="bg-red-600 hover:bg-red-700"
             >
