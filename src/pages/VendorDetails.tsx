@@ -7,6 +7,13 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import {
+  Carousel,
+  CarouselContent,
+  CarouselItem,
+  CarouselNext,
+  CarouselPrevious,
+} from "@/components/ui/carousel";
 
 interface Vendor {
   id: string;
@@ -95,10 +102,10 @@ const VendorDetails = () => {
     );
   }
 
-  // Determine which image to display
-  const displayImage = vendor.images && vendor.images.length > 0 
-    ? vendor.images[0] 
-    : "https://source.unsplash.com/random/800x600?business";
+  // Determine which images to display
+  const displayImages = vendor.images && vendor.images.length > 0 
+    ? vendor.images 
+    : ["https://source.unsplash.com/random/800x600?business"];
 
   // Format available days (this is a placeholder since we don't have this data yet)
   const availableDays = ["Segunda", "Terça", "Quarta", "Quinta", "Sexta"];
@@ -114,13 +121,32 @@ const VendorDetails = () => {
         <span>Voltar</span>
       </Button>
 
-      <div className="w-full h-64 rounded-xl overflow-hidden mb-6">
-        <OptimizedImage
-          src={displayImage}
-          alt={vendor.name}
-          className="w-full h-full object-cover"
-          loadingClassName="animate-pulse bg-gray-200"
-        />
+      <div className="w-full rounded-xl overflow-hidden mb-6">
+        <Carousel className="w-full">
+          <CarouselContent>
+            {displayImages.map((image, index) => (
+              <CarouselItem key={`vendor-image-${index}`} className="w-full h-64">
+                <OptimizedImage
+                  src={image}
+                  alt={`${vendor.name} - Imagem ${index + 1}`}
+                  className="w-full h-full object-cover"
+                  loadingClassName="animate-pulse bg-gray-200"
+                />
+              </CarouselItem>
+            ))}
+          </CarouselContent>
+          {displayImages.length > 1 && (
+            <>
+              <CarouselPrevious className="left-2 lg:left-4" />
+              <CarouselNext className="right-2 lg:right-4" />
+            </>
+          )}
+        </Carousel>
+        <div className="flex justify-center mt-2">
+          <p className="text-xs text-muted-foreground">
+            {displayImages.length} {displayImages.length === 1 ? 'imagem' : 'imagens'}
+          </p>
+        </div>
       </div>
 
       <div className="mb-6">
