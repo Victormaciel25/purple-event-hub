@@ -52,7 +52,7 @@ const VendorApproval = () => {
 
   const fetchVendors = async () => {
     try {
-      const { data, error } = await supabase
+      const { data: vendorData, error } = await supabase
         .from("vendors")
         .select(`
           id,
@@ -60,11 +60,7 @@ const VendorApproval = () => {
           category,
           created_at,
           status,
-          user_id,
-          profiles:profiles!user_id (
-            first_name, 
-            last_name
-          )
+          user_id
         `)
         .order('created_at', { ascending: false });
 
@@ -72,7 +68,24 @@ const VendorApproval = () => {
         throw error;
       }
 
-      setVendors(data as VendorWithProfileInfo[]);
+      // Buscar perfis separadamente e juntar os dados
+      const vendorsWithProfiles: VendorWithProfileInfo[] = [];
+
+      for (const vendor of vendorData || []) {
+        // Buscar o perfil associado ao usuário do fornecedor
+        const { data: profileData } = await supabase
+          .from("profiles")
+          .select("first_name, last_name")
+          .eq("id", vendor.user_id)
+          .single();
+
+        vendorsWithProfiles.push({
+          ...vendor,
+          profiles: profileData || null
+        });
+      }
+
+      setVendors(vendorsWithProfiles);
     } catch (error) {
       console.error("Erro ao buscar fornecedores:", error);
       toast.error("Erro ao buscar fornecedores");
@@ -83,15 +96,9 @@ const VendorApproval = () => {
 
   const fetchVendorDetails = async (vendorId: string) => {
     try {
-      const { data, error } = await supabase
+      const { data: vendorData, error } = await supabase
         .from("vendors")
-        .select(`
-          *,
-          profiles:profiles!user_id (
-            first_name, 
-            last_name
-          )
-        `)
+        .select(`*`)
         .eq("id", vendorId)
         .single();
 
@@ -99,12 +106,25 @@ const VendorApproval = () => {
         throw error;
       }
 
-      setSelectedVendor(data as VendorDetailsType);
+      // Buscar perfil separadamente
+      const { data: profileData } = await supabase
+        .from("profiles")
+        .select("first_name, last_name")
+        .eq("id", vendorData.user_id)
+        .single();
+
+      // Combinar os dados
+      const vendorWithProfile: VendorDetailsType = {
+        ...vendorData,
+        profiles: profileData || null
+      };
+
+      setSelectedVendor(vendorWithProfile);
       setSheetOpen(true);
       
       // Se o fornecedor tiver imagens, vamos processá-las para exibição
-      if (data.images && data.images.length > 0) {
-        const urls = data.images;
+      if (vendorData.images && vendorData.images.length > 0) {
+        const urls = vendorData.images;
         setImageUrls(urls);
       } else {
         setImageUrls([]);
