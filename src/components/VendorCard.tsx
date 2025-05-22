@@ -19,7 +19,7 @@ const VendorCard: React.FC<VendorProps> = ({
   id,
   name,
   category,
-  rating,
+  rating, // We'll keep this in the props interface for now to avoid breaking existing code
   contactNumber,
   image,
 }) => {
@@ -47,13 +47,7 @@ const VendorCard: React.FC<VendorProps> = ({
           />
         </div>
         <CardContent className="p-0 flex-1">
-          <div className="flex justify-between">
-            <h3 className="font-semibold text-base">{name}</h3>
-            <div className="flex items-center text-yellow-500">
-              <span className="text-sm font-medium">{rating}</span>
-              <span className="ml-1">★</span>
-            </div>
-          </div>
+          <h3 className="font-semibold text-base">{name}</h3>
           <Badge variant="outline" className="mt-1 bg-secondary text-xs">
             {category}
           </Badge>

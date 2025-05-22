@@ -13,7 +13,7 @@ type Vendor = {
   category: string;
   contact_number: string;
   images: string[];
-  rating?: number;
+  rating?: number; // Keep in type definition for now, but we won't use it
 };
 
 const Vendors = () => {
@@ -53,7 +53,7 @@ const Vendors = () => {
           category: vendor.category,
           contact_number: vendor.contact_number,
           images: vendor.images || [],
-          rating: 4.8, // Default rating until we implement a rating system
+          // We're not setting any rating anymore since we're removing this feature
         }));
 
         // Extract unique categories for tabs
@@ -125,7 +125,7 @@ const Vendors = () => {
                   id={vendor.id}
                   name={vendor.name}
                   category={vendor.category}
-                  rating={vendor.rating || 4.5}
+                  rating={0} // Set a default value (we'll ignore this in VendorCard)
                   contactNumber={vendor.contact_number}
                   image={vendor.images[0] || "https://source.unsplash.com/random/200x200?food"}
                 />
@@ -144,7 +144,7 @@ const Vendors = () => {
                       id={vendor.id}
                       name={vendor.name}
                       category={vendor.category}
-                      rating={vendor.rating || 4.5}
+                      rating={0} // Set a default value (we'll ignore this in VendorCard)
                       contactNumber={vendor.contact_number}
                       image={vendor.images[0] || "https://source.unsplash.com/random/200x200?food"}
                     />

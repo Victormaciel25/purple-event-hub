@@ -1,7 +1,6 @@
-
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { Phone, Star, ArrowLeft, MapPin, Calendar, Clock } from "lucide-react";
+import { Phone, ArrowLeft, MapPin, Calendar, Clock } from "lucide-react";
 import OptimizedImage from "@/components/OptimizedImage";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -24,7 +23,7 @@ interface Vendor {
   address: string;
   working_hours?: string | null;
   images?: string[] | null;
-  rating?: number;
+  rating?: number; // We'll keep this in the interface for now
 }
 
 const VendorDetails = () => {
@@ -150,14 +149,7 @@ const VendorDetails = () => {
       </div>
 
       <div className="mb-6">
-        <div className="flex items-center justify-between mb-2">
-          <h1 className="text-2xl font-bold">{vendor.name}</h1>
-          <div className="flex items-center text-yellow-500">
-            <span className="text-lg font-medium mr-1">{vendor.rating}</span>
-            <Star size={20} fill="currentColor" />
-          </div>
-        </div>
-        
+        <h1 className="text-2xl font-bold mb-2">{vendor.name}</h1>
         <Badge variant="outline" className="mb-4 bg-secondary">
           {vendor.category}
         </Badge>
