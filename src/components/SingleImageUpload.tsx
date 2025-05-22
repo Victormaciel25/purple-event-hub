@@ -4,6 +4,7 @@ import { X, Images } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { STORAGE } from "@/config/app-config";
+import imageCompression from "browser-image-compression";
 
 interface SingleImageUploadProps {
   onImageChange: (urls: string[]) => void;
@@ -30,6 +31,40 @@ const SingleImageUpload: React.FC<SingleImageUploadProps> = ({
 }) => {
   const [previewUrls, setPreviewUrls] = useState<string[]>(initialImages);
 
+  // Função para comprimir a imagem
+  const compressImage = async (file: File): Promise<File> => {
+    try {
+      // Opções para compressão
+      const options = {
+        maxSizeMB: 1.9, // Comprime para menos de 2MB
+        maxWidthOrHeight: 1280, // Limita a largura/altura
+        useWebWorker: true,
+        fileType: file.type,
+      };
+      
+      // Log inicial do tamanho da imagem
+      console.log(`Comprimindo imagem: ${file.name} (${(file.size / 1024 / 1024).toFixed(2)}MB)`);
+      
+      // Comprimir a imagem
+      const compressedFile = await imageCompression(file, options);
+      
+      // Criando um novo arquivo com o mesmo nome (para manter a extensão original)
+      const resultFile = new File([compressedFile], file.name, {
+        type: file.type,
+        lastModified: new Date().getTime(),
+      });
+      
+      // Log do resultado da compressão
+      console.log(`Imagem comprimida: ${file.name} (${(resultFile.size / 1024 / 1024).toFixed(2)}MB)`);
+      
+      return resultFile;
+    } catch (error) {
+      console.error("Erro ao comprimir imagem:", error);
+      toast.error(`Erro ao comprimir a imagem ${file.name}`);
+      return file; // Retorna arquivo original em caso de falha na compressão
+    }
+  };
+
   const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     if (!event.target.files || event.target.files.length === 0) return;
     
@@ -49,16 +84,27 @@ const SingleImageUpload: React.FC<SingleImageUploadProps> = ({
       for (const file of files) {
         const fileSizeInMB = file.size / (1024 * 1024);
         
-        if (fileSizeInMB > maxSize) {
-          toast.error(`O arquivo ${file.name} é muito grande. Tamanho máximo: ${maxSize}MB`);
+        // Verificar se precisamos comprimir (imagens maiores que 1.9MB)
+        let fileToUpload = file;
+        if (fileSizeInMB > 1.9) {
+          toast.info(`Comprimindo imagem: ${file.name}`);
+          fileToUpload = await compressImage(file);
+        } else {
+          console.log(`Imagem já está abaixo do limite: ${file.name} (${fileSizeInMB.toFixed(2)}MB)`);
+        }
+        
+        // Verificar novamente o tamanho após a compressão
+        const finalSizeInMB = fileToUpload.size / (1024 * 1024);
+        if (finalSizeInMB > maxSize) {
+          toast.error(`A imagem ${file.name} ainda é muito grande mesmo após compressão. Tamanho máximo: ${maxSize}MB`);
           continue;
         }
         
         // Create a local preview
-        const objectUrl = URL.createObjectURL(file);
+        const objectUrl = URL.createObjectURL(fileToUpload);
         
         // Upload to Supabase Storage
-        const fileExt = file.name.split('.').pop();
+        const fileExt = fileToUpload.name.split('.').pop();
         const fileName = `${Math.random().toString(36).substring(2, 15)}.${fileExt}`;
         const filePath = `${fileName}`;
         
@@ -67,11 +113,11 @@ const SingleImageUpload: React.FC<SingleImageUploadProps> = ({
         
         const { data, error } = await supabase.storage
           .from(bucketName)
-          .upload(uploadPath ? `${uploadPath}/${filePath}` : filePath, file);
+          .upload(uploadPath ? `${uploadPath}/${filePath}` : filePath, fileToUpload);
         
         if (error) {
           console.error("Error uploading image:", error);
-          toast.error(`Erro ao enviar imagem ${file.name}.`);
+          toast.error(`Erro ao enviar imagem ${fileToUpload.name}.`);
           URL.revokeObjectURL(objectUrl);
           continue;
         }
@@ -141,6 +187,9 @@ const SingleImageUpload: React.FC<SingleImageUploadProps> = ({
             </span>
             <span className="text-xs text-gray-400 mt-1 text-center px-2">
               ({aspectRatio}, max {maxSize}MB)
+            </span>
+            <span className="text-xs text-gray-400 mt-1 text-center px-2">
+              Imagens grandes serão comprimidas automaticamente
             </span>
             <input
               type="file"
