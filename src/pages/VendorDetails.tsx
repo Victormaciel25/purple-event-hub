@@ -5,84 +5,87 @@ import { Phone, Star, ArrowLeft, MapPin, Calendar, Clock } from "lucide-react";
 import OptimizedImage from "@/components/OptimizedImage";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 interface Vendor {
   id: string;
   name: string;
   category: string;
-  rating: number;
-  contactNumber: string;
-  image: string;
-  description?: string;
-  address?: string;
-  workingHours?: string;
-  availableDays?: string[];
+  contact_number: string;
+  description: string;
+  address: string;
+  working_hours?: string | null;
+  images?: string[] | null;
+  rating?: number;
 }
-
-// This would come from a database in a real app
-const vendorsData: Vendor[] = [
-  {
-    id: "1",
-    name: "Buffet Delicias",
-    category: "Buffet",
-    rating: 4.8,
-    contactNumber: "(11) 99999-8888",
-    image: "https://source.unsplash.com/random/800x600?food",
-    description: "Especialistas em buffet para casamentos, festas corporativas e eventos sociais. Oferecemos um menu variado com opções nacionais e internacionais.",
-    address: "Av. Paulista, 1000 - São Paulo, SP",
-    workingHours: "09:00 - 18:00",
-    availableDays: ["Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"]
-  },
-  {
-    id: "2",
-    name: "DJ Master Sound",
-    category: "DJ",
-    rating: 4.7,
-    contactNumber: "(11) 98888-7777",
-    image: "https://source.unsplash.com/random/800x600?dj",
-    description: "DJ profissional com mais de 10 anos de experiência. Especializado em casamentos e festas corporativas com equipamentos de última geração.",
-    address: "Rua Augusta, 500 - São Paulo, SP",
-    workingHours: "14:00 - 23:00",
-    availableDays: ["Quinta", "Sexta", "Sábado", "Domingo"]
-  },
-  {
-    id: "3",
-    name: "Flor & Arte Decorações",
-    category: "Decoração",
-    rating: 5.0,
-    contactNumber: "(11) 97777-6666",
-    image: "https://source.unsplash.com/random/800x600?flowers",
-    description: "Decoração personalizada para eventos. Utilizamos flores frescas e materiais de alta qualidade para criar ambientes únicos e memoráveis.",
-    address: "Rua Oscar Freire, 200 - São Paulo, SP",
-    workingHours: "10:00 - 19:00",
-    availableDays: ["Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"]
-  },
-  {
-    id: "4",
-    name: "Click Fotografias",
-    category: "Fotografia",
-    rating: 4.9,
-    contactNumber: "(11) 96666-5555",
-    image: "https://source.unsplash.com/random/800x600?camera",
-    description: "Equipe de fotógrafos profissionais especializados em capturar momentos especiais de forma natural e artística em seu evento.",
-    address: "Alameda Santos, 800 - São Paulo, SP",
-    workingHours: "09:00 - 20:00",
-    availableDays: ["Quarta", "Quinta", "Sexta", "Sábado", "Domingo"]
-  },
-];
 
 const VendorDetails = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [vendor, setVendor] = useState<Vendor | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // In a real application, this would be an API call to get vendor details
-    const foundVendor = vendorsData.find(v => v.id === id);
-    if (foundVendor) {
-      setVendor(foundVendor);
-    }
+    const fetchVendorDetails = async () => {
+      if (!id) return;
+
+      try {
+        setLoading(true);
+        console.log("Fetching vendor details for ID:", id);
+        
+        const { data, error } = await supabase
+          .from("vendors")
+          .select("*")
+          .eq("id", id)
+          .eq("status", "approved")
+          .single();
+
+        if (error) {
+          console.error("Error fetching vendor details:", error);
+          toast.error("Erro ao carregar detalhes do fornecedor");
+          return;
+        }
+
+        if (!data) {
+          console.error("No vendor data found for ID:", id);
+          return;
+        }
+        
+        console.log("Vendor details fetched:", data);
+        
+        // Map the data from Supabase to our Vendor interface
+        const vendorData: Vendor = {
+          id: data.id,
+          name: data.name,
+          category: data.category,
+          contact_number: data.contact_number,
+          description: data.description,
+          address: data.address,
+          working_hours: data.working_hours,
+          images: data.images,
+          rating: 4.8, // Default rating until we implement a rating system
+        };
+        
+        setVendor(vendorData);
+      } catch (error) {
+        console.error("Failed to fetch vendor details:", error);
+        toast.error("Erro ao carregar detalhes do fornecedor");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchVendorDetails();
   }, [id]);
+
+  if (loading) {
+    return (
+      <div className="container px-4 py-6 max-w-4xl mx-auto flex items-center justify-center h-[80vh]">
+        <p>Carregando detalhes do fornecedor...</p>
+      </div>
+    );
+  }
 
   if (!vendor) {
     return (
@@ -91,6 +94,14 @@ const VendorDetails = () => {
       </div>
     );
   }
+
+  // Determine which image to display
+  const displayImage = vendor.images && vendor.images.length > 0 
+    ? vendor.images[0] 
+    : "https://source.unsplash.com/random/800x600?business";
+
+  // Format available days (this is a placeholder since we don't have this data yet)
+  const availableDays = ["Segunda", "Terça", "Quarta", "Quinta", "Sexta"];
 
   return (
     <div className="container px-4 py-6 max-w-4xl mx-auto">
@@ -105,9 +116,9 @@ const VendorDetails = () => {
 
       <div className="w-full h-64 rounded-xl overflow-hidden mb-6">
         <OptimizedImage
-          src={vendor.image}
+          src={displayImage}
           alt={vendor.name}
-          className="w-full h-full"
+          className="w-full h-full object-cover"
           loadingClassName="animate-pulse bg-gray-200"
         />
       </div>
@@ -132,7 +143,7 @@ const VendorDetails = () => {
             <Phone size={20} className="text-iparty mr-3 mt-1" />
             <div>
               <h3 className="font-semibold mb-1">Contato</h3>
-              <p className="text-gray-700">{vendor.contactNumber}</p>
+              <p className="text-gray-700">{vendor.contact_number}</p>
             </div>
           </div>
           
@@ -146,23 +157,23 @@ const VendorDetails = () => {
             </div>
           )}
           
-          {vendor.workingHours && (
+          {vendor.working_hours && (
             <div className="flex items-start">
               <Clock size={20} className="text-iparty mr-3 mt-1" />
               <div>
                 <h3 className="font-semibold mb-1">Horário de Atendimento</h3>
-                <p className="text-gray-700">{vendor.workingHours}</p>
+                <p className="text-gray-700">{vendor.working_hours}</p>
               </div>
             </div>
           )}
           
-          {vendor.availableDays && vendor.availableDays.length > 0 && (
+          {availableDays && availableDays.length > 0 && (
             <div className="flex items-start">
               <Calendar size={20} className="text-iparty mr-3 mt-1" />
               <div>
                 <h3 className="font-semibold mb-1">Dias Disponíveis</h3>
                 <div className="flex flex-wrap gap-2 mt-2">
-                  {vendor.availableDays.map((day) => (
+                  {availableDays.map((day) => (
                     <Badge key={day} variant="secondary" className="text-xs">
                       {day}
                     </Badge>
