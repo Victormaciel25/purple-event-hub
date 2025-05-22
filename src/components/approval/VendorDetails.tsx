@@ -1,11 +1,21 @@
 
-import React from "react";
+import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
-import { Loader2 } from "lucide-react";
+import { Loader2, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 export type VendorDetailsType = {
   id: string;
@@ -35,7 +45,11 @@ interface VendorDetailsProps {
   onApprove: () => void;
   onReject: () => void;
   onClose: () => void;
+  onDelete?: () => void;
   approving?: boolean;
+  isAdmin?: boolean;
+  isSuperAdmin?: boolean;
+  deleting?: boolean;
 }
 
 const dayTranslations: Record<string, string> = {
@@ -56,12 +70,31 @@ const VendorDetails: React.FC<VendorDetailsProps> = ({
   onApprove,
   onReject,
   onClose,
+  onDelete,
   approving = false,
+  isAdmin = false,
+  isSuperAdmin = false,
+  deleting = false,
 }) => {
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deleteReason, setDeleteReason] = useState("");
+  
   // Format available days
   const availableDays = selectedVendor.available_days && selectedVendor.available_days.length > 0
     ? selectedVendor.available_days.map(day => dayTranslations[day] || day)
     : [];
+    
+  const handleDelete = () => {
+    if (deleteReason.trim() === "") {
+      return;
+    }
+    
+    if (onDelete) {
+      onDelete();
+    }
+    
+    setDeleteDialogOpen(false);
+  };
 
   return (
     <div className="mt-4 space-y-4">
@@ -195,6 +228,49 @@ const VendorDetails: React.FC<VendorDetailsProps> = ({
           <p className="text-red-700">{selectedVendor.rejection_reason}</p>
         </div>
       )}
+
+      {/* Delete vendor button - only visible to admins */}
+      {(isAdmin || isSuperAdmin) && (
+        <Button
+          variant="destructive"
+          className="w-full mt-4"
+          onClick={() => setDeleteDialogOpen(true)}
+          disabled={deleting}
+        >
+          <Trash2 className="mr-2" size={18} />
+          {deleting ? "Excluindo..." : "Excluir Fornecedor"}
+        </Button>
+      )}
+
+      {/* Delete confirmation dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir Fornecedor</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja excluir este fornecedor? Esta ação não pode ser
+              desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <Textarea
+            placeholder="Motivo da exclusão (obrigatório)"
+            value={deleteReason}
+            onChange={(e) => setDeleteReason(e.target.value)}
+            className="mt-4"
+            rows={3}
+          />
+          <AlertDialogFooter className="mt-4">
+            <AlertDialogCancel disabled={deleting}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDelete}
+              disabled={deleting || !deleteReason.trim()}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              {deleting ? "Excluindo..." : "Excluir"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
