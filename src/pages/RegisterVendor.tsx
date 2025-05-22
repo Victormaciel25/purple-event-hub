@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Calendar as CalendarIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Form,
@@ -19,6 +19,25 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import SingleImageUpload from "@/components/SingleImageUpload";
+import { Calendar } from "@/components/ui/calendar";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale"; 
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
+
+const dayOptions = [
+  { label: 'Segunda', value: 'monday' },
+  { label: 'Terça', value: 'tuesday' },
+  { label: 'Quarta', value: 'wednesday' },
+  { label: 'Quinta', value: 'thursday' },
+  { label: 'Sexta', value: 'friday' },
+  { label: 'Sábado', value: 'saturday' },
+  { label: 'Domingo', value: 'sunday' },
+];
 
 const formSchema = z.object({
   name: z.string().min(3, { message: "O nome deve ter pelo menos 3 caracteres" }),
@@ -27,6 +46,7 @@ const formSchema = z.object({
   description: z.string().min(10, { message: "A descrição deve ter pelo menos 10 caracteres" }),
   address: z.string().min(5, { message: "Insira um endereço válido" }),
   workingHours: z.string().optional(),
+  availableDays: z.array(z.string()).optional(),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -36,6 +56,7 @@ const RegisterVendor = () => {
   const [imageUrls, setImageUrls] = useState<string[]>([]);
   const [uploading, setUploading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [selectedDays, setSelectedDays] = useState<string[]>([]);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -46,11 +67,29 @@ const RegisterVendor = () => {
       description: "",
       address: "",
       workingHours: "",
+      availableDays: [],
     },
   });
 
   const handleImageChange = (urls: string[]) => {
     setImageUrls(urls);
+  };
+
+  const toggleDay = (day: string) => {
+    setSelectedDays((prevSelectedDays) => {
+      if (prevSelectedDays.includes(day)) {
+        return prevSelectedDays.filter((d) => d !== day);
+      } else {
+        return [...prevSelectedDays, day];
+      }
+    });
+    
+    // Update the form with the new selected days
+    form.setValue('availableDays', 
+      selectedDays.includes(day) 
+        ? selectedDays.filter(d => d !== day) 
+        : [...selectedDays, day]
+    );
   };
 
   const onSubmit = async (values: FormValues) => {
@@ -85,7 +124,8 @@ const RegisterVendor = () => {
           working_hours: values.workingHours,
           images: imageUrls,
           user_id: userId,
-          status: 'pending'
+          status: 'pending',
+          available_days: selectedDays,
         });
         
       if (error) {
@@ -199,6 +239,32 @@ const RegisterVendor = () => {
                 <FormControl>
                   <Input placeholder="Ex: 09:00 - 18:00" {...field} />
                 </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="availableDays"
+            render={() => (
+              <FormItem>
+                <FormLabel>Dias Disponíveis</FormLabel>
+                <div className="flex flex-wrap gap-2 mt-2">
+                  {dayOptions.map((day) => (
+                    <Badge
+                      key={day.value}
+                      variant={selectedDays.includes(day.value) ? "default" : "outline"}
+                      className={cn(
+                        "cursor-pointer hover:bg-secondary transition-colors",
+                        selectedDays.includes(day.value) ? "bg-iparty hover:bg-iparty/90" : ""
+                      )}
+                      onClick={() => toggleDay(day.value)}
+                    >
+                      {day.label}
+                    </Badge>
+                  ))}
+                </div>
                 <FormMessage />
               </FormItem>
             )}
