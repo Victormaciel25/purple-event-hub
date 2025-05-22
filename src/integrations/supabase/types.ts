@@ -337,6 +337,7 @@ export type Database = {
       vendors: {
         Row: {
           address: string
+          available_days: string[] | null
           category: string
           contact_number: string
           created_at: string
@@ -351,6 +352,7 @@ export type Database = {
         }
         Insert: {
           address: string
+          available_days?: string[] | null
           category: string
           contact_number: string
           created_at?: string
@@ -365,6 +367,7 @@ export type Database = {
         }
         Update: {
           address?: string
+          available_days?: string[] | null
           category?: string
           contact_number?: string
           created_at?: string

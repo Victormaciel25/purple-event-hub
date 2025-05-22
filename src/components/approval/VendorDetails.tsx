@@ -5,6 +5,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Loader2 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 
 export type VendorDetailsType = {
   id: string;
@@ -14,6 +15,7 @@ export type VendorDetailsType = {
   description: string;
   address: string;
   working_hours?: string | null;
+  available_days?: string[] | null;
   created_at: string;
   status: 'pending' | 'approved' | 'rejected';
   rejection_reason?: string | null;
@@ -36,6 +38,16 @@ interface VendorDetailsProps {
   approving?: boolean;
 }
 
+const dayTranslations: Record<string, string> = {
+  monday: 'Segunda',
+  tuesday: 'Terça',
+  wednesday: 'Quarta',
+  thursday: 'Quinta',
+  friday: 'Sexta',
+  saturday: 'Sábado',
+  sunday: 'Domingo'
+};
+
 const VendorDetails: React.FC<VendorDetailsProps> = ({
   selectedVendor,
   imageUrls,
@@ -46,6 +58,11 @@ const VendorDetails: React.FC<VendorDetailsProps> = ({
   onClose,
   approving = false,
 }) => {
+  // Format available days
+  const availableDays = selectedVendor.available_days && selectedVendor.available_days.length > 0
+    ? selectedVendor.available_days.map(day => dayTranslations[day] || day)
+    : [];
+
   return (
     <div className="mt-4 space-y-4">
       <div className="grid grid-cols-1 gap-4">
@@ -73,6 +90,19 @@ const VendorDetails: React.FC<VendorDetailsProps> = ({
           <div>
             <div className="font-medium">Horário de Funcionamento</div>
             <div>{selectedVendor.working_hours}</div>
+          </div>
+        )}
+
+        {availableDays.length > 0 && (
+          <div>
+            <div className="font-medium">Dias Disponíveis</div>
+            <div className="flex flex-wrap gap-2 mt-2">
+              {availableDays.map((day) => (
+                <Badge key={day} variant="secondary" className="text-xs">
+                  {day}
+                </Badge>
+              ))}
+            </div>
           </div>
         )}
       </div>

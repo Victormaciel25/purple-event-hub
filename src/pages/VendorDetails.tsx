@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Phone, ArrowLeft, MapPin, Calendar, Clock } from "lucide-react";
@@ -23,8 +24,19 @@ interface Vendor {
   address: string;
   working_hours?: string | null;
   images?: string[] | null;
+  available_days?: string[] | null;
   rating?: number; // We'll keep this in the interface for now
 }
+
+const dayTranslations: Record<string, string> = {
+  monday: 'Segunda',
+  tuesday: 'Terça',
+  wednesday: 'Quarta',
+  thursday: 'Quinta',
+  friday: 'Sexta',
+  saturday: 'Sábado',
+  sunday: 'Domingo'
+};
 
 const VendorDetails = () => {
   const { id } = useParams<{ id: string }>();
@@ -70,6 +82,7 @@ const VendorDetails = () => {
           address: data.address,
           working_hours: data.working_hours,
           images: data.images,
+          available_days: data.available_days,
           rating: 4.8, // Default rating until we implement a rating system
         };
         
@@ -106,8 +119,10 @@ const VendorDetails = () => {
     ? vendor.images 
     : ["https://source.unsplash.com/random/800x600?business"];
 
-  // Format available days (this is a placeholder since we don't have this data yet)
-  const availableDays = ["Segunda", "Terça", "Quarta", "Quinta", "Sexta"];
+  // Format available days from the database
+  const availableDays = vendor.available_days && vendor.available_days.length > 0
+    ? vendor.available_days.map(day => dayTranslations[day] || day)
+    : [];
 
   return (
     <div className="container px-4 py-6 max-w-4xl mx-auto">

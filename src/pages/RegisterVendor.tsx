@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { z } from "zod";
@@ -76,20 +77,14 @@ const RegisterVendor = () => {
   };
 
   const toggleDay = (day: string) => {
-    setSelectedDays((prevSelectedDays) => {
-      if (prevSelectedDays.includes(day)) {
-        return prevSelectedDays.filter((d) => d !== day);
-      } else {
-        return [...prevSelectedDays, day];
-      }
-    });
+    const updatedDays = selectedDays.includes(day)
+      ? selectedDays.filter(d => d !== day)
+      : [...selectedDays, day];
     
-    // Update the form with the new selected days
-    form.setValue('availableDays', 
-      selectedDays.includes(day) 
-        ? selectedDays.filter(d => d !== day) 
-        : [...selectedDays, day]
-    );
+    setSelectedDays(updatedDays);
+    
+    // Atualiza o formulário com os dias selecionados
+    form.setValue('availableDays', updatedDays);
   };
 
   const onSubmit = async (values: FormValues) => {
@@ -110,11 +105,23 @@ const RegisterVendor = () => {
       }
 
       const userId = session.session.user.id;
+      
+      console.log("Enviando dados para o banco:", {
+        name: values.name,
+        category: values.category, 
+        contact_number: values.contactNumber,
+        description: values.description,
+        address: values.address,
+        working_hours: values.workingHours,
+        images: imageUrls,
+        user_id: userId,
+        status: 'pending',
+        available_days: selectedDays,
+      });
 
-      // Insert vendor data into Supabase using type assertion to bypass TypeScript error
-      // This is necessary because the types haven't been updated yet after creating the vendors table
-      const { error } = await (supabase
-        .from('vendors') as any)
+      // Insert vendor data into Supabase
+      const { error } = await supabase
+        .from('vendors')
         .insert({
           name: values.name,
           category: values.category, 
