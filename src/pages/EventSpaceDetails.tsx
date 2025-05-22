@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -32,7 +33,8 @@ import { toast } from "sonner";
 import {
   Dialog,
   DialogContent,
-  DialogClose
+  DialogClose,
+  DialogTitle
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { useUserRoles } from "@/hooks/useUserRoles";
@@ -214,6 +216,52 @@ const EventSpaceDetails: React.FC = () => {
     }
   };
 
+  // Add the missing handleDeleteSpace function
+  const handleDeleteSpace = async () => {
+    if (!deleteReason.trim()) {
+      toast.error("Por favor, forneça um motivo para a exclusão");
+      return;
+    }
+
+    try {
+      setDeletingSpace(true);
+
+      // Create a notification for the space owner
+      if (space && space.user_id) {
+        const { error: notificationError } = await supabase
+          .from("space_deletion_notifications")
+          .insert({
+            user_id: space.user_id,
+            space_name: space.name,
+            deletion_reason: deleteReason
+          });
+
+        if (notificationError) {
+          console.error("Erro ao criar notificação:", notificationError);
+          toast.error("Erro ao notificar o proprietário");
+        }
+      }
+
+      // Delete the space using the existing function
+      if (space) {
+        const { error } = await supabase.functions.invoke("delete_space_with_photos", {
+          body: { space_id: space.id }
+        });
+
+        if (error) throw error;
+
+        toast.success("Espaço excluído com sucesso");
+        setDeleteDialogOpen(false);
+        navigate('/explore');
+      }
+    } catch (error) {
+      console.error("Erro ao excluir espaço:", error);
+      toast.error("Erro ao excluir espaço");
+    } finally {
+      setDeletingSpace(false);
+    }
+  };
+
   if (loading || !space) {
     return (
       <div className="container px-4 py-6 flex items-center justify-center h-[70vh]">
@@ -356,6 +404,7 @@ const EventSpaceDetails: React.FC = () => {
       {/* image dialog */}
       <Dialog open={isImageDialogOpen} onOpenChange={setIsImageDialogOpen}>
         <DialogContent className="max-w-screen-lg w-[95vw] h-[90vh] p-0 bg-black/95 border-none">
+          <DialogTitle className="sr-only">Visualização da imagem</DialogTitle>
           <div className="flex items-center justify-center w-full h-full relative">
             <OptimizedImage
               src={selectedImage!}
