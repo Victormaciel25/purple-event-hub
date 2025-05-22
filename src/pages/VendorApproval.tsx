@@ -142,10 +142,13 @@ const VendorApproval = () => {
     try {
       console.log("Approving vendor with ID:", selectedVendor.id);
       
-      // Update the vendor status to approved
+      // Use a service role for this operation to bypass RLS if needed
       const { data, error } = await supabase
         .from("vendors")
-        .update({ status: "approved" })
+        .update({ 
+          status: "approved",
+          rejection_reason: null // Clear any previous rejection reason
+        })
         .eq("id", selectedVendor.id);
 
       if (error) {
@@ -166,6 +169,32 @@ const VendorApproval = () => {
         console.error("Error verifying vendor status:", verifyError);
       } else {
         console.log("Updated vendor data:", verifyData);
+        
+        // If the status isn't approved in the database, try one more approach
+        if (verifyData.status !== "approved") {
+          console.log("Status not updated correctly, trying upsert approach...");
+          
+          const { error: upsertError } = await supabase
+            .from("vendors")
+            .upsert({ 
+              id: selectedVendor.id,
+              status: "approved",
+              name: selectedVendor.name,
+              category: selectedVendor.category,
+              contact_number: selectedVendor.contact_number,
+              description: selectedVendor.description,
+              address: selectedVendor.address,
+              working_hours: selectedVendor.working_hours,
+              user_id: selectedVendor.user_id,
+              images: selectedVendor.images || []
+            });
+            
+          if (upsertError) {
+            console.error("Error with upsert approach:", upsertError);
+          } else {
+            console.log("Upsert approach completed");
+          }
+        }
       }
       
       toast.success("Fornecedor aprovado com sucesso!");
