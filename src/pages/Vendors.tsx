@@ -43,6 +43,7 @@ const Vendors = () => {
       }
 
       console.log("Vendors fetched:", data);
+      console.log("Number of approved vendors:", data ? data.length : 0);
 
       if (data) {
         // Process the data obtained from Supabase
@@ -54,8 +55,6 @@ const Vendors = () => {
           images: vendor.images || [],
           rating: 4.8, // Default rating until we implement a rating system
         }));
-
-        console.log("Processed vendors:", processedVendors);
 
         // Extract unique categories for tabs
         const uniqueCategories = Array.from(

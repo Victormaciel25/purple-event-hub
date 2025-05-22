@@ -2,10 +2,43 @@
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.20.0";
 
+// Add CORS headers for browser compatibility
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+};
+
 serve(async (req) => {
+  // Handle CORS preflight requests
+  if (req.method === "OPTIONS") {
+    return new Response(null, { headers: corsHeaders });
+  }
+  
   try {
     // Get the request body
-    const { vendorId } = await req.json();
+    let vendorId;
+    try {
+      const body = await req.json();
+      vendorId = body.vendorId;
+      
+      if (!vendorId) {
+        throw new Error("Vendor ID is required");
+      }
+      
+      console.log("Received vendor ID for approval:", vendorId);
+    } catch (error) {
+      console.error("Error parsing request body:", error);
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: "Invalid request body. Expected JSON with vendorId field." 
+        }),
+        { 
+          headers: { ...corsHeaders, "Content-Type": "application/json" }, 
+          status: 400 
+        }
+      );
+    }
     
     // Create a Supabase client with the service role key
     const supabaseUrl = Deno.env.get("SUPABASE_URL") || "";
@@ -28,7 +61,7 @@ serve(async (req) => {
       console.error("Error approving vendor:", error);
       return new Response(
         JSON.stringify({ success: false, error: error.message }),
-        { headers: { "Content-Type": "application/json" }, status: 400 }
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 }
       );
     }
 
@@ -40,7 +73,7 @@ serve(async (req) => {
         data,
         message: "Vendor approved successfully" 
       }),
-      { headers: { "Content-Type": "application/json" } }
+      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error) {
     console.error("Unexpected error:", error);
@@ -49,7 +82,7 @@ serve(async (req) => {
         success: false, 
         error: "An unexpected error occurred" 
       }),
-      { headers: { "Content-Type": "application/json" }, status: 500 }
+      { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 500 }
     );
   }
 });

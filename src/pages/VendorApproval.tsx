@@ -147,25 +147,31 @@ const VendorApproval = () => {
       console.log("Approving vendor with ID:", selectedVendor.id);
       
       // Use our edge function to approve the vendor (with admin privileges)
-      const response = await fetch(
-        `${SUPABASE_CONFIG.URL}/functions/v1/vendor-approval`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${SUPABASE_CONFIG.PUBLIC_KEY}`,
-          },
-          body: JSON.stringify({ vendorId: selectedVendor.id }),
-        }
-      );
+      const functionUrl = `${SUPABASE_CONFIG.URL}/functions/v1/vendor-approval`;
       
-      const result = await response.json();
+      console.log("Calling edge function at:", functionUrl);
+      
+      const response = await fetch(functionUrl, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${SUPABASE_CONFIG.PUBLIC_KEY}`,
+        },
+        body: JSON.stringify({ vendorId: selectedVendor.id }),
+      });
       
       if (!response.ok) {
-        throw new Error(result.error || "Failed to approve vendor");
+        const errorText = await response.text();
+        console.error("Edge function error response:", errorText);
+        throw new Error(`Error ${response.status}: ${errorText || "Unknown error"}`);
       }
       
+      const result = await response.json();
       console.log("Edge function result:", result);
+      
+      if (!result.success) {
+        throw new Error(result.error || "Failed to approve vendor");
+      }
       
       toast.success("Fornecedor aprovado com sucesso!");
       
@@ -182,15 +188,33 @@ const VendorApproval = () => {
       if (selectedVendor) {
         setSelectedVendor({
           ...selectedVendor,
-          status: 'approved' as const
+          status: 'approved' as const,
+          rejection_reason: null
         });
       }
       
-      // Close the details panel
-      setSheetOpen(false);
+      // Verify the update worked by fetching the vendor directly
+      const { data: verifyData, error: verifyError } = await supabase
+        .from("vendors")
+        .select("status")
+        .eq("id", selectedVendor.id)
+        .single();
+        
+      if (verifyError) {
+        console.warn("Failed to verify vendor status update:", verifyError);
+      } else {
+        console.log("Verified vendor status:", verifyData);
+        if (verifyData.status !== "approved") {
+          console.warn("Vendor status not updated correctly in database!");
+        }
+      }
       
-      // Refresh vendor list to get the latest data
-      fetchVendors();
+      // Close the details panel
+      setTimeout(() => {
+        setSheetOpen(false);
+        // Refresh vendor list to get the latest data
+        fetchVendors();
+      }, 1500);
       
     } catch (error) {
       console.error("Erro ao aprovar fornecedor:", error);
