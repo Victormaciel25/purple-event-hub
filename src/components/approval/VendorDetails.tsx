@@ -1,10 +1,10 @@
 
 import React from "react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
+import { Loader2 } from "lucide-react";
 
 export type VendorDetailsType = {
   id: string;
@@ -33,6 +33,7 @@ interface VendorDetailsProps {
   onApprove: () => void;
   onReject: () => void;
   onClose: () => void;
+  approving?: boolean;
 }
 
 const VendorDetails: React.FC<VendorDetailsProps> = ({
@@ -43,6 +44,7 @@ const VendorDetails: React.FC<VendorDetailsProps> = ({
   onApprove,
   onReject,
   onClose,
+  approving = false,
 }) => {
   return (
     <div className="mt-4 space-y-4">
@@ -116,6 +118,7 @@ const VendorDetails: React.FC<VendorDetailsProps> = ({
                 variant="secondary"
                 onClick={onClose}
                 className="sm:w-1/3"
+                disabled={approving}
               >
                 Fechar
               </Button>
@@ -123,14 +126,23 @@ const VendorDetails: React.FC<VendorDetailsProps> = ({
                 variant="destructive"
                 onClick={onReject}
                 className="sm:w-1/3"
+                disabled={approving}
               >
                 Rejeitar
               </Button>
               <Button
                 onClick={onApprove}
                 className="bg-green-600 hover:bg-green-700 text-white sm:w-1/3"
+                disabled={approving}
               >
-                Aprovar
+                {approving ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Aprovando...
+                  </>
+                ) : (
+                  "Aprovar"
+                )}
               </Button>
             </div>
           </div>

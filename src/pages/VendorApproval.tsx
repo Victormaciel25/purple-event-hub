@@ -15,6 +15,7 @@ import { useUserRoles } from "@/hooks/useUserRoles";
 import { toast } from "sonner";
 import VendorList from "@/components/approval/VendorList";
 import VendorDetails, { VendorDetailsType } from "@/components/approval/VendorDetails";
+import { SUPABASE_CONFIG } from "@/config/app-config";
 
 type VendorWithProfileInfo = {
   id: string;
@@ -37,6 +38,7 @@ const VendorApproval = () => {
   const [sheetOpen, setSheetOpen] = useState(false);
   const [rejectionReason, setRejectionReason] = useState("");
   const [imageUrls, setImageUrls] = useState<string[]>([]);
+  const [approving, setApproving] = useState(false);
   const { isAdmin, loading: roleLoading } = useUserRoles();
   const navigate = useNavigate();
 
@@ -138,64 +140,32 @@ const VendorApproval = () => {
 
   const approveVendor = async () => {
     if (!selectedVendor) return;
-
+    
     try {
+      setApproving(true);
+      
       console.log("Approving vendor with ID:", selectedVendor.id);
       
-      // Use a service role for this operation to bypass RLS if needed
-      const { data, error } = await supabase
-        .from("vendors")
-        .update({ 
-          status: "approved",
-          rejection_reason: null // Clear any previous rejection reason
-        })
-        .eq("id", selectedVendor.id);
-
-      if (error) {
-        console.error("Error approving vendor:", error);
-        throw error;
-      }
-      
-      console.log("Vendor approval request processed");
-      
-      // Verify the update worked by fetching the vendor again
-      const { data: verifyData, error: verifyError } = await supabase
-        .from("vendors")
-        .select("*")
-        .eq("id", selectedVendor.id)
-        .single();
-        
-      if (verifyError) {
-        console.error("Error verifying vendor status:", verifyError);
-      } else {
-        console.log("Updated vendor data:", verifyData);
-        
-        // If the status isn't approved in the database, try one more approach
-        if (verifyData.status !== "approved") {
-          console.log("Status not updated correctly, trying upsert approach...");
-          
-          const { error: upsertError } = await supabase
-            .from("vendors")
-            .upsert({ 
-              id: selectedVendor.id,
-              status: "approved",
-              name: selectedVendor.name,
-              category: selectedVendor.category,
-              contact_number: selectedVendor.contact_number,
-              description: selectedVendor.description,
-              address: selectedVendor.address,
-              working_hours: selectedVendor.working_hours,
-              user_id: selectedVendor.user_id,
-              images: selectedVendor.images || []
-            });
-            
-          if (upsertError) {
-            console.error("Error with upsert approach:", upsertError);
-          } else {
-            console.log("Upsert approach completed");
-          }
+      // Use our edge function to approve the vendor (with admin privileges)
+      const response = await fetch(
+        `${SUPABASE_CONFIG.URL}/functions/v1/vendor-approval`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${SUPABASE_CONFIG.PUBLIC_KEY}`,
+          },
+          body: JSON.stringify({ vendorId: selectedVendor.id }),
         }
+      );
+      
+      const result = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(result.error || "Failed to approve vendor");
       }
+      
+      console.log("Edge function result:", result);
       
       toast.success("Fornecedor aprovado com sucesso!");
       
@@ -221,9 +191,12 @@ const VendorApproval = () => {
       
       // Refresh vendor list to get the latest data
       fetchVendors();
+      
     } catch (error) {
       console.error("Erro ao aprovar fornecedor:", error);
       toast.error("Erro ao aprovar fornecedor");
+    } finally {
+      setApproving(false);
     }
   };
 
@@ -298,6 +271,7 @@ const VendorApproval = () => {
               onApprove={approveVendor}
               onReject={rejectVendor}
               onClose={() => setSheetOpen(false)}
+              approving={approving}
             />
           </SheetContent>
         </Sheet>
