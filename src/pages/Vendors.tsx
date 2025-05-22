@@ -31,6 +31,7 @@ const Vendors = () => {
       setLoading(true);
       console.log("Fetching approved vendors...");
       
+      // Make sure we're explicitly filtering for approved vendors
       const { data, error } = await supabase
         .from("vendors")
         .select("*")

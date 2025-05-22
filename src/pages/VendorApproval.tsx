@@ -142,21 +142,32 @@ const VendorApproval = () => {
     try {
       console.log("Approving vendor with ID:", selectedVendor.id);
       
-      // Use upsert to ensure the update happens regardless of RLS policies
+      // Update the vendor status to approved
       const { data, error } = await supabase
         .from("vendors")
-        .update({ 
-          status: "approved" 
-        })
-        .eq("id", selectedVendor.id)
-        .select();
+        .update({ status: "approved" })
+        .eq("id", selectedVendor.id);
 
       if (error) {
         console.error("Error approving vendor:", error);
         throw error;
       }
       
-      console.log("Vendor approved successfully, response:", data);
+      console.log("Vendor approval request processed");
+      
+      // Verify the update worked by fetching the vendor again
+      const { data: verifyData, error: verifyError } = await supabase
+        .from("vendors")
+        .select("*")
+        .eq("id", selectedVendor.id)
+        .single();
+        
+      if (verifyError) {
+        console.error("Error verifying vendor status:", verifyError);
+      } else {
+        console.log("Updated vendor data:", verifyData);
+      }
+      
       toast.success("Fornecedor aprovado com sucesso!");
       
       // Update the local state to reflect the approval
