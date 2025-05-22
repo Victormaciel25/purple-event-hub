@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { ArrowLeft, Upload, Trash2 } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Form,
@@ -18,7 +18,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import ImageUpload from "@/components/ImageUpload";
+import SingleImageUpload from "@/components/SingleImageUpload";
 
 const formSchema = z.object({
   name: z.string().min(3, { message: "O nome deve ter pelo menos 3 caracteres" }),
@@ -103,7 +103,7 @@ const RegisterVendor = () => {
       
       <div className="mb-6">
         <p className="text-muted-foreground text-sm mb-2">Imagem do fornecedor</p>
-        <ImageUpload
+        <SingleImageUpload
           onImageChange={handleImageChange}
           uploadPath="vendors"
           aspectRatio="1:1"
