@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -216,7 +215,7 @@ const EventSpaceDetails: React.FC = () => {
     }
   };
 
-  // Add the missing handleDeleteSpace function
+  // Fix the handleDeleteSpace function to avoid void truthiness checks
   const handleDeleteSpace = async () => {
     if (!deleteReason.trim()) {
       toast.error("Por favor, forneça um motivo para a exclusão");
@@ -296,7 +295,10 @@ const EventSpaceDetails: React.FC = () => {
                     src={img}
                     alt={`${space.name} ${i + 1}`}
                     className="object-cover w-full h-full cursor-pointer"
-                    onClick={() => setIsImageDialogOpen(true) || setSelectedImage(img)}
+                    onClick={() => {
+                      setIsImageDialogOpen(true);
+                      setSelectedImage(img);
+                    }}
                   />
                   <div className="absolute bottom-2 right-2 flex items-center gap-2">
                     <span className="bg-black/70 text-white px-2 py-1 rounded text-xs">
@@ -304,7 +306,10 @@ const EventSpaceDetails: React.FC = () => {
                     </span>
                     <button
                       className="opacity-0 group-hover:opacity-100 bg-black/70 p-1 rounded text-white"
-                      onClick={() => setIsImageDialogOpen(true) || setSelectedImage(img)}
+                      onClick={() => {
+                        setIsImageDialogOpen(true);
+                        setSelectedImage(img);
+                      }}
                     >
                       <ZoomIn size={16} />
                     </button>
