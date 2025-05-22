@@ -251,24 +251,27 @@ const SpaceDetails: React.FC<SpaceDetailsProps> = ({
                 <p className="text-gray-500">Nenhuma foto disponível</p>
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {photoUrls.map((url, index) => (
-                  <div key={index} className="relative">
-                    <img 
-                      src={url} 
-                      alt={`Espaço ${selectedSpace.name} ${index + 1}`}
-                      className="w-full h-40 object-cover rounded-md"
-                      onError={(e) => {
-                        console.error(`Error loading image at ${url}`);
-                        e.currentTarget.src = 'https://source.unsplash.com/random/600x400?event';
-                      }}
-                    />
-                    <span className="absolute bottom-2 right-2 bg-black/50 text-white text-xs px-2 py-1 rounded">
-                      {index + 1}/{photoUrls.length}
-                    </span>
-                  </div>
-                ))}
-              </div>
+              <>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {photoUrls.map((url, index) => (
+                    <div key={index} className="relative">
+                      <img 
+                        src={url} 
+                        alt={`Espaço ${selectedSpace.name} ${index + 1}`}
+                        className="w-full h-40 object-cover rounded-md"
+                        onError={(e) => {
+                          console.error(`Error loading image at ${url}`);
+                          e.currentTarget.src = 'https://source.unsplash.com/random/600x400?event';
+                        }}
+                      />
+                      <span className="absolute bottom-2 right-2 bg-black/50 text-white text-xs px-2 py-1 rounded">
+                        {index + 1}/{photoUrls.length}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+                <h3 className="text-lg font-medium mt-4 text-center">{selectedSpace.name}</h3>
+              </>
             )}
           </Card>
         </TabsContent>
