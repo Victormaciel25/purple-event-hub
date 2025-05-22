@@ -3,6 +3,7 @@ import React, { useState } from "react";
 import { X, Images } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { STORAGE } from "@/config/app-config";
 
 interface SingleImageUploadProps {
   onImageChange: (urls: string[]) => void;
@@ -59,11 +60,14 @@ const SingleImageUpload: React.FC<SingleImageUploadProps> = ({
         // Upload to Supabase Storage
         const fileExt = file.name.split('.').pop();
         const fileName = `${Math.random().toString(36).substring(2, 15)}.${fileExt}`;
-        const filePath = `${uploadPath}/${fileName}`;
+        const filePath = `${fileName}`;
+        
+        // Check if bucket exists, if not we'll use the spaces bucket from config
+        const bucketName = STORAGE.SPACES_BUCKET || "spaces";
         
         const { data, error } = await supabase.storage
-          .from(uploadPath)
-          .upload(filePath, file);
+          .from(bucketName)
+          .upload(uploadPath ? `${uploadPath}/${filePath}` : filePath, file);
         
         if (error) {
           console.error("Error uploading image:", error);
@@ -74,8 +78,8 @@ const SingleImageUpload: React.FC<SingleImageUploadProps> = ({
         
         // Get the public URL
         const { data: publicURLData } = supabase.storage
-          .from(uploadPath)
-          .getPublicUrl(filePath);
+          .from(bucketName)
+          .getPublicUrl(uploadPath ? `${uploadPath}/${filePath}` : filePath);
         
         newUrls.push(publicURLData.publicUrl);
       }

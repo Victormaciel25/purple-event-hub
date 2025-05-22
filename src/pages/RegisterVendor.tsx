@@ -72,12 +72,26 @@ const RegisterVendor = () => {
 
       const userId = session.session.user.id;
 
-      // This would be replaced with actual API integration in a real app
-      // For now, we're just simulating success
+      // Insert vendor data into Supabase
+      const { data, error } = await supabase
+        .from('vendors')
+        .insert({
+          name: values.name,
+          category: values.category, 
+          contact_number: values.contactNumber,
+          description: values.description,
+          address: values.address,
+          working_hours: values.workingHours,
+          images: imageUrls,
+          user_id: userId
+        });
+        
+      if (error) {
+        console.error("Error submitting vendor:", error);
+        toast.error("Erro ao cadastrar fornecedor. Tente novamente.");
+        return;
+      }
       
-      // Simulating a server delay
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-
       toast.success("Fornecedor cadastrado com sucesso!");
       navigate(-1);
     } catch (error) {
