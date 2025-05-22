@@ -72,9 +72,10 @@ const RegisterVendor = () => {
 
       const userId = session.session.user.id;
 
-      // Insert vendor data into Supabase
-      const { data, error } = await supabase
-        .from('vendors')
+      // Insert vendor data into Supabase using type assertion to bypass TypeScript error
+      // This is necessary because the types haven't been updated yet after creating the vendors table
+      const { error } = await (supabase
+        .from('vendors') as any)
         .insert({
           name: values.name,
           category: values.category, 
