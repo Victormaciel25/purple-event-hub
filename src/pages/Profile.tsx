@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { Heart, Calendar, HelpCircle, Plus, Home, Shield, CheckSquare, Users } from "lucide-react";
@@ -258,7 +257,8 @@ const Profile = () => {
     },
     { 
       icon: Plus, 
-      label: "Cadastrar fornecedor" 
+      label: "Cadastrar fornecedor",
+      onClick: () => navigate("/register-vendor")
     },
     { 
       icon: Home, 

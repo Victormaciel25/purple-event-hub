@@ -17,6 +17,7 @@ import Profile from "./pages/Profile";
 import NotFound from "./pages/NotFound";
 import EventSpaceDetails from "./pages/EventSpaceDetails";
 import RegisterSpace from "./pages/RegisterSpace";
+import RegisterVendor from "./pages/RegisterVendor";
 import SpaceApproval from "./pages/SpaceApproval";
 import AdminManagement from "./pages/AdminManagement";
 import UserSpaces from "./pages/UserSpaces";
@@ -103,6 +104,7 @@ const App: React.FC = () => {
               <Route path="/explore" element={<Explore />} />
               <Route path="/vendors" element={<Vendors />} />
               <Route path="/vendor/:id" element={<VendorDetails />} />
+              <Route path="/register-vendor" element={<RegisterVendor />} />
               <Route path="/map" element={<Map />} />
               <Route path="/messages" element={<Messages />} />
               <Route path="/profile" element={<Profile />} />
