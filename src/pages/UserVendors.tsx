@@ -102,13 +102,13 @@ const UserVendors = () => {
           </TabsTrigger>
           <TabsTrigger
             value="approved"
-            className="rounded-md w-full h-full bg-gray-100"
+            className="rounded-md w-full h-full"
           >
             Aprovados ({approvedCount})
           </TabsTrigger>
           <TabsTrigger
             value="rejected"
-            className="rounded-md w-full h-full bg-gray-100"
+            className="rounded-md w-full h-full"
           >
             Rejeitados ({rejectedCount})
           </TabsTrigger>
