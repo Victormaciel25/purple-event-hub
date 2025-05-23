@@ -1,6 +1,7 @@
+
 import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { Heart, Calendar, HelpCircle, Plus, Home, Shield, CheckSquare, Users, Briefcase } from "lucide-react";
+import { Heart, Calendar, HelpCircle, Plus, Home, Shield, CheckSquare, Users, Briefcase, Clipboard } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useUserRoles } from "@/hooks/useUserRoles";
 import FavoriteSpaces from "../components/FavoriteSpaces";
@@ -264,6 +265,11 @@ const Profile = () => {
       icon: Home, 
       label: "Meus espaços", 
       onClick: () => navigate("/user-spaces") 
+    },
+    { 
+      icon: Clipboard, 
+      label: "Meus fornecedores", 
+      onClick: () => navigate("/user-vendors") 
     },
     { 
       icon: Shield, 

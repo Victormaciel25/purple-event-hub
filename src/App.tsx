@@ -22,6 +22,7 @@ import SpaceApproval from "./pages/SpaceApproval";
 import VendorApproval from "./pages/VendorApproval";
 import AdminManagement from "./pages/AdminManagement";
 import UserSpaces from "./pages/UserSpaces";
+import UserVendors from "./pages/UserVendors";
 import EditSpace from "./pages/EditSpace";
 import PromoteSpace from "./pages/PromoteSpace";
 import Index from "./pages/Index";
@@ -118,6 +119,7 @@ const App: React.FC = () => {
               <Route path="/vendor-approval" element={<VendorApproval />} />
               <Route path="/admin-management" element={<AdminManagement />} />
               <Route path="/user-spaces" element={<UserSpaces />} />
+              <Route path="/user-vendors" element={<UserVendors />} />
               <Route path="/edit-space/:id" element={<EditSpace />} />
               <Route path="/promote-space" element={<PromoteSpace />} />
             </Route>
