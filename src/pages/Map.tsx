@@ -1,13 +1,13 @@
-
 import React, { useState, useEffect, useRef } from "react";
 import { Loader2 } from "lucide-react";
-import LocationMap from "@/components/LocationMap";
-import { supabase } from "@/integrations/supabase/client";
+import { Wrapper } from "@googlemaps/react-wrapper";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import { GOOGLE_MAPS_API_KEY } from "@/config/app-config";
-import { Wrapper } from "@googlemaps/react-wrapper";
+
+import LocationMap from "@/components/LocationMap";
 import AddressAutoComplete from "@/components/AddressAutoComplete";
+import { supabase } from "@/integrations/supabase/client";
+import { GOOGLE_MAPS_API_KEY } from "@/config/app-config";
 
 type Space = {
   id: string;
@@ -27,86 +27,86 @@ type GeocodingResult = {
   locationName: string;
 };
 
-const Map = () => {
+const Map: React.FC = () => {
   const [spaces, setSpaces] = useState<Space[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [searchValue, setSearchValue] = useState<string>("");
+  const [loading, setLoading] = useState(true);
+  const [searchValue, setSearchValue] = useState("");
   const [filteredSpaces, setFilteredSpaces] = useState<Space[]>([]);
-  const [mapCenter, setMapCenter] = useState<{lat: number, lng: number} | null>(null);
+  const [mapCenter, setMapCenter] = useState<{ lat: number; lng: number } | null>(null);
   const [searchError, setSearchError] = useState<string | null>(null);
+
   const mapRef = useRef<google.maps.Map | null>(null);
   const navigate = useNavigate();
 
-  // Efeito para carregar espaços ao montar o componente
+  // 1) Pega localização atual do usuário no mount
+  useEffect(() => {
+    if (!navigator.geolocation) {
+      setSearchError("Geolocalização não suportada neste navegador");
+      setLoading(false);
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(
+      ({ coords }) => {
+        const userLoc = { lat: coords.latitude, lng: coords.longitude };
+        setMapCenter(userLoc);
+      },
+      (err) => {
+        console.warn("Erro ao obter localização:", err);
+        setSearchError("Não foi possível obter sua localização");
+      }
+    );
+  }, []);
+
+  // 2) Sempre que mapCenter muda, centraliza o mapa
+  useEffect(() => {
+    if (mapRef.current && mapCenter) {
+      mapRef.current.panTo(mapCenter);
+      mapRef.current.setZoom(14);
+    }
+  }, [mapCenter]);
+
+  // Carrega espaços do Supabase
   useEffect(() => {
     fetchSpaces();
   }, []);
 
-  // Efeito para filtrar espaços com base na busca
-  useEffect(() => {
-    if (searchValue.trim() === "") {
-      setFilteredSpaces(spaces);
-    } else {
-      // Filtra espaços com base na busca
-      const lowercaseSearch = searchValue.toLowerCase();
-      const filtered = spaces.filter(space => 
-        space.name.toLowerCase().includes(lowercaseSearch) || 
-        `${space.address}, ${space.number} - ${space.state}`.toLowerCase().includes(lowercaseSearch) ||
-        (space.zipCode && space.zipCode.toLowerCase().includes(lowercaseSearch))
-      );
-      setFilteredSpaces(filtered);
-    }
-  }, [searchValue, spaces]);
-
-  // Função para buscar espaços no Supabase
   const fetchSpaces = async () => {
     setLoading(true);
     try {
-      // Buscar apenas espaços aprovados com latitude e longitude válidos
       const { data: spacesData, error } = await supabase
         .from("spaces")
         .select("id, name, address, number, state, latitude, longitude, zip_code, space_photos(storage_path)")
         .eq("status", "approved")
         .not("latitude", "is", null)
         .not("longitude", "is", null);
-      
-      if (error) {
-        throw error;
-      }
 
-      if (spacesData) {
-        // Processar os espaços para incluir URLs de imagens
-        const spacesWithImages = await Promise.all(
-          spacesData.map(async (space) => {
-            let imageUrl = undefined;
+      if (error) throw error;
 
-            if (space.space_photos && space.space_photos.length > 0) {
-              const { data: urlData } = await supabase.storage
-                .from('spaces')
-                .createSignedUrl(space.space_photos[0].storage_path, 3600);
-                
-              if (urlData) {
-                imageUrl = urlData.signedUrl;
-              }
-            }
+      const spacesWithImages = await Promise.all(
+        (spacesData || []).map(async (space) => {
+          let imageUrl: string | undefined;
+          if (space.space_photos?.length) {
+            const { data: urlData } = await supabase
+              .storage.from("spaces")
+              .createSignedUrl(space.space_photos[0].storage_path, 3600);
+            if (urlData) imageUrl = urlData.signedUrl;
+          }
+          return {
+            id: space.id,
+            name: space.name,
+            address: space.address,
+            number: space.number,
+            state: space.state,
+            latitude: Number(space.latitude),
+            longitude: Number(space.longitude),
+            zipCode: space.zip_code || "",
+            imageUrl,
+          };
+        })
+      );
 
-            return {
-              id: space.id,
-              name: space.name,
-              address: space.address,
-              number: space.number,
-              state: space.state,
-              latitude: Number(space.latitude),
-              longitude: Number(space.longitude),
-              zipCode: space.zip_code || "",
-              imageUrl: imageUrl
-            };
-          })
-        );
-        
-        setSpaces(spacesWithImages);
-        setFilteredSpaces(spacesWithImages);
-      }
+      setSpaces(spacesWithImages);
+      setFilteredSpaces(spacesWithImages);
     } catch (error) {
       console.error("Erro ao buscar espaços:", error);
       toast.error("Erro ao carregar espaços");
@@ -115,34 +115,38 @@ const Map = () => {
     }
   };
 
+  // Filtra os espaços quando searchValue muda
+  useEffect(() => {
+    if (!searchValue.trim()) {
+      setFilteredSpaces(spaces);
+      return;
+    }
+    const term = searchValue.toLowerCase();
+    setFilteredSpaces(
+      spaces.filter((s) =>
+        s.name.toLowerCase().includes(term) ||
+        `${s.address}, ${s.number} - ${s.state}`.toLowerCase().includes(term) ||
+        s.zipCode.toLowerCase().includes(term)
+      )
+    );
+  }, [searchValue, spaces]);
+
+  // Chamado pelo AddressAutoComplete
+  const handleLocationSelected = (loc: GeocodingResult) => {
+    setMapCenter({ lat: loc.lat, lng: loc.lng });
+    setSearchError(null);
+    toast.success("Localização encontrada!");
+  };
+
   const handleSpaceClick = (spaceId: string) => {
-    // Navegar para a página de detalhes do espaço com a rota correta
     navigate(`/event-space/${spaceId}`);
   };
 
-  // Handler para quando um local é selecionado pelo componente AddressAutoComplete
-  const handleLocationSelected = (location: GeocodingResult) => {
-    setMapCenter({ lat: location.lat, lng: location.lng });
-    // 👇 NÃO atualizar searchValue para não filtrar os pins
-    
-    // Se o mapa já foi carregado, ajusta a visualização para a nova localização
-    if (mapRef.current) {
-      mapRef.current.panTo({ lat: location.lat, lng: location.lng });
-      mapRef.current.setZoom(14);
-    }
-    
-    toast.success("Localização encontrada!");
-    setSearchError(null);
-  };
-
   return (
-    <Wrapper
-      apiKey={GOOGLE_MAPS_API_KEY}
-      libraries={["places"]}
-    >
+    <Wrapper apiKey={GOOGLE_MAPS_API_KEY} libraries={["places"]}>
       <div className="container px-4 py-6 max-w-4xl mx-auto h-full">
         <div className="mb-6">
-          <AddressAutoComplete 
+          <AddressAutoComplete
             onLocationSelected={handleLocationSelected}
             initialValue={searchValue}
             placeholder="Buscar por endereço, cidade ou CEP..."
@@ -156,16 +160,26 @@ const Map = () => {
         )}
 
         <div className="bg-gray-200 rounded-xl h-[calc(100vh-200px)] flex items-center justify-center">
-          <LocationMap 
-            onLocationSelected={() => {}} 
-            viewOnly={true}
-            spaces={filteredSpaces}
-            onSpaceClick={handleSpaceClick}
-            isLoading={loading}
-            initialLocation={mapCenter}
-            onMapLoad={(map) => { mapRef.current = map; }}
-            keepPinsVisible={false}
-          />
+          {loading ? (
+            <Loader2 className="animate-spin h-8 w-8 text-iparty" />
+          ) : (
+            <LocationMap
+              viewOnly
+              spaces={filteredSpaces}
+              onSpaceClick={handleSpaceClick}
+              initialLocation={mapCenter || undefined}
+              onMapLoad={(mapInstance) => {
+                mapRef.current = mapInstance;
+                if (mapCenter) {
+                  mapInstance.panTo(mapCenter);
+                  mapInstance.setZoom(14);
+                }
+              }}
+              isLoading={false}
+              keepPinsVisible={false}
+              onLocationSelected={() => {}}
+            />
+          )}
         </div>
       </div>
     </Wrapper>
