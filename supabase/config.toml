@@ -6,3 +6,4 @@ verify_jwt = false
 verify_jwt = false
 [functions.delete_vendor_with_notification]
 verify_jwt = false
+

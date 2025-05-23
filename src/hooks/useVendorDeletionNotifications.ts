@@ -9,6 +9,7 @@ interface VendorDeletionNotification {
   deletion_reason: string;
   created_at: string;
   viewed: boolean;
+  user_id: string;
 }
 
 export const useVendorDeletionNotifications = () => {
@@ -21,6 +22,7 @@ export const useVendorDeletionNotifications = () => {
         const { data: userData } = await supabase.auth.getUser();
         if (!userData.user) return;
 
+        // Fix TS error by using the correct table name that exists in the database schema
         const { data, error } = await supabase
           .from('vendor_deletion_notifications')
           .select('*')
@@ -34,10 +36,12 @@ export const useVendorDeletionNotifications = () => {
         }
 
         if (data && data.length > 0) {
-          setNotifications(data as VendorDeletionNotification[]);
+          // Explicitly cast the data to the correct type
+          const typedData = data as VendorDeletionNotification[];
+          setNotifications(typedData);
           
           // Display toast notifications for unviewed notifications
-          data.forEach((notification: VendorDeletionNotification) => {
+          typedData.forEach((notification: VendorDeletionNotification) => {
             toast.error(`O fornecedor "${notification.vendor_name}" foi excluído: ${notification.deletion_reason}`, {
               duration: 8000,
               onDismiss: () => markNotificationAsViewed(notification.id),
@@ -66,7 +70,7 @@ export const useVendorDeletionNotifications = () => {
         
         // Check if the notification is for the current user before showing toast
         supabase.auth.getUser().then(({ data }) => {
-          if (data.user && newNotification.viewed === false) {
+          if (data.user && newNotification.user_id === data.user.id && newNotification.viewed === false) {
             setNotifications((prev) => [newNotification, ...prev]);
             
             toast.error(`O fornecedor "${newNotification.vendor_name}" foi excluído: ${newNotification.deletion_reason}`, {

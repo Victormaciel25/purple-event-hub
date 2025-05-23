@@ -334,6 +334,33 @@ export type Database = {
         }
         Relationships: []
       }
+      vendor_deletion_notifications: {
+        Row: {
+          created_at: string
+          deletion_reason: string
+          id: string
+          user_id: string
+          vendor_name: string
+          viewed: boolean
+        }
+        Insert: {
+          created_at?: string
+          deletion_reason: string
+          id?: string
+          user_id: string
+          vendor_name: string
+          viewed?: boolean
+        }
+        Update: {
+          created_at?: string
+          deletion_reason?: string
+          id?: string
+          user_id?: string
+          vendor_name?: string
+          viewed?: boolean
+        }
+        Relationships: []
+      }
       vendors: {
         Row: {
           address: string
@@ -404,6 +431,10 @@ export type Database = {
         Returns: boolean
       }
       mark_notification_viewed: {
+        Args: { notification_id: string }
+        Returns: undefined
+      }
+      mark_vendor_notification_viewed: {
         Args: { notification_id: string }
         Returns: undefined
       }
