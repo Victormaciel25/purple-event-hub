@@ -26,6 +26,7 @@ import EditSpace from "./pages/EditSpace";
 import PromoteSpace from "./pages/PromoteSpace";
 import Index from "./pages/Index";
 import { useSpaceDeletionNotifications } from "./hooks/useSpaceDeletionNotifications";
+import { useVendorDeletionNotifications } from "./hooks/useVendorDeletionNotifications";
 
 // Create a QueryClient instance outside of the component
 const queryClient = new QueryClient();
@@ -38,8 +39,9 @@ const App: React.FC = () => {
   const [session, setSession] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   
-  // Disable space deletion notifications
-  // useSpaceDeletionNotifications();
+  // Use space and vendor deletion notifications
+  useSpaceDeletionNotifications();
+  useVendorDeletionNotifications();
 
   useEffect(() => {
     // Set up auth state listener first

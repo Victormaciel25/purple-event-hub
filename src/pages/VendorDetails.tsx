@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Phone, ArrowLeft, MapPin, Calendar, Clock } from "lucide-react";
@@ -27,6 +26,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Trash2 } from "lucide-react";
+import { SUPABASE_CONFIG } from "@/config/app-config";
 
 interface Vendor {
   id: string;
@@ -125,13 +125,36 @@ const VendorDetails = () => {
 
     try {
       setDeleting(true);
-
-      const { error } = await supabase
-        .from("vendors")
-        .delete()
-        .eq("id", id);
-
-      if (error) throw error;
+      
+      // Call the edge function to delete the vendor and create notification
+      const functionUrl = `${SUPABASE_CONFIG.URL}/functions/v1/delete_vendor_with_notification`;
+      
+      console.log("Calling edge function for vendor deletion:", functionUrl);
+      
+      const response = await fetch(functionUrl, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${SUPABASE_CONFIG.PUBLIC_KEY}`,
+        },
+        body: JSON.stringify({ 
+          vendorId: id,
+          deleteReason: deleteReason
+        }),
+      });
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error("Edge function error response:", errorText);
+        throw new Error(`Error ${response.status}: ${errorText || "Unknown error"}`);
+      }
+      
+      const result = await response.json();
+      console.log("Edge function result:", result);
+      
+      if (!result.success) {
+        throw new Error(result.error || "Failed to delete vendor");
+      }
 
       toast.success("Fornecedor excluído com sucesso");
       navigate("/vendors");

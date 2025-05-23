@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -16,6 +15,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { SUPABASE_CONFIG } from "@/config/app-config";
+import { toast } from "sonner";
 
 export type VendorDetailsType = {
   id: string;
@@ -78,22 +79,63 @@ const VendorDetails: React.FC<VendorDetailsProps> = ({
 }) => {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleteReason, setDeleteReason] = useState("");
+  const [isDeleting, setIsDeleting] = useState(false);
   
   // Format available days
   const availableDays = selectedVendor.available_days && selectedVendor.available_days.length > 0
     ? selectedVendor.available_days.map(day => dayTranslations[day] || day)
     : [];
     
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (deleteReason.trim() === "") {
       return;
     }
     
-    if (onDelete) {
-      onDelete();
+    try {
+      setIsDeleting(true);
+      
+      // Call the edge function to delete the vendor and create notification
+      const functionUrl = `${SUPABASE_CONFIG.URL}/functions/v1/delete_vendor_with_notification`;
+      
+      console.log("Calling edge function for vendor deletion:", functionUrl);
+      
+      const response = await fetch(functionUrl, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${SUPABASE_CONFIG.PUBLIC_KEY}`,
+        },
+        body: JSON.stringify({ 
+          vendorId: selectedVendor.id,
+          deleteReason: deleteReason
+        }),
+      });
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error("Edge function error response:", errorText);
+        throw new Error(`Error ${response.status}: ${errorText || "Unknown error"}`);
+      }
+      
+      const result = await response.json();
+      console.log("Edge function result:", result);
+      
+      if (!result.success) {
+        throw new Error(result.error || "Failed to delete vendor");
+      }
+
+      toast.success("Fornecedor excluído com sucesso");
+      
+      if (onDelete) {
+        onDelete();
+      }
+    } catch (error) {
+      console.error("Error deleting vendor:", error);
+      toast.error("Erro ao excluir fornecedor");
+    } finally {
+      setIsDeleting(false);
+      setDeleteDialogOpen(false);
     }
-    
-    setDeleteDialogOpen(false);
   };
 
   return (
@@ -235,10 +277,10 @@ const VendorDetails: React.FC<VendorDetailsProps> = ({
           variant="destructive"
           className="w-full mt-4"
           onClick={() => setDeleteDialogOpen(true)}
-          disabled={deleting}
+          disabled={isDeleting || deleting}
         >
           <Trash2 className="mr-2" size={18} />
-          {deleting ? "Excluindo..." : "Excluir Fornecedor"}
+          {isDeleting || deleting ? "Excluindo..." : "Excluir Fornecedor"}
         </Button>
       )}
 
@@ -260,13 +302,13 @@ const VendorDetails: React.FC<VendorDetailsProps> = ({
             rows={3}
           />
           <AlertDialogFooter className="mt-4">
-            <AlertDialogCancel disabled={deleting}>Cancelar</AlertDialogCancel>
+            <AlertDialogCancel disabled={isDeleting}>Cancelar</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDelete}
-              disabled={deleting || !deleteReason.trim()}
+              disabled={isDeleting || !deleteReason.trim()}
               className="bg-red-600 hover:bg-red-700"
             >
-              {deleting ? "Excluindo..." : "Excluir"}
+              {isDeleting ? "Excluindo..." : "Excluir"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

@@ -1,10 +1,8 @@
 
 project_id = "kfqorqjwbkxzrqhuvnyh"
-
-[functions]
-[functions.process-payment]
+[functions.vendor-approval]
 verify_jwt = false
-[functions.get-mercado-pago-public-key]
+[functions.delete_space_with_photos]
 verify_jwt = false
-[functions.geocode-address]
+[functions.delete_vendor_with_notification]
 verify_jwt = false
