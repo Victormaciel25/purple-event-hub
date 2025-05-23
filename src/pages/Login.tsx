@@ -191,10 +191,7 @@ const Login = () => {
           </div>
           <h1 className="text-3xl font-bold text-foreground">iParty</h1>
           <p className="text-muted-foreground mt-2">
-            Encontre o espaço perfeito para seu evento,
-          </p>
-            <p className="text-muted-foreground mt-2">
-            conecte-se aos melhores fornecedores!
+            Encontre o espaço perfeito para seu evento, conecte-se aos melhores fornecedores!
           </p>
         </div>
 
