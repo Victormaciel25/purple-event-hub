@@ -93,7 +93,7 @@ const UserVendors = () => {
         className="w-full"
       >
         {/* duas colunas para dividir em duas linhas */}
-        <TabsList className="w-full grid grid-cols-2 gap-2 mb-4">
+        <TabsList className="w-full grid grid-cols-2 gap-2 mb-6">
           <TabsTrigger value="all" className="rounded-md">
             Todos ({vendors.length})
           </TabsTrigger>
