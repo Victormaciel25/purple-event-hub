@@ -14,6 +14,19 @@ import {
   CarouselNext,
   CarouselPrevious,
 } from "@/components/ui/carousel";
+import { useUserRoles } from "@/hooks/useUserRoles";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Textarea } from "@/components/ui/textarea";
+import { Trash2 } from "lucide-react";
 
 interface Vendor {
   id: string;
@@ -43,6 +56,12 @@ const VendorDetails = () => {
   const navigate = useNavigate();
   const [vendor, setVendor] = useState<Vendor | null>(null);
   const [loading, setLoading] = useState(true);
+  const { isAdmin, isSuperAdmin } = useUserRoles();
+  
+  // State for vendor deletion
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deleteReason, setDeleteReason] = useState("");
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     const fetchVendorDetails = async () => {
@@ -97,6 +116,33 @@ const VendorDetails = () => {
 
     fetchVendorDetails();
   }, [id]);
+
+  // Handler for vendor deletion
+  const handleDeleteVendor = async () => {
+    if (!id || !deleteReason.trim()) {
+      return;
+    }
+
+    try {
+      setDeleting(true);
+
+      const { error } = await supabase
+        .from("vendors")
+        .delete()
+        .eq("id", id);
+
+      if (error) throw error;
+
+      toast.success("Fornecedor excluído com sucesso");
+      navigate("/vendors");
+    } catch (error) {
+      console.error("Error deleting vendor:", error);
+      toast.error("Erro ao excluir fornecedor");
+    } finally {
+      setDeleting(false);
+      setDeleteDialogOpen(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -221,6 +267,49 @@ const VendorDetails = () => {
       <Button className="w-full mb-4 bg-iparty text-white hover:bg-iparty/90">
         Entrar em Contato
       </Button>
+
+      {/* Admin Delete Button */}
+      {(isAdmin || isSuperAdmin) && (
+        <Button
+          variant="destructive"
+          className="w-full mb-4 flex items-center justify-center"
+          onClick={() => setDeleteDialogOpen(true)}
+          disabled={deleting}
+        >
+          <Trash2 className="mr-2" size={18} />
+          {deleting ? "Excluindo..." : "Excluir Fornecedor"}
+        </Button>
+      )}
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir Fornecedor</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja excluir este fornecedor? Esta ação não pode ser
+              desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <Textarea
+            placeholder="Motivo da exclusão (obrigatório)"
+            value={deleteReason}
+            onChange={(e) => setDeleteReason(e.target.value)}
+            className="mt-4"
+            rows={3}
+          />
+          <AlertDialogFooter className="mt-4">
+            <AlertDialogCancel disabled={deleting}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteVendor}
+              disabled={deleting || !deleteReason.trim()}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              {deleting ? "Excluindo..." : "Excluir"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <div className="h-20"></div> {/* Space for bottom nav */}
     </div>
