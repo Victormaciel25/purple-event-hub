@@ -104,75 +104,77 @@ const UserVendors = () => {
         </Button>
       </div>
 
-      <Tabs
-        defaultValue="all"
-        value={activeTab}
-        onValueChange={handleTabChange}
-        className="w-full mb-6"
-      >
-        <TabsList className="grid grid-cols-4 mb-6">
-          <TabsTrigger value="all">
-            Todos ({vendors.length})
-          </TabsTrigger>
-          <TabsTrigger value="pending">
-            Pendentes ({pendingCount})
-          </TabsTrigger>
-          <TabsTrigger value="approved">
-            Aprovados ({approvedCount})
-          </TabsTrigger>
-          <TabsTrigger value="rejected">
-            Rejeitados ({rejectedCount})
-          </TabsTrigger>
-        </TabsList>
+      <div className="mb-6">
+        <Tabs
+          defaultValue="all"
+          value={activeTab}
+          onValueChange={handleTabChange}
+          className="w-full"
+        >
+          <TabsList className="w-full grid grid-cols-4 gap-2">
+            <TabsTrigger value="all" className="rounded-md">
+              Todos ({vendors.length})
+            </TabsTrigger>
+            <TabsTrigger value="pending" className="rounded-md">
+              Pendentes ({pendingCount})
+            </TabsTrigger>
+            <TabsTrigger value="approved" className="rounded-md">
+              Aprovados ({approvedCount})
+            </TabsTrigger>
+            <TabsTrigger value="rejected" className="rounded-md">
+              Rejeitados ({rejectedCount})
+            </TabsTrigger>
+          </TabsList>
 
-        <TabsContent value={activeTab}>
-          {loading ? (
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-center">Carregando fornecedores...</CardTitle>
-              </CardHeader>
-            </Card>
-          ) : filteredVendors.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {filteredVendors.map((vendor) => (
-                <VendorCard
-                  key={vendor.id}
-                  id={vendor.id}
-                  name={vendor.name}
-                  category={vendor.category}
-                  rating={0} // Rating is not currently implemented
-                  contactNumber={vendor.contact_number}
-                  image={vendor.images && vendor.images.length > 0 ? vendor.images[0] : "/placeholder.svg"}
-                />
-              ))}
-            </div>
-          ) : (
-            <Card>
-              <CardContent className="pt-6">
-                <p className="text-center text-muted-foreground">
-                  {activeTab === "all"
-                    ? "Você ainda não cadastrou nenhum fornecedor."
-                    : activeTab === "pending"
-                    ? "Você não tem fornecedores pendentes de aprovação."
-                    : activeTab === "approved"
-                    ? "Você não tem fornecedores aprovados."
-                    : "Você não tem fornecedores rejeitados."}
-                </p>
-                {activeTab === "all" && (
-                  <div className="flex justify-center mt-4">
-                    <Button
-                      onClick={() => navigate("/register-vendor")}
-                      className="bg-iparty hover:bg-iparty/90"
-                    >
-                      <Plus size={16} className="mr-2" /> Cadastrar Fornecedor
-                    </Button>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          )}
-        </TabsContent>
-      </Tabs>
+          <TabsContent value={activeTab} className="mt-4">
+            {loading ? (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-center">Carregando fornecedores...</CardTitle>
+                </CardHeader>
+              </Card>
+            ) : filteredVendors.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {filteredVendors.map((vendor) => (
+                  <VendorCard
+                    key={vendor.id}
+                    id={vendor.id}
+                    name={vendor.name}
+                    category={vendor.category}
+                    rating={0} // Rating is not currently implemented
+                    contactNumber={vendor.contact_number}
+                    image={vendor.images && vendor.images.length > 0 ? vendor.images[0] : "/placeholder.svg"}
+                  />
+                ))}
+              </div>
+            ) : (
+              <Card>
+                <CardContent className="pt-6">
+                  <p className="text-center text-muted-foreground">
+                    {activeTab === "all"
+                      ? "Você ainda não cadastrou nenhum fornecedor."
+                      : activeTab === "pending"
+                      ? "Você não tem fornecedores pendentes de aprovação."
+                      : activeTab === "approved"
+                      ? "Você não tem fornecedores aprovados."
+                      : "Você não tem fornecedores rejeitados."}
+                  </p>
+                  {activeTab === "all" && (
+                    <div className="flex justify-center mt-4">
+                      <Button
+                        onClick={() => navigate("/register-vendor")}
+                        className="bg-iparty hover:bg-iparty/90"
+                      >
+                        <Plus size={16} className="mr-2" /> Cadastrar Fornecedor
+                      </Button>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            )}
+          </TabsContent>
+        </Tabs>
+      </div>
     </div>
   );
 };
