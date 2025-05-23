@@ -93,22 +93,25 @@ const UserVendors = () => {
         className="w-full"
       >
         {/* duas colunas por linha */}
-        <TabsList className="w-full grid grid-cols-2 gap-2 mb-8">
-          {[
-            { key: 'all', label: `Todos (${vendors.length})` },
-            { key: 'pending', label: `Pendentes (${pendingCount})` },
-            { key: 'approved', label: `Aprovados (${approvedCount})` },
-            { key: 'rejected', label: `Rejeitados (${rejectedCount})` },
-          ].map(tab => (
-            <TabsTrigger
-              key={tab.key}
-              value={tab.key}
-              className={`rounded-md w-full h-12 flex items-center justify-center
-                ${activeTab === tab.key ? 'bg-white' : 'bg-gray-100'}`}
-            >
-              {tab.label}
-            </TabsTrigger>
-          ))}
+        <TabsList className="w-full grid grid-cols-2 gap-2 mb-10">
+          <TabsTrigger value="all" className="rounded-md w-full h-full">
+            Todos ({vendors.length})
+          </TabsTrigger>
+          <TabsTrigger value="pending" className="rounded-md w-full h-full">
+            Pendentes ({pendingCount})
+          </TabsTrigger>
+          <TabsTrigger
+            value="approved"
+            className="rounded-md w-full h-full bg-gray-100"
+          >
+            Aprovados ({approvedCount})
+          </TabsTrigger>
+          <TabsTrigger
+            value="rejected"
+            className="rounded-md w-full h-full bg-gray-100"
+          >
+            Rejeitados ({rejectedCount})
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value={activeTab} className="mt-4">
@@ -128,7 +131,9 @@ const UserVendors = () => {
                   category={vendor.category}
                   rating={0}
                   contactNumber={vendor.contact_number}
-                  image={vendor.images?.[0] ?? "/placeholder.svg"}
+                  image={
+                    vendor.images?.[0] ?? "/placeholder.svg"
+                  }
                 />
               ))}
             </div>
