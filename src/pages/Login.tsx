@@ -178,7 +178,7 @@ const Login = () => {
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-background p-4">
-      <div className="w-full max-w-md space-y-8 animate-fade-in">
+      <div className="w-full max-w-md space-y-4 animate-fade-in">
         <div className="text-center">
           <div className="flex justify-center mb-4">
             <div className="h-32 w-32">
