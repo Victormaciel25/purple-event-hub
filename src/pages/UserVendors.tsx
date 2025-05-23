@@ -92,18 +92,24 @@ const UserVendors = () => {
         onValueChange={setActiveTab}
         className="w-full"
       >
-        {/* grid-cols-2 para 2 colunas por linha */}
+        {/* duas colunas por linha */}
         <TabsList className="w-full grid grid-cols-2 gap-2 mb-10">
-          <TabsTrigger value="all" className="rounded-md">
+          <TabsTrigger value="all" className="rounded-md w-full h-full">
             Todos ({vendors.length})
           </TabsTrigger>
-          <TabsTrigger value="pending" className="rounded-md">
+          <TabsTrigger value="pending" className="rounded-md w-full h-full">
             Pendentes ({pendingCount})
           </TabsTrigger>
-          <TabsTrigger value="approved" className="rounded-md bg-gray-100">
+          <TabsTrigger
+            value="approved"
+            className="rounded-md w-full h-full bg-gray-100"
+          >
             Aprovados ({approvedCount})
           </TabsTrigger>
-          <TabsTrigger value="rejected" className="rounded-md bg-gray-100">
+          <TabsTrigger
+            value="rejected"
+            className="rounded-md w-full h-full bg-gray-100"
+          >
             Rejeitados ({rejectedCount})
           </TabsTrigger>
         </TabsList>
