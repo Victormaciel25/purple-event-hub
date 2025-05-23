@@ -193,7 +193,6 @@ const Login = () => {
           <p className="text-muted-foreground mt-2">
             Encontre o espaço perfeito para seu evento,
           </p>
-          <br>
             <p className="text-muted-foreground mt-2">
             conecte-se aos melhores fornecedores!
           </p>
