@@ -196,7 +196,7 @@ const Login = () => {
         </div>
 
         <div className="bg-white rounded-2xl p-6 shadow-lg">
-          <div className="flex justify-center mb-6">
+          <div className="flex justify-center mb-2">
             <div className="flex rounded-lg overflow-hidden border">
               <button
                 className={`px-6 py-2 text-sm ${
