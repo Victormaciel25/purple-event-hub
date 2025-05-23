@@ -14,30 +14,24 @@ const UserVendors = () => {
   const [activeTab, setActiveTab] = useState("all");
   const navigate = useNavigate();
 
-  // Fetch user's vendors
   const fetchVendors = async () => {
     try {
       setLoading(true);
-      const { data: sessionData } = await supabase.auth.getSession();
-      if (!sessionData.session) {
+      const { data: session } = await supabase.auth.getSession();
+      if (!session.session) {
         navigate("/login");
         return;
       }
       const { data, error } = await supabase
         .from("vendors")
         .select("*")
-        .eq("user_id", sessionData.session.user.id)
+        .eq("user_id", session.session.user.id)
         .order("created_at", { ascending: false });
-
-      if (error) {
-        console.error("Error fetching vendors:", error);
-        toast.error("Erro ao carregar fornecedores");
-        return;
-      }
+      if (error) throw error;
       setVendors(data || []);
     } catch (err) {
-      console.error("Error in fetchVendors:", err);
-      toast.error("Ocorreu um erro ao buscar seus fornecedores");
+      console.error(err);
+      toast.error("Erro ao carregar fornecedores");
     } finally {
       setLoading(false);
     }
@@ -52,23 +46,14 @@ const UserVendors = () => {
     toast.info("Atualizando lista de fornecedores...");
   };
 
-  const handleTabChange = (value: string) => {
-    setActiveTab(value);
-  };
-
-  // Filter vendors based on active tab
-  const filteredVendors = vendors.filter((vendor) => {
-    if (activeTab === "all") return true;
-    return vendor.status === activeTab;
-  });
-
-  // Count vendors by status
-  const pendingCount = vendors.filter((vendor) => vendor.status === "pending").length;
-  const approvedCount = vendors.filter((vendor) => vendor.status === "approved").length;
-  const rejectedCount = vendors.filter((vendor) => vendor.status === "rejected").length;
+  const pendingCount = vendors.filter(v => v.status === "pending").length;
+  const approvedCount = vendors.filter(v => v.status === "approved").length;
+  const rejectedCount = vendors.filter(v => v.status === "rejected").length;
+  const filteredVendors = vendors.filter(v => activeTab === "all" ? true : v.status === activeTab);
 
   return (
     <div className="container px-4 py-6 max-w-4xl mx-auto">
+      {/* header */}
       <div className="flex items-center mb-6">
         <Button
           variant="ghost"
@@ -81,6 +66,7 @@ const UserVendors = () => {
         <h1 className="text-2xl font-semibold">Meus Fornecedores</h1>
       </div>
 
+      {/* actions */}
       <div className="flex justify-between items-center mb-6">
         <Button
           onClick={() => navigate("/register-vendor")}
@@ -88,7 +74,6 @@ const UserVendors = () => {
         >
           <Plus size={16} className="mr-2" /> Cadastrar Fornecedor
         </Button>
-
         <Button
           variant="outline"
           onClick={handleRefresh}
@@ -100,15 +85,15 @@ const UserVendors = () => {
         </Button>
       </div>
 
+      {/* tabs */}
       <Tabs
         defaultValue="all"
         value={activeTab}
-        onValueChange={handleTabChange}
+        onValueChange={setActiveTab}
         className="w-full"
       >
-        {/* Aqui usamos 2 colunas para que "Todos" e "Pendentes" fiquem na primeira linha,
-            e "Aprovados" e "Rejeitados" na segunda */}
-        <TabsList className="w-full grid grid-cols-2 gap-2">
+        {/* duas colunas para dividir em duas linhas */}
+        <TabsList className="w-full grid grid-cols-2 gap-2 mb-4">
           <TabsTrigger value="all" className="rounded-md">
             Todos ({vendors.length})
           </TabsTrigger>
@@ -127,7 +112,7 @@ const UserVendors = () => {
           {loading ? (
             <Card>
               <CardHeader>
-                <CardTitle className="text-center">Carregando fornecedores...</CardTitle>
+                <CardTitle className="text-center">Carregando fornecedores…</CardTitle>
               </CardHeader>
             </Card>
           ) : filteredVendors.length > 0 ? (
@@ -141,9 +126,7 @@ const UserVendors = () => {
                   rating={0}
                   contactNumber={vendor.contact_number}
                   image={
-                    vendor.images && vendor.images.length > 0
-                      ? vendor.images[0]
-                      : "/placeholder.svg"
+                    vendor.images?.[0] ?? "/placeholder.svg"
                   }
                 />
               ))}
