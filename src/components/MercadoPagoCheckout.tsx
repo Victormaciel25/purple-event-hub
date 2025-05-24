@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { toast } from '@/components/ui/use-toast';
 import { Button } from "@/components/ui/button";
@@ -34,7 +35,7 @@ const MercadoPagoCheckout: React.FC<CheckoutProps> = ({
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [mercadoPagoPublicKey, setMercadoPagoPublicKey] = useState<string | null>(null);
   const [paymentStatus, setPaymentStatus] = useState<string | null>(null);
-  const [cardFormInstance, setCardFormInstance] = useState<any>(null);
+  const [initializationAttempted, setInitializationAttempted] = useState(false);
   
   // Get user ID and Mercado Pago public key on component mount
   useEffect(() => {
@@ -102,6 +103,7 @@ const MercadoPagoCheckout: React.FC<CheckoutProps> = ({
       }
     };
 
+    // Small delay to ensure DOM is ready
     setTimeout(loadSDK, 100);
     
     return () => {
@@ -171,6 +173,11 @@ const MercadoPagoCheckout: React.FC<CheckoutProps> = ({
   };
   
   const initializePaymentForm = () => {
+    if (initializationAttempted) {
+      console.log("Payment form already initialized");
+      return;
+    }
+    
     try {
       console.log("Initializing payment form...");
       
@@ -184,8 +191,9 @@ const MercadoPagoCheckout: React.FC<CheckoutProps> = ({
         return;
       }
       
-      // @ts-ignore
-      const mp = new window.MercadoPago(mercadoPagoPublicKey, { locale: 'pt-BR' });
+      setInitializationAttempted(true);
+      
+      const mp = new window.MercadoPago(mercadoPagoPublicKey);
       
       // Create styles for the form
       createFormStyles();
@@ -206,18 +214,45 @@ const MercadoPagoCheckout: React.FC<CheckoutProps> = ({
         iframe: true,
         form: {
           id: "form-checkout",
-          cardNumber: { id: "form-checkout__cardNumber" },
-          expirationDate: { id: "form-checkout__expirationDate" },
-          securityCode: { id: "form-checkout__securityCode" },
-          cardholderName: { id: "form-checkout__cardholderName" },
-          issuer: { id: "form-checkout__issuer" },
-          installments: { id: "form-checkout__installments" },
-          identificationType: { id: "form-checkout__identificationType" },
-          identificationNumber: { id: "form-checkout__identificationNumber" },
-          cardholderEmail: { id: "form-checkout__cardholderEmail" },
+          cardNumber: {
+            id: "form-checkout__cardNumber",
+            placeholder: "Número do cartão",
+          },
+          expirationDate: {
+            id: "form-checkout__expirationDate",
+            placeholder: "MM/YY",
+          },
+          securityCode: {
+            id: "form-checkout__securityCode",
+            placeholder: "Código de segurança",
+          },
+          cardholderName: {
+            id: "form-checkout__cardholderName",
+            placeholder: "Titular do cartão",
+          },
+          issuer: {
+            id: "form-checkout__issuer",
+            placeholder: "Banco emissor",
+          },
+          installments: {
+            id: "form-checkout__installments",
+            placeholder: "Parcelas",
+          },        
+          identificationType: {
+            id: "form-checkout__identificationType",
+            placeholder: "Tipo de documento",
+          },
+          identificationNumber: {
+            id: "form-checkout__identificationNumber",
+            placeholder: "Número do documento",
+          },
+          cardholderEmail: {
+            id: "form-checkout__cardholderEmail",
+            placeholder: "E-mail",
+          },
         },
         callbacks: {
-          onFormMounted: (error) => {
+          onFormMounted: error => {
             if (error) {
               console.warn("Form Mounted handling error: ", error);
               setErrorMessage("Erro ao carregar o formulário de pagamento");
@@ -225,10 +260,9 @@ const MercadoPagoCheckout: React.FC<CheckoutProps> = ({
             }
             console.log("Form mounted successfully");
           },
-          onSubmit: async (event) => {
+          onSubmit: async event => {
             event.preventDefault();
-            console.log("Form submitted, using stored cardForm instance");
-            await handleFormSubmit();
+            await handleFormSubmit(cardForm);
           },
           onFetching: (resource) => {
             console.log("Fetching resource: ", resource);
@@ -242,26 +276,16 @@ const MercadoPagoCheckout: React.FC<CheckoutProps> = ({
         },
       });
       
-      // Store the cardForm instance for later use
-      setCardFormInstance(cardForm);
-      
       console.log("Payment form initialized successfully");
     } catch (error) {
       console.error("Error initializing payment form:", error);
       setErrorMessage("Erro ao inicializar formulário de pagamento. Tente recarregar a página.");
+      setInitializationAttempted(false);
     }
   };
 
-  const handleFormSubmit = async () => {
+  const handleFormSubmit = async (cardForm: any) => {
     if (processingPayment) return;
-    
-    console.log("handleFormSubmit called, cardForm instance:", cardFormInstance);
-    
-    if (!cardFormInstance || typeof cardFormInstance.getCardFormData !== 'function') {
-      console.error("Invalid cardForm instance:", cardFormInstance);
-      setErrorMessage("Erro interno: instância do formulário inválida");
-      return;
-    }
     
     setErrorMessage(null);
     setPaymentStatus(null);
@@ -271,42 +295,26 @@ const MercadoPagoCheckout: React.FC<CheckoutProps> = ({
     if (progressBar) progressBar.removeAttribute("value");
 
     try {
-      const formData = cardFormInstance.getCardFormData();
-      console.log("Processing payment with form data:", formData);
+      const formData = cardForm.getCardFormData();
+      console.log("Processing payment with form data");
       
       if (!userId) {
         throw new Error("Usuário não identificado. Faça login novamente.");
       }
 
-      // Extract all required data from formData
-      const {
-        token,
-        paymentMethodId,
-        issuerId,
-        amount,
-        installments,
-        cardholderEmail,
-        identificationType,
-        identificationNumber,
-        cardholderDeviceFingerprint
-      } = formData;
-
-      console.log("Device fingerprint extracted:", cardholderDeviceFingerprint);
-
       // Process payment through Supabase Edge Function
       const { data, error } = await supabase.functions.invoke('process-payment', {
         body: JSON.stringify({
-          token: token,
-          issuer_id: issuerId,
-          payment_method_id: paymentMethodId,
-          transaction_amount: parseFloat(amount),
-          installments: parseInt(installments),
-          email: cardholderEmail,
+          token: formData.token,
+          issuer_id: formData.issuerId,
+          payment_method_id: formData.paymentMethodId,
+          transaction_amount: formData.amount,
+          installments: formData.installments,
+          email: formData.cardholderEmail,
           identification: {
-            type: identificationType,
-            number: identificationNumber
+            type: formData.identificationType,
+            number: formData.identificationNumber
           },
-          device_id: cardholderDeviceFingerprint,
           space_id: spaceId,
           plan_id: plan.id,
           user_id: userId,
