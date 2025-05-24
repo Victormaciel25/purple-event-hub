@@ -31,6 +31,7 @@ async function processPayment(req: Request) {
       installments, 
       email, 
       identification,
+      device_id,
       space_id,
       plan_id,
       user_id,
@@ -125,7 +126,8 @@ async function processPayment(req: Request) {
         issuer_id,
         payer: {
           email,
-          identification
+          identification,
+          ...(device_id && { device_id }) // Include device_id if available
         },
         capture: true,
         binary_mode: true

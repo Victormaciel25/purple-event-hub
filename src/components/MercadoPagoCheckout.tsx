@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { toast } from '@/components/ui/use-toast';
 import { Button } from "@/components/ui/button";
@@ -193,7 +192,7 @@ const MercadoPagoCheckout: React.FC<CheckoutProps> = ({
       
       setInitializationAttempted(true);
       
-      const mp = new window.MercadoPago(mercadoPagoPublicKey);
+      const mp = new window.MercadoPago(mercadoPagoPublicKey, { locale: 'pt-BR' });
       
       // Create styles for the form
       createFormStyles();
@@ -260,7 +259,7 @@ const MercadoPagoCheckout: React.FC<CheckoutProps> = ({
             }
             console.log("Form mounted successfully");
           },
-          onSubmit: async event => {
+          onSubmit: async (event, cardForm) => {
             event.preventDefault();
             await handleFormSubmit(cardForm);
           },
@@ -302,19 +301,35 @@ const MercadoPagoCheckout: React.FC<CheckoutProps> = ({
         throw new Error("Usuário não identificado. Faça login novamente.");
       }
 
+      // Extract cardholderDeviceFingerprint from formData
+      const {
+        token,
+        paymentMethodId,
+        issuerId,
+        amount,
+        installments,
+        cardholderEmail,
+        identificationType,
+        identificationNumber,
+        cardholderDeviceFingerprint
+      } = formData;
+
+      console.log("Device fingerprint extracted:", cardholderDeviceFingerprint);
+
       // Process payment through Supabase Edge Function
       const { data, error } = await supabase.functions.invoke('process-payment', {
         body: JSON.stringify({
-          token: formData.token,
-          issuer_id: formData.issuerId,
-          payment_method_id: formData.paymentMethodId,
-          transaction_amount: formData.amount,
-          installments: formData.installments,
-          email: formData.cardholderEmail,
+          token: token,
+          issuer_id: issuerId,
+          payment_method_id: paymentMethodId,
+          transaction_amount: parseFloat(amount),
+          installments: parseInt(installments),
+          email: cardholderEmail,
           identification: {
-            type: formData.identificationType,
-            number: formData.identificationNumber
+            type: identificationType,
+            number: identificationNumber
           },
+          device_id: cardholderDeviceFingerprint, // Include device fingerprint
           space_id: spaceId,
           plan_id: plan.id,
           user_id: userId,
