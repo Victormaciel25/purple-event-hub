@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { toast } from '@/components/ui/use-toast';
 import { Button } from "@/components/ui/button";
@@ -259,9 +260,10 @@ const MercadoPagoCheckout: React.FC<CheckoutProps> = ({
             }
             console.log("Form mounted successfully");
           },
-          onSubmit: async (event, cardForm) => {
+          onSubmit: async (event, cardFormInstance) => {
             event.preventDefault();
-            await handleFormSubmit(cardForm);
+            console.log("Form submitted, cardForm instance:", cardFormInstance);
+            await handleFormSubmit(cardFormInstance);
           },
           onFetching: (resource) => {
             console.log("Fetching resource: ", resource);
@@ -283,8 +285,16 @@ const MercadoPagoCheckout: React.FC<CheckoutProps> = ({
     }
   };
 
-  const handleFormSubmit = async (cardForm: any) => {
+  const handleFormSubmit = async (cardFormInstance: any) => {
     if (processingPayment) return;
+    
+    console.log("handleFormSubmit called with:", cardFormInstance);
+    
+    if (!cardFormInstance || typeof cardFormInstance.getCardFormData !== 'function') {
+      console.error("Invalid cardForm instance:", cardFormInstance);
+      setErrorMessage("Erro interno: instância do formulário inválida");
+      return;
+    }
     
     setErrorMessage(null);
     setPaymentStatus(null);
@@ -294,7 +304,7 @@ const MercadoPagoCheckout: React.FC<CheckoutProps> = ({
     if (progressBar) progressBar.removeAttribute("value");
 
     try {
-      const formData = cardForm.getCardFormData();
+      const formData = cardFormInstance.getCardFormData();
       console.log("Processing payment with form data");
       
       if (!userId) {
