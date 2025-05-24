@@ -1,9 +1,18 @@
+// src/components/MercadoPagoCheckout.tsx
 import React, { useEffect, useState, useRef } from 'react';
 import { toast } from '@/components/ui/use-toast';
 import { Button } from "@/components/ui/button";
 import { Check, Loader2, AlertCircle } from "lucide-react";
 import { supabase } from '@/integrations/supabase/client';
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
+
+export {}; // assegura que este arquivo seja tratado como módulo
+
+declare global {
+  interface Window {
+    MercadoPago: any;
+  }
+}
 
 type CheckoutProps = {
   spaceId: string;
@@ -19,12 +28,6 @@ type CheckoutProps = {
   onError?: () => void;
 };
 
-declare global {
-  interface Window {
-    MercadoPago: any;
-  }
-}
-
 const MercadoPagoCheckout: React.FC<CheckoutProps> = ({
   spaceId,
   spaceName,
@@ -32,9 +35,6 @@ const MercadoPagoCheckout: React.FC<CheckoutProps> = ({
   onSuccess,
   onError
 }) => {
-  // ref para guardar a instância do cardForm do SDK
-  const cardFormRef = useRef<any>(null);
-
   const [loading, setLoading] = useState(false);
   const [sdkReady, setSdkReady] = useState(false);
   const [showCheckoutForm, setShowCheckoutForm] = useState(false);
@@ -44,8 +44,10 @@ const MercadoPagoCheckout: React.FC<CheckoutProps> = ({
   const [mercadoPagoPublicKey, setMercadoPagoPublicKey] = useState<string | null>(null);
   const [paymentStatus, setPaymentStatus] = useState<string | null>(null);
   const [initializationAttempted, setInitializationAttempted] = useState(false);
+  const [mpInstance, setMpInstance] = useState<any>(null);
+  const formContainerRef = useRef<HTMLDivElement>(null);
 
-  // 1) Busca o usuário e a public key ao montar
+  // 1) Busca session & public key
   useEffect(() => {
     (async () => {
       try {
@@ -58,226 +60,216 @@ const MercadoPagoCheckout: React.FC<CheckoutProps> = ({
 
         const { data: mpKeyData, error } = await supabase.functions.invoke('get-mercado-pago-public-key');
         if (error || !mpKeyData?.public_key) {
-          throw error || new Error("Chave não encontrada");
+          throw new Error(error?.message ?? "Chave pública não fornecida");
         }
         setMercadoPagoPublicKey(mpKeyData.public_key);
       } catch (err: any) {
-        console.error("Init error:", err);
-        setErrorMessage("Erro ao inicializar checkout.");
+        console.error("Erro na inicialização:", err);
+        setErrorMessage("Não foi possível preparar o checkout. Tente novamente.");
       }
     })();
   }, []);
 
-  // 2) Carrega o SDK do Mercado Pago
+  // 2) Carrega SDK MercadoPago.JS v2
   useEffect(() => {
     let script: HTMLScriptElement | null = null;
-    const load = () => {
-      if (!window.MercadoPago && !document.querySelector('script[src="https://sdk.mercadopago.com/js/v2"]')) {
-        script = document.createElement('script');
-        script.src = "https://sdk.mercadopago.com/js/v2";
-        script.onload = () => setSdkReady(true);
-        script.onerror = () => setErrorMessage("Falha ao carregar SDK Mercado Pago");
-        document.body.appendChild(script);
-      } else if (window.MercadoPago) {
+    if (!window.MercadoPago && mercadoPagoPublicKey) {
+      script = document.createElement('script');
+      script.src = "https://sdk.mercadopago.com/js/v2";
+      script.onload = () => {
         setSdkReady(true);
-      }
-    };
-    setTimeout(load, 100);
+      };
+      script.onerror = () => {
+        setErrorMessage("Erro ao carregar o SDK do Mercado Pago.");
+      };
+      document.body.appendChild(script);
+    } else if (window.MercadoPago) {
+      setSdkReady(true);
+    }
     return () => {
-      if (script) script.remove();
-      cleanupMercadoPagoElements();
+      if (script && script.parentNode) script.parentNode.removeChild(script);
     };
-  }, []);
+  }, [mercadoPagoPublicKey]);
 
-  // 3) Quando o usuário clica em "Continuar para o pagamento"
-  const handleShowCheckout = async () => {
-    if (!sdkReady) {
-      toast({ title: "Aguarde", description: "SDK carregando...", variant: "default" });
+  const handleShowCheckout = () => {
+    if (!sdkReady || !mercadoPagoPublicKey) {
+      toast({ title: "Aguarde", description: "Estamos preparando o checkout...", variant: "default" });
       return;
     }
-    if (!mercadoPagoPublicKey || !userId) {
-      toast({ title: "Erro", description: "Configuração incompleta.", variant: "destructive" });
-      return;
-    }
-    setLoading(true);
-    setErrorMessage(null);
     setShowCheckoutForm(true);
-    // aguarda um tiquinho para garantir o container no DOM
-    setTimeout(() => {
-      initializePaymentForm();
-      setLoading(false);
-    }, 300);
+    setTimeout(initializePaymentForm, 300);
   };
 
-  // 4) Inicializa o cardForm e guarda na ref
   const initializePaymentForm = () => {
-    if (initializationAttempted) return;
-    if (!window.MercadoPago || !mercadoPagoPublicKey) {
-      setErrorMessage("SDK ou chave indisponível");
-      return;
-    }
+    if (initializationAttempted || !window.MercadoPago || !mercadoPagoPublicKey) return;
     setInitializationAttempted(true);
 
-    // inject styles
-    const existing = document.getElementById('mp-form-styles');
-    if (existing) existing.remove();
+    const mp = new window.MercadoPago(mercadoPagoPublicKey, { locale: 'pt-BR' });
+    setMpInstance(mp);
+
+    // injeta estilos
     const style = document.createElement('style');
-    style.id = 'mp-form-styles';
+    style.id = "mp-form-styles";
     style.textContent = `
-      #form-checkout { display:flex; flex-direction:column; gap:16px; max-width:600px; margin:0 auto; }
-      .container, .form-control { height:40px; border:1px solid #D1D5DB; border-radius:.375rem; padding:8px 12px; font-size:16px; width:100%; }
-      #form-checkout__submit { background:#9333EA;color:#fff;padding:10px 16px;border:none;border-radius:.375rem; cursor:pointer; }
+      #form-checkout { display:flex; flex-direction:column; gap:12px; max-width:600px; margin:auto; }
+      .form-control, .container { width:100%; padding:8px; border:1px solid #d1d5db; border-radius:.375rem; font-size:16px; }
+      .form-group label { font-size:14px; margin-bottom:4px; display:block; }
+      #form-checkout__submit { background:#9333ea; color:white; padding:10px; border:none; border-radius:.375rem; cursor:pointer; }
       #form-checkout__submit:disabled { opacity:.5; cursor:not-allowed; }
-      .progress-bar { width:100%; height:8px; margin-top:16px; }
+      .progress-bar { width:100%; height:6px; margin-top:8px; }
     `;
     document.head.appendChild(style);
 
-    // monta o HTML do form
-    const container = document.getElementById('payment-form-container');
-    if (!container) {
-      setErrorMessage("Container não encontrado");
-      return;
-    }
+    // monta HTML do formulário
+    const container = formContainerRef.current!;
     container.innerHTML = `
       <form id="form-checkout">
         <div class="form-group">
-          <label for="form-checkout__cardNumber">Número do cartão</label>
+          <label for="payerFirstName">Nome do comprador</label>
+          <input type="text" id="payerFirstName" name="payerFirstName" class="form-control" required />
+        </div>
+        <div class="form-group">
+          <label for="payerLastName">Sobrenome do comprador</label>
+          <input type="text" id="payerLastName" name="payerLastName" class="form-control" required />
+        </div>
+        <div class="form-group">
+          <label for="form-checkout__cardNumber">Número do Cartão</label>
           <div id="form-checkout__cardNumber" class="container"></div>
         </div>
         <div class="form-group">
-          <label for="form-checkout__cardholderName">Titular</label>
-          <input id="form-checkout__cardholderName" class="form-control" />
+          <label for="form-checkout__expirationDate">Data de Validade</label>
+          <div id="form-checkout__expirationDate" class="container"></div>
+        </div>
+        <div class="form-group">
+          <label for="form-checkout__securityCode">CVV</label>
+          <div id="form-checkout__securityCode" class="container"></div>
         </div>
         <div class="form-group">
           <label for="form-checkout__cardholderEmail">E-mail</label>
-          <input id="form-checkout__cardholderEmail" type="email" class="form-control" />
-        </div>
-        <div style="display:flex; gap:16px;">
-          <div class="form-group" style="flex:1;">
-            <label for="form-checkout__expirationDate">Validade</label>
-            <div id="form-checkout__expirationDate" class="container"></div>
-          </div>
-          <div class="form-group" style="flex:1;">
-            <label for="form-checkout__securityCode">CVV</label>
-            <div id="form-checkout__securityCode" class="container"></div>
-          </div>
+          <input type="email" id="form-checkout__cardholderEmail" class="form-control" required />
         </div>
         <div class="form-group">
-          <label for="form-checkout__issuer">Emissor</label>
-          <select id="form-checkout__issuer" class="form-control"></select>
+          <label for="form-checkout__identificationType">Tipo de Documento</label>
+          <select id="form-checkout__identificationType" class="form-control" required></select>
         </div>
         <div class="form-group">
-          <label for="form-checkout__installments">Parcelas</label>
-          <select id="form-checkout__installments" class="form-control"></select>
-        </div>
-        <div style="display:flex; gap:16px;">
-          <div class="form-group" style="flex:1;">
-            <label for="form-checkout__identificationType">Doc. Tipo</label>
-            <select id="form-checkout__identificationType" class="form-control"></select>
-          </div>
-          <div class="form-group" style="flex:1;">
-            <label for="form-checkout__identificationNumber">Doc. Nº</label>
-            <input id="form-checkout__identificationNumber" class="form-control" />
-          </div>
+          <label for="form-checkout__identificationNumber">Número do Documento</label>
+          <input type="text" id="form-checkout__identificationNumber" class="form-control" required />
         </div>
         <button type="submit" id="form-checkout__submit">Pagar</button>
-        <progress id="payment-progress" class="progress-bar" hidden></progress>
+        <progress id="payment-progress" class="progress-bar" value="0"></progress>
       </form>
     `;
 
-    // inicializa o MP CardForm
-    const mp = new window.MercadoPago(mercadoPagoPublicKey);
-    const cardForm = mp.cardForm({
+    // inicializa Select de tipos de documento
+    mp.getIdentificationTypes().then((types: any[]) => {
+      const sel = document.getElementById('form-checkout__identificationType') as HTMLSelectElement;
+      sel.innerHTML = `<option value="">Selecione</option>` +
+        types.map(t => `<option value="${t.id}">${t.name}</option>`).join('');
+    });
+
+    // inicializa cardForm
+    mp.cardForm({
       amount: plan.price.toString(),
-      iframe: true,
       form: {
         id: "form-checkout",
-        cardNumber: { id: "form-checkout__cardNumber", placeholder: "1234 5678 9012 3456" },
-        expirationDate: { id: "form-checkout__expirationDate", placeholder: "MM/AA" },
-        securityCode: { id: "form-checkout__securityCode", placeholder: "CVV" },
-        cardholderName: { id: "form-checkout__cardholderName", placeholder: "Nome impresso" },
-        issuer: { id: "form-checkout__issuer" },
-        installments: { id: "form-checkout__installments" },
+        cardNumber: { id: "form-checkout__cardNumber" },
+        expirationDate: { id: "form-checkout__expirationDate" },
+        securityCode: { id: "form-checkout__securityCode" },
+        cardholderEmail: { id: "form-checkout__cardholderEmail" },
         identificationType: { id: "form-checkout__identificationType" },
         identificationNumber: { id: "form-checkout__identificationNumber" },
-        cardholderEmail: { id: "form-checkout__cardholderEmail", placeholder: "email@exemplo.com" },
       },
       callbacks: {
         onFormMounted: (error: any) => {
-          if (error) console.warn("Form mounted error:", error);
+          if (error) {
+            console.error("onFormMounted error", error);
+            setErrorMessage("Falha ao montar o formulário de pagamento.");
+          }
         },
-        onFetching: (_resource: any) => {
-          const pb = document.getElementById("payment-progress");
-          if (pb) pb.removeAttribute("hidden");
-        },
-        onSubmit: async (event: Event) => {
+        onSubmit: async (event: any) => {
           event.preventDefault();
-          await handleFormSubmit(cardForm);
+          await handleFormSubmit(event);
+        },
+        onFetching: () => {
+          const pr = document.getElementById("payment-progress") as HTMLProgressElement;
+          pr.removeAttribute("value");
+          return () => pr.setAttribute("value", "0");
         }
       }
     });
-    // guarda a instância
-    cardFormRef.current = cardForm;
   };
 
-  // 5) Processa o pagamento usando a instância guardada
-  const handleFormSubmit = async (cardForm: any) => {
+  const handleFormSubmit = async (e: Event) => {
     if (processingPayment) return;
     setProcessingPayment(true);
     setErrorMessage(null);
 
     try {
-      // pega os dados via SDK
-      const formData = cardForm.getCardFormData();
-      // chama sua edge function
-      const { data, error } = await supabase.functions.invoke('process-payment', {
-        body: JSON.stringify({
-          token: formData.token,
-          issuer_id: formData.issuerId,
-          payment_method_id: formData.paymentMethodId,
-          transaction_amount: formData.amount,
-          installments: formData.installments,
-          email: formData.cardholderEmail,
+      const form = document.getElementById("form-checkout") as HTMLFormElement;
+      const formData = new FormData(form);
+      // tokeniza
+      const cardForm = mpInstance.cardForm({}) as any;
+      const cardData = cardForm.getCardFormData();
+      // device fingerprint
+      const deviceFingerprint = mpInstance.getDeviceFingerprint();
+
+      // monta body
+      const body = {
+        token: cardData.token,
+        payment_method_id: cardData.paymentMethodId,
+        transaction_amount: cardData.amount,
+        installments: cardData.installments,
+        issuer_id: cardData.issuerId,
+        payer: {
+          first_name: formData.get("payerFirstName"),
+          last_name: formData.get("payerLastName"),
+          email: formData.get("form-checkout__cardholderEmail"),
           identification: {
-            type: formData.identificationType,
-            number: formData.identificationNumber
-          },
-          space_id: spaceId,
-          plan_id: plan.id,
-          user_id: userId,
-          description: `Promoção: ${spaceName} - ${plan.name}`
-        })
+            type: formData.get("form-checkout__identificationType"),
+            number: formData.get("form-checkout__identificationNumber")
+          }
+        },
+        device: {
+          fingerprint: deviceFingerprint
+        },
+        space_id: spaceId,
+        plan_id: plan.id,
+        user_id: userId
+      };
+
+      const { data, error } = await supabase.functions.invoke('process-payment', {
+        body: JSON.stringify(body)
       });
-      if (error || !data?.success) {
-        throw error || new Error(data?.error || 'Erro no pagamento');
+
+      if (error || !data.success) {
+        throw new Error(error?.message ?? data.error ?? "Falha no pagamento");
       }
-      setPaymentStatus(data.status);
-      if (data.status === 'approved') {
-        toast({ title: "Pagamento aprovado!", description: "", variant: "default" });
-        cleanupMercadoPagoElements();
+
+      if (data.status === "approved") {
+        toast({ title: "Pagamento aprovado!", description: "Seu espaço foi promovido.", variant: "default" });
+        cleanup();
         onSuccess?.();
       } else {
-        toast({ title: `Status: ${data.status}`, description: "", variant: "default" });
+        setPaymentStatus(data.status);
+        toast({ title: "Status", description: `Pagamento: ${data.status}`, variant: "default" });
       }
     } catch (err: any) {
-      console.error("Payment error:", err);
-      setErrorMessage(err.message || "Erro ao processar pagamento");
+      console.error(err);
+      setErrorMessage(err.message);
       onError?.();
     } finally {
       setProcessingPayment(false);
-      const pb = document.getElementById("payment-progress");
-      if (pb) pb.setAttribute("hidden", "true");
     }
   };
 
-  // 6) Limpa iframes, hidden inputs e estilos
-  const cleanupMercadoPagoElements = () => {
-    document.querySelectorAll('[id^="MPHidden"]').forEach(n => n.remove());
-    document.querySelectorAll('iframe[src*="mercadopago"]').forEach(n => n.remove());
-    document.getElementById('mp-form-styles')?.remove();
-    const container = document.getElementById('payment-form-container');
-    if (container) container.innerHTML = '';
+  const cleanup = () => {
+    const style = document.getElementById("mp-form-styles");
+    if (style) style.remove();
+    formContainerRef.current!.innerHTML = "";
   };
+
+  const canShow = sdkReady && mercadoPagoPublicKey && !errorMessage;
 
   return (
     <div className="flex flex-col w-full">
@@ -288,33 +280,25 @@ const MercadoPagoCheckout: React.FC<CheckoutProps> = ({
           <AlertDescription>{errorMessage}</AlertDescription>
         </Alert>
       )}
-      {paymentStatus && paymentStatus !== 'approved' && (
+      {paymentStatus && paymentStatus !== "approved" && (
         <Alert className="mb-4">
           <AlertTitle>Status do Pagamento</AlertTitle>
-          <AlertDescription>Seu pagamento está: {paymentStatus}</AlertDescription>
+          <AlertDescription>
+            Seu pagamento está com status: {paymentStatus}.
+          </AlertDescription>
         </Alert>
       )}
       {!showCheckoutForm ? (
-        <Button
-          size="lg"
-          onClick={handleShowCheckout}
-          disabled={loading || !sdkReady || !mercadoPagoPublicKey || !userId}
-          className="bg-iparty hover:bg-iparty/90"
-        >
+        <Button size="lg" onClick={handleShowCheckout} disabled={!canShow}>
           {loading || !sdkReady ? (
-            <>
-              <Loader2 className="mr-2 animate-spin" />
-              Carregando...
-            </>
+            <Loader2 className="mr-2 animate-spin" />
           ) : (
-            <>
-              <Check className="mr-2" />
-              Continuar para o pagamento
-            </>
+            <Check className="mr-2" />
           )}
+          Continuar para o pagamento
         </Button>
       ) : (
-        <div className="mt-6" id="payment-form-container" />
+        <div ref={formContainerRef} className="mt-6" />
       )}
     </div>
   );
