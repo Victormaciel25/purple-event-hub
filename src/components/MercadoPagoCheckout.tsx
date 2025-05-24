@@ -1,19 +1,10 @@
+
 import React, { useEffect, useState } from 'react';
 import { toast } from '@/components/ui/use-toast';
 import { Button } from "@/components/ui/button";
 import { Check, Loader2, AlertCircle } from "lucide-react";
 import { supabase } from '@/integrations/supabase/client';
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
-
-// Gera/recupera um Device ID persistido em localStorage
-function getDeviceId(): string {
-  let id = localStorage.getItem("deviceId");
-  if (!id) {
-    id = crypto.randomUUID();
-    localStorage.setItem("deviceId", id);
-  }
-  return id;
-}
 
 type CheckoutProps = {
   spaceId: string;
@@ -310,13 +301,9 @@ const MercadoPagoCheckout: React.FC<CheckoutProps> = ({
       if (!userId) {
         throw new Error("Usuário não identificado. Faça login novamente.");
       }
-      
-      // Gera/recupera o deviceId
-      const deviceId = getDeviceId();
 
-      // Process payment through Supabase Edge Function, enviando o deviceId no header
+      // Process payment through Supabase Edge Function
       const { data, error } = await supabase.functions.invoke('process-payment', {
-        headers: { "X-Meli-Session-Id": deviceId },
         body: JSON.stringify({
           token: formData.token,
           issuer_id: formData.issuerId,
@@ -395,8 +382,176 @@ const MercadoPagoCheckout: React.FC<CheckoutProps> = ({
     }
   };
 
-  // … restante do componente (createFormStyles, createFormHTML, cleanupMercadoPagoElements, render) …
+  const createFormStyles = () => {
+    // Remove any existing styles to avoid duplicates
+    const existingStyles = document.getElementById('mp-form-styles');
+    if (existingStyles) {
+      existingStyles.remove();
+    }
+    
+    const formStyles = document.createElement('style');
+    formStyles.id = 'mp-form-styles';
+    formStyles.textContent = `
+      #form-checkout {
+        display: flex;
+        flex-direction: column;
+        max-width: 600px;
+        gap: 16px;
+        margin: 0 auto;
+      }
+      
+      .container {
+        height: 40px;
+        display: block;
+        border: 1px solid rgb(209, 213, 219);
+        border-radius: 0.375rem;
+        padding: 8px 12px;
+        font-size: 16px;
+        width: 100%;
+        background-color: white;
+      }
+      
+      .form-control {
+        height: 40px;
+        display: block;
+        border: 1px solid rgb(209, 213, 219);
+        border-radius: 0.375rem;
+        padding: 8px 12px;
+        font-size: 16px;
+        width: 100%;
+      }
+      
+      .form-group {
+        margin-bottom: 12px;
+      }
+      
+      .form-group label {
+        display: block;
+        margin-bottom: 4px;
+        font-size: 14px;
+        font-weight: 500;
+        color: rgba(0, 0, 0, 0.7);
+      }
+      
+      #form-checkout__submit {
+        background-color: rgb(147, 51, 234);
+        color: white;
+        font-weight: 500;
+        padding: 10px 16px;
+        border-radius: 0.375rem;
+        border: none;
+        cursor: pointer;
+        font-size: 16px;
+        transition: background-color 0.2s;
+        margin-bottom: 0px;
+      }
+      
+      #form-checkout__submit:hover:not(:disabled) {
+        background-color: rgb(126, 34, 206);
+      }
+      
+      #form-checkout__submit:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+      
+      .progress-bar {
+        width: 100%;
+        height: 8px;
+        margin-top: 16px;
+      }
+    `;
+    document.head.appendChild(formStyles);
+  };
+
+  const createFormHTML = () => {
+    return `
+      <form id="form-checkout">
+        <div class="form-group">
+          <label for="form-checkout__cardNumber">Número do Cartão</label>
+          <div id="form-checkout__cardNumber" class="container"></div>
+        </div>
+        
+        <div class="form-group">
+          <label for="form-checkout__cardholderName">Titular do Cartão</label>
+          <input type="text" id="form-checkout__cardholderName" class="form-control" />
+        </div>
+        
+        <div class="form-group">
+          <label for="form-checkout__cardholderEmail">E-mail</label>
+          <input type="email" id="form-checkout__cardholderEmail" class="form-control" />
+        </div>
+        
+        <div style="display: flex; gap: 16px;">
+          <div class="form-group" style="flex: 1;">
+            <label for="form-checkout__expirationDate">Data de Validade</label>
+            <div id="form-checkout__expirationDate" class="container"></div>
+          </div>
+          
+          <div class="form-group" style="flex: 1;">
+            <label for="form-checkout__securityCode">CVV</label>
+            <div id="form-checkout__securityCode" class="container"></div>
+          </div>
+        </div>
+        
+        <div class="form-group">
+          <label for="form-checkout__issuer">Banco Emissor</label>
+          <select id="form-checkout__issuer" class="form-control"></select>
+        </div>
+        
+        <div class="form-group">
+          <label for="form-checkout__installments">Parcelas</label>
+          <select id="form-checkout__installments" class="form-control"></select>
+        </div>
+        
+        <div style="display: flex; gap: 16px;">
+          <div class="form-group" style="flex: 1;">
+            <label for="form-checkout__identificationType">Tipo de Documento</label>
+            <select id="form-checkout__identificationType" class="form-control"></select>
+          </div>
+          
+          <div class="form-group" style="flex: 1;">
+            <label for="form-checkout__identificationNumber">Número do Documento</label>
+            <input type="text" id="form-checkout__identificationNumber" class="form-control" />
+          </div>
+        </div>
+        
+        <button type="submit" id="form-checkout__submit" ${processingPayment ? 'disabled' : ''}>
+          ${processingPayment ? 'Processando...' : 'Pagar'}
+        </button>
+        <progress value="0" class="progress-bar" id="payment-progress">Carregando...</progress>
+      </form>
+    `;
+  };
   
+  // Helper function to clean up Mercado Pago elements
+  const cleanupMercadoPagoElements = () => {
+    const hiddenInputs = document.querySelectorAll('[id^="MPHidden"]');
+    hiddenInputs.forEach((element) => {
+      element.remove();
+    });
+    
+    const mpIframes = document.querySelectorAll('iframe[src*="mercadopago"]');
+    mpIframes.forEach((iframe) => {
+      iframe.remove();
+    });
+    
+    const formStyles = document.getElementById('mp-form-styles');
+    if (formStyles) {
+      formStyles.remove();
+    }
+    
+    const overlays = document.querySelectorAll('.mercadopago-overlay');
+    overlays.forEach((element) => {
+      element.remove();
+    });
+    
+    const formContainer = document.getElementById('payment-form-container');
+    if (formContainer) {
+      formContainer.innerHTML = '';
+    }
+  };
+
   const canShowButton = sdkReady && mercadoPagoPublicKey && userId && !errorMessage;
 
   return (
@@ -432,6 +587,21 @@ const MercadoPagoCheckout: React.FC<CheckoutProps> = ({
             <>
               <Loader2 size={20} className="mr-2 animate-spin" />
               Carregando formulário...
+            </>
+          ) : !sdkReady ? (
+            <>
+              <Loader2 size={20} className="mr-2 animate-spin" />
+              Carregando sistema de pagamento...
+            </>
+          ) : !mercadoPagoPublicKey ? (
+            <>
+              <Loader2 size={20} className="mr-2 animate-spin" />
+              Carregando configurações...
+            </>
+          ) : !userId ? (
+            <>
+              <Loader2 size={20} className="mr-2 animate-spin" />
+              Verificando autenticação...
             </>
           ) : (
             <>
