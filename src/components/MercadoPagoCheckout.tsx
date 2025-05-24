@@ -1,7 +1,3 @@
-// src/components/MercadoPagoCheckout.tsx
-
-/// <reference no-default-lib="true"/>
-declare var MercadoPago: any;
 
 import React, { useEffect, useState } from 'react';
 import { toast } from '@/components/ui/use-toast';
@@ -24,9 +20,9 @@ type CheckoutProps = {
   onError?: () => void;
 };
 
-const MercadoPagoCheckout: React.FC<CheckoutProps> = ({
-  spaceId,
-  spaceName,
+const MercadoPagoCheckout: React.FC<CheckoutProps> = ({ 
+  spaceId, 
+  spaceName, 
   plan,
   onSuccess,
   onError
@@ -40,13 +36,13 @@ const MercadoPagoCheckout: React.FC<CheckoutProps> = ({
   const [mercadoPagoPublicKey, setMercadoPagoPublicKey] = useState<string | null>(null);
   const [paymentStatus, setPaymentStatus] = useState<string | null>(null);
   const [initializationAttempted, setInitializationAttempted] = useState(false);
-
+  
   // Get user ID and Mercado Pago public key on component mount
   useEffect(() => {
     const initialize = async () => {
       try {
         console.log("Initializing MercadoPago checkout...");
-
+        
         // Get user session
         const { data } = await supabase.auth.getSession();
         if (data.session) {
@@ -56,17 +52,17 @@ const MercadoPagoCheckout: React.FC<CheckoutProps> = ({
           setErrorMessage("Você precisa estar logado para realizar um pagamento.");
           return;
         }
-
+        
         // Fetch Mercado Pago public key from edge function
         console.log("Fetching Mercado Pago public key...");
         const { data: mpKeyData, error } = await supabase.functions.invoke('get-mercado-pago-public-key');
-
+        
         if (error) {
           console.error("Error fetching Mercado Pago public key:", error);
           setErrorMessage("Erro ao obter chave de pagamento. Verifique sua conexão e tente novamente.");
           return;
         }
-
+        
         if (mpKeyData && mpKeyData.public_key) {
           setMercadoPagoPublicKey(mpKeyData.public_key);
           console.log("Mercado Pago public key received");
@@ -79,19 +75,16 @@ const MercadoPagoCheckout: React.FC<CheckoutProps> = ({
         setErrorMessage("Erro ao inicializar o checkout. Tente recarregar a página.");
       }
     };
-
+    
     initialize();
   }, []);
-
+  
   // Load Mercado Pago SDK
   useEffect(() => {
     let script: HTMLScriptElement | null = null;
-
+    
     const loadSDK = () => {
-      if (
-        !window.MercadoPago &&
-        !document.querySelector('script[src="https://sdk.mercadopago.com/js/v2"]')
-      ) {
+      if (!window.MercadoPago && !document.querySelector('script[src="https://sdk.mercadopago.com/js/v2"]')) {
         console.log("Loading Mercado Pago SDK...");
         script = document.createElement('script');
         script.src = "https://sdk.mercadopago.com/js/v2";
@@ -112,7 +105,7 @@ const MercadoPagoCheckout: React.FC<CheckoutProps> = ({
 
     // Small delay to ensure DOM is ready
     setTimeout(loadSDK, 100);
-
+    
     return () => {
       cleanupMercadoPagoElements();
       if (script && script.parentNode) {
@@ -123,7 +116,7 @@ const MercadoPagoCheckout: React.FC<CheckoutProps> = ({
 
   const handleShowCheckout = async () => {
     console.log("Show checkout button clicked");
-
+    
     if (!sdkReady) {
       toast({
         title: "Aguarde",
@@ -132,7 +125,7 @@ const MercadoPagoCheckout: React.FC<CheckoutProps> = ({
       });
       return;
     }
-
+    
     if (!mercadoPagoPublicKey) {
       toast({
         title: "Erro",
@@ -141,7 +134,7 @@ const MercadoPagoCheckout: React.FC<CheckoutProps> = ({
       });
       return;
     }
-
+    
     // Check if user is authenticated
     if (!userId) {
       const { data } = await supabase.auth.getSession();
@@ -155,14 +148,14 @@ const MercadoPagoCheckout: React.FC<CheckoutProps> = ({
       }
       setUserId(data.session.user.id);
     }
-
+    
     setLoading(true);
     setErrorMessage(null);
-
+    
     try {
       console.log("Showing payment form...");
       setShowCheckoutForm(true);
-
+      
       // Initialize the form after a small delay to ensure DOM is ready
       setTimeout(() => {
         initializePaymentForm();
@@ -172,39 +165,39 @@ const MercadoPagoCheckout: React.FC<CheckoutProps> = ({
       console.error("Checkout error:", error);
       setErrorMessage("Não foi possível iniciar o checkout. Tente recarregar a página.");
       setLoading(false);
-
+      
       if (onError) {
         onError();
       }
     }
   };
-
+  
   const initializePaymentForm = () => {
     if (initializationAttempted) {
       console.log("Payment form already initialized");
       return;
     }
-
+    
     try {
       console.log("Initializing payment form...");
-
+      
       if (!mercadoPagoPublicKey) {
         setErrorMessage("Chave de pagamento não disponível");
         return;
       }
-
+      
       if (!window.MercadoPago) {
         setErrorMessage("SDK do Mercado Pago não carregado");
         return;
       }
-
+      
       setInitializationAttempted(true);
-
-      const mp = new MercadoPago(mercadoPagoPublicKey);
-
+      
+      const mp = new window.MercadoPago(mercadoPagoPublicKey);
+      
       // Create styles for the form
       createFormStyles();
-
+      
       // Create the payment form HTML
       const paymentFormContainer = document.getElementById('payment-form-container');
       if (!paymentFormContainer) {
@@ -212,9 +205,9 @@ const MercadoPagoCheckout: React.FC<CheckoutProps> = ({
         setErrorMessage("Erro interno: container do formulário não encontrado");
         return;
       }
-
+      
       paymentFormContainer.innerHTML = createFormHTML();
-
+      
       // Initialize Mercado Pago card form
       const cardForm = mp.cardForm({
         amount: plan.price.toString(),
@@ -244,7 +237,7 @@ const MercadoPagoCheckout: React.FC<CheckoutProps> = ({
           installments: {
             id: "form-checkout__installments",
             placeholder: "Parcelas",
-          },
+          },        
           identificationType: {
             id: "form-checkout__identificationType",
             placeholder: "Tipo de documento",
@@ -271,17 +264,18 @@ const MercadoPagoCheckout: React.FC<CheckoutProps> = ({
             event.preventDefault();
             await handleFormSubmit(cardForm);
           },
-          onFetching: resource => {
+          onFetching: (resource) => {
             console.log("Fetching resource: ", resource);
             const progressBar = document.querySelector<HTMLProgressElement>(".progress-bar");
             if (progressBar) progressBar.removeAttribute("value");
+            
             return () => {
               if (progressBar) progressBar.setAttribute("value", "0");
             };
           }
         },
       });
-
+      
       console.log("Payment form initialized successfully");
     } catch (error) {
       console.error("Error initializing payment form:", error);
@@ -292,18 +286,18 @@ const MercadoPagoCheckout: React.FC<CheckoutProps> = ({
 
   const handleFormSubmit = async (cardForm: any) => {
     if (processingPayment) return;
-
+    
     setErrorMessage(null);
     setPaymentStatus(null);
     setProcessingPayment(true);
-
+    
     const progressBar = document.querySelector<HTMLProgressElement>("#payment-progress");
     if (progressBar) progressBar.removeAttribute("value");
 
     try {
       const formData = cardForm.getCardFormData();
       console.log("Processing payment with form data");
-
+      
       if (!userId) {
         throw new Error("Usuário não identificado. Faça login novamente.");
       }
@@ -327,15 +321,15 @@ const MercadoPagoCheckout: React.FC<CheckoutProps> = ({
           description: `Promoção do espaço: ${spaceName} - Plano ${plan.name}`
         })
       });
-
+      
       if (error) {
         console.error("Payment function error:", error);
         throw new Error("Erro na comunicação com o servidor de pagamentos");
       }
-
+      
       if (data && data.success) {
         setPaymentStatus(data.status);
-
+        
         if (data.status === "approved") {
           toast({
             title: "Pagamento aprovado!",
@@ -344,7 +338,7 @@ const MercadoPagoCheckout: React.FC<CheckoutProps> = ({
           });
 
           cleanupMercadoPagoElements();
-
+          
           if (onSuccess) {
             onSuccess();
           }
@@ -370,7 +364,7 @@ const MercadoPagoCheckout: React.FC<CheckoutProps> = ({
       }
     } catch (error) {
       console.error("Payment processing error:", error);
-
+      
       const errorMsg = error instanceof Error ? error.message : "Erro ao processar pagamento. Verifique os dados do cartão.";
       toast({
         title: "Erro no pagamento",
@@ -378,7 +372,7 @@ const MercadoPagoCheckout: React.FC<CheckoutProps> = ({
         variant: "destructive"
       });
       setErrorMessage(errorMsg);
-
+      
       if (onError) {
         onError();
       }
@@ -389,82 +383,173 @@ const MercadoPagoCheckout: React.FC<CheckoutProps> = ({
   };
 
   const createFormStyles = () => {
+    // Remove any existing styles to avoid duplicates
     const existingStyles = document.getElementById('mp-form-styles');
-    if (existingStyles) existingStyles.remove();
-
+    if (existingStyles) {
+      existingStyles.remove();
+    }
+    
     const formStyles = document.createElement('style');
     formStyles.id = 'mp-form-styles';
     formStyles.textContent = `
-      /* form container styles */
-      #form-checkout { display: flex; flex-direction: column; gap: 16px; max-width: 600px; margin: 0 auto; }
-      .container, .form-control { height: 40px; display: block; border: 1px solid #D1D5DB; border-radius: .375rem; padding: 8px 12px; font-size: 16px; width: 100%; background: #fff; }
-      .form-group { margin-bottom: 12px; }
-      .form-group label { display: block; margin-bottom: 4px; font-size: 14px; font-weight: 500; color: rgba(0,0,0,.7); }
-      #form-checkout__submit { background-color: #9333EA; color: white; font-weight: 500; padding: 10px 16px; border-radius: .375rem; border: none; cursor: pointer; font-size: 16px; transition: background 0.2s; margin-bottom: 0; }
-      #form-checkout__submit:hover:not(:disabled) { background: #7E22CE; }
-      #form-checkout__submit:disabled { opacity: 0.5; cursor: not-allowed; }
-      .progress-bar { width: 100%; height: 8px; margin-top: 16px; }
+      #form-checkout {
+        display: flex;
+        flex-direction: column;
+        max-width: 600px;
+        gap: 16px;
+        margin: 0 auto;
+      }
+      
+      .container {
+        height: 40px;
+        display: block;
+        border: 1px solid rgb(209, 213, 219);
+        border-radius: 0.375rem;
+        padding: 8px 12px;
+        font-size: 16px;
+        width: 100%;
+        background-color: white;
+      }
+      
+      .form-control {
+        height: 40px;
+        display: block;
+        border: 1px solid rgb(209, 213, 219);
+        border-radius: 0.375rem;
+        padding: 8px 12px;
+        font-size: 16px;
+        width: 100%;
+      }
+      
+      .form-group {
+        margin-bottom: 12px;
+      }
+      
+      .form-group label {
+        display: block;
+        margin-bottom: 4px;
+        font-size: 14px;
+        font-weight: 500;
+        color: rgba(0, 0, 0, 0.7);
+      }
+      
+      #form-checkout__submit {
+        background-color: rgb(147, 51, 234);
+        color: white;
+        font-weight: 500;
+        padding: 10px 16px;
+        border-radius: 0.375rem;
+        border: none;
+        cursor: pointer;
+        font-size: 16px;
+        transition: background-color 0.2s;
+        margin-bottom: 0px;
+      }
+      
+      #form-checkout__submit:hover:not(:disabled) {
+        background-color: rgb(126, 34, 206);
+      }
+      
+      #form-checkout__submit:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+      
+      .progress-bar {
+        width: 100%;
+        height: 8px;
+        margin-top: 16px;
+      }
     `;
     document.head.appendChild(formStyles);
   };
 
-  const createFormHTML = () => `
-    <form id="form-checkout">
-      <div class="form-group">
-        <label for="form-checkout__cardNumber">Número do Cartão</label>
-        <div id="form-checkout__cardNumber" class="container"></div>
-      </div>
-      <div class="form-group">
-        <label for="form-checkout__cardholderName">Titular do Cartão</label>
-        <input type="text" id="form-checkout__cardholderName" class="form-control" />
-      </div>
-      <div class="form-group">
-        <label for="form-checkout__cardholderEmail">E-mail</label>
-        <input type="email" id="form-checkout__cardholderEmail" class="form-control" />
-      </div>
-      <div style="display:flex;gap:16px;">
-        <div class="form-group" style="flex:1;">
-          <label for="form-checkout__expirationDate">Data de Validade</label>
-          <div id="form-checkout__expirationDate" class="container"></div>
+  const createFormHTML = () => {
+    return `
+      <form id="form-checkout">
+        <div class="form-group">
+          <label for="form-checkout__cardNumber">Número do Cartão</label>
+          <div id="form-checkout__cardNumber" class="container"></div>
         </div>
-        <div class="form-group" style="flex:1;">
-          <label for="form-checkout__securityCode">CVV</label>
-          <div id="form-checkout__securityCode" class="container"></div>
+        
+        <div class="form-group">
+          <label for="form-checkout__cardholderName">Titular do Cartão</label>
+          <input type="text" id="form-checkout__cardholderName" class="form-control" />
         </div>
-      </div>
-      <div class="form-group">
-        <label for="form-checkout__issuer">Banco Emissor</label>
-        <select id="form-checkout__issuer" class="form-control"></select>
-      </div>
-      <div class="form-group">
-        <label for="form-checkout__installments">Parcelas</label>
-        <select id="form-checkout__installments" class="form-control"></select>
-      </div>
-      <div style="display:flex;gap:16px;">
-        <div class="form-group" style="flex:1;">
-          <label for="form-checkout__identificationType">Tipo de Documento</label>
-          <select id="form-checkout__identificationType" class="form-control"></select>
+        
+        <div class="form-group">
+          <label for="form-checkout__cardholderEmail">E-mail</label>
+          <input type="email" id="form-checkout__cardholderEmail" class="form-control" />
         </div>
-        <div class="form-group" style="flex:1;">
-          <label for="form-checkout__identificationNumber">Número do Documento</label>
-          <input type="text" id="form-checkout__identificationNumber" class="form-control" />
+        
+        <div style="display: flex; gap: 16px;">
+          <div class="form-group" style="flex: 1;">
+            <label for="form-checkout__expirationDate">Data de Validade</label>
+            <div id="form-checkout__expirationDate" class="container"></div>
+          </div>
+          
+          <div class="form-group" style="flex: 1;">
+            <label for="form-checkout__securityCode">CVV</label>
+            <div id="form-checkout__securityCode" class="container"></div>
+          </div>
         </div>
-      </div>
-      <button type="submit" id="form-checkout__submit" ${processingPayment ? 'disabled' : ''}>
-        ${processingPayment ? 'Processando...' : 'Pagar'}
-      </button>
-      <progress value="0" class="progress-bar" id="payment-progress">Carregando...</progress>
-    </form>
-  `;
-
+        
+        <div class="form-group">
+          <label for="form-checkout__issuer">Banco Emissor</label>
+          <select id="form-checkout__issuer" class="form-control"></select>
+        </div>
+        
+        <div class="form-group">
+          <label for="form-checkout__installments">Parcelas</label>
+          <select id="form-checkout__installments" class="form-control"></select>
+        </div>
+        
+        <div style="display: flex; gap: 16px;">
+          <div class="form-group" style="flex: 1;">
+            <label for="form-checkout__identificationType">Tipo de Documento</label>
+            <select id="form-checkout__identificationType" class="form-control"></select>
+          </div>
+          
+          <div class="form-group" style="flex: 1;">
+            <label for="form-checkout__identificationNumber">Número do Documento</label>
+            <input type="text" id="form-checkout__identificationNumber" class="form-control" />
+          </div>
+        </div>
+        
+        <button type="submit" id="form-checkout__submit" ${processingPayment ? 'disabled' : ''}>
+          ${processingPayment ? 'Processando...' : 'Pagar'}
+        </button>
+        <progress value="0" class="progress-bar" id="payment-progress">Carregando...</progress>
+      </form>
+    `;
+  };
+  
   // Helper function to clean up Mercado Pago elements
   const cleanupMercadoPagoElements = () => {
-    document.querySelectorAll('[id^="MPHidden"]').forEach(el => el.remove());
-    document.querySelectorAll('iframe[src*="mercadopago"]').forEach(el => el.remove());
-    document.getElementById('mp-form-styles')?.remove();
-    document.querySelectorAll('.mercadopago-overlay').forEach(el => el.remove());
+    const hiddenInputs = document.querySelectorAll('[id^="MPHidden"]');
+    hiddenInputs.forEach((element) => {
+      element.remove();
+    });
+    
+    const mpIframes = document.querySelectorAll('iframe[src*="mercadopago"]');
+    mpIframes.forEach((iframe) => {
+      iframe.remove();
+    });
+    
+    const formStyles = document.getElementById('mp-form-styles');
+    if (formStyles) {
+      formStyles.remove();
+    }
+    
+    const overlays = document.querySelectorAll('.mercadopago-overlay');
+    overlays.forEach((element) => {
+      element.remove();
+    });
+    
     const formContainer = document.getElementById('payment-form-container');
-    if (formContainer) formContainer.innerHTML = '';
+    if (formContainer) {
+      formContainer.innerHTML = '';
+    }
   };
 
   const canShowButton = sdkReady && mercadoPagoPublicKey && userId && !errorMessage;
@@ -478,21 +563,21 @@ const MercadoPagoCheckout: React.FC<CheckoutProps> = ({
           <AlertDescription>{errorMessage}</AlertDescription>
         </Alert>
       )}
-
+      
       {paymentStatus && paymentStatus !== "approved" && (
         <Alert className="mb-4">
           <AlertTitle>Status do Pagamento</AlertTitle>
           <AlertDescription>
-            Seu pagamento está com status: {paymentStatus}.
-            {(paymentStatus === "in_process" || paymentStatus === "pending")
-              ? " Aguarde a confirmação."
+            Seu pagamento está com status: {paymentStatus}. 
+            {paymentStatus === "in_process" || paymentStatus === "pending" 
+              ? " Aguarde a confirmação." 
               : " Entre em contato com o suporte se precisar de ajuda."}
           </AlertDescription>
         </Alert>
       )}
-
+      
       {!showCheckoutForm ? (
-        <Button
+        <Button 
           size="lg"
           onClick={handleShowCheckout}
           disabled={loading || !canShowButton}
