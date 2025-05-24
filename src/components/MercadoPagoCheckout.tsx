@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { toast } from '@/components/ui/use-toast';
 import { Button } from "@/components/ui/button";
@@ -35,6 +34,7 @@ const MercadoPagoCheckout: React.FC<CheckoutProps> = ({
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [mercadoPagoPublicKey, setMercadoPagoPublicKey] = useState<string | null>(null);
   const [paymentStatus, setPaymentStatus] = useState<string | null>(null);
+  const [cardFormInstance, setCardFormInstance] = useState<any>(null);
   
   // Get user ID and Mercado Pago public key on component mount
   useEffect(() => {
@@ -201,7 +201,7 @@ const MercadoPagoCheckout: React.FC<CheckoutProps> = ({
       paymentFormContainer.innerHTML = createFormHTML();
       
       // Initialize Mercado Pago card form
-      mp.cardForm({
+      const cardForm = mp.cardForm({
         amount: plan.price.toString(),
         iframe: true,
         form: {
@@ -225,10 +225,10 @@ const MercadoPagoCheckout: React.FC<CheckoutProps> = ({
             }
             console.log("Form mounted successfully");
           },
-          onSubmit: async (event, cardForm) => {
+          onSubmit: async (event) => {
             event.preventDefault();
-            console.log("Form submitted, cardForm instance:", cardForm);
-            await handleFormSubmit(cardForm);
+            console.log("Form submitted, using stored cardForm instance");
+            await handleFormSubmit();
           },
           onFetching: (resource) => {
             console.log("Fetching resource: ", resource);
@@ -242,6 +242,9 @@ const MercadoPagoCheckout: React.FC<CheckoutProps> = ({
         },
       });
       
+      // Store the cardForm instance for later use
+      setCardFormInstance(cardForm);
+      
       console.log("Payment form initialized successfully");
     } catch (error) {
       console.error("Error initializing payment form:", error);
@@ -249,13 +252,13 @@ const MercadoPagoCheckout: React.FC<CheckoutProps> = ({
     }
   };
 
-  const handleFormSubmit = async (cardForm: any) => {
+  const handleFormSubmit = async () => {
     if (processingPayment) return;
     
-    console.log("handleFormSubmit called with:", cardForm);
+    console.log("handleFormSubmit called, cardForm instance:", cardFormInstance);
     
-    if (!cardForm || typeof cardForm.getCardFormData !== 'function') {
-      console.error("Invalid cardForm instance:", cardForm);
+    if (!cardFormInstance || typeof cardFormInstance.getCardFormData !== 'function') {
+      console.error("Invalid cardForm instance:", cardFormInstance);
       setErrorMessage("Erro interno: instância do formulário inválida");
       return;
     }
@@ -268,7 +271,7 @@ const MercadoPagoCheckout: React.FC<CheckoutProps> = ({
     if (progressBar) progressBar.removeAttribute("value");
 
     try {
-      const formData = cardForm.getCardFormData();
+      const formData = cardFormInstance.getCardFormData();
       console.log("Processing payment with form data:", formData);
       
       if (!userId) {
