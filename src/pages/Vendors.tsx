@@ -3,9 +3,10 @@ import React, { useState, useEffect } from "react";
 import VendorCard from "@/components/VendorCard";
 import { Input } from "@/components/ui/input";
 import { Search } from "lucide-react";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 
 type Vendor = {
   id: string;
@@ -17,6 +18,7 @@ type Vendor = {
 };
 
 const predefinedCategories = [
+  "Todos",
   "Buffet",
   "Fotografia", 
   "Videomaker",
@@ -33,6 +35,7 @@ const Vendors = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [vendors, setVendors] = useState<Vendor[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedCategory, setSelectedCategory] = useState("Todos");
 
   useEffect(() => {
     fetchVendors();
@@ -83,8 +86,13 @@ const Vendors = () => {
   );
 
   const getVendorsByCategory = (category: string) => {
+    if (category === "Todos") {
+      return filteredVendors;
+    }
     return filteredVendors.filter((vendor) => vendor.category === category);
   };
+
+  const currentVendors = getVendorsByCategory(selectedCategory);
 
   return (
     <div className="container px-4 py-6 max-w-4xl mx-auto">
@@ -108,25 +116,32 @@ const Vendors = () => {
           Nenhum fornecedor aprovado encontrado.
         </div>
       ) : (
-        <Tabs defaultValue="all" className="mb-6">
-          <TabsList className="w-full bg-secondary flex-wrap h-auto p-2 gap-1">
-            <TabsTrigger value="all" className="flex-shrink-0">
-              Todos
-            </TabsTrigger>
-            {predefinedCategories.map((category) => (
-              <TabsTrigger
-                key={category}
-                value={category.toLowerCase()}
-                className="flex-shrink-0"
-              >
-                {category}
-              </TabsTrigger>
-            ))}
-          </TabsList>
+        <>
+          <div className="mb-6">
+            <ScrollArea className="w-full whitespace-nowrap">
+              <div className="flex space-x-2 pb-2">
+                {predefinedCategories.map((category) => (
+                  <button
+                    key={category}
+                    onClick={() => setSelectedCategory(category)}
+                    className={cn(
+                      "inline-flex items-center justify-center whitespace-nowrap rounded-full px-4 py-2 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50",
+                      selectedCategory === category
+                        ? "bg-primary text-primary-foreground shadow"
+                        : "bg-muted text-muted-foreground hover:bg-muted/80"
+                    )}
+                  >
+                    {category}
+                  </button>
+                ))}
+              </div>
+              <ScrollBar orientation="horizontal" />
+            </ScrollArea>
+          </div>
 
-          <TabsContent value="all" className="mt-4">
-            <div className="space-y-4">
-              {filteredVendors.map((vendor) => (
+          <div className="space-y-4">
+            {currentVendors.length > 0 ? (
+              currentVendors.map((vendor) => (
                 <VendorCard
                   key={vendor.id}
                   id={vendor.id}
@@ -136,34 +151,15 @@ const Vendors = () => {
                   contactNumber={vendor.contact_number}
                   image={vendor.images[0] || "https://source.unsplash.com/random/200x200?food"}
                 />
-              ))}
-            </div>
-          </TabsContent>
-
-          {predefinedCategories.map((category) => (
-            <TabsContent key={category} value={category.toLowerCase()} className="mt-4">
-              <div className="space-y-4">
-                {getVendorsByCategory(category).length > 0 ? (
-                  getVendorsByCategory(category).map((vendor) => (
-                    <VendorCard
-                      key={vendor.id}
-                      id={vendor.id}
-                      name={vendor.name}
-                      category={vendor.category}
-                      rating={0}
-                      contactNumber={vendor.contact_number}
-                      image={vendor.images[0] || "https://source.unsplash.com/random/200x200?food"}
-                    />
-                  ))
-                ) : (
-                  <div className="text-center py-8 text-muted-foreground">
-                    Nenhum fornecedor encontrado na categoria "{category}"
-                  </div>
-                )}
+              ))
+            ) : (
+              <div className="text-center py-8 text-muted-foreground">
+                Nenhum fornecedor encontrado
+                {selectedCategory !== "Todos" && ` na categoria "${selectedCategory}"`}
               </div>
-            </TabsContent>
-          ))}
-        </Tabs>
+            )}
+          </div>
+        </>
       )}
     </div>
   );
