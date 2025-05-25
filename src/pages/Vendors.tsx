@@ -13,14 +13,26 @@ type Vendor = {
   category: string;
   contact_number: string;
   images: string[];
-  rating?: number; // Keep in type definition for now, but we won't use it
+  rating?: number;
 };
+
+const predefinedCategories = [
+  "Buffet",
+  "Fotografia", 
+  "Videomaker",
+  "Storymaker",
+  "Vestidos",
+  "Maquiagem",
+  "Doceria",
+  "Bolo",
+  "Decoração",
+  "Assessoria"
+];
 
 const Vendors = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [vendors, setVendors] = useState<Vendor[]>([]);
   const [loading, setLoading] = useState(true);
-  const [categories, setCategories] = useState<string[]>([]);
 
   useEffect(() => {
     fetchVendors();
@@ -31,7 +43,6 @@ const Vendors = () => {
       setLoading(true);
       console.log("Fetching approved vendors...");
       
-      // Make sure we're explicitly filtering for approved vendors
       const { data, error } = await supabase
         .from("vendors")
         .select("*")
@@ -46,23 +57,15 @@ const Vendors = () => {
       console.log("Number of approved vendors:", data ? data.length : 0);
 
       if (data) {
-        // Process the data obtained from Supabase
         const processedVendors = data.map((vendor) => ({
           id: vendor.id,
           name: vendor.name,
           category: vendor.category,
           contact_number: vendor.contact_number,
           images: vendor.images || [],
-          // We're not setting any rating anymore since we're removing this feature
         }));
 
-        // Extract unique categories for tabs
-        const uniqueCategories = Array.from(
-          new Set(processedVendors.map((vendor) => vendor.category))
-        );
-
         setVendors(processedVendors);
-        setCategories(uniqueCategories);
       }
     } catch (error) {
       console.error("Erro ao buscar fornecedores:", error);
@@ -78,6 +81,10 @@ const Vendors = () => {
       vendor.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
       vendor.contact_number.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  const getVendorsByCategory = (category: string) => {
+    return filteredVendors.filter((vendor) => vendor.category === category);
+  };
 
   return (
     <div className="container px-4 py-6 max-w-4xl mx-auto">
@@ -102,15 +109,15 @@ const Vendors = () => {
         </div>
       ) : (
         <Tabs defaultValue="all" className="mb-6">
-          <TabsList className="w-full bg-secondary">
-            <TabsTrigger value="all" className="flex-1">
+          <TabsList className="w-full bg-secondary flex-wrap h-auto p-2 gap-1">
+            <TabsTrigger value="all" className="flex-shrink-0">
               Todos
             </TabsTrigger>
-            {categories.map((category) => (
+            {predefinedCategories.map((category) => (
               <TabsTrigger
                 key={category}
                 value={category.toLowerCase()}
-                className="flex-1"
+                className="flex-shrink-0"
               >
                 {category}
               </TabsTrigger>
@@ -125,7 +132,7 @@ const Vendors = () => {
                   id={vendor.id}
                   name={vendor.name}
                   category={vendor.category}
-                  rating={0} // Set a default value (we'll ignore this in VendorCard)
+                  rating={0}
                   contactNumber={vendor.contact_number}
                   image={vendor.images[0] || "https://source.unsplash.com/random/200x200?food"}
                 />
@@ -133,22 +140,26 @@ const Vendors = () => {
             </div>
           </TabsContent>
 
-          {categories.map((category) => (
+          {predefinedCategories.map((category) => (
             <TabsContent key={category} value={category.toLowerCase()} className="mt-4">
               <div className="space-y-4">
-                {filteredVendors
-                  .filter((vendor) => vendor.category === category)
-                  .map((vendor) => (
+                {getVendorsByCategory(category).length > 0 ? (
+                  getVendorsByCategory(category).map((vendor) => (
                     <VendorCard
                       key={vendor.id}
                       id={vendor.id}
                       name={vendor.name}
                       category={vendor.category}
-                      rating={0} // Set a default value (we'll ignore this in VendorCard)
+                      rating={0}
                       contactNumber={vendor.contact_number}
                       image={vendor.images[0] || "https://source.unsplash.com/random/200x200?food"}
                     />
-                  ))}
+                  ))
+                ) : (
+                  <div className="text-center py-8 text-muted-foreground">
+                    Nenhum fornecedor encontrado na categoria "{category}"
+                  </div>
+                )}
               </div>
             </TabsContent>
           ))}

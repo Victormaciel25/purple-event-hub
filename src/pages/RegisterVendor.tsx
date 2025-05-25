@@ -16,6 +16,13 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import SingleImageUpload from "@/components/SingleImageUpload";
@@ -40,9 +47,22 @@ const dayOptions = [
   { label: 'Domingo', value: 'sunday' },
 ];
 
+const categoryOptions = [
+  "Buffet",
+  "Fotografia", 
+  "Videomaker",
+  "Storymaker",
+  "Vestidos",
+  "Maquiagem",
+  "Doceria",
+  "Bolo",
+  "Decoração",
+  "Assessoria"
+];
+
 const formSchema = z.object({
   name: z.string().min(3, { message: "O nome deve ter pelo menos 3 caracteres" }),
-  category: z.string().min(2, { message: "A categoria é obrigatória" }),
+  category: z.string().min(1, { message: "Selecione uma categoria" }),
   contactNumber: z.string().min(8, { message: "Insira um número de telefone válido" }),
   description: z.string().min(10, { message: "A descrição deve ter pelo menos 10 caracteres" }),
   address: z.string().min(5, { message: "Insira um endereço válido" }),
@@ -82,8 +102,6 @@ const RegisterVendor = () => {
       : [...selectedDays, day];
     
     setSelectedDays(updatedDays);
-    
-    // Atualiza o formulário com os dias selecionados
     form.setValue('availableDays', updatedDays);
   };
 
@@ -119,7 +137,6 @@ const RegisterVendor = () => {
         available_days: selectedDays,
       });
 
-      // Insert vendor data into Supabase
       const { error } = await supabase
         .from('vendors')
         .insert({
@@ -201,9 +218,20 @@ const RegisterVendor = () => {
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Categoria</FormLabel>
-                <FormControl>
-                  <Input placeholder="Ex: Buffet, DJ, Fotografia" {...field} />
-                </FormControl>
+                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione uma categoria" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    {categoryOptions.map((category) => (
+                      <SelectItem key={category} value={category}>
+                        {category}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
                 <FormMessage />
               </FormItem>
             )}
@@ -305,7 +333,7 @@ const RegisterVendor = () => {
         </form>
       </Form>
 
-      <div className="h-20"></div> {/* Space for bottom nav */}
+      <div className="h-20"></div>
     </div>
   );
 };
