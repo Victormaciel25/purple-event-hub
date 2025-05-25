@@ -2,11 +2,17 @@
 import React, { useState, useEffect } from "react";
 import VendorCard from "@/components/VendorCard";
 import { Input } from "@/components/ui/input";
-import { Search } from "lucide-react";
-import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
+import { Search, ChefHat, Camera, Video, FileText, Shirt, Palette, Cookie, Cake, Sparkles, Clipboard } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import {
+  Carousel,
+  CarouselContent,
+  CarouselItem,
+  CarouselNext,
+  CarouselPrevious,
+} from "@/components/ui/carousel";
 
 type Vendor = {
   id: string;
@@ -18,17 +24,17 @@ type Vendor = {
 };
 
 const predefinedCategories = [
-  "Todos",
-  "Buffet",
-  "Fotografia", 
-  "Videomaker",
-  "Storymaker",
-  "Vestidos",
-  "Maquiagem",
-  "Doceria",
-  "Bolo",
-  "Decoração",
-  "Assessoria"
+  { name: "Todos", icon: Sparkles },
+  { name: "Buffet", icon: ChefHat },
+  { name: "Fotografia", icon: Camera }, 
+  { name: "Videomaker", icon: Video },
+  { name: "Storymaker", icon: FileText },
+  { name: "Vestidos", icon: Shirt },
+  { name: "Maquiagem", icon: Palette },
+  { name: "Doceria", icon: Cookie },
+  { name: "Bolo", icon: Cake },
+  { name: "Decoração", icon: Sparkles },
+  { name: "Assessoria", icon: Clipboard }
 ];
 
 const Vendors = () => {
@@ -118,25 +124,40 @@ const Vendors = () => {
       ) : (
         <>
           <div className="mb-6">
-            <ScrollArea className="w-full whitespace-nowrap">
-              <div className="flex space-x-2 pb-2">
-                {predefinedCategories.map((category) => (
-                  <button
-                    key={category}
-                    onClick={() => setSelectedCategory(category)}
-                    className={cn(
-                      "inline-flex items-center justify-center whitespace-nowrap rounded-full px-4 py-2 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50",
-                      selectedCategory === category
-                        ? "bg-primary text-primary-foreground shadow"
-                        : "bg-muted text-muted-foreground hover:bg-muted/80"
-                    )}
-                  >
-                    {category}
-                  </button>
-                ))}
-              </div>
-              <ScrollBar orientation="horizontal" />
-            </ScrollArea>
+            <Carousel className="w-full max-w-sm mx-auto">
+              <CarouselContent>
+                {predefinedCategories.map((category, index) => {
+                  const IconComponent = category.icon;
+                  return (
+                    <CarouselItem key={category.name} className="basis-1/3">
+                      <div 
+                        className={cn(
+                          "flex flex-col items-center justify-center p-4 cursor-pointer transition-all",
+                          selectedCategory === category.name
+                            ? "text-primary"
+                            : "text-muted-foreground hover:text-primary"
+                        )}
+                        onClick={() => setSelectedCategory(category.name)}
+                      >
+                        <div className={cn(
+                          "w-16 h-16 rounded-full flex items-center justify-center mb-2 transition-colors",
+                          selectedCategory === category.name
+                            ? "bg-primary/10 border-2 border-primary"
+                            : "bg-muted hover:bg-primary/10"
+                        )}>
+                          <IconComponent size={24} />
+                        </div>
+                        <span className="text-xs text-center font-medium">
+                          {category.name}
+                        </span>
+                      </div>
+                    </CarouselItem>
+                  );
+                })}
+              </CarouselContent>
+              <CarouselPrevious />
+              <CarouselNext />
+            </Carousel>
           </div>
 
           <div className="space-y-4">
