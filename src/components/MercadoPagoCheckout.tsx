@@ -36,6 +36,7 @@ const MercadoPagoCheckout: React.FC<CheckoutProps> = ({
   const [mercadoPagoPublicKey, setMercadoPagoPublicKey] = useState<string | null>(null);
   const [paymentStatus, setPaymentStatus] = useState<string | null>(null);
   const [initializationAttempted, setInitializationAttempted] = useState(false);
+  const [cardFormInstance, setCardFormInstance] = useState<any>(null);
   
   // Get user ID and Mercado Pago public key on component mount
   useEffect(() => {
@@ -276,6 +277,9 @@ const MercadoPagoCheckout: React.FC<CheckoutProps> = ({
         },
       });
       
+      // Store the card form instance
+      setCardFormInstance(cardForm);
+      
       console.log("Payment form initialized successfully");
     } catch (error) {
       console.error("Error initializing payment form:", error);
@@ -295,12 +299,39 @@ const MercadoPagoCheckout: React.FC<CheckoutProps> = ({
     if (progressBar) progressBar.removeAttribute("value");
 
     try {
+      if (!cardForm) {
+        throw new Error("Instância do formulário inválida");
+      }
+
       const formData = cardForm.getCardFormData();
-      console.log("Processing payment with form data");
+      console.log("Form data extracted:", formData);
+      
+      // Extract device fingerprint
+      let deviceId = null;
+      try {
+        deviceId = await cardForm.getCardholderDeviceFingerprint();
+        console.log("Device fingerprint extracted:", deviceId);
+      } catch (fingerprintError) {
+        console.warn("Could not extract device fingerprint:", fingerprintError);
+      }
       
       if (!userId) {
         throw new Error("Usuário não identificado. Faça login novamente.");
       }
+
+      // Get payer first name and last name from form
+      const cardholderName = formData.cardholderName || '';
+      const nameParts = cardholderName.trim().split(' ');
+      const firstName = nameParts[0] || '';
+      const lastName = nameParts.slice(1).join(' ') || '';
+
+      console.log("Processing payment with extracted data:", {
+        token: formData.token,
+        cardholderName,
+        firstName,
+        lastName,
+        deviceId
+      });
 
       // Process payment through Supabase Edge Function
       const { data, error } = await supabase.functions.invoke('process-payment', {
@@ -315,6 +346,16 @@ const MercadoPagoCheckout: React.FC<CheckoutProps> = ({
             type: formData.identificationType,
             number: formData.identificationNumber
           },
+          payer: {
+            email: formData.cardholderEmail,
+            first_name: firstName,
+            last_name: lastName,
+            identification: {
+              type: formData.identificationType,
+              number: formData.identificationNumber
+            }
+          },
+          device_id: deviceId,
           space_id: spaceId,
           plan_id: plan.id,
           user_id: userId,
@@ -473,8 +514,8 @@ const MercadoPagoCheckout: React.FC<CheckoutProps> = ({
         </div>
         
         <div class="form-group">
-          <label for="form-checkout__cardholderName">Titular do Cartão</label>
-          <input type="text" id="form-checkout__cardholderName" class="form-control" />
+          <label for="form-checkout__cardholderName">Nome Completo do Titular</label>
+          <input type="text" id="form-checkout__cardholderName" class="form-control" placeholder="Nome e sobrenome" />
         </div>
         
         <div class="form-group">

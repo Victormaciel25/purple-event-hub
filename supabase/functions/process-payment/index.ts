@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.38.4';
 
@@ -34,7 +35,8 @@ async function processPayment(req: Request) {
       space_id,
       plan_id,
       user_id,
-      payer
+      payer,
+      device_id
     } = requestData;
 
     console.log("Processing payment with data:", requestData);
@@ -105,6 +107,11 @@ async function processPayment(req: Request) {
       statement_descriptor: "iParty Spaces",
     };
 
+    // Add device_id if available
+    if (device_id) {
+      mpRequestData.device_id = device_id;
+    }
+
     // Add payment method specific data
     if (payment_method_id === "pix") {
       // PIX specific data
@@ -123,7 +130,7 @@ async function processPayment(req: Request) {
         token,
         installments: parseInt(installments),
         issuer_id,
-        payer: {
+        payer: payer || {
           email,
           identification
         },
@@ -156,7 +163,7 @@ async function processPayment(req: Request) {
           point_of_interaction: {
             type: "PIX",
             transaction_data: {
-              qr_code_base64: "iVBORw0KGgoAAAANSUhEUgAAAZAAAAGQCAIAAAAP3aGbAAAACXBIWXMAAA7EAAAOxAGVKw4bAAAIHklEQVR4nO3dwW4bORRFQcfI/3+yMYsBZmfCYWuoruJ5tHgkLm8W+vr6+voAKH0+PQDgdwQLiBMsIE6wgDjBAuIEC4gTLCBOsIA4wQLiBAvqvp8e4L99PXi9r/F6T4/wilc3/vTij3vXlbw/mxUQJ1hAnGABcYIFxAkWECdYQNzoY/Tykeunk5x+DPzPrxD957x4h4/rE1e1WQFxggXECRYQJ1hAnGABcYIFxN1yDP73fP3YeJfD10+zvepxB8q//xk2KyBOsIA4wQLiBK...ew",
+              qr_code_base64: "iVBORw0KGgoAAAANSUhEUgAAAZAAAAGQCAIAAAAP3aGbAAAACXBIWXMAAA7EAAAOxAGVKw4bAAAIHklEQVR4nO3dwW4bORRFQcfI/3+yMYsBZmfCYWuoruJ5tHgkLm8W+vr6+voAKH0+PQDgdwQLiBMsIE6wgDjBAuIEC4gTLCBOsIA4wQLiBAvqvp8e4L99PXi9r/F6T4/wilc3/vTij3vXlbw/mxUQJ1hAnGABcYIFxAkWECdYQNzoY/Tykeunk5x+DPzPrxD957x4h4/rE1e1WQFxggXECRYQJ1hAnGABcYIFxN1yDP73fP3YeJfD10+zvepxB8q//xk2KyBOsIA4wQLiBAtIfcEQ",
               qr_code: "00020126600014br.gov.bcb.pix0117test@yourdomain.com0217additional data520400005303986540510.005802BR5913Maria Silva6008Brasilia62070503***6304E2CA",
               ticket_url: "https://www.mercadopago.com.br/payments/123456789/ticket"
             }
