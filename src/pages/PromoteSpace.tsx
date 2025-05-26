@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -11,6 +10,7 @@ import { toast } from "@/components/ui/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import MercadoPagoCheckout from "@/components/MercadoPagoCheckout";
 import PixPayment from "@/components/PixPayment";
+import SubscriptionCheckout from "@/components/SubscriptionCheckout";
 
 type Space = {
   id: string;
@@ -136,6 +136,13 @@ const PromoteSpace: React.FC = () => {
     }
   };
 
+  // Reset payment method to card when monthly-recurring plan is selected
+  useEffect(() => {
+    if (selectedPlan === "monthly-recurring") {
+      setPaymentMethod("card");
+    }
+  }, [selectedPlan]);
+
   // This will only be called when payment is confirmed and approved by Mercado Pago
   const handlePaymentSuccess = async () => {
     // Verify payment status in database before showing success screen
@@ -186,6 +193,8 @@ const PromoteSpace: React.FC = () => {
       currency: 'BRL',
     });
   };
+
+  const isRecurringPlan = selectedPlan === "monthly-recurring";
 
   if (loading) {
     return (
@@ -314,6 +323,15 @@ const PromoteSpace: React.FC = () => {
 
       <div className="mb-8">
         <h2 className="text-lg font-medium mb-3">Escolha a forma de pagamento:</h2>
+        
+        {isRecurringPlan && (
+          <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+            <p className="text-sm text-yellow-800">
+              Para planos recorrentes, apenas pagamento por cartão de crédito está disponível.
+            </p>
+          </div>
+        )}
+
         <Tabs 
           value={paymentMethod} 
           onValueChange={(value) => setPaymentMethod(value as "card" | "pix")}
@@ -324,7 +342,11 @@ const PromoteSpace: React.FC = () => {
               <CreditCard size={18} />
               <span>Cartão de Crédito</span>
             </TabsTrigger>
-            <TabsTrigger value="pix" className="flex items-center gap-2">
+            <TabsTrigger 
+              value="pix" 
+              className="flex items-center gap-2"
+              disabled={isRecurringPlan}
+            >
               <QrCode size={18} />
               <span>Pix</span>
             </TabsTrigger>
@@ -333,12 +355,21 @@ const PromoteSpace: React.FC = () => {
           <TabsContent value="card" className="mt-4">
             <Card>
               <CardContent className="pt-4">
-                <MercadoPagoCheckout 
-                  spaceId={selectedSpace}
-                  spaceName={spaces.find(space => space.id === selectedSpace)?.name || ""}
-                  plan={plans.find(plan => plan.id === selectedPlan) || plans[0]}
-                  onSuccess={handlePaymentSuccess}
-                />
+                {isRecurringPlan ? (
+                  <SubscriptionCheckout 
+                    spaceId={selectedSpace}
+                    spaceName={spaces.find(space => space.id === selectedSpace)?.name || ""}
+                    plan={plans.find(plan => plan.id === selectedPlan) || plans[0]}
+                    onSuccess={handlePaymentSuccess}
+                  />
+                ) : (
+                  <MercadoPagoCheckout 
+                    spaceId={selectedSpace}
+                    spaceName={spaces.find(space => space.id === selectedSpace)?.name || ""}
+                    plan={plans.find(plan => plan.id === selectedPlan) || plans[0]}
+                    onSuccess={handlePaymentSuccess}
+                  />
+                )}
               </CardContent>
             </Card>
           </TabsContent>
