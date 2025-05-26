@@ -25,7 +25,7 @@ const predefinedCategories = [
   { name: "Buffet", icon: ChefHat },
   { name: "Fotografia", icon: Camera }, 
   { name: "Videomaker", icon: Video },
-  { name: "Storymaker", icon: Phone },
+  { name: "Storymaker", icon: FileText },
   { name: "Vestido", icon: Shirt },
   { name: "Maquiagem", icon: Palette },
   { name: "Doceria", icon: Cookie },
