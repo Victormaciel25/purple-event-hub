@@ -98,6 +98,7 @@ async function processPayment(req: Request) {
             id: space_id,
             title: requestData.description || `Space promotion plan ${plan_id}`,
             description: `Promotion for space ID ${space_id}`,
+            category_id: "event_space",
             quantity: 1,
             unit_price: parseFloat(transaction_amount)
           }

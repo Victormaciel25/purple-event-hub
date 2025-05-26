@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { toast } from '@/components/ui/use-toast';
 import { Button } from "@/components/ui/button";
@@ -263,7 +262,7 @@ const MercadoPagoCheckout: React.FC<CheckoutProps> = ({
           },
           onSubmit: async event => {
             event.preventDefault();
-            await handleFormSubmit(cardForm);
+            await handleFormSubmit(cardForm, mp);
           },
           onFetching: (resource) => {
             console.log("Fetching resource: ", resource);
@@ -288,7 +287,7 @@ const MercadoPagoCheckout: React.FC<CheckoutProps> = ({
     }
   };
 
-  const handleFormSubmit = async (cardForm: any) => {
+  const handleFormSubmit = async (cardForm: any, mp: any) => {
     if (processingPayment) return;
     
     setErrorMessage(null);
@@ -306,10 +305,10 @@ const MercadoPagoCheckout: React.FC<CheckoutProps> = ({
       const formData = cardForm.getCardFormData();
       console.log("Form data extracted:", formData);
       
-      // Extract device fingerprint
+      // Extract device fingerprint using the correct method
       let deviceId = null;
       try {
-        deviceId = await cardForm.getCardholderDeviceFingerprint();
+        deviceId = mp.getDeviceFingerprint();
         console.log("Device fingerprint extracted:", deviceId);
       } catch (fingerprintError) {
         console.warn("Could not extract device fingerprint:", fingerprintError);
