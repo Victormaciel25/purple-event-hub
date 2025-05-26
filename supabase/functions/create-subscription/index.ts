@@ -33,7 +33,6 @@ async function createSubscription(req: Request) {
       payer_email,
       card_token_id,
       subscription_start,
-      subscription_end,
       space_id,
       plan_id,
       user_id,
@@ -139,7 +138,7 @@ async function createSubscription(req: Request) {
 
     const preapproval_plan_id = planData.id;
 
-    // 2) Create the SUBSCRIPTION
+    // 2) Create the SUBSCRIPTION (removed end_date from auto_recurring)
     const subscriptionBody = {
       preapproval_plan_id,
       reason,
@@ -150,7 +149,6 @@ async function createSubscription(req: Request) {
         frequency,
         frequency_type,
         start_date: subscription_start,
-        end_date: subscription_end,
         transaction_amount: amount,
         currency_id: currency,
       },

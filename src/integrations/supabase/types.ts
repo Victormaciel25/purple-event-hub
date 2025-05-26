@@ -227,6 +227,62 @@ export type Database = {
           },
         ]
       }
+      space_subscriptions: {
+        Row: {
+          amount: number
+          created_at: string
+          id: string
+          next_billing_date: string | null
+          payer_email: string
+          plan_id: string
+          preapproval_plan_id: string
+          space_id: string
+          started_at: string | null
+          status: string
+          subscription_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          id?: string
+          next_billing_date?: string | null
+          payer_email: string
+          plan_id: string
+          preapproval_plan_id: string
+          space_id: string
+          started_at?: string | null
+          status: string
+          subscription_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          id?: string
+          next_billing_date?: string | null
+          payer_email?: string
+          plan_id?: string
+          preapproval_plan_id?: string
+          space_id?: string
+          started_at?: string | null
+          status?: string
+          subscription_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "space_subscriptions_space_id_fkey"
+            columns: ["space_id"]
+            isOneToOne: false
+            referencedRelation: "spaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       spaces: {
         Row: {
           address: string

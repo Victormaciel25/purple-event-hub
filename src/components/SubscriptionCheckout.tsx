@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { toast } from '@/components/ui/use-toast';
 import { Button } from "@/components/ui/button";
@@ -322,10 +321,8 @@ const SubscriptionCheckout: React.FC<SubscriptionCheckoutProps> = ({
         deviceId
       });
 
-      // Calculate subscription dates
+      // Calculate subscription start date (no end date for unlimited subscription)
       const subscriptionStart = new Date();
-      const subscriptionEnd = new Date();
-      subscriptionEnd.setFullYear(subscriptionEnd.getFullYear() + 1); // 1 year subscription
 
       // Process subscription through Supabase Edge Function
       const { data, error } = await supabase.functions.invoke('create-subscription', {
@@ -343,7 +340,6 @@ const SubscriptionCheckout: React.FC<SubscriptionCheckoutProps> = ({
           payer_email: formData.cardholderEmail,
           card_token_id: formData.token,
           subscription_start: subscriptionStart.toISOString(),
-          subscription_end: subscriptionEnd.toISOString(),
           space_id: spaceId,
           plan_id: plan.id,
           user_id: userId,
