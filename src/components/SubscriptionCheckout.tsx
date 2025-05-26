@@ -333,7 +333,6 @@ const SubscriptionCheckout: React.FC<SubscriptionCheckoutProps> = ({
           frequency: 1,
           frequency_type: "months",
           repetitions: 12,
-          billing_day: 10,
           billing_day_proportional: true,
           back_url: window.location.origin + "/profile",
           external_reference: `space-${spaceId}-subscription`,
@@ -577,7 +576,7 @@ const SubscriptionCheckout: React.FC<SubscriptionCheckoutProps> = ({
         <h3 className="font-medium text-blue-900 mb-2">Assinatura Mensal Recorrente</h3>
         <p className="text-sm text-blue-800">
           Ao criar esta assinatura, você será cobrado mensalmente no valor de {plan.price.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })} 
-          para manter seu espaço sempre promovido. O primeiro pagamento será processado hoje e os próximos todo dia 10 de cada mês.
+          para manter seu espaço sempre promovido. O primeiro pagamento será processado hoje e os próximos sempre na mesma data do mês.
         </p>
       </div>
       

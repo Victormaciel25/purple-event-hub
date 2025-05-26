@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.38.4';
 
@@ -26,7 +27,6 @@ async function createSubscription(req: Request) {
       frequency,
       frequency_type,
       repetitions,
-      billing_day,
       billing_day_proportional,
       back_url,
       external_reference,
@@ -70,6 +70,12 @@ async function createSubscription(req: Request) {
         }
       );
     }
+
+    // Calculate billing day from subscription start date
+    const startDate = new Date(subscription_start);
+    const billing_day = startDate.getDate();
+    
+    console.log("Using billing day from subscription start:", billing_day);
 
     // 1) Create the PLAN
     const planBody = {
