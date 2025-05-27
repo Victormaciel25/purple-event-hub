@@ -348,28 +348,33 @@ const EventSpaceDetails: React.FC = () => {
       </div>
 
       {/* amenities */}
-      <div className="mb-8 grid grid-cols-2 gap-4">
+      <div className="mb-8">
         <h3 className="text-lg font-semibold mb-2">Comodidades</h3>
-        <div className={space.parking ? "" : "text-muted-foreground/50"}>
-          <ParkingMeter className="mr-2" size={18} />{" "}
-          {space.parking ? "Estacionamento" : "Sem estacionamento"}
-        </div>
-        <div className={space.wifi ? "" : "text-muted-foreground/50"}>
-          <Wifi className="mr-2" size={18} /> {space.wifi ? "Wi-Fi" : "Sem Wi-Fi"}
-        </div>
-        <div className={space.sound_system ? "" : "text-muted-foreground/50"}>
-          <Speaker className="mr-2" size={18} />{" "}
-          {space.sound_system ? "Sistema de som" : "Sem sistema de som"}
-        </div>
-        <div className={space.air_conditioning ? "" : "text-muted-foreground/50"}>
-          <AirVent className="mr-2" size={18} />{" "}
-          {space.air_conditioning ? "Ar condicionado" : "Sem ar condicionado"}
-        </div>
-        <div className={space.kitchen ? "" : "text-muted-foreground/50"}>
-          <Utensils className="mr-2" size={18} /> {space.kitchen ? "Cozinha" : "Sem cozinha"}
-        </div>
-        <div className={space.pool ? "" : "text-muted-foreground/50"}>
-          <Waves className="mr-2" size={18} /> {space.pool ? "Piscina" : "Sem piscina"}
+        <div className="grid grid-cols-2 gap-4">
+          <div className={`flex items-center ${space.parking ? "" : "text-muted-foreground/50"}`}>
+            <ParkingMeter className="mr-2" size={18} />
+            <span>{space.parking ? "Estacionamento" : "Sem estacionamento"}</span>
+          </div>
+          <div className={`flex items-center ${space.wifi ? "" : "text-muted-foreground/50"}`}>
+            <Wifi className="mr-2" size={18} />
+            <span>{space.wifi ? "Wi-Fi" : "Sem Wi-Fi"}</span>
+          </div>
+          <div className={`flex items-center ${space.sound_system ? "" : "text-muted-foreground/50"}`}>
+            <Speaker className="mr-2" size={18} />
+            <span>{space.sound_system ? "Sistema de som" : "Sem sistema de som"}</span>
+          </div>
+          <div className={`flex items-center ${space.air_conditioning ? "" : "text-muted-foreground/50"}`}>
+            <AirVent className="mr-2" size={18} />
+            <span>{space.air_conditioning ? "Ar condicionado" : "Sem ar condicionado"}</span>
+          </div>
+          <div className={`flex items-center ${space.kitchen ? "" : "text-muted-foreground/50"}`}>
+            <Utensils className="mr-2" size={18} />
+            <span>{space.kitchen ? "Cozinha" : "Sem cozinha"}</span>
+          </div>
+          <div className={`flex items-center ${space.pool ? "" : "text-muted-foreground/50"}`}>
+            <Waves className="mr-2" size={18} />
+            <span>{space.pool ? "Piscina" : "Sem piscina"}</span>
+          </div>
         </div>
       </div>
 
