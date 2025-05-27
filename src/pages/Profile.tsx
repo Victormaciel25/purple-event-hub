@@ -315,7 +315,8 @@ const Profile = () => {
     },
     { 
       icon: FileText, 
-      label: "Política de privacidade" 
+      label: "Política de privacidade",
+      onClick: () => navigate("/privacy-policy")
     }
   ];
 
