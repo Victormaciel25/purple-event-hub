@@ -101,6 +101,9 @@ const App: React.FC = () => {
               element={session ? <Navigate to="/explore" replace /> : <Login />} 
             />
             
+            {/* Privacy Policy Route - accessible without authentication */}
+            <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+            
             {/* App Routes with Layout */}
             <Route element={
               <RequireAuth>
