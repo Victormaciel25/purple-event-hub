@@ -1,7 +1,6 @@
-
 import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { Heart, Calendar, HelpCircle, Plus, Home, Shield, CheckSquare, Users, Briefcase, Clipboard } from "lucide-react";
+import { Heart, HelpCircle, Plus, Home, Shield, CheckSquare, Users, Briefcase, Clipboard, FileText } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useUserRoles } from "@/hooks/useUserRoles";
 import FavoriteSpaces from "../components/FavoriteSpaces";
@@ -311,12 +310,12 @@ const Profile = () => {
       onClick: () => setShowFavorites(true) 
     },
     { 
-      icon: Calendar, 
-      label: "Meus Eventos" 
-    },
-    { 
       icon: HelpCircle, 
       label: "Ajuda e Suporte" 
+    },
+    { 
+      icon: FileText, 
+      label: "Política de privacidade" 
     }
   ];
 
