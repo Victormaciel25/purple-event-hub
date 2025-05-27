@@ -349,7 +349,7 @@ const EventSpaceDetails: React.FC = () => {
 
       {/* amenities */}
       <div className="mb-8 grid grid-cols-2 gap-4">
-        <h3 className="text-sm font-medium text-gray-500 mb-2">Comodidades</h3>
+        <h3 className="text-lg font-semibold mb-2">Comodidades</h3>
         <div className={space.parking ? "" : "text-muted-foreground/50"}>
           <ParkingMeter className="mr-2" size={18} />{" "}
           {space.parking ? "Estacionamento" : "Sem estacionamento"}
