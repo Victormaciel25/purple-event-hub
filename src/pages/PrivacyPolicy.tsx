@@ -23,10 +23,6 @@ const PrivacyPolicy = () => {
 
       <div className="prose prose-sm max-w-none space-y-6">
         <div>
-          <h2 className="text-xl font-bold mb-3">Política de Privacidade do iParty</h2>
-        </div>
-
-        <div>
           <h3 className="text-lg font-semibold mb-2">1. Introdução</h3>
           <p className="text-gray-700 leading-relaxed">
             Bem-vindo ao iParty! Sua privacidade é muito importante para nós. Esta Política de Privacidade explica como coletamos, usamos, armazenamos e protegemos suas informações quando você utiliza nosso site e nossos serviços.
