@@ -195,7 +195,7 @@ const SpaceDetails: React.FC<SpaceDetailsProps> = ({
           </Card>
 
           <Card className="p-4">
-            <p className="text-sm font-medium text-gray-500 mb-2">Comodidades</p>
+            <h4 className="text-sm font-medium text-gray-500 mb-2">Comodidades</h4>
             <div className="grid grid-cols-2 gap-2">
               <div className="flex items-center">
                 {selectedSpace.wifi ? 
