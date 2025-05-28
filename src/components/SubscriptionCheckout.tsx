@@ -252,6 +252,24 @@ const SubscriptionCheckout: React.FC<SubscriptionCheckoutProps> = ({
               return;
             }
             console.log("Subscription form mounted successfully");
+            
+            // Force installments to 1x for recurring subscriptions
+            setTimeout(() => {
+              const installmentsSelect = document.getElementById('subscription-form-checkout__installments') as HTMLSelectElement;
+              if (installmentsSelect) {
+                // Clear existing options
+                installmentsSelect.innerHTML = '';
+                // Add only 1x option
+                const option = document.createElement('option');
+                option.value = '1';
+                option.textContent = '1x sem juros';
+                option.selected = true;
+                installmentsSelect.appendChild(option);
+                installmentsSelect.disabled = true;
+                installmentsSelect.style.backgroundColor = '#f3f4f6';
+                installmentsSelect.style.cursor = 'not-allowed';
+              }
+            }, 1000);
           },
           onSubmit: async event => {
             event.preventDefault();
@@ -515,7 +533,10 @@ const SubscriptionCheckout: React.FC<SubscriptionCheckoutProps> = ({
         
         <div class="subscription-form-group">
           <label for="subscription-form-checkout__installments">Parcelas</label>
-          <select id="subscription-form-checkout__installments" class="subscription-form-control"></select>
+          <select id="subscription-form-checkout__installments" class="subscription-form-control">
+            <option value="1">1x sem juros</option>
+          </select>
+          <small class="text-gray-600 mt-1 block">Para assinaturas recorrentes, apenas pagamento à vista está disponível.</small>
         </div>
         
         <div style="display: flex; gap: 16px;">
