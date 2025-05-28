@@ -575,7 +575,7 @@ const SubscriptionCheckout: React.FC<SubscriptionCheckoutProps> = ({
       <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
         <h3 className="font-medium text-blue-900 mb-2">Assinatura Mensal Recorrente</h3>
         <p className="text-sm text-blue-800">
-          Ao criar esta assinatura, você será cobrado mensalmente no valor de {plan.price.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })} 
+          Ao criar esta assinatura, você será cobrado mensalmente no valor de {plan.price.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })} {' '}
           para manter seu espaço sempre promovido. O primeiro pagamento será processado hoje e os próximos sempre na mesma data do mês.
         </p>
       </div>
