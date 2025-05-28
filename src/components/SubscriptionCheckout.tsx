@@ -321,10 +321,10 @@ const SubscriptionCheckout: React.FC<SubscriptionCheckoutProps> = ({
         deviceId
       });
 
-      // Calculate subscription start date (no end date for unlimited subscription)
+      // Calculate subscription start date
       const subscriptionStart = new Date();
 
-      // Process subscription through Supabase Edge Function
+      // Process subscription through Supabase Edge Function (corrected flow)
       const { data, error } = await supabase.functions.invoke('create-subscription', {
         body: JSON.stringify({
           reason: `Assinatura mensal - Promoção do espaço: ${spaceName}`,

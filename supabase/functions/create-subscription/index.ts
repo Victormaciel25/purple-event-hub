@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.38.4';
 
@@ -144,7 +143,7 @@ async function createSubscription(req: Request) {
 
     const preapproval_plan_id = planData.id;
 
-    // 2) Create the SUBSCRIPTION (removed end_date from auto_recurring)
+    // 2) Create the SUBSCRIPTION
     const subscriptionBody = {
       preapproval_plan_id,
       reason,
@@ -152,11 +151,10 @@ async function createSubscription(req: Request) {
       payer_email,
       card_token_id,
       auto_recurring: {
-        frequency,
-        frequency_type,
         start_date: subscription_start,
         transaction_amount: amount,
         currency_id: currency,
+        // Omit end_date for unlimited subscription
       },
       back_url,
       status: "authorized",
