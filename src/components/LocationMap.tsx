@@ -273,11 +273,6 @@ const LocationMap = ({
             gestureHandling: 'greedy'
           }}
           onLoad={handleMapLoad}
-          onError={(error) => {
-            console.error("Erro do GoogleMap:", error);
-            setHasError(true);
-            onError?.("Erro ao carregar o mapa");
-          }}
         >
           {/* Espaços */}
           {showPins && spaces.map(space => (
