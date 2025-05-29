@@ -274,7 +274,7 @@ const EventSpaceDetails: React.FC = () => {
         </Button>
       </div>
 
-      {/* image display - responsive grid for tablet/desktop */}
+      {/* image display - responsive carousel for all screen sizes */}
       <div className="mb-6">
         {/* Mobile: Carousel */}
         <div className="block md:hidden">
@@ -302,24 +302,30 @@ const EventSpaceDetails: React.FC = () => {
           </Carousel>
         </div>
 
-        {/* Tablet/Desktop: Grid */}
+        {/* Tablet/Desktop: Horizontal Scrollable Row */}
         <div className="hidden md:block">
-          <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
-            {space.images.map((img, i) => (
-              <div key={i} className="relative rounded-lg overflow-hidden h-48 lg:h-56">
-                <OptimizedImage
-                  src={img}
-                  alt={`${space.name} ${i + 1}`}
-                  className="object-cover w-full h-full"
-                />
-                <div className="absolute bottom-2 right-2">
-                  <span className="bg-black/70 text-white px-2 py-1 rounded text-xs">
-                    {i + 1}
-                  </span>
-                </div>
-              </div>
-            ))}
-          </div>
+          <Carousel>
+            <CarouselContent className="-ml-2 md:-ml-4">
+              {space.images.map((img, i) => (
+                <CarouselItem key={i} className="pl-2 md:pl-4 md:basis-1/3 lg:basis-1/4">
+                  <div className="relative rounded-lg overflow-hidden h-48 lg:h-56">
+                    <OptimizedImage
+                      src={img}
+                      alt={`${space.name} ${i + 1}`}
+                      className="object-cover w-full h-full"
+                    />
+                    <div className="absolute bottom-2 right-2">
+                      <span className="bg-black/70 text-white px-2 py-1 rounded text-xs">
+                        {i + 1}
+                      </span>
+                    </div>
+                  </div>
+                </CarouselItem>
+              ))}
+            </CarouselContent>
+            <CarouselPrevious className="bg-white/70 -left-12" />
+            <CarouselNext className="bg-white/70 -right-12" />
+          </Carousel>
         </div>
       </div>
 
