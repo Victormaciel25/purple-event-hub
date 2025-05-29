@@ -156,7 +156,7 @@ const Explore = () => {
               image={space.photo_url || ""}
               isPromoted={space.isPromoted}
               promotionExpiresAt={space.promotionExpiresAt}
-              showTimer={true}
+              showTimer={false}
             />
           ))}
         </div>
