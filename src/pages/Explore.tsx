@@ -1,93 +1,23 @@
-import React, { useState, useEffect } from "react";
-import EventSpaceCard from "@/components/EventSpaceCard";
+import React, { useState } from "react";
+import PromotedSpaceCard from "@/components/PromotedSpaceCard";
 import { Input } from "@/components/ui/input";
 import { Search, Circle, Heart, Briefcase, Cake, GraduationCap, ChevronLeft, ChevronRight } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { APP_CONSTANTS, STORAGE, SPACE_CATEGORIES } from "@/config/app-config";
-
-type EventSpace = {
-  id: string;
-  name: string;
-  address: string;
-  price: string;
-  number: string;
-  state: string;
-  photo_url?: string;
-  description: string;
-  categories?: string[];
-};
+import { SPACE_CATEGORIES } from "@/config/app-config";
+import { usePromotedSpaces } from "@/hooks/usePromotedSpaces";
 
 const Explore = () => {
-  const [spaces, setSpaces] = useState<EventSpace[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { spaces, loading, error } = usePromotedSpaces();
   const [searchTerm, setSearchTerm] = useState("");
   const [activeCategory, setActiveCategory] = useState(SPACE_CATEGORIES.ALL);
   const scrollContainerRef = React.useRef<HTMLDivElement>(null);
   
-  useEffect(() => {
-    fetchApprovedSpaces();
-  }, []);
-  
-  const fetchApprovedSpaces = async () => {
-    try {
-      setLoading(true);
-      const { data, error } = await supabase
-        .from("spaces")
-        .select(`
-          id,
-          name,
-          address,
-          number,
-          state,
-          price,
-          description,
-          categories,
-          space_photos(storage_path)
-        `)
-        .eq("status", "approved");
-        
-      if (error) {
-        throw error;
-      }
-      
-      // Process data to match our component's format
-      const processedSpaces = await Promise.all((data || []).map(async (space) => {
-        let photoUrl = APP_CONSTANTS.DEFAULT_SPACE_IMAGE;
-        
-        // If there are photos, get the URL for the first one
-        if (space.space_photos && space.space_photos.length > 0) {
-          const { data: urlData } = await supabase.storage
-            .from(STORAGE.SPACES_BUCKET)
-            .createSignedUrl(space.space_photos[0].storage_path, 3600);
-            
-          if (urlData) {
-            photoUrl = urlData.signedUrl;
-          }
-        }
-        
-        return {
-          id: space.id,
-          name: space.name,
-          address: space.address,
-          number: space.number,
-          state: space.state,
-          price: space.price,
-          description: space.description,
-          categories: space.categories || [],
-          photo_url: photoUrl
-        };
-      }));
-      
-      setSpaces(processedSpaces);
-    } catch (error) {
-      console.error("Error fetching spaces:", error);
-      toast.error("Erro ao carregar espaços");
-    } finally {
-      setLoading(false);
+  React.useEffect(() => {
+    if (error) {
+      toast.error(error);
     }
-  };
+  }, [error]);
   
   // Filter spaces based on search term across multiple fields and by category
   const filteredSpaces = spaces.filter(space => {
@@ -216,13 +146,15 @@ const Explore = () => {
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pb-20">
           {filteredSpaces.map((space) => (
-            <EventSpaceCard 
+            <PromotedSpaceCard 
               key={space.id} 
               id={space.id}
               name={space.name}
               address={`${space.address}, ${space.number} - ${space.state}`}
               price={parseFloat(space.price)}
-              image={space.photo_url || APP_CONSTANTS.DEFAULT_SPACE_IMAGE}
+              image={space.photo_url || ""}
+              isPromoted={space.isPromoted}
+              promotionExpiresAt={space.promotionExpiresAt}
             />
           ))}
         </div>
