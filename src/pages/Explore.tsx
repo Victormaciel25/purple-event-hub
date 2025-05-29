@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import PromotedSpaceCard from "@/components/PromotedSpaceCard";
 import { Input } from "@/components/ui/input";
@@ -155,6 +156,7 @@ const Explore = () => {
               image={space.photo_url || ""}
               isPromoted={space.isPromoted}
               promotionExpiresAt={space.promotionExpiresAt}
+              showTimer={true}
             />
           ))}
         </div>

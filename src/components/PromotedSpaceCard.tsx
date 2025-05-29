@@ -14,7 +14,7 @@ interface PromotedSpaceCardProps {
   image: string;
   isPromoted?: boolean;
   promotionExpiresAt?: string;
-  showTimer?: boolean; // New prop to control timer display
+  showTimer?: boolean;
 }
 
 const PromotedSpaceCard: React.FC<PromotedSpaceCardProps> = ({
