@@ -29,7 +29,7 @@ export const usePromotedSpaces = () => {
 
       console.log('Fetching spaces with promotions...');
 
-      // Primeiro, buscar espaços com promoções ativas
+      // Buscar espaços com promoções ativas usando LEFT JOIN para garantir visibilidade pública
       const { data: promotedSpaces, error: promotedError } = await supabase
         .from('spaces')
         .select(`
@@ -42,12 +42,15 @@ export const usePromotedSpaces = () => {
           description,
           categories,
           space_photos(storage_path),
-          space_promotions!inner(
+          space_promotions(
             expires_at,
-            plan_id
+            plan_id,
+            active
           )
         `)
         .eq('status', 'approved')
+        .not('space_promotions', 'is', null)
+        .eq('space_promotions.active', true)
         .gt('space_promotions.expires_at', new Date().toISOString())
         .order('created_at', { ascending: false });
 
@@ -57,7 +60,7 @@ export const usePromotedSpaces = () => {
 
       console.log('Promoted spaces found:', promotedSpaces?.length || 0);
 
-      // Depois, buscar espaços normais (sem promoção ativa ou sem promoção)
+      // Buscar espaços normais (sem promoção ativa)
       const promotedSpaceIds = (promotedSpaces || []).map(s => s.id);
       
       let normalSpacesQuery = supabase
@@ -78,7 +81,7 @@ export const usePromotedSpaces = () => {
 
       // Se houver espaços promovidos, excluí-los da lista normal
       if (promotedSpaceIds.length > 0) {
-        normalSpacesQuery = normalSpacesQuery.not('id', 'in', `(${promotedSpaceIds.map(id => `"${id}"`).join(',')})`);
+        normalSpacesQuery = normalSpacesQuery.not('id', 'in', `(${promotedSpaceIds.join(',')})`);
       }
 
       const { data: normalSpaces, error: normalError } = await normalSpacesQuery;
