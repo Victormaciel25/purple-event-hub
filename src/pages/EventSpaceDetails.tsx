@@ -274,30 +274,53 @@ const EventSpaceDetails: React.FC = () => {
         </Button>
       </div>
 
-      {/* carousel */}
+      {/* image display - responsive grid for tablet/desktop */}
       <div className="mb-6">
-        <Carousel>
-          <CarouselContent>
-            {space.images.map((img, i) => (
-              <CarouselItem key={i}>
-                <div className="relative rounded-lg overflow-hidden h-64 md:h-80">
-                  <OptimizedImage
-                    src={img}
-                    alt={`${space.name} ${i + 1}`}
-                    className="object-cover w-full h-full"
-                  />
-                  <div className="absolute bottom-2 right-2">
-                    <span className="bg-black/70 text-white px-2 py-1 rounded text-xs">
-                      {i + 1}/{space.images.length}
-                    </span>
+        {/* Mobile: Carousel */}
+        <div className="block md:hidden">
+          <Carousel>
+            <CarouselContent>
+              {space.images.map((img, i) => (
+                <CarouselItem key={i}>
+                  <div className="relative rounded-lg overflow-hidden h-64">
+                    <OptimizedImage
+                      src={img}
+                      alt={`${space.name} ${i + 1}`}
+                      className="object-cover w-full h-full"
+                    />
+                    <div className="absolute bottom-2 right-2">
+                      <span className="bg-black/70 text-white px-2 py-1 rounded text-xs">
+                        {i + 1}/{space.images.length}
+                      </span>
+                    </div>
                   </div>
+                </CarouselItem>
+              ))}
+            </CarouselContent>
+            <CarouselPrevious className="bg-white/70 left-2" />
+            <CarouselNext className="bg-white/70 right-2" />
+          </Carousel>
+        </div>
+
+        {/* Tablet/Desktop: Grid */}
+        <div className="hidden md:block">
+          <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
+            {space.images.map((img, i) => (
+              <div key={i} className="relative rounded-lg overflow-hidden h-48 lg:h-56">
+                <OptimizedImage
+                  src={img}
+                  alt={`${space.name} ${i + 1}`}
+                  className="object-cover w-full h-full"
+                />
+                <div className="absolute bottom-2 right-2">
+                  <span className="bg-black/70 text-white px-2 py-1 rounded text-xs">
+                    {i + 1}
+                  </span>
                 </div>
-              </CarouselItem>
+              </div>
             ))}
-          </CarouselContent>
-          <CarouselPrevious className="bg-white/70 left-2" />
-          <CarouselNext className="bg-white/70 right-2" />
-        </Carousel>
+          </div>
+        </div>
       </div>
 
       {/* title */}
