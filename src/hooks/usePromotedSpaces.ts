@@ -29,41 +29,8 @@ export const usePromotedSpaces = () => {
 
       console.log('Fetching spaces with promotions...');
 
-      // Buscar espaços com promoções ativas usando LEFT JOIN para garantir visibilidade pública
-      const { data: promotedSpaces, error: promotedError } = await supabase
-        .from('spaces')
-        .select(`
-          id,
-          name,
-          address,
-          number,
-          state,
-          price,
-          description,
-          categories,
-          space_photos(storage_path),
-          space_promotions(
-            expires_at,
-            plan_id,
-            active
-          )
-        `)
-        .eq('status', 'approved')
-        .not('space_promotions', 'is', null)
-        .eq('space_promotions.active', true)
-        .gt('space_promotions.expires_at', new Date().toISOString())
-        .order('created_at', { ascending: false });
-
-      if (promotedError) {
-        console.error('Error fetching promoted spaces:', promotedError);
-      }
-
-      console.log('Promoted spaces found:', promotedSpaces?.length || 0);
-
-      // Buscar espaços normais (sem promoção ativa)
-      const promotedSpaceIds = (promotedSpaces || []).map(s => s.id);
-      
-      let normalSpacesQuery = supabase
+      // Primeiro, buscar todos os espaços aprovados
+      const { data: allSpaces, error: spacesError } = await supabase
         .from('spaces')
         .select(`
           id,
@@ -79,21 +46,35 @@ export const usePromotedSpaces = () => {
         .eq('status', 'approved')
         .order('created_at', { ascending: false });
 
-      // Se houver espaços promovidos, excluí-los da lista normal
-      if (promotedSpaceIds.length > 0) {
-        normalSpacesQuery = normalSpacesQuery.not('id', 'in', `(${promotedSpaceIds.join(',')})`);
+      if (spacesError) {
+        console.error('Error fetching spaces:', spacesError);
+        throw spacesError;
       }
 
-      const { data: normalSpaces, error: normalError } = await normalSpacesQuery;
+      console.log('All spaces found:', allSpaces?.length || 0);
 
-      if (normalError) {
-        console.error('Error fetching normal spaces:', normalError);
+      // Buscar promoções ativas
+      const { data: activePromotions, error: promotionsError } = await supabase
+        .from('space_promotions')
+        .select('space_id, expires_at, plan_id')
+        .eq('active', true)
+        .gt('expires_at', new Date().toISOString());
+
+      if (promotionsError) {
+        console.error('Error fetching promotions:', promotionsError);
+        // Não falhar se não conseguir buscar promoções, apenas mostrar sem destaque
       }
 
-      console.log('Normal spaces found:', normalSpaces?.length || 0);
+      console.log('Active promotions found:', activePromotions?.length || 0);
 
-      // Processar espaços promovidos
-      const processedPromotedSpaces = await Promise.all((promotedSpaces || []).map(async (space) => {
+      // Criar um map de promoções por space_id
+      const promotionsMap = new Map();
+      (activePromotions || []).forEach(promo => {
+        promotionsMap.set(promo.space_id, promo);
+      });
+
+      // Processar todos os espaços
+      const processedSpaces = await Promise.all((allSpaces || []).map(async (space) => {
         let photoUrl = APP_CONSTANTS.DEFAULT_SPACE_IMAGE;
         
         if (space.space_photos && space.space_photos.length > 0) {
@@ -105,6 +86,9 @@ export const usePromotedSpaces = () => {
             photoUrl = urlData.signedUrl;
           }
         }
+
+        const promotion = promotionsMap.get(space.id);
+        const isPromoted = !!promotion;
         
         return {
           id: space.id,
@@ -116,44 +100,23 @@ export const usePromotedSpaces = () => {
           description: space.description,
           categories: space.categories || [],
           photo_url: photoUrl,
-          isPromoted: true,
-          promotionExpiresAt: space.space_promotions?.[0]?.expires_at
+          isPromoted,
+          promotionExpiresAt: promotion?.expires_at
         };
       }));
 
-      // Processar espaços normais
-      const processedNormalSpaces = await Promise.all((normalSpaces || []).map(async (space) => {
-        let photoUrl = APP_CONSTANTS.DEFAULT_SPACE_IMAGE;
-        
-        if (space.space_photos && space.space_photos.length > 0) {
-          const { data: urlData } = await supabase.storage
-            .from(STORAGE.SPACES_BUCKET)
-            .createSignedUrl(space.space_photos[0].storage_path, 3600);
-            
-          if (urlData) {
-            photoUrl = urlData.signedUrl;
-          }
-        }
-        
-        return {
-          id: space.id,
-          name: space.name,
-          address: space.address,
-          number: space.number,
-          state: space.state,
-          price: space.price,
-          description: space.description,
-          categories: space.categories || [],
-          photo_url: photoUrl,
-          isPromoted: false
-        };
-      }));
+      // Separar espaços promovidos e normais
+      const promotedSpaces = processedSpaces.filter(space => space.isPromoted);
+      const normalSpaces = processedSpaces.filter(space => !space.isPromoted);
 
       // Combinar: promovidos primeiro, depois normais
-      const allSpaces = [...processedPromotedSpaces, ...processedNormalSpaces];
-      console.log('Total spaces processed:', allSpaces.length);
-      console.log('Promoted spaces:', processedPromotedSpaces.length);
-      setSpaces(allSpaces);
+      const allProcessedSpaces = [...promotedSpaces, ...normalSpaces];
+      
+      console.log('Total spaces processed:', allProcessedSpaces.length);
+      console.log('Promoted spaces:', promotedSpaces.length);
+      console.log('Normal spaces:', normalSpaces.length);
+      
+      setSpaces(allProcessedSpaces);
 
     } catch (error) {
       console.error('Error fetching spaces:', error);
