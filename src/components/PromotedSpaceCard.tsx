@@ -1,9 +1,8 @@
 
 import React from "react";
 import { Card, CardContent } from "@/components/ui/card";
-import { MapPin, Heart, Star, Clock } from "lucide-react";
+import { MapPin, Star, Clock } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { useEventSpaceFavorites } from "../hooks/useEventSpaceFavorites";
 import OptimizedImage from "./OptimizedImage";
 import { Badge } from "@/components/ui/badge";
 
@@ -29,15 +28,9 @@ const PromotedSpaceCard: React.FC<PromotedSpaceCardProps> = ({
   showTimer = false,
 }) => {
   const navigate = useNavigate();
-  const { isFavorite, toggleFavorite } = useEventSpaceFavorites();
   
   const handleCardClick = () => {
     navigate(`/event-space/${id}`);
-  };
-
-  const handleFavoriteClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    toggleFavorite(id);
   };
   
   const formatPrice = (value: number) => {
@@ -46,8 +39,6 @@ const PromotedSpaceCard: React.FC<PromotedSpaceCardProps> = ({
       currency: 'BRL',
     });
   };
-  
-  const isSpaceFavorite = isFavorite(id);
 
   const getPromotionTimeLeft = () => {
     if (!promotionExpiresAt) return null;
@@ -71,24 +62,13 @@ const PromotedSpaceCard: React.FC<PromotedSpaceCardProps> = ({
       }`}
       onClick={handleCardClick}
     >
-      <div className="absolute top-2 right-2 z-10 flex flex-col gap-2">
+      <div className="absolute top-2 right-2 z-10">
         {isPromoted && (
           <Badge className="bg-yellow-500 hover:bg-yellow-600 text-white flex items-center gap-1">
             <Star size={12} className="fill-current" />
             Destaque
           </Badge>
         )}
-        <button 
-          onClick={handleFavoriteClick}
-          className="bg-white/70 hover:bg-white p-2 rounded-full transition-colors"
-          aria-label={isSpaceFavorite ? "Remover dos favoritos" : "Adicionar aos favoritos"}
-          type="button"
-        >
-          <Heart 
-            size={20} 
-            className={isSpaceFavorite ? "fill-red-500 text-red-500" : "text-gray-500"} 
-          />
-        </button>
       </div>
       
       {isPromoted && promotionExpiresAt && showTimer && (
