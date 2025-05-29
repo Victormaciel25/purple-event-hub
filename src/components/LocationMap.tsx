@@ -1,6 +1,5 @@
-
 import React, { useEffect, useRef, useState } from "react";
-import { Loader2, X, AlertTriangle } from "lucide-react";
+import { Loader2, X } from "lucide-react";
 import { GoogleMap, useJsApiLoader, Marker, OverlayView } from "@react-google-maps/api";
 import { GOOGLE_MAPS_API_KEY } from "@/config/app-config";
 import OptimizedImage from "./OptimizedImage";
@@ -26,7 +25,6 @@ interface LocationMapProps {
   isLoading?: boolean;
   onMapLoad?: (map: google.maps.Map) => void;
   keepPinsVisible?: boolean;
-  onError?: (error: string) => void;
 }
 
 const hidePOIsStyle = [
@@ -61,14 +59,12 @@ const LocationMap = ({
   onSpaceClick,
   isLoading = false,
   onMapLoad,
-  keepPinsVisible = false,
-  onError
+  keepPinsVisible = false
 }: LocationMapProps) => {
   const [position, setPosition] = useState<{ lat: number, lng: number } | null>(initialLocation || null);
   const [selectedSpace, setSelectedSpace] = useState<Space | null>(null);
   const [currentZoom, setCurrentZoom] = useState<number>(12);
   const [showPins, setShowPins] = useState<boolean>(true);
-  const [hasError, setHasError] = useState<boolean>(false);
   const mapRef = useRef<google.maps.Map | null>(null);
   
   // Track the moved spaces to prevent duplicate movements
@@ -80,18 +76,8 @@ const LocationMap = ({
   const { isLoaded, loadError } = useJsApiLoader({
     id: 'google-map-script',
     googleMapsApiKey: GOOGLE_MAPS_API_KEY,
-    libraries,
-    preventGoogleFontsLoading: true, // Prevent font loading issues on mobile
+    libraries
   });
-
-  // Handle load errors
-  useEffect(() => {
-    if (loadError) {
-      console.error("Erro ao carregar Google Maps API:", loadError);
-      setHasError(true);
-      onError?.("Erro ao carregar a API do Google Maps. Verifique sua conexão com a internet.");
-    }
-  }, [loadError, onError]);
 
   // Changed the condition to hide pins when zoom is less than threshold
   useEffect(() => {
@@ -106,109 +92,76 @@ const LocationMap = ({
 
   useEffect(() => {
     if (spaces.length > 0 && mapRef.current && !initialLocation) {
-      try {
-        const bounds = new google.maps.LatLngBounds();
-        spaces.forEach(space => {
-          if (typeof space.latitude === 'number' && typeof space.longitude === 'number') {
-            bounds.extend({ lat: space.latitude, lng: space.longitude });
-          }
-        });
-        if (!bounds.isEmpty()) {
-          mapRef.current.fitBounds(bounds);
-          if (mapRef.current.getZoom() > 15) {
-            mapRef.current.setZoom(15);
-          }
+      const bounds = new google.maps.LatLngBounds();
+      spaces.forEach(space => {
+        if (typeof space.latitude === 'number' && typeof space.longitude === 'number') {
+          bounds.extend({ lat: space.latitude, lng: space.longitude });
         }
-      } catch (error) {
-        console.error("Erro ao ajustar bounds do mapa:", error);
+      });
+      if (!bounds.isEmpty()) {
+        mapRef.current.fitBounds(bounds);
+        if (mapRef.current.getZoom() > 15) {
+          mapRef.current.setZoom(15);
+        }
       }
     }
   }, [spaces, isLoaded, initialLocation]);
 
   const handleMapLoad = (map: google.maps.Map) => {
-    try {
-      mapRef.current = map;
+    mapRef.current = map;
+    setCurrentZoom(map.getZoom() || 12);
+    map.addListener('zoom_changed', () => {
       setCurrentZoom(map.getZoom() || 12);
-      
-      map.addListener('zoom_changed', () => {
-        try {
-          setCurrentZoom(map.getZoom() || 12);
-        } catch (error) {
-          console.error("Erro no listener de zoom:", error);
-        }
-      });
-      
-      // Add error listener
-      map.addListener('tilesloaded', () => {
-        setHasError(false);
-      });
-      
-      if (onMapLoad) onMapLoad(map);
-    } catch (error) {
-      console.error("Erro ao carregar mapa:", error);
-      setHasError(true);
-      onError?.("Erro ao inicializar o mapa");
-    }
+    });
+    if (onMapLoad) onMapLoad(map);
   };
 
   const handleMapClick = (event: google.maps.MapMouseEvent) => {
     if (viewOnly || !event.latLng) return;
-    try {
-      const newPosition = { lat: event.latLng.lat(), lng: event.latLng.lng() };
-      setPosition(newPosition);
-      onLocationSelected?.(newPosition.lat, newPosition.lng);
-    } catch (error) {
-      console.error("Erro ao processar clique no mapa:", error);
-    }
+    const newPosition = { lat: event.latLng.lat(), lng: event.latLng.lng() };
+    setPosition(newPosition);
+    onLocationSelected?.(newPosition.lat, newPosition.lng);
   };
 
   const handleMarkerClick = (space: Space) => {
-    try {
-      setSelectedSpace(space);
-      
-      if (mapRef.current) {
-        // If we already have an offset position for this space, use it
-        if (offsetPositions[space.id]) {
-          mapRef.current.panTo(offsetPositions[space.id]);
-        } else {
-          // First center on the marker
-          const position = { lat: space.latitude, lng: space.longitude };
-          mapRef.current.panTo(position);
-          
-          // Then calculate and apply the offset position
-          setTimeout(() => {
-            if (mapRef.current) {
-              try {
-                const projection = mapRef.current.getProjection();
-                if (projection) {
-                  const point = projection.fromLatLngToPoint(new google.maps.LatLng(position.lat, position.lng));
-                  point.y -= 130 / Math.pow(2, mapRef.current.getZoom() || 0);
-                  const newLatLng = projection.fromPointToLatLng(point);
-                  
-                  // Store the offset position for future use
-                  setOffsetPositions(prev => ({
-                    ...prev,
-                    [space.id]: {lat: newLatLng.lat(), lng: newLatLng.lng()}
-                  }));
-                  
-                  // Move to the offset position
-                  mapRef.current.panTo(newLatLng);
-                  
-                  // Mark this space as having been moved
-                  setMovedSpaces(prev => ({
-                    ...prev,
-                    [space.id]: true
-                  }));
-                }
-              } catch (error) {
-                console.error("Erro ao calcular offset do marcador:", error);
-              }
+    setSelectedSpace(space);
+    
+    if (mapRef.current) {
+      // If we already have an offset position for this space, use it
+      if (offsetPositions[space.id]) {
+        mapRef.current.panTo(offsetPositions[space.id]);
+      } else {
+        // First center on the marker
+        const position = { lat: space.latitude, lng: space.longitude };
+        mapRef.current.panTo(position);
+        
+        // Then calculate and apply the offset position
+        setTimeout(() => {
+          if (mapRef.current) {
+            const projection = mapRef.current.getProjection();
+            if (projection) {
+              const point = projection.fromLatLngToPoint(new google.maps.LatLng(position.lat, position.lng));
+              point.y -= 130 / Math.pow(2, mapRef.current.getZoom() || 0);
+              const newLatLng = projection.fromPointToLatLng(point);
+              
+              // Store the offset position for future use
+              setOffsetPositions(prev => ({
+                ...prev,
+                [space.id]: {lat: newLatLng.lat(), lng: newLatLng.lng()}
+              }));
+              
+              // Move to the offset position
+              mapRef.current.panTo(newLatLng);
+              
+              // Mark this space as having been moved
+              setMovedSpaces(prev => ({
+                ...prev,
+                [space.id]: true
+              }));
             }
-          }, 50);
-        }
+          }
+        }, 50);
       }
-    } catch (error) {
-      console.error("Erro ao processar clique no marcador:", error);
     }
   };
 
@@ -222,41 +175,15 @@ const LocationMap = ({
     }
   };
 
-  if (hasError || loadError) {
-    return (
-      <div className="relative w-full h-full rounded-xl overflow-hidden shadow-md bg-red-50 border border-red-200">
-        <div className="absolute inset-0 flex items-center justify-center">
-          <div className="text-center p-6">
-            <AlertTriangle className="h-12 w-12 text-red-500 mx-auto mb-4" />
-            <h3 className="text-lg font-semibold text-red-800 mb-2">
-              Erro no mapa
-            </h3>
-            <p className="text-red-600 text-sm mb-4">
-              Não foi possível carregar o Google Maps. Verifique sua conexão e tente novamente.
-            </p>
-            <button
-              onClick={() => {
-                setHasError(false);
-                window.location.reload();
-              }}
-              className="bg-red-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-red-700 transition-colors"
-            >
-              Tentar novamente
-            </button>
-          </div>
-        </div>
-      </div>
-    );
+  if (loadError) {
+    return <div className="text-center text-red-500 p-4 bg-red-50 rounded-lg shadow">Erro ao carregar o mapa</div>;
   }
 
   return (
     <div className="relative w-full h-full rounded-xl overflow-hidden shadow-md">
       {!isLoaded ? (
         <div className="absolute inset-0 flex items-center justify-center bg-gray-100 rounded-xl animate-pulse">
-          <div className="flex flex-col items-center gap-3">
-            <Loader2 className="animate-spin h-8 w-8 text-iparty" />
-            <div className="text-gray-600 font-medium">Carregando mapa...</div>
-          </div>
+          <div className="text-gray-600 font-medium">Carregando mapa...</div>
         </div>
       ) : (
         <GoogleMap
@@ -353,15 +280,11 @@ const LocationMap = ({
               position={position}
               draggable={!viewOnly}
               onDragEnd={(e) => {
-                try {
-                  const lat = e.latLng?.lat();
-                  const lng = e.latLng?.lng();
-                  if (lat && lng) {
-                    setPosition({ lat, lng });
-                    onLocationSelected?.(lat, lng);
-                  }
-                } catch (error) {
-                  console.error("Erro ao processar drag do marcador:", error);
+                const lat = e.latLng?.lat();
+                const lng = e.latLng?.lng();
+                if (lat && lng) {
+                  setPosition({ lat, lng });
+                  onLocationSelected?.(lat, lng);
                 }
               }}
               icon={{
