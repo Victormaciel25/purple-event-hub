@@ -1,7 +1,7 @@
 
 import React from "react";
 import { Card, CardContent } from "@/components/ui/card";
-import { MapPin, Heart, Star, Clock } from "lucide-react";
+import { MapPin, Heart, Star } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useEventSpaceFavorites } from "../hooks/useEventSpaceFavorites";
 import OptimizedImage from "./OptimizedImage";
@@ -15,6 +15,7 @@ interface PromotedSpaceCardProps {
   image: string;
   isPromoted?: boolean;
   promotionExpiresAt?: string;
+  showTimer?: boolean; // New prop to control timer display
 }
 
 const PromotedSpaceCard: React.FC<PromotedSpaceCardProps> = ({
@@ -25,6 +26,7 @@ const PromotedSpaceCard: React.FC<PromotedSpaceCardProps> = ({
   image,
   isPromoted = false,
   promotionExpiresAt,
+  showTimer = false,
 }) => {
   const navigate = useNavigate();
   const { isFavorite, toggleFavorite } = useEventSpaceFavorites();
@@ -89,7 +91,7 @@ const PromotedSpaceCard: React.FC<PromotedSpaceCardProps> = ({
         </button>
       </div>
       
-      {isPromoted && promotionExpiresAt && (
+      {isPromoted && promotionExpiresAt && showTimer && (
         <div className="absolute top-2 left-2 z-10">
           <Badge variant="secondary" className="bg-black/70 text-white flex items-center gap-1">
             <Clock size={12} />

@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { ChevronLeft, Edit, Trash2 } from "lucide-react";
+import { ChevronLeft, Edit, Trash2, Clock } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -18,6 +18,10 @@ type UserSpace = {
   created_at: string;
   status: 'pending' | 'approved' | 'rejected';
   rejection_reason?: string | null;
+  promotion?: {
+    expires_at: string;
+    plan_id: string;
+  } | null;
 };
 
 const UserSpaces: React.FC = () => {
@@ -38,7 +42,6 @@ const UserSpaces: React.FC = () => {
       const { data: sessionData } = await supabase.auth.getSession();
       
       if (!sessionData.session) {
-        // Instead of toast, set error message or redirect
         navigate("/");
         return;
       }
@@ -47,13 +50,31 @@ const UserSpaces: React.FC = () => {
       
       const { data, error } = await supabase
         .from("spaces")
-        .select("id, name, address, state, price, created_at, status, rejection_reason")
+        .select(`
+          id, 
+          name, 
+          address, 
+          state, 
+          price, 
+          created_at, 
+          status, 
+          rejection_reason,
+          space_promotions(expires_at, plan_id)
+        `)
         .eq("user_id", userId)
         .order("created_at", { ascending: false });
       
       if (error) throw error;
       
-      setSpaces(data || []);
+      // Process spaces with promotion data
+      const processedSpaces = (data || []).map(space => ({
+        ...space,
+        promotion: space.space_promotions?.find(p => 
+          new Date(p.expires_at) > new Date()
+        ) || null
+      }));
+      
+      setSpaces(processedSpaces);
     } catch (error) {
       console.error("Erro ao carregar espaços:", error);
       setDeleteError("Erro ao carregar seus espaços");
@@ -77,8 +98,6 @@ const UserSpaces: React.FC = () => {
       
       console.log(`Iniciando processo de exclusão para espaço: ${spaceId}`);
       
-      // Usando uma RPC (Remote Procedure Call) para executar a exclusão no lado do servidor
-      // Isso garante que todas as fotos sejam excluídas antes do espaço ser removido
       const { error } = await supabase.functions.invoke("delete_space_with_photos", {
         body: { space_id: spaceId }
       });
@@ -90,12 +109,10 @@ const UserSpaces: React.FC = () => {
       
       setSuccessMessage("Espaço excluído com sucesso");
       
-      // Clear success message after 3 seconds
       setTimeout(() => {
         setSuccessMessage(null);
       }, 3000);
       
-      // Update local state to remove the deleted space
       setSpaces(spaces.filter(space => space.id !== spaceId));
     } catch (error: any) {
       console.error("Erro ao excluir espaço:", error);
@@ -125,6 +142,19 @@ const UserSpaces: React.FC = () => {
         return <Badge variant="outline" className="bg-green-100 text-green-800 hover:bg-green-100">Aprovado</Badge>;
       case 'rejected':
         return <Badge variant="outline" className="bg-red-100 text-red-800 hover:bg-red-100">Rejeitado</Badge>;
+    }
+  };
+
+  const getPromotionTimeLeft = (expiresAt: string) => {
+    const now = new Date();
+    const expires = new Date(expiresAt);
+    const diffInHours = Math.floor((expires.getTime() - now.getTime()) / (1000 * 60 * 60));
+    
+    if (diffInHours < 24) {
+      return `${diffInHours}h restantes`;
+    } else {
+      const diffInDays = Math.floor(diffInHours / 24);
+      return `${diffInDays} dias restantes`;
     }
   };
 
@@ -162,8 +192,26 @@ const UserSpaces: React.FC = () => {
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <h3 className="font-medium text-lg">{space.name}</h3>
-                  {getStatusBadge(space.status)}
+                  <div className="flex gap-2">
+                    {getStatusBadge(space.status)}
+                    {space.promotion && (
+                      <Badge className="bg-yellow-500 text-white">
+                        Em Destaque
+                      </Badge>
+                    )}
+                  </div>
                 </div>
+                
+                {space.promotion && (
+                  <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+                    <div className="flex items-center gap-2 text-yellow-800">
+                      <Clock size={16} />
+                      <span className="text-sm font-medium">
+                        Promoção ativa: {getPromotionTimeLeft(space.promotion.expires_at)}
+                      </span>
+                    </div>
+                  </div>
+                )}
                 
                 <div className="grid grid-cols-2 gap-2 text-sm">
                   <div>

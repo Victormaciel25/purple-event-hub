@@ -27,6 +27,8 @@ export const usePromotedSpaces = () => {
       setLoading(true);
       setError(null);
 
+      console.log('Fetching spaces with promotions...');
+
       // Primeiro, buscar espaços com promoções ativas
       const { data: promotedSpaces, error: promotedError } = await supabase
         .from('spaces')
@@ -47,14 +49,18 @@ export const usePromotedSpaces = () => {
         `)
         .eq('status', 'approved')
         .gt('space_promotions.expires_at', new Date().toISOString())
-        .order('space_promotions.expires_at', { ascending: false, foreignTable: 'space_promotions' });
+        .order('created_at', { ascending: false });
 
       if (promotedError) {
         console.error('Error fetching promoted spaces:', promotedError);
       }
 
-      // Depois, buscar espaços normais (sem promoção ativa)
-      const { data: normalSpaces, error: normalError } = await supabase
+      console.log('Promoted spaces found:', promotedSpaces?.length || 0);
+
+      // Depois, buscar espaços normais (sem promoção ativa ou sem promoção)
+      const promotedSpaceIds = (promotedSpaces || []).map(s => s.id);
+      
+      let normalSpacesQuery = supabase
         .from('spaces')
         .select(`
           id,
@@ -68,12 +74,20 @@ export const usePromotedSpaces = () => {
           space_photos(storage_path)
         `)
         .eq('status', 'approved')
-        .not('id', 'in', `(${(promotedSpaces || []).map(s => `"${s.id}"`).join(',') || '""'})`)
         .order('created_at', { ascending: false });
+
+      // Se houver espaços promovidos, excluí-los da lista normal
+      if (promotedSpaceIds.length > 0) {
+        normalSpacesQuery = normalSpacesQuery.not('id', 'in', `(${promotedSpaceIds.map(id => `"${id}"`).join(',')})`);
+      }
+
+      const { data: normalSpaces, error: normalError } = await normalSpacesQuery;
 
       if (normalError) {
         console.error('Error fetching normal spaces:', normalError);
       }
+
+      console.log('Normal spaces found:', normalSpaces?.length || 0);
 
       // Processar espaços promovidos
       const processedPromotedSpaces = await Promise.all((promotedSpaces || []).map(async (space) => {
@@ -134,6 +148,8 @@ export const usePromotedSpaces = () => {
 
       // Combinar: promovidos primeiro, depois normais
       const allSpaces = [...processedPromotedSpaces, ...processedNormalSpaces];
+      console.log('Total spaces processed:', allSpaces.length);
+      console.log('Promoted spaces:', processedPromotedSpaces.length);
       setSpaces(allSpaces);
 
     } catch (error) {
