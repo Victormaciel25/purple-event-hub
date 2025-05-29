@@ -1,7 +1,7 @@
 
 import React from "react";
 import { Card, CardContent } from "@/components/ui/card";
-import { MapPin, Heart, Star } from "lucide-react";
+import { MapPin, Heart, Star, Clock } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useEventSpaceFavorites } from "../hooks/useEventSpaceFavorites";
 import OptimizedImage from "./OptimizedImage";
