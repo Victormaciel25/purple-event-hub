@@ -71,7 +71,7 @@ const PromotedSpaceCard: React.FC<PromotedSpaceCardProps> = ({
       }`}
       onClick={handleCardClick}
     >
-      <div className="absolute top-2 right-2 z-10 flex flex-col gap-1">
+      <div className="absolute top-2 right-2 z-10 flex flex-col gap-2">
         {isPromoted && (
           <Badge className="bg-yellow-500 hover:bg-yellow-600 text-white flex items-center gap-1">
             <Star size={12} className="fill-current" />
