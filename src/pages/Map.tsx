@@ -1,6 +1,7 @@
+
 import React, { useState, useEffect, useRef } from "react";
-import { Loader2 } from "lucide-react";
-import { Wrapper } from "@googlemaps/react-wrapper";
+import { Loader2, MapPin, AlertTriangle } from "lucide-react";
+import { Wrapper, Status } from "@googlemaps/react-wrapper";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 
@@ -34,6 +35,7 @@ const Map: React.FC = () => {
   const [filteredSpaces, setFilteredSpaces] = useState<Space[]>([]);
   const [mapCenter, setMapCenter] = useState<{ lat: number; lng: number } | null>(null);
   const [searchError, setSearchError] = useState<string | null>(null);
+  const [mapError, setMapError] = useState<string | null>(null);
 
   const mapRef = useRef<google.maps.Map | null>(null);
   const navigate = useNavigate();
@@ -53,6 +55,8 @@ const Map: React.FC = () => {
       (err) => {
         console.warn("Erro ao obter localização:", err);
         setSearchError("Não foi possível obter sua localização");
+        // Define uma localização padrão (São Paulo)
+        setMapCenter({ lat: -23.5505, lng: -46.6333 });
       }
     );
   }, []);
@@ -135,6 +139,7 @@ const Map: React.FC = () => {
   const handleLocationSelected = (loc: GeocodingResult) => {
     setMapCenter({ lat: loc.lat, lng: loc.lng });
     setSearchError(null);
+    setMapError(null);
     toast.success("Localização encontrada!");
   };
 
@@ -142,47 +147,100 @@ const Map: React.FC = () => {
     navigate(`/event-space/${spaceId}`);
   };
 
-  return (
-    <Wrapper apiKey={GOOGLE_MAPS_API_KEY} libraries={["places"]}>
-      <div className="container px-4 py-6 max-w-4xl mx-auto h-full">
-        <div className="mb-6">
-          <AddressAutoComplete
-            onLocationSelected={handleLocationSelected}
-            initialValue={searchValue}
-            placeholder="Buscar por endereço, cidade ou CEP..."
-          />
-        </div>
-
-        {searchError && (
-          <div className="mb-2 p-2 bg-red-100 text-red-700 rounded-md text-sm">
-            {searchError}
-          </div>
-        )}
-
-        <div className="bg-gray-200 rounded-xl h-[calc(100vh-200px)] flex items-center justify-center">
-          {loading ? (
+  const renderMap = (status: Status) => {
+    console.log("Google Maps status:", status);
+    
+    if (status === Status.LOADING) {
+      return (
+        <div className="bg-gray-100 rounded-xl h-[calc(100vh-200px)] flex items-center justify-center">
+          <div className="flex flex-col items-center gap-3">
             <Loader2 className="animate-spin h-8 w-8 text-iparty" />
-          ) : (
-            <LocationMap
-              viewOnly
-              spaces={filteredSpaces}
-              onSpaceClick={handleSpaceClick}
-              initialLocation={mapCenter || undefined}
-              onMapLoad={(mapInstance) => {
-                mapRef.current = mapInstance;
-                if (mapCenter) {
-                  mapInstance.panTo(mapCenter);
-                  mapInstance.setZoom(14);
-                }
-              }}
-              isLoading={false}
-              keepPinsVisible={false}
-              onLocationSelected={() => {}}
-            />
-          )}
+            <p className="text-gray-600">Carregando mapa...</p>
+          </div>
         </div>
+      );
+    }
+
+    if (status === Status.FAILURE) {
+      return (
+        <div className="bg-red-50 border border-red-200 rounded-xl h-[calc(100vh-200px)] flex items-center justify-center">
+          <div className="flex flex-col items-center gap-4 p-6 text-center">
+            <AlertTriangle className="h-12 w-12 text-red-500" />
+            <div>
+              <h3 className="text-lg font-semibold text-red-800 mb-2">
+                Erro ao carregar o mapa
+              </h3>
+              <p className="text-red-600 mb-4">
+                Não foi possível carregar o Google Maps. Verifique sua conexão com a internet e tente novamente.
+              </p>
+              <button
+                onClick={() => window.location.reload()}
+                className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors"
+              >
+                Tentar novamente
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <div className="bg-gray-200 rounded-xl h-[calc(100vh-200px)] flex items-center justify-center">
+        {loading ? (
+          <div className="flex flex-col items-center gap-3">
+            <Loader2 className="animate-spin h-8 w-8 text-iparty" />
+            <p className="text-gray-600">Carregando espaços...</p>
+          </div>
+        ) : (
+          <LocationMap
+            viewOnly
+            spaces={filteredSpaces}
+            onSpaceClick={handleSpaceClick}
+            initialLocation={mapCenter || undefined}
+            onMapLoad={(mapInstance) => {
+              mapRef.current = mapInstance;
+              if (mapCenter) {
+                mapInstance.panTo(mapCenter);
+                mapInstance.setZoom(14);
+              }
+            }}
+            isLoading={false}
+            keepPinsVisible={false}
+            onLocationSelected={() => {}}
+            onError={(error) => {
+              console.error("Erro no mapa:", error);
+              setMapError(error);
+            }}
+          />
+        )}
       </div>
-    </Wrapper>
+    );
+  };
+
+  return (
+    <div className="container px-4 py-6 max-w-4xl mx-auto h-full">
+      <div className="mb-6">
+        <AddressAutoComplete
+          onLocationSelected={handleLocationSelected}
+          initialValue={searchValue}
+          placeholder="Buscar por endereço, cidade ou CEP..."
+        />
+      </div>
+
+      {(searchError || mapError) && (
+        <div className="mb-2 p-3 bg-yellow-100 border border-yellow-300 text-yellow-800 rounded-md text-sm flex items-center gap-2">
+          <AlertTriangle size={16} />
+          {searchError || mapError}
+        </div>
+      )}
+
+      <Wrapper 
+        apiKey={GOOGLE_MAPS_API_KEY} 
+        libraries={["places"]}
+        render={renderMap}
+      />
+    </div>
   );
 };
 
