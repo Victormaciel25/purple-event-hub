@@ -13,8 +13,6 @@ import {
   Users, 
   Heart, 
   Loader2,
-  X,
-  ZoomIn,
   MessageSquare,
   Trash2
 } from "lucide-react";
@@ -29,12 +27,6 @@ import { Badge } from "@/components/ui/badge";
 import { useEventSpaceFavorites } from "../hooks/useEventSpaceFavorites";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import {
-  Dialog,
-  DialogContent,
-  DialogClose,
-  DialogTitle
-} from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { useUserRoles } from "@/hooks/useUserRoles";
 import OptimizedImage from "@/components/OptimizedImage";
@@ -80,8 +72,6 @@ const EventSpaceDetails: React.FC = () => {
 
   const [space, setSpace] = useState<SpaceDetails | null>(null);
   const [loading, setLoading] = useState(true);
-  const [selectedImage, setSelectedImage] = useState<string | null>(null);
-  const [isImageDialogOpen, setIsImageDialogOpen] = useState(false);
   const [spaceOwner, setSpaceOwner] = useState<{ id: string; name: string } | null>(null);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [processingChat, setProcessingChat] = useState(false);
@@ -290,29 +280,16 @@ const EventSpaceDetails: React.FC = () => {
           <CarouselContent>
             {space.images.map((img, i) => (
               <CarouselItem key={i}>
-                <div className="relative group rounded-lg overflow-hidden h-64 md:h-80">
+                <div className="relative rounded-lg overflow-hidden h-64 md:h-80">
                   <OptimizedImage
                     src={img}
                     alt={`${space.name} ${i + 1}`}
-                    className="object-cover w-full h-full cursor-pointer"
-                    onClick={() => {
-                      setIsImageDialogOpen(true);
-                      setSelectedImage(img);
-                    }}
+                    className="object-cover w-full h-full"
                   />
-                  <div className="absolute bottom-2 right-2 flex items-center gap-2">
+                  <div className="absolute bottom-2 right-2">
                     <span className="bg-black/70 text-white px-2 py-1 rounded text-xs">
                       {i + 1}/{space.images.length}
                     </span>
-                    <button
-                      className="opacity-0 group-hover:opacity-100 bg-black/70 p-1 rounded text-white"
-                      onClick={() => {
-                        setIsImageDialogOpen(true);
-                        setSelectedImage(img);
-                      }}
-                    >
-                      <ZoomIn size={16} />
-                    </button>
                   </div>
                 </div>
               </CarouselItem>
@@ -411,23 +388,6 @@ const EventSpaceDetails: React.FC = () => {
           Excluir Espaço
         </Button>
       )}
-
-      {/* image dialog */}
-      <Dialog open={isImageDialogOpen} onOpenChange={setIsImageDialogOpen}>
-        <DialogContent className="max-w-screen-lg w-[95vw] h-[90vh] p-0 bg-black/95 border-none">
-          <DialogTitle className="sr-only">Visualização da imagem</DialogTitle>
-          <div className="flex items-center justify-center w-full h-full relative">
-            <OptimizedImage
-              src={selectedImage!}
-              alt="Visualização ampliada"
-              className="max-w-full max-h-full object-contain"
-            />
-            <DialogClose className="absolute top-4 right-4 bg-black/50 rounded-full p-1 hover:bg-black/70">
-              <X className="h-6 w-6 text-white" />
-            </DialogClose>
-          </div>
-        </DialogContent>
-      </Dialog>
 
       {/* delete confirmation */}
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
