@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft } from "lucide-react";
+import { ChevronLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { 
   Sheet,
@@ -241,11 +241,12 @@ const SpaceApproval = () => {
 
   return (
     <div className="container px-4 py-6 max-w-5xl mx-auto">
-      <div className="flex items-center mb-6">
-        <Button variant="ghost" onClick={() => navigate("/profile")} className="mr-2 p-0 h-auto">
-          <ArrowLeft size={24} />
+      <div className="flex items-center justify-between mb-6">
+        <Button variant="ghost" size="sm" onClick={() => navigate("/profile")}>
+          <ChevronLeft size={20} />
         </Button>
-        <h1 className="text-2xl font-bold">Aprovação de Espaços</h1>
+        <h1 className="text-2xl font-bold absolute left-1/2 transform -translate-x-1/2">Aprovação de Espaços</h1>
+        <div></div> {/* Empty div for spacing */}
       </div>
 
       <SpaceList 

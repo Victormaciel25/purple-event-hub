@@ -1,9 +1,9 @@
-
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { ChevronLeft } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { useUserRoles } from "@/hooks/useUserRoles";
-import AdminHeader from "@/components/admin/AdminHeader";
 import AddAdminForm from "@/components/admin/AddAdminForm";
 import AdminsTable, { AdminUser } from "@/components/admin/AdminsTable";
 
@@ -71,7 +71,14 @@ const AdminManagement = () => {
 
   return (
     <div className="container px-4 py-6 max-w-4xl mx-auto">
-      <AdminHeader title="Gerenciamento de Administradores" />
+      <div className="flex items-center justify-between mb-6">
+        <Button variant="ghost" size="sm" onClick={() => navigate("/profile")}>
+          <ChevronLeft size={20} />
+        </Button>
+        <h1 className="text-2xl font-bold absolute left-1/2 transform -translate-x-1/2">Gerenciamento de Administradores</h1>
+        <div></div> {/* Empty div for spacing */}
+      </div>
+      
       <AddAdminForm onAdminAdded={fetchAdmins} />
       <AdminsTable 
         adminUsers={adminUsers}
