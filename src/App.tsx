@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -9,6 +8,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "./integrations/supabase/client";
 import Layout from "./components/Layout";
 import Login from "./pages/Login";
+import ForgotPassword from "./pages/ForgotPassword";
 import Explore from "./pages/Explore";
 import Vendors from "./pages/Vendors";
 import VendorDetails from "./pages/VendorDetails";
@@ -99,6 +99,12 @@ const App: React.FC = () => {
             <Route 
               path="/login" 
               element={session ? <Navigate to="/explore" replace /> : <Login />} 
+            />
+            
+            {/* Forgot Password Route */}
+            <Route 
+              path="/forgot-password" 
+              element={session ? <Navigate to="/explore" replace /> : <ForgotPassword />} 
             />
             
             {/* Privacy Policy Route - accessible without authentication */}

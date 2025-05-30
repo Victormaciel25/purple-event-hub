@@ -388,6 +388,19 @@ const Login = () => {
               )}
               {loading ? "Processando..." : isLogin ? "Entrar" : "Cadastrar"}
             </Button>
+
+            {isLogin && (
+              <div className="text-center">
+                <Button
+                  type="button"
+                  variant="link"
+                  className="text-iparty hover:text-iparty-dark text-sm"
+                  onClick={() => navigate("/forgot-password")}
+                >
+                  Esqueci minha senha
+                </Button>
+              </div>
+            )}
           </form>
         </div>
       </div>
