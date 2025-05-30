@@ -1,9 +1,8 @@
-
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { LogIn, Check } from "lucide-react";
+import { LogIn, Check, AlertCircle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
@@ -18,8 +17,49 @@ const Login = () => {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [initialAuthCheckDone, setInitialAuthCheckDone] = useState(false);
+  const [passwordErrors, setPasswordErrors] = useState<string[]>([]);
   const navigate = useNavigate();
   const { toast } = useToast();
+
+  // Password validation function
+  const validatePassword = (password: string): string[] => {
+    const errors: string[] = [];
+    
+    if (password.length < 8) {
+      errors.push("Mínimo de 8 caracteres");
+    }
+    
+    if (!/[A-Z]/.test(password)) {
+      errors.push("Pelo menos uma letra maiúscula (A-Z)");
+    }
+    
+    if (!/[a-z]/.test(password)) {
+      errors.push("Pelo menos uma letra minúscula (a-z)");
+    }
+    
+    if (!/[0-9]/.test(password)) {
+      errors.push("Pelo menos um número (0-9)");
+    }
+    
+    if (!/[!@#$%^&*]/.test(password)) {
+      errors.push("Pelo menos um caractere especial (!@#$%^&*)");
+    }
+    
+    return errors;
+  };
+
+  // Handle password change with validation
+  const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newPassword = e.target.value;
+    setPassword(newPassword);
+    
+    if (!isLogin && newPassword) {
+      const errors = validatePassword(newPassword);
+      setPasswordErrors(errors);
+    } else {
+      setPasswordErrors([]);
+    }
+  };
 
   useEffect(() => {
     // Check if user is already logged in
@@ -72,7 +112,18 @@ const Login = () => {
         
         // Navigation will be handled by onAuthStateChange
       } else {
-        // Handle signup
+        // Handle signup - validate password first
+        const passwordValidationErrors = validatePassword(password);
+        if (passwordValidationErrors.length > 0) {
+          toast({
+            title: "Senha inválida",
+            description: "Por favor, atenda a todos os requisitos de senha",
+            variant: "destructive",
+          });
+          setLoading(false);
+          return;
+        }
+
         if (password !== confirmPassword) {
           toast({
             title: "Erro",
@@ -284,8 +335,33 @@ const Login = () => {
                 placeholder="••••••••"
                 required
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                onChange={handlePasswordChange}
               />
+              {!isLogin && password && (
+                <div className="mt-2">
+                  <div className="text-xs text-gray-600 mb-2">
+                    Crie uma senha forte seguindo estas regras:
+                  </div>
+                  <div className="space-y-1">
+                    {[
+                      { rule: "Mínimo de 8 caracteres", valid: password.length >= 8 },
+                      { rule: "Pelo menos uma letra maiúscula (A-Z)", valid: /[A-Z]/.test(password) },
+                      { rule: "Pelo menos uma letra minúscula (a-z)", valid: /[a-z]/.test(password) },
+                      { rule: "Pelo menos um número (0-9)", valid: /[0-9]/.test(password) },
+                      { rule: "Pelo menos um caractere especial (!@#$%^&*)", valid: /[!@#$%^&*]/.test(password) }
+                    ].map(({ rule, valid }, index) => (
+                      <div key={index} className={`flex items-center gap-2 text-xs ${valid ? 'text-green-600' : 'text-red-500'}`}>
+                        {valid ? (
+                          <Check size={12} className="text-green-600" />
+                        ) : (
+                          <AlertCircle size={12} className="text-red-500" />
+                        )}
+                        <span>{rule}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
             {!isLogin && (
               <div className="space-y-2">
@@ -303,7 +379,7 @@ const Login = () => {
             <Button
               type="submit"
               className="w-full bg-iparty hover:bg-iparty-dark text-white"
-              disabled={loading}
+              disabled={loading || (!isLogin && passwordErrors.length > 0)}
             >
               {isLogin ? (
                 <LogIn className="mr-2 h-4 w-4" />
