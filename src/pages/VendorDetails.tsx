@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { Phone, ArrowLeft, MapPin, Calendar, Clock } from "lucide-react";
+import { Phone, MapPin, Calendar, Clock, ChevronLeft } from "lucide-react";
 import OptimizedImage from "@/components/OptimizedImage";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -10,8 +10,6 @@ import {
   Carousel,
   CarouselContent,
   CarouselItem,
-  CarouselNext,
-  CarouselPrevious,
 } from "@/components/ui/carousel";
 import { useUserRoles } from "@/hooks/useUserRoles";
 import {
@@ -195,14 +193,11 @@ const VendorDetails = () => {
 
   return (
     <div className="container px-4 py-6 max-w-4xl mx-auto">
-      <Button 
-        variant="ghost" 
-        onClick={() => navigate(-1)} 
-        className="mb-4 pl-0 flex items-center text-gray-600"
-      >
-        <ArrowLeft size={20} className="mr-1" />
-        <span>Voltar</span>
-      </Button>
+      <div className="flex items-center justify-between mb-4">
+        <Button variant="ghost" size="sm" onClick={() => navigate(-1)}>
+          <ChevronLeft size={20} />
+        </Button>
+      </div>
 
       {/* image display - responsive carousel for all screen sizes */}
       <div className="mb-6">
