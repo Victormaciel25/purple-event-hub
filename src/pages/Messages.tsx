@@ -789,7 +789,7 @@ const Messages = () => {
               <Button 
                 variant="ghost" 
                 size="sm" 
-                className="mr-2 p-1"
+                className="mr-3"
                 onClick={handleBackToChats}
               >
                 <ArrowLeft size={20} />
