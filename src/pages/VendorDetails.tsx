@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Phone, ArrowLeft, MapPin, Calendar, Clock } from "lucide-react";
@@ -204,27 +205,59 @@ const VendorDetails = () => {
         <span>Voltar</span>
       </Button>
 
-      <div className="w-full rounded-xl overflow-hidden mb-6">
-        <Carousel className="w-full">
-          <CarouselContent>
-            {displayImages.map((image, index) => (
-              <CarouselItem key={`vendor-image-${index}`} className="w-full h-64">
-                <OptimizedImage
-                  src={image}
-                  alt={`${vendor.name} - Imagem ${index + 1}`}
-                  className="w-full h-full object-cover"
-                  loadingClassName="animate-pulse bg-gray-200"
-                />
-              </CarouselItem>
-            ))}
-          </CarouselContent>
-          {displayImages.length > 1 && (
-            <>
-              <CarouselPrevious className="left-2 lg:left-4" />
-              <CarouselNext className="right-2 lg:right-4" />
-            </>
-          )}
-        </Carousel>
+      {/* image display - responsive carousel for all screen sizes */}
+      <div className="mb-6">
+        {/* Mobile: Carousel */}
+        <div className="block md:hidden">
+          <Carousel>
+            <CarouselContent>
+              {displayImages.map((image, index) => (
+                <CarouselItem key={index} className="w-full h-64">
+                  <OptimizedImage
+                    src={image}
+                    alt={`${vendor.name} - Imagem ${index + 1}`}
+                    className="w-full h-full object-cover rounded-lg"
+                    loadingClassName="animate-pulse bg-gray-200"
+                  />
+                  <div className="absolute bottom-2 right-2">
+                    <span className="bg-black/70 text-white px-2 py-1 rounded text-xs">
+                      {index + 1}/{displayImages.length}
+                    </span>
+                  </div>
+                </CarouselItem>
+              ))}
+            </CarouselContent>
+            <CarouselPrevious className="bg-white/70 left-2" />
+            <CarouselNext className="bg-white/70 right-2" />
+          </Carousel>
+        </div>
+
+        {/* Tablet/Desktop: Horizontal Scrollable Row */}
+        <div className="hidden md:block">
+          <Carousel>
+            <CarouselContent className="-ml-2 md:-ml-4">
+              {displayImages.map((image, index) => (
+                <CarouselItem key={index} className="pl-2 md:pl-4 md:basis-1/3 lg:basis-1/4">
+                  <div className="relative rounded-lg overflow-hidden h-48 lg:h-56">
+                    <OptimizedImage
+                      src={image}
+                      alt={`${vendor.name} - Imagem ${index + 1}`}
+                      className="object-cover w-full h-full"
+                    />
+                    <div className="absolute bottom-2 right-2">
+                      <span className="bg-black/70 text-white px-2 py-1 rounded text-xs">
+                        {index + 1}
+                      </span>
+                    </div>
+                  </div>
+                </CarouselItem>
+              ))}
+            </CarouselContent>
+            <CarouselPrevious className="bg-white/70 -left-12" />
+            <CarouselNext className="bg-white/70 -right-12" />
+          </Carousel>
+        </div>
+
         <div className="flex justify-center mt-2">
           <p className="text-xs text-muted-foreground">
             {displayImages.length} {displayImages.length === 1 ? 'imagem' : 'imagens'}
