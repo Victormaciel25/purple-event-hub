@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Phone, ArrowLeft, MapPin, Calendar, Clock } from "lucide-react";
@@ -227,8 +226,6 @@ const VendorDetails = () => {
                 </CarouselItem>
               ))}
             </CarouselContent>
-            <CarouselPrevious className="bg-white/70 left-2" />
-            <CarouselNext className="bg-white/70 right-2" />
           </Carousel>
         </div>
 
@@ -253,8 +250,6 @@ const VendorDetails = () => {
                 </CarouselItem>
               ))}
             </CarouselContent>
-            <CarouselPrevious className="bg-white/70 -left-12" />
-            <CarouselNext className="bg-white/70 -right-12" />
           </Carousel>
         </div>
 

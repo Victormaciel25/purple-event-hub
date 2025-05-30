@@ -297,8 +297,6 @@ const EventSpaceDetails: React.FC = () => {
                 </CarouselItem>
               ))}
             </CarouselContent>
-            <CarouselPrevious className="bg-white/70 left-2" />
-            <CarouselNext className="bg-white/70 right-2" />
           </Carousel>
         </div>
 
@@ -323,8 +321,6 @@ const EventSpaceDetails: React.FC = () => {
                 </CarouselItem>
               ))}
             </CarouselContent>
-            <CarouselPrevious className="bg-white/70 -left-12" />
-            <CarouselNext className="bg-white/70 -right-12" />
           </Carousel>
         </div>
       </div>
