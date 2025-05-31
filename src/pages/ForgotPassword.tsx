@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -6,6 +7,7 @@ import { ArrowLeft, Mail } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
+import { getCurrentDomain } from "@/config/app-config";
 
 const ForgotPassword = () => {
   const [email, setEmail] = useState("");
@@ -20,7 +22,7 @@ const ForgotPassword = () => {
 
     try {
       // Use the correct redirect URL that matches the route in App.tsx
-      const redirectUrl = `${window.location.origin}/reset-password`;
+      const redirectUrl = `${getCurrentDomain()}/reset-password`;
       
       console.log("Sending reset email with redirect URL:", redirectUrl);
 

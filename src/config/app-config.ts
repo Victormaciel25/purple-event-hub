@@ -1,4 +1,3 @@
-
 /**
  * Application-wide configuration constants
  * 
@@ -6,10 +5,26 @@
  * For sensitive values like API keys, use Supabase Edge Function Secrets instead.
  */
 
+// Application domain configuration
+export const APP_CONFIG = {
+  PRODUCTION_DOMAIN: "https://iparty-brasil.lovable.app",
+  DEVELOPMENT_DOMAIN: "http://localhost:8080"
+};
+
 // Supabase project details
 export const SUPABASE_CONFIG = {
   URL: "https://kfqorqjwbkxzrqhuvnyh.supabase.co",
   PUBLIC_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtmcW9ycWp3Ymt4enJxaHV2bnloIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDU5Mzc2NTYsImV4cCI6MjA2MTUxMzY1Nn0.bfqH3CFPuE14hgQCiB8OBhr7YDfaK2sJqqnVaZexjjU"
+};
+
+// Helper function to get the correct domain
+export const getCurrentDomain = () => {
+  if (typeof window !== 'undefined') {
+    return window.location.hostname === 'localhost' 
+      ? APP_CONFIG.DEVELOPMENT_DOMAIN 
+      : APP_CONFIG.PRODUCTION_DOMAIN;
+  }
+  return APP_CONFIG.PRODUCTION_DOMAIN;
 };
 
 // Edge function endpoints
