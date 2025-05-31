@@ -61,12 +61,15 @@ const ResetPassword = () => {
     // Check if we have the necessary tokens in the URL
     const accessToken = searchParams.get('access_token');
     const refreshToken = searchParams.get('refresh_token');
+    const type = searchParams.get('type');
     
     console.log("Reset password page loaded");
     console.log("Access token present:", !!accessToken);
     console.log("Refresh token present:", !!refreshToken);
+    console.log("Type:", type);
     
-    if (!accessToken || !refreshToken) {
+    if (!accessToken || !refreshToken || type !== 'recovery') {
+      console.log("Missing required parameters or invalid type");
       toast({
         title: "Link inválido",
         description: "O link de redefinição de senha é inválido ou expirou.",
