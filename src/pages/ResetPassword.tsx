@@ -62,6 +62,10 @@ const ResetPassword = () => {
     const accessToken = searchParams.get('access_token');
     const refreshToken = searchParams.get('refresh_token');
     
+    console.log("Reset password page loaded");
+    console.log("Access token present:", !!accessToken);
+    console.log("Refresh token present:", !!refreshToken);
+    
     if (!accessToken || !refreshToken) {
       toast({
         title: "Link inválido",
@@ -107,6 +111,8 @@ const ResetPassword = () => {
         throw new Error("Tokens de autenticação não encontrados");
       }
 
+      console.log("Setting session with tokens from URL");
+
       // Set the session with the tokens from URL
       const { error: sessionError } = await supabase.auth.setSession({
         access_token: accessToken,
@@ -114,6 +120,8 @@ const ResetPassword = () => {
       });
 
       if (sessionError) throw sessionError;
+
+      console.log("Session set successfully, updating password");
 
       // Update the password
       const { error } = await supabase.auth.updateUser({
@@ -132,6 +140,7 @@ const ResetPassword = () => {
       navigate("/login");
 
     } catch (error: any) {
+      console.error("Error resetting password:", error);
       toast({
         title: "Erro",
         description: error.message,
