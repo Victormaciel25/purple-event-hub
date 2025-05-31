@@ -20,8 +20,13 @@ const ForgotPassword = () => {
     setLoading(true);
 
     try {
+      // Use the URL configured in Supabase
+      const redirectUrl = window.location.hostname === 'localhost' 
+        ? `${window.location.origin}/reset-password`
+        : 'https://www.ipartybrasil.com/redefinir-senha';
+
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/reset-password`,
+        redirectTo: redirectUrl,
       });
 
       if (error) throw error;
