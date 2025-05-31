@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,10 +19,10 @@ const ForgotPassword = () => {
     setLoading(true);
 
     try {
-      // Use the URL configured in Supabase
-      const redirectUrl = window.location.hostname === 'localhost' 
-        ? `${window.location.origin}/reset-password`
-        : 'https://www.ipartybrasil.com/redefinir-senha';
+      // Use the correct redirect URL that matches the route in App.tsx
+      const redirectUrl = `${window.location.origin}/reset-password`;
+      
+      console.log("Sending reset email with redirect URL:", redirectUrl);
 
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
         redirectTo: redirectUrl,
@@ -37,6 +36,7 @@ const ForgotPassword = () => {
         description: "Verifique sua caixa de entrada para redefinir sua senha",
       });
     } catch (error: any) {
+      console.error("Error sending reset email:", error);
       toast({
         title: "Erro",
         description: error.message,
