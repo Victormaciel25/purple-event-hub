@@ -1,3 +1,4 @@
+
 /**
  * Application-wide configuration constants
  * 
@@ -7,8 +8,8 @@
 
 // Application domain configuration
 export const APP_CONFIG = {
-  PRODUCTION_DOMAIN: "https://iparty-brasil.lovable.app",
-  DEVELOPMENT_DOMAIN: "http://localhost:8080"
+  PRODUCTION_DOMAIN: "https://www.ipartybrasil.com",
+  DEVELOPMENT_DOMAIN: "http://localhost:3000"
 };
 
 // Supabase project details
