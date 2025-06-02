@@ -5,7 +5,7 @@ import PromotedSpaceCard from "@/components/PromotedSpaceCard";
 import { Input } from "@/components/ui/input";
 import { Search, Circle, Heart, Briefcase, Cake, GraduationCap } from "lucide-react";
 import { toast } from "sonner";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { SPACE_CATEGORIES } from "@/config/app-config";
 import { usePromotedSpaces } from "@/hooks/usePromotedSpaces";
 
@@ -148,8 +148,8 @@ const Explore = () => {
       </div>
 
       <div className="mb-4">
-        <ScrollArea className="w-full">
-          <div className="flex gap-3 pb-3 px-1 pt-1">
+        <ScrollArea className="w-full whitespace-nowrap">
+          <div className="flex gap-3 pb-3 px-1 pt-1 w-max">
             {categories.map((category) => {
               const Icon = category.icon;
               const isActive = activeCategory === category.key;
@@ -159,7 +159,7 @@ const Explore = () => {
                   key={category.key}
                   className={`
                     relative flex flex-col items-center justify-center min-w-[70px] h-16 rounded-xl 
-                    transition-all duration-300 transform hover:scale-105 hover:shadow-md
+                    transition-all duration-300 transform hover:scale-105 hover:shadow-md flex-shrink-0
                     ${isActive 
                       ? 'bg-iparty text-white shadow-md' 
                       : 'bg-white border border-gray-200 text-gray-600 hover:border-gray-300 hover:bg-gray-50'
@@ -185,6 +185,7 @@ const Explore = () => {
               );
             })}
           </div>
+          <ScrollBar orientation="horizontal" />
         </ScrollArea>
       </div>
 
