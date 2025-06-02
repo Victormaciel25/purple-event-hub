@@ -13,6 +13,7 @@ const ResetPassword = () => {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [passwordErrors, setPasswordErrors] = useState<string[]>([]);
+  const [tokensValid, setTokensValid] = useState<boolean | null>(null);
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -70,14 +71,11 @@ const ResetPassword = () => {
     
     if (!accessToken || !refreshToken || type !== 'recovery') {
       console.log("Missing required parameters or invalid type");
-      toast({
-        title: "Link inválido",
-        description: "O link de redefinição de senha é inválido ou expirou.",
-        variant: "destructive",
-      });
-      navigate("/login");
+      setTokensValid(false);
+    } else {
+      setTokensValid(true);
     }
-  }, [searchParams, navigate, toast]);
+  }, [searchParams]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -154,6 +152,76 @@ const ResetPassword = () => {
     }
   };
 
+  // Show loading state while checking tokens
+  if (tokensValid === null) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-background p-4">
+        <div className="text-center">
+          <div className="flex justify-center mb-4">
+            <div className="h-32 w-32">
+              <img 
+                src="/lovable-uploads/b59e9ab5-1380-47bb-b7f4-95ecfc1fe03c.png" 
+                alt="iParty Balloons" 
+                className="w-full h-full"
+              />
+            </div>
+          </div>
+          <p className="text-gray-500">Verificando link de redefinição...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show error state if tokens are invalid
+  if (tokensValid === false) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-background p-4">
+        <div className="w-full max-w-md space-y-4 animate-fade-in">
+          <div className="text-center">
+            <div className="flex justify-center mb-4">
+              <div className="h-32 w-32">
+                <img 
+                  src="/lovable-uploads/b59e9ab5-1380-47bb-b7f4-95ecfc1fe03c.png" 
+                  alt="iParty Balloons" 
+                  className="w-full h-full"
+                />
+              </div>
+            </div>
+            <h1 className="text-3xl font-bold text-foreground">Link Inválido</h1>
+            <p className="text-muted-foreground mt-2">
+              O link de redefinição de senha é inválido ou expirou.
+            </p>
+          </div>
+
+          <div className="bg-white rounded-2xl p-6 shadow-lg text-center">
+            <div className="flex justify-center mb-4">
+              <AlertCircle className="h-16 w-16 text-red-500" />
+            </div>
+            <p className="text-gray-600 mb-6">
+              Por favor, solicite um novo link de redefinição de senha.
+            </p>
+            <div className="space-y-3">
+              <Button
+                onClick={() => navigate("/forgot-password")}
+                className="w-full bg-iparty hover:bg-iparty-dark text-white"
+              >
+                Solicitar Novo Link
+              </Button>
+              <Button
+                onClick={() => navigate("/login")}
+                variant="outline"
+                className="w-full"
+              >
+                Voltar para o Login
+              </Button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Show the reset form if tokens are valid
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-background p-4">
       <div className="w-full max-w-md space-y-4 animate-fade-in">
