@@ -2,7 +2,7 @@
 import React, { useState } from "react";
 import PromotedSpaceCard from "@/components/PromotedSpaceCard";
 import { Input } from "@/components/ui/input";
-import { Search, Circle, Heart, Briefcase, Cake, GraduationCap } from "lucide-react";
+import { Search, Circle, Heart, Briefcase, Cake, GraduationCap, ChevronLeft, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { SPACE_CATEGORIES } from "@/config/app-config";
@@ -12,6 +12,7 @@ const Explore = () => {
   const { spaces, loading, error } = usePromotedSpaces();
   const [searchTerm, setSearchTerm] = useState("");
   const [activeCategory, setActiveCategory] = useState(SPACE_CATEGORIES.ALL);
+  const scrollContainerRef = React.useRef<HTMLDivElement>(null);
   
   React.useEffect(() => {
     if (error) {
@@ -40,6 +41,18 @@ const Explore = () => {
     );
   });
 
+  const handleScrollLeft = () => {
+    if (scrollContainerRef.current) {
+      scrollContainerRef.current.scrollBy({ left: -200, behavior: 'smooth' });
+    }
+  };
+
+  const handleScrollRight = () => {
+    if (scrollContainerRef.current) {
+      scrollContainerRef.current.scrollBy({ left: 200, behavior: 'smooth' });
+    }
+  };
+
   return (
     <div className="container px-4 py-6 max-w-4xl mx-auto">
       <div className="relative mb-6">
@@ -53,50 +66,72 @@ const Explore = () => {
       </div>
 
       <div className="space-y-2 mb-6">
-        <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-none" style={{ scrollbarWidth: 'none' }}>
+        <div className="relative">
           <button 
-            className={`${activeCategory === SPACE_CATEGORIES.ALL ? 'bg-iparty text-white' : 'bg-secondary text-foreground'} 
-              rounded-lg px-3 py-1 text-xs flex flex-col items-center min-w-[70px] transition-all`}
-            onClick={() => setActiveCategory(SPACE_CATEGORIES.ALL)}
+            onClick={handleScrollLeft} 
+            className="absolute left-0 top-1/2 transform -translate-y-1/2 bg-white rounded-full shadow-md p-1 z-10"
           >
-            <Circle className="mb-1" size={20} />
-            <span>Todos</span>
+            <ChevronLeft size={20} />
           </button>
           
-          <button 
-            className={`${activeCategory === SPACE_CATEGORIES.WEDDINGS ? 'bg-iparty text-white' : 'bg-secondary text-foreground'} 
-              rounded-lg px-3 py-1 text-xs flex flex-col items-center min-w-[70px] transition-all`}
-            onClick={() => setActiveCategory(SPACE_CATEGORIES.WEDDINGS)}
-          >
-            <Heart className="mb-1" size={20} />
-            <span>Casamentos</span>
-          </button>
+          <div className="overflow-hidden mx-6">
+            <div 
+              ref={scrollContainerRef} 
+              className="flex gap-3 overflow-x-auto pb-2 scrollbar-none"
+              style={{ scrollbarWidth: 'none' }}
+            >
+              <button 
+                className={`${activeCategory === SPACE_CATEGORIES.ALL ? 'bg-iparty text-white' : 'bg-secondary text-foreground'} 
+                  rounded-lg px-3 py-1 text-xs flex flex-col items-center min-w-[70px] transition-all`}
+                onClick={() => setActiveCategory(SPACE_CATEGORIES.ALL)}
+              >
+                <Circle className="mb-1" size={20} />
+                <span>Todos</span>
+              </button>
+              
+              <button 
+                className={`${activeCategory === SPACE_CATEGORIES.WEDDINGS ? 'bg-iparty text-white' : 'bg-secondary text-foreground'} 
+                  rounded-lg px-3 py-1 text-xs flex flex-col items-center min-w-[70px] transition-all`}
+                onClick={() => setActiveCategory(SPACE_CATEGORIES.WEDDINGS)}
+              >
+                <Heart className="mb-1" size={20} />
+                <span>Casamentos</span>
+              </button>
+              
+              <button 
+                className={`${activeCategory === SPACE_CATEGORIES.CORPORATE ? 'bg-iparty text-white' : 'bg-secondary text-foreground'} 
+                  rounded-lg px-3 py-1 text-xs flex flex-col items-center min-w-[70px] transition-all`}
+                onClick={() => setActiveCategory(SPACE_CATEGORIES.CORPORATE)}
+              >
+                <Briefcase className="mb-1" size={20} />
+                <span>Corporativo</span>
+              </button>
+              
+              <button 
+                className={`${activeCategory === SPACE_CATEGORIES.BIRTHDAYS ? 'bg-iparty text-white' : 'bg-secondary text-foreground'} 
+                  rounded-lg px-3 py-1 text-xs flex flex-col items-center min-w-[70px] transition-all`}
+                onClick={() => setActiveCategory(SPACE_CATEGORIES.BIRTHDAYS)}
+              >
+                <Cake className="mb-1" size={20} />
+                <span>Aniversários</span>
+              </button>
+              
+              <button 
+                className={`${activeCategory === SPACE_CATEGORIES.GRADUATIONS ? 'bg-iparty text-white' : 'bg-secondary text-foreground'} 
+                  rounded-lg px-3 py-1 text-xs flex flex-col items-center min-w-[70px] transition-all`}
+                onClick={() => setActiveCategory(SPACE_CATEGORIES.GRADUATIONS)}
+              >
+                <GraduationCap className="mb-1" size={20} />
+                <span>Formaturas</span>
+              </button>
+            </div>
+          </div>
           
           <button 
-            className={`${activeCategory === SPACE_CATEGORIES.CORPORATE ? 'bg-iparty text-white' : 'bg-secondary text-foreground'} 
-              rounded-lg px-3 py-1 text-xs flex flex-col items-center min-w-[70px] transition-all`}
-            onClick={() => setActiveCategory(SPACE_CATEGORIES.CORPORATE)}
+            onClick={handleScrollRight} 
+            className="absolute right-0 top-1/2 transform -translate-y-1/2 bg-white rounded-full shadow-md p-1 z-10"
           >
-            <Briefcase className="mb-1" size={20} />
-            <span>Corporativo</span>
-          </button>
-          
-          <button 
-            className={`${activeCategory === SPACE_CATEGORIES.BIRTHDAYS ? 'bg-iparty text-white' : 'bg-secondary text-foreground'} 
-              rounded-lg px-3 py-1 text-xs flex flex-col items-center min-w-[70px] transition-all`}
-            onClick={() => setActiveCategory(SPACE_CATEGORIES.BIRTHDAYS)}
-          >
-            <Cake className="mb-1" size={20} />
-            <span>Aniversários</span>
-          </button>
-          
-          <button 
-            className={`${activeCategory === SPACE_CATEGORIES.GRADUATIONS ? 'bg-iparty text-white' : 'bg-secondary text-foreground'} 
-              rounded-lg px-3 py-1 text-xs flex flex-col items-center min-w-[70px] transition-all`}
-            onClick={() => setActiveCategory(SPACE_CATEGORIES.GRADUATIONS)}
-          >
-            <GraduationCap className="mb-1" size={20} />
-            <span>Formaturas</span>
+            <ChevronRight size={20} />
           </button>
         </div>
       </div>
