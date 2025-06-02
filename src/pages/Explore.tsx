@@ -4,6 +4,7 @@ import PromotedSpaceCard from "@/components/PromotedSpaceCard";
 import { Input } from "@/components/ui/input";
 import { Search, Circle, Heart, Briefcase, Cake, GraduationCap } from "lucide-react";
 import { toast } from "sonner";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { SPACE_CATEGORIES } from "@/config/app-config";
 import { usePromotedSpaces } from "@/hooks/usePromotedSpaces";
 
@@ -52,21 +53,10 @@ const Explore = () => {
       </div>
 
       <div className="space-y-2 mb-6">
-        <div className="flex gap-3 overflow-x-auto pb-2 touch-pan-x" 
-             style={{ 
-               scrollbarWidth: 'none',
-               msOverflowStyle: 'none',
-               WebkitOverflowScrolling: 'touch'
-             }}>
-          <style jsx>{`
-            div::-webkit-scrollbar {
-              display: none;
-            }
-          `}</style>
-          
+        <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-none" style={{ scrollbarWidth: 'none' }}>
           <button 
             className={`${activeCategory === SPACE_CATEGORIES.ALL ? 'bg-iparty text-white' : 'bg-secondary text-foreground'} 
-              rounded-lg px-3 py-1 text-xs flex flex-col items-center min-w-[70px] transition-all flex-shrink-0`}
+              rounded-lg px-3 py-1 text-xs flex flex-col items-center min-w-[70px] transition-all`}
             onClick={() => setActiveCategory(SPACE_CATEGORIES.ALL)}
           >
             <Circle className="mb-1" size={20} />
@@ -75,7 +65,7 @@ const Explore = () => {
           
           <button 
             className={`${activeCategory === SPACE_CATEGORIES.WEDDINGS ? 'bg-iparty text-white' : 'bg-secondary text-foreground'} 
-              rounded-lg px-3 py-1 text-xs flex flex-col items-center min-w-[70px] transition-all flex-shrink-0`}
+              rounded-lg px-3 py-1 text-xs flex flex-col items-center min-w-[70px] transition-all`}
             onClick={() => setActiveCategory(SPACE_CATEGORIES.WEDDINGS)}
           >
             <Heart className="mb-1" size={20} />
@@ -84,7 +74,7 @@ const Explore = () => {
           
           <button 
             className={`${activeCategory === SPACE_CATEGORIES.CORPORATE ? 'bg-iparty text-white' : 'bg-secondary text-foreground'} 
-              rounded-lg px-3 py-1 text-xs flex flex-col items-center min-w-[70px] transition-all flex-shrink-0`}
+              rounded-lg px-3 py-1 text-xs flex flex-col items-center min-w-[70px] transition-all`}
             onClick={() => setActiveCategory(SPACE_CATEGORIES.CORPORATE)}
           >
             <Briefcase className="mb-1" size={20} />
@@ -93,7 +83,7 @@ const Explore = () => {
           
           <button 
             className={`${activeCategory === SPACE_CATEGORIES.BIRTHDAYS ? 'bg-iparty text-white' : 'bg-secondary text-foreground'} 
-              rounded-lg px-3 py-1 text-xs flex flex-col items-center min-w-[70px] transition-all flex-shrink-0`}
+              rounded-lg px-3 py-1 text-xs flex flex-col items-center min-w-[70px] transition-all`}
             onClick={() => setActiveCategory(SPACE_CATEGORIES.BIRTHDAYS)}
           >
             <Cake className="mb-1" size={20} />
@@ -102,7 +92,7 @@ const Explore = () => {
           
           <button 
             className={`${activeCategory === SPACE_CATEGORIES.GRADUATIONS ? 'bg-iparty text-white' : 'bg-secondary text-foreground'} 
-              rounded-lg px-3 py-1 text-xs flex flex-col items-center min-w-[70px] transition-all flex-shrink-0`}
+              rounded-lg px-3 py-1 text-xs flex flex-col items-center min-w-[70px] transition-all`}
             onClick={() => setActiveCategory(SPACE_CATEGORIES.GRADUATIONS)}
           >
             <GraduationCap className="mb-1" size={20} />
