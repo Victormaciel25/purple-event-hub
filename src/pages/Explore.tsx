@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import PromotedSpaceCard from "@/components/PromotedSpaceCard";
 import { Input } from "@/components/ui/input";
@@ -153,7 +152,7 @@ const Explore = () => {
 
       <div className="mb-8">
         <ScrollArea className="w-full">
-          <div className="flex gap-4 pb-2 px-1">
+          <div className="flex gap-3 pb-2 px-1">
             {categories.map((category) => {
               const Icon = category.icon;
               const isActive = activeCategory === category.key;
@@ -162,11 +161,11 @@ const Explore = () => {
                 <button
                   key={category.key}
                   className={`
-                    relative flex flex-col items-center justify-center min-w-[90px] h-20 rounded-2xl 
-                    transition-all duration-300 transform hover:scale-105 hover:shadow-lg
+                    relative flex flex-col items-center justify-center min-w-[70px] h-16 rounded-xl 
+                    transition-all duration-300 transform hover:scale-105 hover:shadow-md
                     ${isActive 
-                      ? `bg-gradient-to-br ${category.color} text-white shadow-lg` 
-                      : 'bg-white border-2 border-gray-100 text-gray-600 hover:border-gray-200 hover:bg-gray-50'
+                      ? `bg-gradient-to-br ${category.color} text-white shadow-md` 
+                      : 'bg-white border border-gray-200 text-gray-600 hover:border-gray-300 hover:bg-gray-50'
                     }
                   `}
                   onClick={() => {
@@ -175,15 +174,15 @@ const Explore = () => {
                   }}
                 >
                   <Icon 
-                    size={24} 
+                    size={20} 
                     className={`mb-1 ${isActive ? 'text-white' : 'text-gray-500'}`} 
                   />
-                  <span className={`text-xs font-medium ${isActive ? 'text-white' : 'text-gray-600'}`}>
+                  <span className={`text-xs font-medium leading-tight text-center px-1 ${isActive ? 'text-white' : 'text-gray-600'}`}>
                     {category.label}
                   </span>
                   
                   {isActive && (
-                    <div className="absolute -bottom-1 left-1/2 transform -translate-x-1/2 w-2 h-2 bg-white rounded-full shadow-md" />
+                    <div className="absolute -bottom-1 left-1/2 transform -translate-x-1/2 w-1.5 h-1.5 bg-white rounded-full shadow-sm" />
                   )}
                 </button>
               );
