@@ -1,4 +1,3 @@
-
 import * as React from "react"
 
 import type {
@@ -6,8 +5,8 @@ import type {
   ToastProps,
 } from "@/components/ui/toast"
 
-const TOAST_LIMIT = 0
-const TOAST_REMOVE_DELAY = 0
+const TOAST_LIMIT = 5
+const TOAST_REMOVE_DELAY = 1000000
 
 type ToasterToast = ToastProps & {
   id: string
@@ -141,15 +140,6 @@ function dispatch(action: Action) {
 type Toast = Omit<ToasterToast, "id">
 
 function toast(props: Toast) {
-  // Set TOAST_LIMIT to 0 to disable toasts
-  if (TOAST_LIMIT <= 0) {
-    return {
-      id: "",
-      dismiss: () => {},
-      update: () => {},
-    };
-  }
-
   const id = genId()
 
   const update = (props: ToasterToast) =>
@@ -177,39 +167,6 @@ function toast(props: Toast) {
     update,
   }
 }
-
-// Helper methods for common toast types with empty implementations
-toast.error = (message: string) => {
-  return {
-    id: "",
-    dismiss: () => {},
-    update: () => {},
-  };
-};
-
-toast.success = (message: string) => {
-  return {
-    id: "",
-    dismiss: () => {},
-    update: () => {},
-  };
-};
-
-toast.warning = (message: string) => {
-  return {
-    id: "",
-    dismiss: () => {},
-    update: () => {},
-  };
-};
-
-toast.info = (message: string) => {
-  return {
-    id: "",
-    dismiss: () => {},
-    update: () => {},
-  };
-};
 
 function useToast() {
   const [state, setState] = React.useState<State>(memoryState)
