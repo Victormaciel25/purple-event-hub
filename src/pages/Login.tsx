@@ -134,12 +134,7 @@ const Login = () => {
           return;
         }
 
-        toast({
-          title: "Login bem-sucedido",
-          description: "Bem-vindo de volta!",
-        });
-        
-        // Navigation will be handled by onAuthStateChange
+        // Remove the success toast - navigation will be handled by onAuthStateChange
       } else {
         // Handle signup - validate password first
         const passwordValidationErrors = validatePassword(password);
