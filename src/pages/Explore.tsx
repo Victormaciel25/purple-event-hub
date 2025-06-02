@@ -156,7 +156,7 @@ const Explore = () => {
                 <button
                   key={category.key}
                   className={`
-                    relative flex flex-col items-center justify-center min-w-[60px] h-12 rounded-xl 
+                    relative flex flex-col items-center justify-center min-w-[70px] h-16 rounded-xl 
                     transition-all duration-300 transform hover:scale-105 hover:shadow-md
                     ${isActive 
                       ? 'bg-iparty text-white shadow-md' 
@@ -169,7 +169,7 @@ const Explore = () => {
                   }}
                 >
                   <Icon 
-                    size={16} 
+                    size={20} 
                     className={`mb-1 ${isActive ? 'text-white' : 'text-gray-500'}`} 
                   />
                   <span className={`text-xs font-medium leading-tight text-center px-1 ${isActive ? 'text-white' : 'text-gray-600'}`}>
