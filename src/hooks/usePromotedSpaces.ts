@@ -105,18 +105,12 @@ export const usePromotedSpaces = () => {
         };
       }));
 
-      // Separar espaços promovidos e normais
-      const promotedSpaces = processedSpaces.filter(space => space.isPromoted);
-      const normalSpaces = processedSpaces.filter(space => !space.isPromoted);
-
-      // Combinar: promovidos primeiro, depois normais
-      const allProcessedSpaces = [...promotedSpaces, ...normalSpaces];
+      // A ordenação agora será feita no componente Explore para respeitar o filtro de categoria
+      setSpaces(processedSpaces);
       
-      console.log('Total spaces processed:', allProcessedSpaces.length);
-      console.log('Promoted spaces:', promotedSpaces.length);
-      console.log('Normal spaces:', normalSpaces.length);
-      
-      setSpaces(allProcessedSpaces);
+      console.log('Total spaces processed:', processedSpaces.length);
+      console.log('Promoted spaces:', processedSpaces.filter(s => s.isPromoted).length);
+      console.log('Normal spaces:', processedSpaces.filter(s => !s.isPromoted).length);
 
     } catch (error) {
       console.error('Error fetching spaces:', error);

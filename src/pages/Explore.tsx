@@ -20,25 +20,38 @@ const Explore = () => {
   }, [error]);
   
   // Filter spaces based on search term across multiple fields and by category
-  const filteredSpaces = spaces.filter(space => {
-    // First filter by category if not "all"
-    if (activeCategory !== SPACE_CATEGORIES.ALL && 
-        (!space.categories || !space.categories.includes(activeCategory))) {
-      return false;
-    }
-    
-    // Then filter by search term across multiple fields
-    if (searchTerm === "") return true;
-    
-    const term = searchTerm.toLowerCase();
-    return (
-      space.name.toLowerCase().includes(term) ||
-      space.address.toLowerCase().includes(term) ||
-      space.description.toLowerCase().includes(term) ||
-      space.state.toLowerCase().includes(term) ||
-      space.price.toLowerCase().includes(term)
-    );
-  });
+  const filteredSpaces = React.useMemo(() => {
+    let filtered = spaces.filter(space => {
+      // First filter by category if not "all"
+      if (activeCategory !== SPACE_CATEGORIES.ALL && 
+          (!space.categories || !space.categories.includes(activeCategory))) {
+        return false;
+      }
+      
+      // Then filter by search term across multiple fields
+      if (searchTerm === "") return true;
+      
+      const term = searchTerm.toLowerCase();
+      return (
+        space.name.toLowerCase().includes(term) ||
+        space.address.toLowerCase().includes(term) ||
+        space.description.toLowerCase().includes(term) ||
+        space.state.toLowerCase().includes(term) ||
+        space.price.toLowerCase().includes(term)
+      );
+    });
+
+    // Sort filtered spaces: promoted first, then normal spaces
+    // This ensures promoted spaces are first within the selected category
+    return filtered.sort((a, b) => {
+      // If both are promoted or both are not promoted, maintain original order
+      if (a.isPromoted === b.isPromoted) {
+        return 0;
+      }
+      // Promoted spaces come first
+      return a.isPromoted ? -1 : 1;
+    });
+  }, [spaces, activeCategory, searchTerm]);
 
   return (
     <div className="container px-4 py-6 max-w-4xl mx-auto">
