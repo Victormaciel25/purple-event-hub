@@ -21,46 +21,74 @@ const Explore = () => {
   
   // Filter spaces based on search term across multiple fields and by category
   const filteredSpaces = React.useMemo(() => {
+    console.log('=== FILTERING DEBUG ===');
     console.log('Active category:', activeCategory);
-    console.log('All spaces:', spaces.map(s => ({ name: s.name, categories: s.categories, isPromoted: s.isPromoted })));
+    console.log('SPACE_CATEGORIES.ALL:', SPACE_CATEGORIES.ALL);
+    console.log('All spaces:', spaces.map(s => ({ 
+      name: s.name, 
+      categories: s.categories, 
+      isPromoted: s.isPromoted 
+    })));
     
     let filtered = spaces.filter(space => {
       // First filter by category if not "all"
       if (activeCategory !== SPACE_CATEGORIES.ALL) {
-        console.log(`Checking space "${space.name}" with categories:`, space.categories);
-        console.log(`Looking for category "${activeCategory}"`);
+        console.log(`\n--- Checking space "${space.name}" ---`);
+        console.log('Space categories:', space.categories);
+        console.log('Looking for category:', activeCategory);
+        console.log('Categories type:', typeof space.categories);
+        console.log('Is array:', Array.isArray(space.categories));
         
         if (!space.categories || !Array.isArray(space.categories)) {
-          console.log(`Space "${space.name}" has no valid categories array`);
+          console.log(`❌ Space "${space.name}" has no valid categories array`);
           return false;
         }
         
-        const hasCategory = space.categories.includes(activeCategory);
+        // Ensure we're comparing strings properly
+        const normalizedSpaceCategories = space.categories.map(cat => String(cat).toLowerCase());
+        const normalizedActiveCategory = String(activeCategory).toLowerCase();
+        
+        console.log('Normalized space categories:', normalizedSpaceCategories);
+        console.log('Normalized active category:', normalizedActiveCategory);
+        
+        const hasCategory = normalizedSpaceCategories.includes(normalizedActiveCategory);
         console.log(`Space "${space.name}" has category "${activeCategory}":`, hasCategory);
         
         if (!hasCategory) {
+          console.log(`❌ Space "${space.name}" does NOT have category "${activeCategory}"`);
           return false;
         }
+        
+        console.log(`✅ Space "${space.name}" HAS category "${activeCategory}"`);
+      } else {
+        console.log(`✅ Showing all categories - including space "${space.name}"`);
       }
       
       // Then filter by search term across multiple fields
       if (searchTerm === "") return true;
       
       const term = searchTerm.toLowerCase();
-      return (
+      const matchesSearch = (
         space.name.toLowerCase().includes(term) ||
         space.address.toLowerCase().includes(term) ||
         space.description.toLowerCase().includes(term) ||
         space.state.toLowerCase().includes(term) ||
         space.price.toLowerCase().includes(term)
       );
+      
+      console.log(`Search filter for "${space.name}":`, matchesSearch);
+      return matchesSearch;
     });
 
-    console.log('Filtered spaces before sorting:', filtered.map(s => ({ name: s.name, isPromoted: s.isPromoted })));
+    console.log('\n=== FILTER RESULTS ===');
+    console.log('Filtered spaces before sorting:', filtered.map(s => ({ 
+      name: s.name, 
+      isPromoted: s.isPromoted 
+    })));
 
     // Sort filtered spaces: promoted first, then normal spaces
     // This ensures promoted spaces are first within the selected category
-    return filtered.sort((a, b) => {
+    const sorted = filtered.sort((a, b) => {
       // If both are promoted or both are not promoted, maintain original order
       if (a.isPromoted === b.isPromoted) {
         return 0;
@@ -68,6 +96,14 @@ const Explore = () => {
       // Promoted spaces come first
       return a.isPromoted ? -1 : 1;
     });
+    
+    console.log('Final sorted spaces:', sorted.map(s => ({ 
+      name: s.name, 
+      isPromoted: s.isPromoted 
+    })));
+    console.log('=== END FILTERING DEBUG ===\n');
+    
+    return sorted;
   }, [spaces, activeCategory, searchTerm]);
 
   return (
@@ -87,7 +123,10 @@ const Explore = () => {
           <button 
             className={`${activeCategory === SPACE_CATEGORIES.ALL ? 'bg-iparty text-white' : 'bg-secondary text-foreground'} 
               rounded-lg px-3 py-1 text-xs flex flex-col items-center min-w-[70px] transition-all`}
-            onClick={() => setActiveCategory(SPACE_CATEGORIES.ALL)}
+            onClick={() => {
+              console.log('Clicking "Todos" button');
+              setActiveCategory(SPACE_CATEGORIES.ALL);
+            }}
           >
             <Circle className="mb-1" size={20} />
             <span>Todos</span>
@@ -96,7 +135,10 @@ const Explore = () => {
           <button 
             className={`${activeCategory === SPACE_CATEGORIES.WEDDINGS ? 'bg-iparty text-white' : 'bg-secondary text-foreground'} 
               rounded-lg px-3 py-1 text-xs flex flex-col items-center min-w-[70px] transition-all`}
-            onClick={() => setActiveCategory(SPACE_CATEGORIES.WEDDINGS)}
+            onClick={() => {
+              console.log('Clicking "Casamentos" button');
+              setActiveCategory(SPACE_CATEGORIES.WEDDINGS);
+            }}
           >
             <Heart className="mb-1" size={20} />
             <span>Casamentos</span>
@@ -105,7 +147,10 @@ const Explore = () => {
           <button 
             className={`${activeCategory === SPACE_CATEGORIES.CORPORATE ? 'bg-iparty text-white' : 'bg-secondary text-foreground'} 
               rounded-lg px-3 py-1 text-xs flex flex-col items-center min-w-[70px] transition-all`}
-            onClick={() => setActiveCategory(SPACE_CATEGORIES.CORPORATE)}
+            onClick={() => {
+              console.log('Clicking "Corporativo" button');
+              setActiveCategory(SPACE_CATEGORIES.CORPORATE);
+            }}
           >
             <Briefcase className="mb-1" size={20} />
             <span>Corporativo</span>
@@ -114,7 +159,10 @@ const Explore = () => {
           <button 
             className={`${activeCategory === SPACE_CATEGORIES.BIRTHDAYS ? 'bg-iparty text-white' : 'bg-secondary text-foreground'} 
               rounded-lg px-3 py-1 text-xs flex flex-col items-center min-w-[70px] transition-all`}
-            onClick={() => setActiveCategory(SPACE_CATEGORIES.BIRTHDAYS)}
+            onClick={() => {
+              console.log('Clicking "Aniversários" button');
+              setActiveCategory(SPACE_CATEGORIES.BIRTHDAYS);
+            }}
           >
             <Cake className="mb-1" size={20} />
             <span>Aniversários</span>
@@ -123,7 +171,10 @@ const Explore = () => {
           <button 
             className={`${activeCategory === SPACE_CATEGORIES.GRADUATIONS ? 'bg-iparty text-white' : 'bg-secondary text-foreground'} 
               rounded-lg px-3 py-1 text-xs flex flex-col items-center min-w-[70px] transition-all`}
-            onClick={() => setActiveCategory(SPACE_CATEGORIES.GRADUATIONS)}
+            onClick={() => {
+              console.log('Clicking "Formaturas" button');
+              setActiveCategory(SPACE_CATEGORIES.GRADUATIONS);
+            }}
           >
             <GraduationCap className="mb-1" size={20} />
             <span>Formaturas</span>
