@@ -106,6 +106,39 @@ const Explore = () => {
     return sorted;
   }, [spaces, activeCategory, searchTerm]);
 
+  const categories = [
+    {
+      key: SPACE_CATEGORIES.ALL,
+      label: "Todos",
+      icon: Circle,
+      color: "from-slate-500 to-slate-600"
+    },
+    {
+      key: SPACE_CATEGORIES.WEDDINGS,
+      label: "Casamentos",
+      icon: Heart,
+      color: "from-pink-500 to-rose-500"
+    },
+    {
+      key: SPACE_CATEGORIES.CORPORATE,
+      label: "Corporativo",
+      icon: Briefcase,
+      color: "from-blue-500 to-indigo-600"
+    },
+    {
+      key: SPACE_CATEGORIES.BIRTHDAYS,
+      label: "Aniversários",
+      icon: Cake,
+      color: "from-yellow-500 to-orange-500"
+    },
+    {
+      key: SPACE_CATEGORIES.GRADUATIONS,
+      label: "Formaturas",
+      icon: GraduationCap,
+      color: "from-green-500 to-emerald-600"
+    }
+  ];
+
   return (
     <div className="container px-4 py-6 max-w-4xl mx-auto">
       <div className="relative mb-6">
@@ -118,68 +151,45 @@ const Explore = () => {
         />
       </div>
 
-      <div className="space-y-2 mb-6">
-        <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-none" style={{ scrollbarWidth: 'none' }}>
-          <button 
-            className={`${activeCategory === SPACE_CATEGORIES.ALL ? 'bg-iparty text-white' : 'bg-secondary text-foreground'} 
-              rounded-lg px-3 py-1 text-xs flex flex-col items-center min-w-[70px] transition-all`}
-            onClick={() => {
-              console.log('Clicking "Todos" button');
-              setActiveCategory(SPACE_CATEGORIES.ALL);
-            }}
-          >
-            <Circle className="mb-1" size={20} />
-            <span>Todos</span>
-          </button>
-          
-          <button 
-            className={`${activeCategory === SPACE_CATEGORIES.WEDDINGS ? 'bg-iparty text-white' : 'bg-secondary text-foreground'} 
-              rounded-lg px-3 py-1 text-xs flex flex-col items-center min-w-[70px] transition-all`}
-            onClick={() => {
-              console.log('Clicking "Casamentos" button');
-              setActiveCategory(SPACE_CATEGORIES.WEDDINGS);
-            }}
-          >
-            <Heart className="mb-1" size={20} />
-            <span>Casamentos</span>
-          </button>
-          
-          <button 
-            className={`${activeCategory === SPACE_CATEGORIES.CORPORATE ? 'bg-iparty text-white' : 'bg-secondary text-foreground'} 
-              rounded-lg px-3 py-1 text-xs flex flex-col items-center min-w-[70px] transition-all`}
-            onClick={() => {
-              console.log('Clicking "Corporativo" button');
-              setActiveCategory(SPACE_CATEGORIES.CORPORATE);
-            }}
-          >
-            <Briefcase className="mb-1" size={20} />
-            <span>Corporativo</span>
-          </button>
-          
-          <button 
-            className={`${activeCategory === SPACE_CATEGORIES.BIRTHDAYS ? 'bg-iparty text-white' : 'bg-secondary text-foreground'} 
-              rounded-lg px-3 py-1 text-xs flex flex-col items-center min-w-[70px] transition-all`}
-            onClick={() => {
-              console.log('Clicking "Aniversários" button');
-              setActiveCategory(SPACE_CATEGORIES.BIRTHDAYS);
-            }}
-          >
-            <Cake className="mb-1" size={20} />
-            <span>Aniversários</span>
-          </button>
-          
-          <button 
-            className={`${activeCategory === SPACE_CATEGORIES.GRADUATIONS ? 'bg-iparty text-white' : 'bg-secondary text-foreground'} 
-              rounded-lg px-3 py-1 text-xs flex flex-col items-center min-w-[70px] transition-all`}
-            onClick={() => {
-              console.log('Clicking "Formaturas" button');
-              setActiveCategory(SPACE_CATEGORIES.GRADUATIONS);
-            }}
-          >
-            <GraduationCap className="mb-1" size={20} />
-            <span>Formaturas</span>
-          </button>
-        </div>
+      <div className="mb-8">
+        <ScrollArea className="w-full">
+          <div className="flex gap-4 pb-2 px-1">
+            {categories.map((category) => {
+              const Icon = category.icon;
+              const isActive = activeCategory === category.key;
+              
+              return (
+                <button
+                  key={category.key}
+                  className={`
+                    relative flex flex-col items-center justify-center min-w-[90px] h-20 rounded-2xl 
+                    transition-all duration-300 transform hover:scale-105 hover:shadow-lg
+                    ${isActive 
+                      ? `bg-gradient-to-br ${category.color} text-white shadow-lg` 
+                      : 'bg-white border-2 border-gray-100 text-gray-600 hover:border-gray-200 hover:bg-gray-50'
+                    }
+                  `}
+                  onClick={() => {
+                    console.log(`Clicking "${category.label}" button`);
+                    setActiveCategory(category.key);
+                  }}
+                >
+                  <Icon 
+                    size={24} 
+                    className={`mb-1 ${isActive ? 'text-white' : 'text-gray-500'}`} 
+                  />
+                  <span className={`text-xs font-medium ${isActive ? 'text-white' : 'text-gray-600'}`}>
+                    {category.label}
+                  </span>
+                  
+                  {isActive && (
+                    <div className="absolute -bottom-1 left-1/2 transform -translate-x-1/2 w-2 h-2 bg-white rounded-full shadow-md" />
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        </ScrollArea>
       </div>
 
       {loading ? (
