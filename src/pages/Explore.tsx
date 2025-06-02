@@ -146,7 +146,7 @@ const Explore = () => {
       </div>
 
       <div className="mb-4">
-        <ScrollArea className="w-full whitespace-nowrap">
+        <div className="overflow-x-auto scrollbar-hide">
           <div className="flex gap-3 pb-3 px-1 pt-1 w-max">
             {categories.map((category) => {
               const Icon = category.icon;
@@ -183,7 +183,7 @@ const Explore = () => {
               );
             })}
           </div>
-        </ScrollArea>
+        </div>
       </div>
 
       {loading ? (
