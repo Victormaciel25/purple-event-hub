@@ -109,10 +109,10 @@ const App: React.FC = () => {
               element={session ? <Navigate to="/explore" replace /> : <ForgotPassword />} 
             />
             
-            {/* Reset Password Route */}
+            {/* Reset Password Route - SEMPRE acessível, mesmo com sessão ativa */}
             <Route 
               path="/reset-password" 
-              element={session ? <Navigate to="/explore" replace /> : <ResetPassword />} 
+              element={<ResetPassword />} 
             />
             
             {/* Privacy Policy Route - accessible without authentication */}
