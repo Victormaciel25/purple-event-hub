@@ -1,4 +1,5 @@
 
+
 import React, { useState } from "react";
 import PromotedSpaceCard from "@/components/PromotedSpaceCard";
 import { Input } from "@/components/ui/input";
@@ -136,7 +137,7 @@ const Explore = () => {
 
   return (
     <div className="container px-4 py-6 max-w-4xl mx-auto">
-      <div className="relative mb-6">
+      <div className="relative mb-4">
         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" size={18} />
         <Input 
           placeholder="Buscar espaços de eventos..." 
@@ -146,9 +147,9 @@ const Explore = () => {
         />
       </div>
 
-      <div className="mb-8">
+      <div className="mb-4">
         <ScrollArea className="w-full">
-          <div className="flex gap-3 pb-4 px-1 py-2">
+          <div className="flex gap-3 pb-3 px-1 pt-1">
             {categories.map((category) => {
               const Icon = category.icon;
               const isActive = activeCategory === category.key;
@@ -217,3 +218,4 @@ const Explore = () => {
 };
 
 export default Explore;
+
