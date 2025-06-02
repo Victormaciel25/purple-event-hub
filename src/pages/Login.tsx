@@ -103,7 +103,36 @@ const Login = () => {
           password,
         });
 
-        if (error) throw error;
+        if (error) {
+          console.log("Login error:", error.message);
+          
+          // Provide specific error messages based on error type
+          let errorMessage = "Erro ao fazer login";
+          
+          if (error.message.includes("Invalid login credentials")) {
+            // Check if email format is valid to determine if it's email or password issue
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!emailRegex.test(email)) {
+              errorMessage = "Email incorreto ou inválido";
+            } else {
+              errorMessage = "Senha incorreta";
+            }
+          } else if (error.message.includes("Email not confirmed")) {
+            errorMessage = "Email não confirmado. Verifique sua caixa de entrada";
+          } else if (error.message.includes("Too many requests")) {
+            errorMessage = "Muitas tentativas. Tente novamente em alguns minutos";
+          } else {
+            errorMessage = error.message;
+          }
+
+          toast({
+            title: "Erro no login",
+            description: errorMessage,
+            variant: "destructive",
+          });
+          setLoading(false);
+          return;
+        }
 
         toast({
           title: "Login bem-sucedido",
@@ -208,6 +237,7 @@ const Login = () => {
         setIsLogin(true);
       }
     } catch (error: any) {
+      console.log("Catch error:", error.message);
       toast({
         title: "Erro",
         description: error.message,

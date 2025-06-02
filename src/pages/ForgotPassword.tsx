@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,37 +16,33 @@ const ForgotPassword: React.FC = () => {
   const { toast } = useToast();
 
   /**
-   * Ao submeter o formulário, fazemos:
-   * 1) Pegamos o domínio atual (localhost em dev ou domínio de produção)
-   * 2) Anexamos "/reset-password" para criar a URL de redirecionamento
+   * Quando o formulário é submetido:
+   * 1) Descobrimos qual é o domínio atual (localhost ou produção).
+   * 2) Anexamos "/reset-password" a esse domínio para compor o redirect_to.
    * 3) Chamamos `supabase.auth.resetPasswordForEmail(...)` passando esse redirectTo.
    *
-   * No painel do Supabase, você deve ter cadastrado, em:
-   *    Authentication → Settings → Configuração de URL → URLs de redirecionamento:
-   *      • https://www.ipartybrasil.com/reset-password
-   *      • http://localhost:8080/reset-password   (para testes locais)
+   * No painel do Supabase em Authentication → Settings → Configuração de URL → URLs de redirecionamento:
+   *   • https://www.ipartybrasil.com/reset-password
+   *   • http://localhost:8080/reset-password   (para testes locais)
    *
-   * Dessa forma, o link que o Supabase envia por e-mail será:
-   * https://<projeto>.supabase.co/auth/v1/verify?
-   *   token=XXXXXXXX
-   *   &type=recovery
-   *   &redirect_to=https://www.ipartybrasil.com/reset-password
+   * Dessa forma, o Supabase vai gerar um link como:
+   * https://<seu-projeto>.supabase.co/auth/v1/verify?
+   *    token=XXXXXXXX
+   *    &type=recovery
+   *    &redirect_to=https://www.ipartybrasil.com/reset-password
    *
-   * E o React Router irá agarrar essa rota `/reset-password`,
-   * exibindo a tela de ResetPassword.tsx, em vez de cair na homepage ou 404.
+   * E, ao clicar, o Supabase cuida de criar a sessão de recuperação e redireciona para /reset-password.
    */
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
     try {
-      // 1. Qual domínio estamos? (localhost dev ou produção)
-      const domain = getCurrentDomain(); // e.g. "http://localhost:8080" ou "https://www.ipartybrasil.com"
-      // 2. Forçamos a rota de redirecionamento exata
+      // Obtemos domínio (ex.: http://localhost:8080 ou https://www.ipartybrasil.com)
+      const domain = getCurrentDomain();
       const redirectTo = `${domain}/reset-password`;
       console.log("[ForgotPassword] redirectTo =", redirectTo);
 
-      // 3. Disparamos o e-mail de recuperação, passando o redirectTo
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
         redirectTo,
       });
@@ -73,7 +68,6 @@ const ForgotPassword: React.FC = () => {
     }
   };
 
-  // Depois que o e-mail já foi enviado, apenas mostramos uma mensagem de confirmação:
   if (emailSent) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-background p-4">
@@ -114,7 +108,6 @@ const ForgotPassword: React.FC = () => {
     );
   }
 
-  // Se ainda não enviamos o e-mail, mostramos o formulário:
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-background p-4">
       <div className="w-full max-w-md space-y-4 animate-fade-in">
@@ -130,7 +123,7 @@ const ForgotPassword: React.FC = () => {
           </div>
           <h1 className="text-3xl font-bold text-foreground">Esqueci Minha Senha</h1>
           <p className="text-muted-foreground mt-2">
-            Digite seu e-mail para receber um link de recuperação
+            Digite seu e-mail para receber um link de recuperação.
           </p>
         </div>
 
