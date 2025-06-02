@@ -152,7 +152,7 @@ const Explore = () => {
 
       <div className="mb-8">
         <ScrollArea className="w-full">
-          <div className="flex gap-3 pb-2 px-1">
+          <div className="flex gap-2 pb-2 px-1">
             {categories.map((category) => {
               const Icon = category.icon;
               const isActive = activeCategory === category.key;
@@ -161,10 +161,10 @@ const Explore = () => {
                 <button
                   key={category.key}
                   className={`
-                    relative flex flex-col items-center justify-center min-w-[70px] h-16 rounded-xl 
-                    transition-all duration-300 transform hover:scale-105 hover:shadow-md
+                    relative flex flex-col items-center justify-center min-w-[60px] h-12 rounded-lg 
+                    transition-all duration-300 transform hover:scale-105 hover:shadow-sm
                     ${isActive 
-                      ? `bg-gradient-to-br ${category.color} text-white shadow-md` 
+                      ? `bg-gradient-to-br ${category.color} text-white shadow-sm` 
                       : 'bg-white border border-gray-200 text-gray-600 hover:border-gray-300 hover:bg-gray-50'
                     }
                   `}
@@ -174,15 +174,15 @@ const Explore = () => {
                   }}
                 >
                   <Icon 
-                    size={20} 
-                    className={`mb-1 ${isActive ? 'text-white' : 'text-gray-500'}`} 
+                    size={16} 
+                    className={`mb-0.5 ${isActive ? 'text-white' : 'text-gray-500'}`} 
                   />
-                  <span className={`text-xs font-medium leading-tight text-center px-1 ${isActive ? 'text-white' : 'text-gray-600'}`}>
+                  <span className={`text-xs font-medium leading-tight text-center px-0.5 ${isActive ? 'text-white' : 'text-gray-600'}`}>
                     {category.label}
                   </span>
                   
                   {isActive && (
-                    <div className="absolute -bottom-1 left-1/2 transform -translate-x-1/2 w-1.5 h-1.5 bg-white rounded-full shadow-sm" />
+                    <div className="absolute -bottom-0.5 left-1/2 transform -translate-x-1/2 w-1 h-1 bg-white rounded-full" />
                   )}
                 </button>
               );
