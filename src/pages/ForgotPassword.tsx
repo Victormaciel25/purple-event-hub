@@ -52,10 +52,6 @@ const ForgotPassword: React.FC = () => {
       }
 
       setEmailSent(true);
-      toast({
-        title: "E-mail enviado",
-        description: "Verifique sua caixa de entrada para redefinir sua senha.",
-      });
     } catch (err: any) {
       console.error("[ForgotPassword] Erro ao enviar e-mail:", err);
       toast({
