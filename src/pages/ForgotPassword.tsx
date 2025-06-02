@@ -7,6 +7,7 @@ import { ArrowLeft, Mail } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
+import { getCurrentDomain } from "@/config/app-config";
 
 const ForgotPassword: React.FC = () => {
   const [email, setEmail] = useState<string>("");
@@ -20,15 +21,22 @@ const ForgotPassword: React.FC = () => {
     setLoading(true);
 
     try {
-      // Use window.location.origin para garantir http(s)://domínio[:porta]
-      const redirectTo = `${window.location.origin}/reset-password`;
-      console.log("[ForgotPassword] redirectTo =", redirectTo);
+      // 1. Pega domínio (localhost ou produção)
+      const domain = getCurrentDomain().replace(/\/$/, ""); 
+      // remove eventual "/" no final
+      // 2. Monta a URL exata:
+      const rawRedirectTo = `${domain}/reset-password`;
 
+      console.log("[ForgotPassword] redirectTo =", rawRedirectTo);
+
+      // 4. Dispara e-mail de reset:
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo,
+        redirectTo: rawRedirectTo, // Supabase já cuida de codificar internamente, mas é bom manter sem espaços
       });
 
-      if (error) throw error;
+      if (error) {
+        throw error;
+      }
 
       setEmailSent(true);
       toast({
