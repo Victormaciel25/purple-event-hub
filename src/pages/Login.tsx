@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -105,6 +104,8 @@ const Login = () => {
         });
 
         if (error) {
+          console.log("Login error:", error.message);
+          
           // Provide specific error messages based on error type
           let errorMessage = "Erro ao fazer login";
           
@@ -236,6 +237,7 @@ const Login = () => {
         setIsLogin(true);
       }
     } catch (error: any) {
+      console.log("Catch error:", error.message);
       toast({
         title: "Erro",
         description: error.message,
