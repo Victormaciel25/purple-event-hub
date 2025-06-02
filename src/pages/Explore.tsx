@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import PromotedSpaceCard from "@/components/PromotedSpaceCard";
 import { Input } from "@/components/ui/input";
@@ -147,7 +148,7 @@ const Explore = () => {
 
       <div className="mb-8">
         <ScrollArea className="w-full">
-          <div className="flex gap-3 pb-2 px-1">
+          <div className="flex gap-3 pb-4 px-1 py-2">
             {categories.map((category) => {
               const Icon = category.icon;
               const isActive = activeCategory === category.key;
