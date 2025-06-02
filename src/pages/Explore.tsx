@@ -109,32 +109,27 @@ const Explore = () => {
     {
       key: SPACE_CATEGORIES.ALL,
       label: "Todos",
-      icon: Circle,
-      color: "from-slate-500 to-slate-600"
+      icon: Circle
     },
     {
       key: SPACE_CATEGORIES.WEDDINGS,
       label: "Casamentos",
-      icon: Heart,
-      color: "from-pink-500 to-rose-500"
+      icon: Heart
     },
     {
       key: SPACE_CATEGORIES.CORPORATE,
       label: "Corporativo",
-      icon: Briefcase,
-      color: "from-blue-500 to-indigo-600"
+      icon: Briefcase
     },
     {
       key: SPACE_CATEGORIES.BIRTHDAYS,
       label: "Aniversários",
-      icon: Cake,
-      color: "from-yellow-500 to-orange-500"
+      icon: Cake
     },
     {
       key: SPACE_CATEGORIES.GRADUATIONS,
       label: "Formaturas",
-      icon: GraduationCap,
-      color: "from-green-500 to-emerald-600"
+      icon: GraduationCap
     }
   ];
 
@@ -161,10 +156,10 @@ const Explore = () => {
                 <button
                   key={category.key}
                   className={`
-                    relative flex flex-col items-center justify-center min-w-[70px] h-16 rounded-xl 
+                    relative flex flex-col items-center justify-center min-w-[60px] h-12 rounded-xl 
                     transition-all duration-300 transform hover:scale-105 hover:shadow-md
                     ${isActive 
-                      ? `bg-gradient-to-br ${category.color} text-white shadow-md` 
+                      ? 'bg-iparty text-white shadow-md' 
                       : 'bg-white border border-gray-200 text-gray-600 hover:border-gray-300 hover:bg-gray-50'
                     }
                   `}
@@ -174,7 +169,7 @@ const Explore = () => {
                   }}
                 >
                   <Icon 
-                    size={20} 
+                    size={16} 
                     className={`mb-1 ${isActive ? 'text-white' : 'text-gray-500'}`} 
                   />
                   <span className={`text-xs font-medium leading-tight text-center px-1 ${isActive ? 'text-white' : 'text-gray-600'}`}>
