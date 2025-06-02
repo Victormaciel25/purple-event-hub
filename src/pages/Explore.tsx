@@ -21,11 +21,26 @@ const Explore = () => {
   
   // Filter spaces based on search term across multiple fields and by category
   const filteredSpaces = React.useMemo(() => {
+    console.log('Active category:', activeCategory);
+    console.log('All spaces:', spaces.map(s => ({ name: s.name, categories: s.categories, isPromoted: s.isPromoted })));
+    
     let filtered = spaces.filter(space => {
       // First filter by category if not "all"
-      if (activeCategory !== SPACE_CATEGORIES.ALL && 
-          (!space.categories || !space.categories.includes(activeCategory))) {
-        return false;
+      if (activeCategory !== SPACE_CATEGORIES.ALL) {
+        console.log(`Checking space "${space.name}" with categories:`, space.categories);
+        console.log(`Looking for category "${activeCategory}"`);
+        
+        if (!space.categories || !Array.isArray(space.categories)) {
+          console.log(`Space "${space.name}" has no valid categories array`);
+          return false;
+        }
+        
+        const hasCategory = space.categories.includes(activeCategory);
+        console.log(`Space "${space.name}" has category "${activeCategory}":`, hasCategory);
+        
+        if (!hasCategory) {
+          return false;
+        }
       }
       
       // Then filter by search term across multiple fields
@@ -40,6 +55,8 @@ const Explore = () => {
         space.price.toLowerCase().includes(term)
       );
     });
+
+    console.log('Filtered spaces before sorting:', filtered.map(s => ({ name: s.name, isPromoted: s.isPromoted })));
 
     // Sort filtered spaces: promoted first, then normal spaces
     // This ensures promoted spaces are first within the selected category
