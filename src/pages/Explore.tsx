@@ -1,11 +1,9 @@
-
-
 import React, { useState } from "react";
 import PromotedSpaceCard from "@/components/PromotedSpaceCard";
 import { Input } from "@/components/ui/input";
 import { Search, Circle, Heart, Briefcase, Cake, GraduationCap } from "lucide-react";
 import { toast } from "sonner";
-import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { SPACE_CATEGORIES } from "@/config/app-config";
 import { usePromotedSpaces } from "@/hooks/usePromotedSpaces";
 
@@ -185,7 +183,6 @@ const Explore = () => {
               );
             })}
           </div>
-          <ScrollBar orientation="horizontal" />
         </ScrollArea>
       </div>
 
@@ -219,4 +216,3 @@ const Explore = () => {
 };
 
 export default Explore;
-
