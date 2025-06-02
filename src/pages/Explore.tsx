@@ -52,17 +52,21 @@ const Explore = () => {
       </div>
 
       <div className="space-y-2 mb-6">
-        <div className="flex gap-3 overflow-x-auto pb-2 touch-pan-x" 
-             style={{ 
-               scrollbarWidth: 'none',
-               msOverflowStyle: 'none',
-               WebkitOverflowScrolling: 'touch'
-             }}>
-          <style jsx>{`
-            div::-webkit-scrollbar {
-              display: none;
-            }
-          `}</style>
+        <div 
+          className="flex gap-3 overflow-x-auto pb-2 touch-pan-x" 
+          style={{ 
+            scrollbarWidth: 'none',
+            msOverflowStyle: 'none',
+            WebkitOverflowScrolling: 'touch'
+          }}
+        >
+          <style dangerouslySetInnerHTML={{
+            __html: `
+              .category-scroll::-webkit-scrollbar {
+                display: none;
+              }
+            `
+          }} />
           
           <button 
             className={`${activeCategory === SPACE_CATEGORIES.ALL ? 'bg-iparty text-white' : 'bg-secondary text-foreground'} 
