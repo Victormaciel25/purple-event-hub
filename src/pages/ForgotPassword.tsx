@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,22 +15,36 @@ const ForgotPassword: React.FC = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
 
+  /**
+   * Quando o formulário é submetido:
+   * 1) Descobrimos qual é o domínio atual (localhost ou produção).
+   * 2) Anexamos "/reset-password" a esse domínio para compor o redirect_to.
+   * 3) Chamamos `supabase.auth.resetPasswordForEmail(...)` passando esse redirectTo.
+   *
+   * No painel do Supabase em Authentication → Settings → Configuração de URL → URLs de redirecionamento:
+   *   • https://www.ipartybrasil.com/reset-password
+   *   • http://localhost:8080/reset-password   (para testes locais)
+   *
+   * Dessa forma, o Supabase vai gerar um link como:
+   * https://<seu-projeto>.supabase.co/auth/v1/verify?
+   *    token=XXXXXXXX
+   *    &type=recovery
+   *    &redirect_to=https://www.ipartybrasil.com/reset-password
+   *
+   * E, ao clicar, o Supabase cuida de criar a sessão de recuperação e redireciona para /reset-password.
+   */
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
     try {
-      // 1. Pega domínio (localhost ou produção)
-      const domain = getCurrentDomain().replace(/\/$/, ""); 
-      // remove eventual "/" no final
-      // 2. Monta a URL exata:
-      const rawRedirectTo = `${domain}/reset-password`;
+      // Obtemos domínio (ex.: http://localhost:8080 ou https://www.ipartybrasil.com)
+      const domain = getCurrentDomain();
+      const redirectTo = `${domain}/reset-password`;
+      console.log("[ForgotPassword] redirectTo =", redirectTo);
 
-      console.log("[ForgotPassword] redirectTo =", rawRedirectTo);
-
-      // 4. Dispara e-mail de reset:
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: rawRedirectTo, // Supabase já cuida de codificar internamente, mas é bom manter sem espaços
+        redirectTo,
       });
 
       if (error) {
@@ -110,7 +123,7 @@ const ForgotPassword: React.FC = () => {
           </div>
           <h1 className="text-3xl font-bold text-foreground">Esqueci Minha Senha</h1>
           <p className="text-muted-foreground mt-2">
-            Digite seu e-mail para receber um link de recuperação
+            Digite seu e-mail para receber um link de recuperação.
           </p>
         </div>
 
