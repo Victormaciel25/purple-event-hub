@@ -1,115 +1,127 @@
-
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ArrowLeft, Check, AlertCircle, Lock } from "lucide-react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
 
 const ResetPassword: React.FC = () => {
-  const [password, setPassword] = useState<string>("");
-  const [confirmPassword, setConfirmPassword] = useState<string>("");
-  const [loading, setLoading] = useState<boolean>(false);
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [loading, setLoading] = useState(false);
   const [passwordErrors, setPasswordErrors] = useState<string[]>([]);
-  const [tokensValid, setTokensValid] = useState<boolean | null>(null);
-  const [searchParams] = useSearchParams();
+  const [sessionChecked, setSessionChecked] = useState<boolean>(false);
+  const [hasValidRecoverySession, setHasValidRecoverySession] = useState<boolean>(false);
   const navigate = useNavigate();
   const { toast } = useToast();
 
   // Função de validação de senha
-  const validatePassword = (pwd: string): string[] => {
+  const validatePassword = (password: string): string[] => {
     const errors: string[] = [];
-    if (pwd.length < 8) errors.push("Mínimo de 8 caracteres");
-    if (!/[A-Z]/.test(pwd)) errors.push("Pelo menos uma letra maiúscula (A-Z)");
-    if (!/[a-z]/.test(pwd)) errors.push("Pelo menos uma letra minúscula (a-z)");
-    if (!/[0-9]/.test(pwd)) errors.push("Pelo menos um número (0-9)");
-    if (!/[!@#$%^&*]/.test(pwd)) errors.push("Pelo menos um caractere especial (!@#$%^&*)");
+    if (password.length < 8) {
+      errors.push("Mínimo de 8 caracteres");
+    }
+    if (!/[A-Z]/.test(password)) {
+      errors.push("Pelo menos uma letra maiúscula (A-Z)");
+    }
+    if (!/[a-z]/.test(password)) {
+      errors.push("Pelo menos uma letra minúscula (a-z)");
+    }
+    if (!/[0-9]/.test(password)) {
+      errors.push("Pelo menos um número (0-9)");
+    }
+    if (!/[!@#$%^&*]/.test(password)) {
+      errors.push("Pelo menos um caractere especial (!@#$%^&*)");
+    }
     return errors;
   };
 
-  // Atualiza lista de erros conforme usuário digita
+  // Atualiza lista de erros enquanto o usuário digita
   const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newPwd = e.target.value;
-    setPassword(newPwd);
-    setPasswordErrors(newPwd ? validatePassword(newPwd) : []);
+    const newPassword = e.target.value;
+    setPassword(newPassword);
+    if (newPassword) {
+      setPasswordErrors(validatePassword(newPassword));
+    } else {
+      setPasswordErrors([]);
+    }
   };
 
   useEffect(() => {
-    // Ao carregar a página, verificamos URL params:
-    const accessToken = searchParams.get("access_token");
-    const refreshToken = searchParams.get("refresh_token");
-    const type = searchParams.get("type");
-    console.log("Tokens recebidos:", { accessToken, refreshToken, type });
+    /**
+     * Quando entramos em /reset-password, o Supabase JS já 
+     * deve ter criado uma sessão de recuperação (without a real login).
+     * Basta verificar se há uma sessão ativa (`supabase.auth.getSession()`).
+     * Se existir e for do tipo “recover”, mostramos o formulário. Do contrário,
+     * bloqueamos e exibimos erro de link inválido.
+     */
+    const checkRecoverySession = async () => {
+      try {
+        const { data } = await supabase.auth.getSession();
+        // supabase.auth.getSession() retorna info da sessão caso o Supabase já tenha validado o "recovery token"
+        if (data.session && data.session.user && data.session.user.id) {
+          // Sessão válida de recuperação de senha
+          setHasValidRecoverySession(true);
+        } else {
+          setHasValidRecoverySession(false);
+        }
+      } catch (err) {
+        console.error("Erro ao verificar sessão de recuperação:", err);
+        setHasValidRecoverySession(false);
+      } finally {
+        setSessionChecked(true);
+      }
+    };
 
-    if (!accessToken || !refreshToken || type !== "recovery") {
-      setTokensValid(false);
-    } else {
-      setTokensValid(true);
-    }
-  }, [searchParams]);
+    checkRecoverySession();
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
     try {
-      // 1) Valida requisitos de senha:
-      const pwdErrors = validatePassword(password);
-      if (pwdErrors.length > 0) {
+      // 1) validações de senha
+      const passwordValidationErrors = validatePassword(password);
+      if (passwordValidationErrors.length > 0) {
         toast({
           title: "Senha inválida",
-          description: "Por favor, atenda a todos os requisitos de senha",
+          description: "Por favor, atenda a todos os requisitos de senha.",
           variant: "destructive",
         });
         setLoading(false);
         return;
       }
-      // 2) Confirma senhas iguais:
       if (password !== confirmPassword) {
         toast({
           title: "Erro",
-          description: "As senhas não coincidem",
+          description: "As senhas não coincidem.",
           variant: "destructive",
         });
         setLoading(false);
         return;
       }
 
-      // 3) Recupera os tokens da URL
-      const accessToken = searchParams.get("access_token");
-      const refreshToken = searchParams.get("refresh_token");
-      if (!accessToken || !refreshToken) {
-        throw new Error("Tokens de autenticação não encontrados");
-      }
-
-      // 4) Seta sessão com os tokens vindos da URL
-      const { error: sessionError } = await supabase.auth.setSession({
-        access_token: accessToken,
-        refresh_token: refreshToken,
-      });
-      if (sessionError) throw sessionError;
-
-      // 5) Atualiza a senha do usuário
-      const { error: updateError } = await supabase.auth.updateUser({
-        password: password,
-      });
-      if (updateError) throw updateError;
+      // 2) O Supabase já inseriu a sessão de recuperação na página inicial.
+      // Basta chamar `updateUser` agora:
+      const { error } = await supabase.auth.updateUser({ password });
+      if (error) throw error;
 
       toast({
         title: "Senha redefinida",
         description: "Sua senha foi redefinida com sucesso!",
       });
 
-      // 6) Desloga e redireciona para login
+      // 3) Deslogar e levar para /login
       await supabase.auth.signOut();
       navigate("/login");
-    } catch (err: any) {
-      console.error("Erro ao redefinir senha:", err);
+    } catch (error: any) {
+      console.error("Error resetting password:", error);
       toast({
         title: "Erro",
-        description: err.message,
+        description: error.message,
         variant: "destructive",
       });
     } finally {
@@ -117,26 +129,37 @@ const ResetPassword: React.FC = () => {
     }
   };
 
-  // Enquanto não validamos tokens, mostramos um loading simples
-  if (tokensValid === null) {
+  // 1) Enquanto não terminamos de checar se existe sessão de recovery, mostramos “verificando”
+  if (!sessionChecked) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <p className="text-gray-600">Verificando link de redefinição…</p>
+      <div className="min-h-screen flex flex-col items-center justify-center bg-background p-4">
+        <div className="text-center">
+          <div className="flex justify-center mb-4">
+            <div className="h-32 w-32">
+              <img
+                src="/lovable-uploads/b59e9ab5-1380-47bb-b7f4-95ecfc1fe03c.png"
+                alt="iParty Balloons"
+                className="w-full h-full"
+              />
+            </div>
+          </div>
+          <p className="text-gray-500">Verificando link de redefinição...</p>
+        </div>
       </div>
     );
   }
 
-  // Se tokens inválidos, mostramos tela de erro
-  if (tokensValid === false) {
+  // 2) Se não existe sessão de recovery válida, mostramos erro
+  if (!hasValidRecoverySession) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-background p-4">
         <div className="w-full max-w-md space-y-4 animate-fade-in">
           <div className="text-center">
             <div className="flex justify-center mb-4">
               <div className="h-32 w-32">
-                <img 
-                  src="/lovable-uploads/b59e9ab5-1380-47bb-b7f4-95ecfc1fe03c.png" 
-                  alt="iParty Balloons" 
+                <img
+                  src="/lovable-uploads/b59e9ab5-1380-47bb-b7f4-95ecfc1fe03c.png"
+                  alt="iParty Balloons"
                   className="w-full h-full"
                 />
               </div>
@@ -146,14 +169,15 @@ const ResetPassword: React.FC = () => {
               O link de redefinição de senha é inválido ou expirou.
             </p>
           </div>
+
           <div className="bg-white rounded-2xl p-6 shadow-lg text-center">
             <div className="flex justify-center mb-4">
-              <AlertCircle className="h-12 w-12 text-red-500" />
+              <AlertCircle className="h-16 w-16 text-red-500" />
             </div>
             <p className="text-gray-600 mb-6">
-              Solicite um novo link de recuperação.
+              Por favor, solicite um novo link de redefinição de senha.
             </p>
-            <div className="space-y-2">
+            <div className="space-y-3">
               <Button
                 onClick={() => navigate("/forgot-password")}
                 className="w-full bg-iparty hover:bg-iparty-dark text-white"
@@ -174,23 +198,26 @@ const ResetPassword: React.FC = () => {
     );
   }
 
-  // Se tokens válidos, exibimos o formulário de reset
+  // 3) Se existe sessão válida de recovery, mostramos o formulário para o usuário digitar a nova senha
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-background p-4">
       <div className="w-full max-w-md space-y-4 animate-fade-in">
         <div className="text-center">
           <div className="flex justify-center mb-4">
             <div className="h-32 w-32">
-              <img 
-                src="/lovable-uploads/b59e9ab5-1380-47bb-b7f4-95ecfc1fe03c.png" 
-                alt="iParty Balloons" 
+              <img
+                src="/lovable-uploads/b59e9ab5-1380-47bb-b7f4-95ecfc1fe03c.png"
+                alt="iParty Balloons"
                 className="w-full h-full"
               />
             </div>
           </div>
           <h1 className="text-3xl font-bold text-foreground">Redefinir Senha</h1>
-          <p className="text-muted-foreground mt-2">Crie uma nova senha para sua conta</p>
+          <p className="text-muted-foreground mt-2">
+            Crie uma nova senha para sua conta.
+          </p>
         </div>
+
         <div className="bg-white rounded-2xl p-6 shadow-lg">
           <Button
             onClick={() => navigate("/login")}
@@ -198,8 +225,9 @@ const ResetPassword: React.FC = () => {
             className="mb-4 p-0 h-auto hover:bg-transparent"
           >
             <ArrowLeft className="h-4 w-4 mr-2" />
-            Voltar para o Login
+            Voltar para o login
           </Button>
+
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="password">Nova Senha</Label>
@@ -213,33 +241,31 @@ const ResetPassword: React.FC = () => {
               />
               {password && (
                 <div className="mt-2">
-                  <p className="text-xs text-gray-600 mb-2">
+                  <div className="text-xs text-gray-600 mb-2">
                     Crie uma senha forte seguindo estas regras:
-                  </p>
-                  {[
-                    { rule: "Mínimo de 8 caracteres", valid: password.length >= 8 },
-                    { rule: "Pelo menos uma letra maiúscula (A-Z)", valid: /[A-Z]/.test(password) },
-                    { rule: "Pelo menos uma letra minúscula (a-z)", valid: /[a-z]/.test(password) },
-                    { rule: "Pelo menos um número (0-9)", valid: /[0-9]/.test(password) },
-                    { rule: "Pelo menos um caractere especial (!@#$%^&*)", valid: /[!@#$%^&*]/.test(password) },
-                  ].map(({ rule, valid }, idx) => (
-                    <div
-                      key={idx}
-                      className={`flex items-center gap-2 text-xs ${
-                        valid ? "text-green-600" : "text-red-500"
-                      }`}
-                    >
-                      {valid ? (
-                        <Check size={12} className="text-green-600" />
-                      ) : (
-                        <AlertCircle size={12} className="text-red-500" />
-                      )}
-                      <span>{rule}</span>
-                    </div>
-                  ))}
+                  </div>
+                  <div className="space-y-1">
+                    {[
+                      { rule: "Mínimo de 8 caracteres", valid: password.length >= 8 },
+                      { rule: "Pelo menos uma letra maiúscula (A-Z)", valid: /[A-Z]/.test(password) },
+                      { rule: "Pelo menos uma letra minúscula (a-z)", valid: /[a-z]/.test(password) },
+                      { rule: "Pelo menos um número (0-9)", valid: /[0-9]/.test(password) },
+                      { rule: "Pelo menos um caractere especial (!@#$%^&*)", valid: /[!@#$%^&*]/.test(password) }
+                    ].map(({ rule, valid }, index) => (
+                      <div key={index} className={`flex items-center gap-2 text-xs ${valid ? 'text-green-600' : 'text-red-500'}`}>
+                        {valid ? (
+                          <Check size={12} className="text-green-600" />
+                        ) : (
+                          <AlertCircle size={12} className="text-red-500" />
+                        )}
+                        <span>{rule}</span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               )}
             </div>
+
             <div className="space-y-2">
               <Label htmlFor="confirmPassword">Confirmar Nova Senha</Label>
               <Input
@@ -251,6 +277,7 @@ const ResetPassword: React.FC = () => {
                 onChange={(e) => setConfirmPassword(e.target.value)}
               />
             </div>
+
             <Button
               type="submit"
               className="w-full bg-iparty hover:bg-iparty-dark text-white"
