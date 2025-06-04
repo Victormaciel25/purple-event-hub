@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import VendorCard from "@/components/VendorCard";
 import { Input } from "@/components/ui/input";
@@ -5,11 +6,6 @@ import { Search, ChefHat, Camera, Video, FileText, Shirt, Palette, Cookie, Cake,
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import {
-  Carousel,
-  CarouselContent,
-  CarouselItem,
-} from "@/components/ui/carousel";
 
 type Vendor = {
   id: string;
@@ -121,38 +117,41 @@ const Vendors = () => {
       ) : (
         <>
           <div className="mb-4">
-            <Carousel className="w-full max-w-full mx-auto">
-              <CarouselContent>
-                {predefinedCategories.map((category, index) => {
-                  const IconComponent = category.icon;
+            <div className="overflow-x-auto scrollbar-hide">
+              <div className="flex gap-3 pb-3 px-1 pt-1 w-max">
+                {predefinedCategories.map((category) => {
+                  const Icon = category.icon;
+                  const isActive = selectedCategory === category.name;
+                  
                   return (
-                    <CarouselItem key={category.name} className="basis-1/5 sm:basis-1/6">
-                      <div 
-                        className={cn(
-                          "flex flex-col items-center justify-center p-1 cursor-pointer transition-all",
-                          selectedCategory === category.name
-                            ? "text-primary"
-                            : "text-muted-foreground hover:text-primary"
-                        )}
-                        onClick={() => setSelectedCategory(category.name)}
-                      >
-                        <div className={cn(
-                          "w-12 h-12 rounded-full flex items-center justify-center mb-1 transition-colors",
-                          selectedCategory === category.name
-                            ? "bg-primary/10 border-2 border-primary"
-                            : "bg-muted hover:bg-primary/10"
-                        )}>
-                          <IconComponent size={20} />
-                        </div>
-                        <span className="text-xs text-center font-medium leading-tight">
-                          {category.name}
-                        </span>
-                      </div>
-                    </CarouselItem>
+                    <button
+                      key={category.name}
+                      className={`
+                        relative flex flex-col items-center justify-center min-w-[70px] h-16 rounded-xl 
+                        transition-all duration-300 transform hover:scale-105 hover:shadow-md flex-shrink-0
+                        ${isActive 
+                          ? 'bg-iparty text-white shadow-md' 
+                          : 'bg-white border border-gray-200 text-gray-600 hover:border-gray-300 hover:bg-gray-50'
+                        }
+                      `}
+                      onClick={() => setSelectedCategory(category.name)}
+                    >
+                      <Icon 
+                        size={20} 
+                        className={`mb-1 ${isActive ? 'text-white' : 'text-gray-500'}`} 
+                      />
+                      <span className={`text-xs font-medium leading-tight text-center px-1 ${isActive ? 'text-white' : 'text-gray-600'}`}>
+                        {category.name}
+                      </span>
+                      
+                      {isActive && (
+                        <div className="absolute -bottom-1 left-1/2 transform -translate-x-1/2 w-1.5 h-1.5 bg-white rounded-full shadow-sm" />
+                      )}
+                    </button>
                   );
                 })}
-              </CarouselContent>
-            </Carousel>
+              </div>
+            </div>
           </div>
 
           <div className="space-y-4">
