@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import VendorCard from "@/components/VendorCard";
 import { Input } from "@/components/ui/input";
@@ -94,7 +95,7 @@ const Vendors = () => {
 
   return (
     <div className="container px-4 py-6 max-w-4xl mx-auto">
-      <div className="relative mb-6">
+      <div className="relative mb-4">
         <Search
           className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground"
           size={18}
@@ -115,7 +116,7 @@ const Vendors = () => {
         </div>
       ) : (
         <>
-          <div className="mb-4">
+          <div className="mb-2">
             <div className="overflow-x-auto scrollbar-hide">
               <div className="flex gap-3 pb-3 px-1 pt-1 w-max">
                 {predefinedCategories.map((category) => {
