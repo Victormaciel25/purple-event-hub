@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Phone, MapPin, Calendar, Clock, ChevronLeft } from "lucide-react";
@@ -114,6 +115,21 @@ const VendorDetails = () => {
 
     fetchVendorDetails();
   }, [id]);
+
+  // Handler for WhatsApp redirect
+  const handleWhatsApp = () => {
+    if (!vendor) return;
+    
+    // Clean the phone number (remove non-numeric characters)
+    const cleanPhone = vendor.contact_number.replace(/\D/g, "");
+    
+    // Create WhatsApp URL with pre-filled message
+    const message = encodeURIComponent(`Olá, tenho interesse nos serviços de ${vendor.name}`);
+    const whatsappUrl = `https://wa.me/+55${cleanPhone}?text=${message}`;
+    
+    // Open WhatsApp in a new tab
+    window.open(whatsappUrl, "_blank");
+  };
 
   // Handler for vendor deletion
   const handleDeleteVendor = async () => {
@@ -310,8 +326,12 @@ const VendorDetails = () => {
         </div>
       </div>
       
-      <Button className="w-full mb-4 bg-iparty text-white hover:bg-iparty/90">
-        Entrar em Contato
+      <Button 
+        className="w-full mb-4 bg-green-600 text-white hover:bg-green-700" 
+        onClick={handleWhatsApp}
+      >
+        <Phone className="mr-2" size={18} />
+        WhatsApp
       </Button>
 
       {/* Admin Delete Button */}
