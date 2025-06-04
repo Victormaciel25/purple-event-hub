@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import VendorCard from "@/components/VendorCard";
 import { Input } from "@/components/ui/input";
@@ -120,7 +121,7 @@ const Vendors = () => {
         </div>
       ) : (
         <>
-          <div className="mb-4">
+          <div className="mb-6">
             <Carousel className="w-full max-w-full mx-auto">
               <CarouselContent>
                 {predefinedCategories.map((category, index) => {
@@ -129,7 +130,7 @@ const Vendors = () => {
                     <CarouselItem key={category.name} className="basis-1/5 sm:basis-1/6">
                       <div 
                         className={cn(
-                          "flex flex-col items-center justify-center p-1 cursor-pointer transition-all",
+                          "flex flex-col items-center justify-center p-2 cursor-pointer transition-all",
                           selectedCategory === category.name
                             ? "text-primary"
                             : "text-muted-foreground hover:text-primary"
@@ -137,12 +138,12 @@ const Vendors = () => {
                         onClick={() => setSelectedCategory(category.name)}
                       >
                         <div className={cn(
-                          "w-12 h-12 rounded-full flex items-center justify-center mb-1 transition-colors",
+                          "w-10 h-10 rounded-full flex items-center justify-center mb-1 transition-colors",
                           selectedCategory === category.name
                             ? "bg-primary/10 border-2 border-primary"
                             : "bg-muted hover:bg-primary/10"
                         )}>
-                          <IconComponent size={20} />
+                          <IconComponent size={16} />
                         </div>
                         <span className="text-xs text-center font-medium leading-tight">
                           {category.name}
