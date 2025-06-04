@@ -39,7 +39,7 @@ const VendorCard: React.FC<VendorProps> = ({
       onClick={handleClick}
     >
       <div className="flex p-4">
-        <div className="h-16 w-16 rounded-full overflow-hidden mr-4">
+        <div className="h-20 w-20 rounded-full overflow-hidden mr-4">
           <OptimizedImage
             src={image}
             alt={name}
