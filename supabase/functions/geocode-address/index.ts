@@ -20,7 +20,8 @@ serve(async (req) => {
   try {
     // Verificar se a API key está disponível
     if (!googleMapsApiKey) {
-      throw new Error('Google Maps API Key não está configurada');
+      console.error('Google Maps API Key não encontrada nas variáveis de ambiente');
+      throw new Error('Google Maps API Key não está configurada no ambiente do servidor');
     }
 
     const requestData = await req.json();
@@ -98,6 +99,8 @@ serve(async (req) => {
           locationName: result.formatted_address
         };
         
+        console.log(`Geocodificação bem-sucedida:`, geocodingResult);
+        
         return new Response(
           JSON.stringify(geocodingResult),
           { 
@@ -108,6 +111,7 @@ serve(async (req) => {
           }
         );
       } else {
+        console.error(`Erro na geocodificação: ${data.status}`, data);
         return new Response(
           JSON.stringify({ error: 'Localização não encontrada', status: data.status }),
           { 
@@ -126,7 +130,10 @@ serve(async (req) => {
     console.error("Erro na função geocode-address:", error);
     
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ 
+        error: error.message,
+        details: 'Verifique se a chave da API do Google Maps está configurada corretamente'
+      }),
       { 
         status: 500,
         headers: { 
