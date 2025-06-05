@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -246,14 +247,14 @@ const Login = () => {
   // Return loading state until the initial auth check is complete
   if (!initialAuthCheckDone) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-background p-4">
+      <div className="min-h-screen flex flex-col items-center justify-center bg-background p-4 scrollbar-hide">
         <div>Carregando...</div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-background p-4">
+    <div className="min-h-screen flex flex-col items-center justify-center bg-background p-4 scrollbar-hide">
       <div className="w-full max-w-md space-y-4 animate-fade-in">
         <div className="text-center">
           <div className="flex justify-center mb-4">
