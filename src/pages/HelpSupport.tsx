@@ -96,7 +96,7 @@ const HelpSupport = () => {
           <div className="space-y-3">
             <div className="flex items-center space-x-2">
               <MessageSquare className="h-4 w-4 text-iparty" />
-              <span className="text-sm">E-mail: suporte@iparty.com.br</span>
+              <span className="text-sm">E-mail: suporte@ipartybrasil.com</span>
             </div>
             <div className="flex items-center space-x-2">
               <HelpCircle className="h-4 w-4 text-iparty" />
