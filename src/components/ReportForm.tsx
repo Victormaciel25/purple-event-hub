@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import {
   Dialog,
@@ -10,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { toast } from "@/components/ui/sonner";
+import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -123,15 +122,18 @@ const ReportForm: React.FC<ReportFormProps> = ({
 
       console.log("Report sent successfully!");
       
-      // Show success message and close dialog
-      toast.success("Denúncia enviada, em breve entraremos em contato.");
+      // Show success message with explicit position and styling
+      toast.success("Denúncia enviada, em breve entraremos em contato.", {
+        position: "top-right",
+        duration: 5000,
+        style: {
+          background: "#10b981",
+          color: "white",
+          border: "none"
+        }
+      });
       
-      // Small delay to ensure toast is visible before closing
-      setTimeout(() => {
-        onClose();
-      }, 100);
-      
-      // Reset form
+      // Reset form first
       setFormData({
         name: "",
         email: "",
@@ -139,6 +141,12 @@ const ReportForm: React.FC<ReportFormProps> = ({
         description: "",
       });
       setImages([]);
+      
+      // Close dialog after a longer delay to ensure toast is visible
+      setTimeout(() => {
+        onClose();
+      }, 1000);
+      
     } catch (error) {
       console.error("Error sending report:", error);
       toast.error("Erro ao enviar denúncia. Tente novamente.");
