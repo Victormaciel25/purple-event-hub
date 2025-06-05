@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { toast } from "sonner";
+import { toast } from "@/components/ui/sonner";
 import { Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -122,8 +122,14 @@ const ReportForm: React.FC<ReportFormProps> = ({
       }
 
       console.log("Report sent successfully!");
+      
+      // Show success message and close dialog
       toast.success("Denúncia enviada, em breve entraremos em contato.");
-      onClose();
+      
+      // Small delay to ensure toast is visible before closing
+      setTimeout(() => {
+        onClose();
+      }, 100);
       
       // Reset form
       setFormData({
