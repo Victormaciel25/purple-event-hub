@@ -220,16 +220,20 @@ const EventSpaceDetails: React.FC = () => {
     if (!space) return;
     
     const url = window.location.href;
-    const text = `Confira este espaço incrível: ${space.name}`;
+    const priceFormatted = formatPrice(space.price);
+    const text = `Confira este espaço incrível: ${space.name} - ${priceFormatted} para até ${space.capacity} pessoas`;
     
     if (navigator.share) {
       navigator.share({
-        title: space.name,
+        title: `${space.name} - iParty`,
         text: text,
         url: url,
       }).catch(console.error);
     } else {
-      navigator.clipboard.writeText(url).then(() => {
+      // Create a more complete share text with the link
+      const shareText = `${text}\n\nLocalização: ${space.address}, ${space.number} - ${space.state}\n\nAcesse: ${url}`;
+      
+      navigator.clipboard.writeText(shareText).then(() => {
         toast.success("Link copiado para a área de transferência!");
       }).catch(() => {
         toast.error("Erro ao copiar link");

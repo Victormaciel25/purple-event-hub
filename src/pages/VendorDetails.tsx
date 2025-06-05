@@ -143,16 +143,19 @@ const VendorDetails = () => {
     if (!vendor) return;
     
     const url = window.location.href;
-    const text = `Confira este fornecedor: ${vendor.name}`;
+    const text = `Confira este fornecedor: ${vendor.name} - ${vendor.category}`;
     
     if (navigator.share) {
       navigator.share({
-        title: vendor.name,
+        title: `${vendor.name} - iParty`,
         text: text,
         url: url,
       }).catch(console.error);
     } else {
-      navigator.clipboard.writeText(url).then(() => {
+      // Create a more complete share text with the link
+      const shareText = `${text}\n\nAcesse: ${url}`;
+      
+      navigator.clipboard.writeText(shareText).then(() => {
         toast.success("Link copiado para a área de transferência!");
       }).catch(() => {
         toast.error("Erro ao copiar link");
