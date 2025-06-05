@@ -26,6 +26,7 @@ serve(async (req) => {
     }
 
     const requestData = await req.json();
+    console.log('Request data received:', requestData);
     
     // Handle autocomplete requests
     if (requestData.type === 'autocomplete' && requestData.input) {
@@ -38,6 +39,9 @@ serve(async (req) => {
       const data = await response.json();
       
       console.log(`Status da busca de sugestões: ${data.status}`);
+      if (data.status !== 'OK') {
+        console.error('Erro na busca de sugestões:', data);
+      }
       
       return new Response(
         JSON.stringify(data),
@@ -61,6 +65,9 @@ serve(async (req) => {
       const data = await response.json();
       
       console.log(`Status da busca de detalhes: ${data.status}`);
+      if (data.status !== 'OK') {
+        console.error('Erro na busca de detalhes:', data);
+      }
       
       return new Response(
         JSON.stringify(data),
@@ -83,12 +90,26 @@ serve(async (req) => {
 
       console.log(`Geocodificando endereço: ${address}`);
 
-      const geocodeUrl = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(address)}&region=br&key=${googleMapsApiKey}`;
+      // Para CEPs brasileiros, vamos tentar uma abordagem diferente
+      const isValidCep = /^\d{8}$/.test(address.replace(/\D/g, ''));
+      let geocodeUrl;
+      
+      if (isValidCep) {
+        // Para CEPs, usar endereço formatado
+        const formattedCep = address.replace(/(\d{5})(\d{3})/, '$1-$2');
+        geocodeUrl = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(formattedCep + ', Brasil')}&region=br&key=${googleMapsApiKey}`;
+        console.log(`Geocodificando CEP formatado: ${formattedCep}, Brasil`);
+      } else {
+        geocodeUrl = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(address)}&region=br&key=${googleMapsApiKey}`;
+      }
+      
+      console.log('URL da requisição:', geocodeUrl.replace(googleMapsApiKey, '[API_KEY_HIDDEN]'));
       
       const response = await fetch(geocodeUrl);
       const data = await response.json();
 
       console.log(`Status da geocodificação: ${data.status}`);
+      console.log('Response completa:', JSON.stringify(data, null, 2));
 
       if (data.status === "OK" && data.results && data.results.length > 0) {
         const result = data.results[0];
@@ -113,8 +134,60 @@ serve(async (req) => {
         );
       } else {
         console.error(`Erro na geocodificação: ${data.status}`, data);
+        
+        // Tentar uma abordagem alternativa se o primeiro método falhar
+        if (data.status === 'REQUEST_DENIED' && isValidCep) {
+          console.log('Tentando abordagem alternativa para CEP...');
+          
+          // Para CEPs, podemos tentar usar um serviço brasileiro como fallback
+          try {
+            const cepClean = address.replace(/\D/g, '');
+            const viacepResponse = await fetch(`https://viacep.com.br/ws/${cepClean}/json/`);
+            const viacepData = await viacepResponse.json();
+            
+            if (viacepData && !viacepData.erro) {
+              // Usar o endereço completo do ViaCEP para geocodificar
+              const fullAddress = `${viacepData.logradouro}, ${viacepData.bairro}, ${viacepData.localidade}, ${viacepData.uf}, Brasil`;
+              console.log('Tentando geocodificar endereço do ViaCEP:', fullAddress);
+              
+              const fallbackUrl = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(fullAddress)}&region=br&key=${googleMapsApiKey}`;
+              const fallbackResponse = await fetch(fallbackUrl);
+              const fallbackData = await fallbackResponse.json();
+              
+              if (fallbackData.status === "OK" && fallbackData.results && fallbackData.results.length > 0) {
+                const result = fallbackData.results[0];
+                const location = result.geometry.location;
+                
+                const geocodingResult = {
+                  lat: location.lat,
+                  lng: location.lng,
+                  locationName: result.formatted_address
+                };
+                
+                console.log(`Geocodificação alternativa bem-sucedida:`, geocodingResult);
+                
+                return new Response(
+                  JSON.stringify(geocodingResult),
+                  { 
+                    headers: { 
+                      'Content-Type': 'application/json',
+                      ...corsHeaders 
+                    } 
+                  }
+                );
+              }
+            }
+          } catch (fallbackError) {
+            console.error('Erro na abordagem alternativa:', fallbackError);
+          }
+        }
+        
         return new Response(
-          JSON.stringify({ error: 'Localização não encontrada', status: data.status }),
+          JSON.stringify({ 
+            error: 'Localização não encontrada', 
+            status: data.status,
+            details: data.error_message || 'Verifique se o CEP está correto'
+          }),
           { 
             status: 404,
             headers: { 
@@ -133,7 +206,7 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({ 
         error: error.message,
-        details: 'Verifique se a chave da API do Google Maps está configurada corretamente'
+        details: 'Erro interno do servidor. Verifique os logs para mais detalhes.'
       }),
       { 
         status: 500,
