@@ -197,7 +197,15 @@ export const usePromotedSpaces = () => {
         return a.distanceKm - b.distanceKm;
       });
 
-      // Combinar: espaços promovidos próximos primeiro, depois todos os outros
+      // Ordenar espaços normais por distância também (mais próximos primeiro)
+      normalSpaces.sort((a, b) => {
+        if (a.distanceKm === undefined && b.distanceKm === undefined) return 0;
+        if (a.distanceKm === undefined) return 1;
+        if (b.distanceKm === undefined) return -1;
+        return a.distanceKm - b.distanceKm;
+      });
+
+      // Combinar: espaços promovidos próximos primeiro, depois espaços normais ordenados por proximidade
       const finalSpaces = [...nearbyPromotedSpaces, ...normalSpaces];
 
       setSpaces(finalSpaces);

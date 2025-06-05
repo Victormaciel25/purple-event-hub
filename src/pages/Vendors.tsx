@@ -1,20 +1,10 @@
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import VendorCard from "@/components/VendorCard";
 import { Input } from "@/components/ui/input";
 import { Search, ChefHat, Camera, Video, FileText, Shirt, Palette, Cookie, Cake, Sparkles, Clipboard } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { cn } from "@/lib/utils";
-
-type Vendor = {
-  id: string;
-  name: string;
-  category: string;
-  contact_number: string;
-  images: string[];
-  rating?: number;
-};
+import { useVendorsWithLocation } from "@/hooks/useVendorsWithLocation";
 
 const predefinedCategories = [
   { name: "Todos", icon: Sparkles },
@@ -32,50 +22,14 @@ const predefinedCategories = [
 
 const Vendors = () => {
   const [searchTerm, setSearchTerm] = useState("");
-  const [vendors, setVendors] = useState<Vendor[]>([]);
-  const [loading, setLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState("Todos");
+  const { vendors, loading, error } = useVendorsWithLocation();
 
-  useEffect(() => {
-    fetchVendors();
-  }, []);
-
-  const fetchVendors = async () => {
-    try {
-      setLoading(true);
-      console.log("Fetching approved vendors...");
-      
-      const { data, error } = await supabase
-        .from("vendors")
-        .select("*")
-        .eq("status", "approved");
-
-      if (error) {
-        console.error("Error fetching vendors:", error);
-        throw error;
-      }
-
-      console.log("Vendors fetched:", data);
-      console.log("Number of approved vendors:", data ? data.length : 0);
-
-      if (data) {
-        const processedVendors = data.map((vendor) => ({
-          id: vendor.id,
-          name: vendor.name,
-          category: vendor.category,
-          contact_number: vendor.contact_number,
-          images: vendor.images || [],
-        }));
-
-        setVendors(processedVendors);
-      }
-    } catch (error) {
-      console.error("Erro ao buscar fornecedores:", error);
-      toast.error("Não foi possível carregar os fornecedores");
-    } finally {
-      setLoading(false);
+  React.useEffect(() => {
+    if (error) {
+      toast.error(error);
     }
-  };
+  }, [error]);
 
   const filteredVendors = vendors.filter(
     (vendor) =>
