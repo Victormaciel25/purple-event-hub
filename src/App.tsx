@@ -18,6 +18,7 @@ import Map from "./pages/Map";
 import Messages from "./pages/Messages";
 import Profile from "./pages/Profile";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
+import HelpSupport from "./pages/HelpSupport";
 import NotFound from "./pages/NotFound";
 import EventSpaceDetails from "./pages/EventSpaceDetails";
 import RegisterSpace from "./pages/RegisterSpace";
@@ -117,6 +118,9 @@ const App: React.FC = () => {
             
             {/* Privacy Policy Route - accessible without authentication */}
             <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+            
+            {/* Help Support Route - accessible without authentication */}
+            <Route path="/help-support" element={<HelpSupport />} />
             
             {/* App Routes with Layout */}
             <Route element={

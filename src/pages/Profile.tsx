@@ -311,7 +311,8 @@ const Profile = () => {
     },
     { 
       icon: HelpCircle, 
-      label: "Ajuda e Suporte" 
+      label: "Ajuda e Suporte",
+      onClick: () => navigate("/help-support")
     },
     { 
       icon: FileText, 
