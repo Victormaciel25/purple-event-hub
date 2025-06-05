@@ -238,7 +238,7 @@ const VendorDetails = () => {
     : [];
 
   return (
-    <div className="container px-4 py-6 max-w-4xl mx-auto">
+    <div className="container px-4 py-6 max-w-4xl mx-auto scrollbar-hide overflow-y-auto">
       <div className="flex items-center justify-between mb-4">
         <Button variant="ghost" size="sm" onClick={() => navigate(-1)}>
           <ChevronLeft size={20} />

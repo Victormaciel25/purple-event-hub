@@ -294,7 +294,7 @@ const EventSpaceDetails: React.FC = () => {
   }
 
   return (
-    <div className="container px-4 py-6 pb-20 mx-auto">
+    <div className="container px-4 py-6 pb-20 mx-auto scrollbar-hide overflow-y-auto">
       {/* back & actions dropdown at top */}
       <div className="flex items-center justify-between mb-4">
         <Button variant="ghost" size="sm" onClick={() => navigate(-1)}>
