@@ -28,7 +28,10 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
+    console.log("Send report function called");
+    
     const reportData: ReportRequest = await req.json();
+    console.log("Report data received:", reportData);
 
     const {
       reporterName,
@@ -40,6 +43,18 @@ const handler = async (req: Request): Promise<Response> => {
       description,
       imageUrls = [],
     } = reportData;
+
+    // Validate required fields
+    if (!reporterName || !reporterEmail || !reportedItemName || !reportedItemUrl || !reportType || !description) {
+      console.error("Missing required fields");
+      return new Response(
+        JSON.stringify({ error: "Missing required fields" }),
+        {
+          status: 400,
+          headers: { "Content-Type": "application/json", ...corsHeaders },
+        }
+      );
+    }
 
     // Create HTML content with images
     let imagesHtml = "";
@@ -74,6 +89,8 @@ const handler = async (req: Request): Promise<Response> => {
       <p><small>Esta denúncia foi enviada através do sistema iParty Brasil em ${new Date().toLocaleString('pt-BR')}.</small></p>
     `;
 
+    console.log("Sending email to suporte@ipartybrasil.com");
+
     const emailResponse = await resend.emails.send({
       from: "Sistema iParty <noreply@ipartybrasil.com>",
       to: ["suporte@ipartybrasil.com"],
@@ -81,9 +98,9 @@ const handler = async (req: Request): Promise<Response> => {
       html: emailHtml,
     });
 
-    console.log("Report email sent successfully:", emailResponse);
+    console.log("Email sent successfully:", emailResponse);
 
-    return new Response(JSON.stringify({ success: true }), {
+    return new Response(JSON.stringify({ success: true, emailResponse }), {
       status: 200,
       headers: {
         "Content-Type": "application/json",

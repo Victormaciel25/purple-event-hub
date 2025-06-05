@@ -63,29 +63,45 @@ const ReportForm: React.FC<ReportFormProps> = ({
     setIsSubmitting(true);
 
     try {
-      // Upload images to Supabase storage if any
+      // Upload images to Supabase storage if any (using spaces bucket)
       const imageUrls: string[] = [];
       
       if (images.length > 0) {
         for (const image of images) {
-          const fileName = `report-${Date.now()}-${image.name}`;
+          const fileName = `reports/${Date.now()}-${image.name}`;
+          
+          console.log("Uploading image to spaces bucket:", fileName);
+          
           const { data, error } = await supabase.storage
-            .from("reports")
+            .from("spaces")
             .upload(fileName, image);
 
           if (error) {
             console.error("Error uploading image:", error);
+            toast.error(`Erro ao enviar imagem: ${image.name}`);
           } else {
+            console.log("Image uploaded successfully:", data);
             const { data: publicUrl } = supabase.storage
-              .from("reports")
+              .from("spaces")
               .getPublicUrl(fileName);
             imageUrls.push(publicUrl.publicUrl);
           }
         }
       }
 
+      console.log("Sending report with data:", {
+        reporterName: formData.name,
+        reporterEmail: formData.email,
+        reporterPhone: formData.phone,
+        reportedItemName,
+        reportedItemUrl,
+        reportType: reportType === "space" ? "Espaço" : "Fornecedor",
+        description: formData.description,
+        imageUrls,
+      });
+
       // Send report via edge function
-      const { error } = await supabase.functions.invoke("send-report", {
+      const { data, error } = await supabase.functions.invoke("send-report", {
         body: {
           reporterName: formData.name,
           reporterEmail: formData.email,
@@ -98,10 +114,14 @@ const ReportForm: React.FC<ReportFormProps> = ({
         },
       });
 
+      console.log("Edge function response:", { data, error });
+
       if (error) {
+        console.error("Edge function error:", error);
         throw error;
       }
 
+      console.log("Report sent successfully!");
       toast.success("Denúncia enviada com sucesso!");
       onClose();
       
