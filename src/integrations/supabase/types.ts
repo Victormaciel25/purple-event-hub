@@ -427,6 +427,8 @@ export type Database = {
           description: string
           id: string
           images: string[] | null
+          latitude: number | null
+          longitude: number | null
           name: string
           rejection_reason: string | null
           status: Database["public"]["Enums"]["vendor_approval_status"]
@@ -442,6 +444,8 @@ export type Database = {
           description: string
           id?: string
           images?: string[] | null
+          latitude?: number | null
+          longitude?: number | null
           name: string
           rejection_reason?: string | null
           status?: Database["public"]["Enums"]["vendor_approval_status"]
@@ -457,6 +461,8 @@ export type Database = {
           description?: string
           id?: string
           images?: string[] | null
+          latitude?: number | null
+          longitude?: number | null
           name?: string
           rejection_reason?: string | null
           status?: Database["public"]["Enums"]["vendor_approval_status"]

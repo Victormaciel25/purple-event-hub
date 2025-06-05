@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { z } from "zod";
@@ -26,6 +25,7 @@ import {
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import SingleImageUpload from "@/components/SingleImageUpload";
+import AddressAutoComplete from "@/components/AddressAutoComplete";
 import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale"; 
@@ -78,6 +78,7 @@ const RegisterVendor = () => {
   const [uploading, setUploading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [selectedDays, setSelectedDays] = useState<string[]>([]);
+  const [location, setLocation] = useState<{ lat: number; lng: number; locationName: string } | null>(null);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -96,6 +97,12 @@ const RegisterVendor = () => {
     setImageUrls(urls);
   };
 
+  const handleLocationSelected = (selectedLocation: { lat: number; lng: number; locationName: string }) => {
+    setLocation(selectedLocation);
+    form.setValue('address', selectedLocation.locationName);
+    console.log('Localização selecionada para o fornecedor:', selectedLocation);
+  };
+
   const toggleDay = (day: string) => {
     const updatedDays = selectedDays.includes(day)
       ? selectedDays.filter(d => d !== day)
@@ -108,6 +115,11 @@ const RegisterVendor = () => {
   const onSubmit = async (values: FormValues) => {
     if (imageUrls.length === 0) {
       toast.error("Por favor, faça o upload de pelo menos uma imagem");
+      return;
+    }
+
+    if (!location) {
+      toast.error("Por favor, selecione um endereço usando o campo de busca");
       return;
     }
 
@@ -135,6 +147,8 @@ const RegisterVendor = () => {
         user_id: userId,
         status: 'pending',
         available_days: selectedDays,
+        latitude: location.lat,
+        longitude: location.lng,
       });
 
       const { error } = await supabase
@@ -150,6 +164,8 @@ const RegisterVendor = () => {
           user_id: userId,
           status: 'pending',
           available_days: selectedDays,
+          latitude: location.lat,
+          longitude: location.lng,
         });
         
       if (error) {
@@ -258,7 +274,12 @@ const RegisterVendor = () => {
               <FormItem>
                 <FormLabel>Endereço</FormLabel>
                 <FormControl>
-                  <Input placeholder="Av. Paulista, 1000 - São Paulo, SP" {...field} />
+                  <AddressAutoComplete
+                    onLocationSelected={handleLocationSelected}
+                    initialValue={field.value}
+                    placeholder="Busque e selecione o endereço"
+                    className="w-full"
+                  />
                 </FormControl>
                 <FormMessage />
               </FormItem>
