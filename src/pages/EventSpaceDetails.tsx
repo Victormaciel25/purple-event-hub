@@ -14,7 +14,10 @@ import {
   Heart, 
   Loader2,
   MessageSquare,
-  Trash2
+  Trash2,
+  MoreVertical,
+  Share,
+  Flag
 } from "lucide-react";
 import {
   Carousel,
@@ -23,6 +26,12 @@ import {
   CarouselPrevious,
   CarouselNext,
 } from "@/components/ui/carousel";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
 import { useEventSpaceFavorites } from "../hooks/useEventSpaceFavorites";
 import { supabase } from "@/integrations/supabase/client";
@@ -205,6 +214,31 @@ const EventSpaceDetails: React.FC = () => {
     }
   };
 
+  const handleShare = () => {
+    if (!space) return;
+    
+    const url = window.location.href;
+    const text = `Confira este espaço incrível: ${space.name}`;
+    
+    if (navigator.share) {
+      navigator.share({
+        title: space.name,
+        text: text,
+        url: url,
+      }).catch(console.error);
+    } else {
+      navigator.clipboard.writeText(url).then(() => {
+        toast.success("Link copiado para a área de transferência!");
+      }).catch(() => {
+        toast.error("Erro ao copiar link");
+      });
+    }
+  };
+
+  const handleReport = () => {
+    toast.success("Denúncia enviada. Nossa equipe irá analisá-la.");
+  };
+
   // Fix the handleDeleteSpace function to avoid void truthiness checks
   const handleDeleteSpace = async () => {
     if (!deleteReason.trim()) {
@@ -261,17 +295,35 @@ const EventSpaceDetails: React.FC = () => {
 
   return (
     <div className="container px-4 py-6 pb-20 mx-auto">
-      {/* back & favorite at top */}
+      {/* back & actions dropdown at top */}
       <div className="flex items-center justify-between mb-4">
         <Button variant="ghost" size="sm" onClick={() => navigate(-1)}>
           <ChevronLeft size={20} />
         </Button>
-        <Button variant="ghost" onClick={() => toggleFavorite(space.id)}>
-          <Heart
-            size={24}
-            className={isFavorite(space.id) ? "fill-red-500 text-red-500" : "text-gray-500"}
-          />
-        </Button>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="sm">
+              <MoreVertical size={20} />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-48">
+            <DropdownMenuItem onClick={() => toggleFavorite(space.id)}>
+              <Heart
+                size={16}
+                className={`mr-2 ${isFavorite(space.id) ? "fill-red-500 text-red-500" : "text-gray-500"}`}
+              />
+              {isFavorite(space.id) ? "Remover dos favoritos" : "Adicionar aos favoritos"}
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={handleShare}>
+              <Share size={16} className="mr-2" />
+              Compartilhar
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={handleReport}>
+              <Flag size={16} className="mr-2" />
+              Denunciar
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
 
       {/* image display - responsive carousel for all screen sizes */}

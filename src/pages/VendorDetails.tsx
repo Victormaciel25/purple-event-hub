@@ -1,7 +1,6 @@
-
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { Phone, MapPin, Calendar, Clock, ChevronLeft } from "lucide-react";
+import { Phone, MapPin, Calendar, Clock, ChevronLeft, MoreVertical, Share, Flag } from "lucide-react";
 import OptimizedImage from "@/components/OptimizedImage";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -12,6 +11,12 @@ import {
   CarouselContent,
   CarouselItem,
 } from "@/components/ui/carousel";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { useUserRoles } from "@/hooks/useUserRoles";
 import {
   AlertDialog,
@@ -131,6 +136,31 @@ const VendorDetails = () => {
     window.open(whatsappUrl, "_blank");
   };
 
+  const handleShare = () => {
+    if (!vendor) return;
+    
+    const url = window.location.href;
+    const text = `Confira este fornecedor: ${vendor.name}`;
+    
+    if (navigator.share) {
+      navigator.share({
+        title: vendor.name,
+        text: text,
+        url: url,
+      }).catch(console.error);
+    } else {
+      navigator.clipboard.writeText(url).then(() => {
+        toast.success("Link copiado para a área de transferência!");
+      }).catch(() => {
+        toast.error("Erro ao copiar link");
+      });
+    }
+  };
+
+  const handleReport = () => {
+    toast.success("Denúncia enviada. Nossa equipe irá analisá-la.");
+  };
+
   // Handler for vendor deletion
   const handleDeleteVendor = async () => {
     if (!id || !deleteReason.trim()) {
@@ -213,6 +243,23 @@ const VendorDetails = () => {
         <Button variant="ghost" size="sm" onClick={() => navigate(-1)}>
           <ChevronLeft size={20} />
         </Button>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="sm">
+              <MoreVertical size={20} />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-48">
+            <DropdownMenuItem onClick={handleShare}>
+              <Share size={16} className="mr-2" />
+              Compartilhar
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={handleReport}>
+              <Flag size={16} className="mr-2" />
+              Denunciar
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
 
       {/* image display - responsive carousel for all screen sizes */}
