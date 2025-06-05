@@ -1,19 +1,37 @@
+
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ArrowLeft, Check, AlertCircle, Lock } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
+
+/**
+ * Função utilitária simples que pega uma `string` de hash tipo
+ * "#access_token=XXX&refresh_token=YYY&type=recovery" e converte num objeto.
+ */
+function parseHashParams(hash: string): Record<string, string> {
+  const trimmed = hash.startsWith("#") ? hash.substring(1) : hash;
+  return trimmed
+    .split("&")
+    .map(segment => segment.split("="))
+    .reduce((obj: Record<string, string>, [key, val]) => {
+      if (key && val !== undefined) {
+        obj[key] = decodeURIComponent(val);
+      }
+      return obj;
+    }, {});
+}
 
 const ResetPassword: React.FC = () => {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [passwordErrors, setPasswordErrors] = useState<string[]>([]);
-  const [sessionChecked, setSessionChecked] = useState<boolean>(false);
-  const [hasValidRecoverySession, setHasValidRecoverySession] = useState<boolean>(false);
+  const [tokensValid, setTokensValid] = useState<boolean | null>(null);
+  const location = useLocation();
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -49,34 +67,23 @@ const ResetPassword: React.FC = () => {
     }
   };
 
+  // No carregamento inicial deste componente, vamos ler `location.hash`
+  // e verificar se existem `access_token`, `refresh_token` e `type=recovery`.
   useEffect(() => {
-    /**
-     * Quando entramos em /reset-password, o Supabase JS já 
-     * deve ter criado uma sessão de recuperação (without a real login).
-     * Basta verificar se há uma sessão ativa (`supabase.auth.getSession()`).
-     * Se existir e for do tipo “recover”, mostramos o formulário. Do contrário,
-     * bloqueamos e exibimos erro de link inválido.
-     */
-    const checkRecoverySession = async () => {
-      try {
-        const { data } = await supabase.auth.getSession();
-        // supabase.auth.getSession() retorna info da sessão caso o Supabase já tenha validado o "recovery token"
-        if (data.session && data.session.user && data.session.user.id) {
-          // Sessão válida de recuperação de senha
-          setHasValidRecoverySession(true);
-        } else {
-          setHasValidRecoverySession(false);
-        }
-      } catch (err) {
-        console.error("Erro ao verificar sessão de recuperação:", err);
-        setHasValidRecoverySession(false);
-      } finally {
-        setSessionChecked(true);
-      }
-    };
+    const hashParams = parseHashParams(location.hash);
+    const accessToken = hashParams["access_token"];
+    const refreshToken = hashParams["refresh_token"];
+    const type = hashParams["type"];
 
-    checkRecoverySession();
-  }, []);
+    console.log("HashParams extraídos:", { accessToken, refreshToken, type });
+
+    // Se faltar qualquer coisa, tokens inválidos
+    if (!accessToken || !refreshToken || type !== "recovery") {
+      setTokensValid(false);
+    } else {
+      setTokensValid(true);
+    }
+  }, [location.hash]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -104,10 +111,24 @@ const ResetPassword: React.FC = () => {
         return;
       }
 
-      // 2) O Supabase já inseriu a sessão de recuperação na página inicial.
-      // Basta chamar `updateUser` agora:
-      const { error } = await supabase.auth.updateUser({ password });
-      if (error) throw error;
+      // 2) Extrair os tokens novamente do hash
+      const hashParams = parseHashParams(location.hash);
+      const accessToken = hashParams["access_token"];
+      const refreshToken = hashParams["refresh_token"];
+      if (!accessToken || !refreshToken) {
+        throw new Error("Tokens de autenticação não encontrados");
+      }
+
+      console.log("Chamando supabase.auth.setSession() com tokens do hash...");
+      const { error: sessionError } = await supabase.auth.setSession({
+        access_token: accessToken,
+        refresh_token: refreshToken,
+      });
+      if (sessionError) throw sessionError;
+
+      console.log("Sessão do Supabase definida com sucesso, atualizando a senha...");
+      const { error: updateError } = await supabase.auth.updateUser({ password });
+      if (updateError) throw updateError;
 
       toast({
         title: "Senha redefinida",
@@ -129,8 +150,8 @@ const ResetPassword: React.FC = () => {
     }
   };
 
-  // 1) Enquanto não terminamos de checar se existe sessão de recovery, mostramos “verificando”
-  if (!sessionChecked) {
+  // 1) Enquanto não terminamos de checar se existe sessão de recovery, mostramos "verificando"
+  if (tokensValid === null) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-background p-4">
         <div className="text-center">
@@ -150,7 +171,7 @@ const ResetPassword: React.FC = () => {
   }
 
   // 2) Se não existe sessão de recovery válida, mostramos erro
-  if (!hasValidRecoverySession) {
+  if (tokensValid === false) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-background p-4">
         <div className="w-full max-w-md space-y-4 animate-fade-in">
