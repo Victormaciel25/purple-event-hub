@@ -9,7 +9,8 @@ const corsHeaders = {
 
 const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
 const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY') || '';
-const googleMapsApiKey = Deno.env.get('GOOGLE_MAPS_API_KEY') || '';
+// Usar a mesma API key que está configurada no projeto
+const googleMapsApiKey = "AIzaSyA5P5mbDieTYIeczsRTS1TSxR005fDnScc";
 
 serve(async (req) => {
   // Handle CORS preflight requests
@@ -20,7 +21,7 @@ serve(async (req) => {
   try {
     // Verificar se a API key está disponível
     if (!googleMapsApiKey) {
-      console.error('Google Maps API Key não encontrada nas variáveis de ambiente');
+      console.error('Google Maps API Key não encontrada');
       throw new Error('Google Maps API Key não está configurada no ambiente do servidor');
     }
 
