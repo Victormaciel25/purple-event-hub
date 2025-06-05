@@ -109,23 +109,34 @@ const RegisterVendor = () => {
   };
 
   const handleCepGeocoding = async (cep: string) => {
-    if (cep.length >= 8) {
+    // Remove caracteres não numéricos do CEP
+    const cleanCep = cep.replace(/\D/g, '');
+    
+    if (cleanCep.length === 8) {
       try {
+        console.log('Geocodificando CEP:', cleanCep);
+        
         const { data, error } = await supabase.functions.invoke('geocode-address', {
-          body: { address: cep }
+          body: { address: cleanCep }
         });
 
         if (error) {
           console.error('Erro ao geocodificar CEP:', error);
+          toast.error("Erro ao buscar localização do CEP");
           return;
         }
 
         if (data && data.lat && data.lng) {
-          setMapCenter({ lat: data.lat, lng: data.lng });
-          console.log('CEP geocodificado:', data);
+          const newCenter = { lat: data.lat, lng: data.lng };
+          setMapCenter(newCenter);
+          console.log('CEP geocodificado, centralizando mapa em:', newCenter);
+          toast.success("Mapa centralizado na localização do CEP. Clique no mapa para marcar sua localização exata.");
+        } else {
+          toast.error("CEP não encontrado");
         }
       } catch (error) {
         console.error('Erro ao geocodificar CEP:', error);
+        toast.error("Erro ao buscar localização do CEP");
       }
     }
   };
@@ -133,6 +144,7 @@ const RegisterVendor = () => {
   const handleMapLocationSelected = (lat: number, lng: number) => {
     setMapLocation({ lat, lng });
     console.log('Localização selecionada no mapa:', { lat, lng });
+    toast.success("Localização selecionada com sucesso!");
   };
 
   const toggleDay = (day: string) => {
@@ -316,6 +328,9 @@ const RegisterVendor = () => {
                   />
                 </FormControl>
                 <FormMessage />
+                <p className="text-sm text-muted-foreground">
+                  Digite o CEP para centralizar o mapa na sua região
+                </p>
               </FormItem>
             )}
           />
@@ -342,7 +357,10 @@ const RegisterVendor = () => {
           <div className="space-y-2">
             <FormLabel>Selecionar Localização no Mapa</FormLabel>
             <p className="text-sm text-muted-foreground">
-              Clique no mapa para marcar a localização exata do seu negócio
+              {mapCenter 
+                ? "Clique no mapa para marcar a localização exata do seu negócio"
+                : "Digite o CEP acima para centralizar o mapa, depois clique para marcar sua localização"
+              }
             </p>
             <div className="h-96 w-full border rounded-lg">
               <LocationMap
@@ -352,6 +370,11 @@ const RegisterVendor = () => {
                 spaces={[]}
               />
             </div>
+            {mapLocation && (
+              <p className="text-sm text-green-600">
+                ✓ Localização selecionada: {mapLocation.lat.toFixed(6)}, {mapLocation.lng.toFixed(6)}
+              </p>
+            )}
           </div>
 
           <FormField
