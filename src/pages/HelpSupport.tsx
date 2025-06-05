@@ -100,7 +100,7 @@ const HelpSupport = () => {
             </div>
             <div className="flex items-center space-x-2">
               <HelpCircle className="h-4 w-4 text-iparty" />
-              <span className="text-sm">Horário de atendimento: Segunda a sexta, 9h às 18h</span>
+              <span className="text-sm">Horário de atendimento: Segunda a sexta, 9h às 17h</span>
             </div>
           </div>
         </CardContent>
