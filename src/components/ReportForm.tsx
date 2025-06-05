@@ -122,7 +122,7 @@ const ReportForm: React.FC<ReportFormProps> = ({
       }
 
       console.log("Report sent successfully!");
-      toast.success("Denúncia enviada com sucesso!");
+      toast.success("Denúncia enviada, em breve entraremos em contato.");
       onClose();
       
       // Reset form
