@@ -294,207 +294,211 @@ const EventSpaceDetails: React.FC = () => {
   }
 
   return (
-    <div className="container px-4 py-6 pb-20 mx-auto scrollbar-hide overflow-y-auto">
-      {/* back & actions dropdown at top */}
-      <div className="flex items-center justify-between mb-4">
-        <Button variant="ghost" size="sm" onClick={() => navigate(-1)}>
-          <ChevronLeft size={20} />
-        </Button>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="sm">
-              <MoreVertical size={20} />
+    <div className="h-screen w-full overflow-hidden">
+      <div className="h-full w-full overflow-y-auto scrollbar-hide">
+        <div className="container px-4 py-6 pb-20 mx-auto">
+          {/* back & actions dropdown at top */}
+          <div className="flex items-center justify-between mb-4">
+            <Button variant="ghost" size="sm" onClick={() => navigate(-1)}>
+              <ChevronLeft size={20} />
             </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-48">
-            <DropdownMenuItem onClick={() => toggleFavorite(space.id)}>
-              <Heart
-                size={16}
-                className={`mr-2 ${isFavorite(space.id) ? "fill-red-500 text-red-500" : "text-gray-500"}`}
-              />
-              {isFavorite(space.id) ? "Remover dos favoritos" : "Adicionar aos favoritos"}
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={handleShare}>
-              <Share size={16} className="mr-2" />
-              Compartilhar
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={handleReport}>
-              <Flag size={16} className="mr-2" />
-              Denunciar
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </div>
-
-      {/* image display - responsive carousel for all screen sizes */}
-      <div className="mb-6">
-        {/* Mobile: Carousel */}
-        <div className="block md:hidden">
-          <Carousel>
-            <CarouselContent>
-              {space.images.map((img, i) => (
-                <CarouselItem key={i}>
-                  <div className="relative rounded-lg overflow-hidden h-64">
-                    <OptimizedImage
-                      src={img}
-                      alt={`${space.name} ${i + 1}`}
-                      className="object-cover w-full h-full"
-                    />
-                    <div className="absolute bottom-2 right-2">
-                      <span className="bg-black/70 text-white px-2 py-1 rounded text-xs">
-                        {i + 1}/{space.images.length}
-                      </span>
-                    </div>
-                  </div>
-                </CarouselItem>
-              ))}
-            </CarouselContent>
-          </Carousel>
-        </div>
-
-        {/* Tablet/Desktop: Horizontal Scrollable Row */}
-        <div className="hidden md:block">
-          <Carousel>
-            <CarouselContent className="-ml-2 md:-ml-4">
-              {space.images.map((img, i) => (
-                <CarouselItem key={i} className="pl-2 md:pl-4 md:basis-1/3 lg:basis-1/4">
-                  <div className="relative rounded-lg overflow-hidden h-48 lg:h-56">
-                    <OptimizedImage
-                      src={img}
-                      alt={`${space.name} ${i + 1}`}
-                      className="object-cover w-full h-full"
-                    />
-                    <div className="absolute bottom-2 right-2">
-                      <span className="bg-black/70 text-white px-2 py-1 rounded text-xs">
-                        {i + 1}
-                      </span>
-                    </div>
-                  </div>
-                </CarouselItem>
-              ))}
-            </CarouselContent>
-          </Carousel>
-        </div>
-      </div>
-
-      {/* title */}
-      <h1 className="text-2xl font-bold mb-6 truncate">{space.name}</h1>
-
-      {/* price / details */}
-      <div className="mb-6">
-        <div className="flex justify-between items-center mb-2">
-          <h2 className="text-2xl font-bold">{formatPrice(space.price)}</h2>
-          <Badge variant="secondary">
-            <Users className="mr-1" size={14} />
-            Até {space.capacity} pessoas
-          </Badge>
-        </div>
-        <p className="text-muted-foreground">
-          {space.address}, {space.number} – {space.state}
-        </p>
-        <p className="text-muted-foreground">CEP: {space.zip_code}</p>
-      </div>
-
-      {/* about */}
-      <div className="mb-6">
-        <h3 className="text-lg font-semibold mb-2">Sobre o espaço</h3>
-        <p className="text-muted-foreground">{space.description}</p>
-      </div>
-
-      {/* amenities */}
-      <div className="mb-8">
-        <h3 className="text-lg font-semibold mb-2">Comodidades</h3>
-        <div className="grid grid-cols-2 gap-4">
-          <div className={`flex items-center ${space.parking ? "" : "text-muted-foreground/50"}`}>
-            <ParkingMeter className="mr-2" size={18} />
-            <span>{space.parking ? "Estacionamento" : "Sem estacionamento"}</span>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="sm">
+                  <MoreVertical size={20} />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-48">
+                <DropdownMenuItem onClick={() => toggleFavorite(space.id)}>
+                  <Heart
+                    size={16}
+                    className={`mr-2 ${isFavorite(space.id) ? "fill-red-500 text-red-500" : "text-gray-500"}`}
+                  />
+                  {isFavorite(space.id) ? "Remover dos favoritos" : "Adicionar aos favoritos"}
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleShare}>
+                  <Share size={16} className="mr-2" />
+                  Compartilhar
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleReport}>
+                  <Flag size={16} className="mr-2" />
+                  Denunciar
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
-          <div className={`flex items-center ${space.wifi ? "" : "text-muted-foreground/50"}`}>
-            <Wifi className="mr-2" size={18} />
-            <span>{space.wifi ? "Wi-Fi" : "Sem Wi-Fi"}</span>
-          </div>
-          <div className={`flex items-center ${space.sound_system ? "" : "text-muted-foreground/50"}`}>
-            <Speaker className="mr-2" size={18} />
-            <span>{space.sound_system ? "Sistema de som" : "Sem sistema de som"}</span>
-          </div>
-          <div className={`flex items-center ${space.air_conditioning ? "" : "text-muted-foreground/50"}`}>
-            <AirVent className="mr-2" size={18} />
-            <span>{space.air_conditioning ? "Ar condicionado" : "Sem ar condicionado"}</span>
-          </div>
-          <div className={`flex items-center ${space.kitchen ? "" : "text-muted-foreground/50"}`}>
-            <Utensils className="mr-2" size={18} />
-            <span>{space.kitchen ? "Cozinha" : "Sem cozinha"}</span>
-          </div>
-          <div className={`flex items-center ${space.pool ? "" : "text-muted-foreground/50"}`}>
-            <Waves className="mr-2" size={18} />
-            <span>{space.pool ? "Piscina" : "Sem piscina"}</span>
-          </div>
-        </div>
-      </div>
 
-      {/* contact buttons */}
-      <div className="grid grid-cols-2 gap-4 mb-6">
-        <Button className="bg-green-600 hover:bg-green-700" size="lg" onClick={handleWhatsApp}>
-          <Phone className="mr-2" size={18} />
-          WhatsApp
-        </Button>
-        <Button
-          className="bg-iparty hover:bg-iparty-dark"
-          size="lg"
-          onClick={startChat}
-          disabled={currentUserId === spaceOwner?.id || processingChat}
-        >
-          {processingChat ? (
-            <Loader2 className="mr-2 animate-spin" size={18} />
-          ) : (
-            <MessageSquare className="mr-2" size={18} />
-          )}
-          Mensagem
-        </Button>
-      </div>
+          {/* image display - responsive carousel for all screen sizes */}
+          <div className="mb-6">
+            {/* Mobile: Carousel */}
+            <div className="block md:hidden">
+              <Carousel>
+                <CarouselContent>
+                  {space.images.map((img, i) => (
+                    <CarouselItem key={i}>
+                      <div className="relative rounded-lg overflow-hidden h-64">
+                        <OptimizedImage
+                          src={img}
+                          alt={`${space.name} ${i + 1}`}
+                          className="object-cover w-full h-full"
+                        />
+                        <div className="absolute bottom-2 right-2">
+                          <span className="bg-black/70 text-white px-2 py-1 rounded text-xs">
+                            {i + 1}/{space.images.length}
+                          </span>
+                        </div>
+                      </div>
+                    </CarouselItem>
+                  ))}
+                </CarouselContent>
+              </Carousel>
+            </div>
 
-      {/* delete button for admin */}
-      {isAdmin && (
-        <Button
-          variant="destructive"
-          className="w-full mb-6"
-          size="lg"
-          onClick={() => setDeleteDialogOpen(true)}
-        >
-          <Trash2 className="mr-2" size={18} />
-          Excluir Espaço
-        </Button>
-      )}
+            {/* Tablet/Desktop: Horizontal Scrollable Row */}
+            <div className="hidden md:block">
+              <Carousel>
+                <CarouselContent className="-ml-2 md:-ml-4">
+                  {space.images.map((img, i) => (
+                    <CarouselItem key={i} className="pl-2 md:pl-4 md:basis-1/3 lg:basis-1/4">
+                      <div className="relative rounded-lg overflow-hidden h-48 lg:h-56">
+                        <OptimizedImage
+                          src={img}
+                          alt={`${space.name} ${i + 1}`}
+                          className="object-cover w-full h-full"
+                        />
+                        <div className="absolute bottom-2 right-2">
+                          <span className="bg-black/70 text-white px-2 py-1 rounded text-xs">
+                            {i + 1}
+                          </span>
+                        </div>
+                      </div>
+                    </CarouselItem>
+                  ))}
+                </CarouselContent>
+              </Carousel>
+            </div>
+          </div>
 
-      {/* delete confirmation */}
-      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Excluir Espaço</AlertDialogTitle>
-            <AlertDialogDescription>
-              Tem certeza que deseja excluir este espaço? Esta ação não pode ser
-              desfeita.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <Textarea
-            placeholder="Motivo da exclusão (obrigatório)"
-            value={deleteReason}
-            onChange={(e) => setDeleteReason(e.target.value)}
-            className="mt-4"
-            rows={3}
-          />
-          <AlertDialogFooter className="mt-4">
-            <AlertDialogCancel disabled={deletingSpace}>Cancelar</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDeleteSpace}
-              disabled={deletingSpace}
-              className="bg-red-600 hover:bg-red-700"
+          {/* title */}
+          <h1 className="text-2xl font-bold mb-6 truncate">{space.name}</h1>
+
+          {/* price / details */}
+          <div className="mb-6">
+            <div className="flex justify-between items-center mb-2">
+              <h2 className="text-2xl font-bold">{formatPrice(space.price)}</h2>
+              <Badge variant="secondary">
+                <Users className="mr-1" size={14} />
+                Até {space.capacity} pessoas
+              </Badge>
+            </div>
+            <p className="text-muted-foreground">
+              {space.address}, {space.number} – {space.state}
+            </p>
+            <p className="text-muted-foreground">CEP: {space.zip_code}</p>
+          </div>
+
+          {/* about */}
+          <div className="mb-6">
+            <h3 className="text-lg font-semibold mb-2">Sobre o espaço</h3>
+            <p className="text-muted-foreground">{space.description}</p>
+          </div>
+
+          {/* amenities */}
+          <div className="mb-8">
+            <h3 className="text-lg font-semibold mb-2">Comodidades</h3>
+            <div className="grid grid-cols-2 gap-4">
+              <div className={`flex items-center ${space.parking ? "" : "text-muted-foreground/50"}`}>
+                <ParkingMeter className="mr-2" size={18} />
+                <span>{space.parking ? "Estacionamento" : "Sem estacionamento"}</span>
+              </div>
+              <div className={`flex items-center ${space.wifi ? "" : "text-muted-foreground/50"}`}>
+                <Wifi className="mr-2" size={18} />
+                <span>{space.wifi ? "Wi-Fi" : "Sem Wi-Fi"}</span>
+              </div>
+              <div className={`flex items-center ${space.sound_system ? "" : "text-muted-foreground/50"}`}>
+                <Speaker className="mr-2" size={18} />
+                <span>{space.sound_system ? "Sistema de som" : "Sem sistema de som"}</span>
+              </div>
+              <div className={`flex items-center ${space.air_conditioning ? "" : "text-muted-foreground/50"}`}>
+                <AirVent className="mr-2" size={18} />
+                <span>{space.air_conditioning ? "Ar condicionado" : "Sem ar condicionado"}</span>
+              </div>
+              <div className={`flex items-center ${space.kitchen ? "" : "text-muted-foreground/50"}`}>
+                <Utensils className="mr-2" size={18} />
+                <span>{space.kitchen ? "Cozinha" : "Sem cozinha"}</span>
+              </div>
+              <div className={`flex items-center ${space.pool ? "" : "text-muted-foreground/50"}`}>
+                <Waves className="mr-2" size={18} />
+                <span>{space.pool ? "Piscina" : "Sem piscina"}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* contact buttons */}
+          <div className="grid grid-cols-2 gap-4 mb-6">
+            <Button className="bg-green-600 hover:bg-green-700" size="lg" onClick={handleWhatsApp}>
+              <Phone className="mr-2" size={18} />
+              WhatsApp
+            </Button>
+            <Button
+              className="bg-iparty hover:bg-iparty-dark"
+              size="lg"
+              onClick={startChat}
+              disabled={currentUserId === spaceOwner?.id || processingChat}
             >
-              {deletingSpace ? "Excluindo..." : "Excluir"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+              {processingChat ? (
+                <Loader2 className="mr-2 animate-spin" size={18} />
+              ) : (
+                <MessageSquare className="mr-2" size={18} />
+              )}
+              Mensagem
+            </Button>
+          </div>
+
+          {/* delete button for admin */}
+          {isAdmin && (
+            <Button
+              variant="destructive"
+              className="w-full mb-6"
+              size="lg"
+              onClick={() => setDeleteDialogOpen(true)}
+            >
+              <Trash2 className="mr-2" size={18} />
+              Excluir Espaço
+            </Button>
+          )}
+
+          {/* delete confirmation */}
+          <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Excluir Espaço</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Tem certeza que deseja excluir este espaço? Esta ação não pode ser
+                  desfeita.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <Textarea
+                placeholder="Motivo da exclusão (obrigatório)"
+                value={deleteReason}
+                onChange={(e) => setDeleteReason(e.target.value)}
+                className="mt-4"
+                rows={3}
+              />
+              <AlertDialogFooter className="mt-4">
+                <AlertDialogCancel disabled={deletingSpace}>Cancelar</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={handleDeleteSpace}
+                  disabled={deletingSpace}
+                  className="bg-red-600 hover:bg-red-700"
+                >
+                  {deletingSpace ? "Excluindo..." : "Excluir"}
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </div>
+      </div>
     </div>
   );
 };

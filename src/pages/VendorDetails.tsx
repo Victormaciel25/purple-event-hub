@@ -238,193 +238,197 @@ const VendorDetails = () => {
     : [];
 
   return (
-    <div className="container px-4 py-6 max-w-4xl mx-auto scrollbar-hide overflow-y-auto">
-      <div className="flex items-center justify-between mb-4">
-        <Button variant="ghost" size="sm" onClick={() => navigate(-1)}>
-          <ChevronLeft size={20} />
-        </Button>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="sm">
-              <MoreVertical size={20} />
+    <div className="h-screen w-full overflow-hidden">
+      <div className="h-full w-full overflow-y-auto scrollbar-hide">
+        <div className="container px-4 py-6 max-w-4xl mx-auto">
+          <div className="flex items-center justify-between mb-4">
+            <Button variant="ghost" size="sm" onClick={() => navigate(-1)}>
+              <ChevronLeft size={20} />
             </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-48">
-            <DropdownMenuItem onClick={handleShare}>
-              <Share size={16} className="mr-2" />
-              Compartilhar
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={handleReport}>
-              <Flag size={16} className="mr-2" />
-              Denunciar
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </div>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="sm">
+                  <MoreVertical size={20} />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-48">
+                <DropdownMenuItem onClick={handleShare}>
+                  <Share size={16} className="mr-2" />
+                  Compartilhar
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleReport}>
+                  <Flag size={16} className="mr-2" />
+                  Denunciar
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
 
-      {/* image display - responsive carousel for all screen sizes */}
-      <div className="mb-6">
-        {/* Mobile: Carousel */}
-        <div className="block md:hidden">
-          <Carousel>
-            <CarouselContent>
-              {displayImages.map((image, index) => (
-                <CarouselItem key={index} className="w-full h-64">
-                  <OptimizedImage
-                    src={image}
-                    alt={`${vendor.name} - Imagem ${index + 1}`}
-                    className="w-full h-full object-cover rounded-lg"
-                    loadingClassName="animate-pulse bg-gray-200"
-                  />
-                  <div className="absolute bottom-2 right-2">
-                    <span className="bg-black/70 text-white px-2 py-1 rounded text-xs">
-                      {index + 1}/{displayImages.length}
-                    </span>
+          {/* image display - responsive carousel for all screen sizes */}
+          <div className="mb-6">
+            {/* Mobile: Carousel */}
+            <div className="block md:hidden">
+              <Carousel>
+                <CarouselContent>
+                  {displayImages.map((image, index) => (
+                    <CarouselItem key={index} className="w-full h-64">
+                      <OptimizedImage
+                        src={image}
+                        alt={`${vendor.name} - Imagem ${index + 1}`}
+                        className="w-full h-full object-cover rounded-lg"
+                        loadingClassName="animate-pulse bg-gray-200"
+                      />
+                      <div className="absolute bottom-2 right-2">
+                        <span className="bg-black/70 text-white px-2 py-1 rounded text-xs">
+                          {index + 1}/{displayImages.length}
+                        </span>
+                      </div>
+                    </CarouselItem>
+                  ))}
+                </CarouselContent>
+              </Carousel>
+            </div>
+
+            {/* Tablet/Desktop: Horizontal Scrollable Row */}
+            <div className="hidden md:block">
+              <Carousel>
+                <CarouselContent className="-ml-2 md:-ml-4">
+                  {displayImages.map((image, index) => (
+                    <CarouselItem key={index} className="pl-2 md:pl-4 md:basis-1/3 lg:basis-1/4">
+                      <div className="relative rounded-lg overflow-hidden h-48 lg:h-56">
+                        <OptimizedImage
+                          src={image}
+                          alt={`${vendor.name} - Imagem ${index + 1}`}
+                          className="object-cover w-full h-full"
+                        />
+                        <div className="absolute bottom-2 right-2">
+                          <span className="bg-black/70 text-white px-2 py-1 rounded text-xs">
+                            {index + 1}
+                          </span>
+                        </div>
+                      </div>
+                    </CarouselItem>
+                  ))}
+                </CarouselContent>
+              </Carousel>
+            </div>
+
+            <div className="flex justify-center mt-2">
+              <p className="text-xs text-muted-foreground">
+                {displayImages.length} {displayImages.length === 1 ? 'imagem' : 'imagens'}
+              </p>
+            </div>
+          </div>
+
+          <div className="mb-6">
+            <h1 className="text-2xl font-bold mb-2">{vendor.name}</h1>
+            <Badge variant="outline" className="mb-4 bg-secondary">
+              {vendor.category}
+            </Badge>
+            
+            <p className="text-gray-700 mb-6">{vendor.description}</p>
+            
+            <div className="space-y-4">
+              <div className="flex items-start">
+                <Phone size={20} className="text-iparty mr-3 mt-1" />
+                <div>
+                  <h3 className="font-semibold mb-1">Contato</h3>
+                  <p className="text-gray-700">{vendor.contact_number}</p>
+                </div>
+              </div>
+              
+              {vendor.address && (
+                <div className="flex items-start">
+                  <MapPin size={20} className="text-iparty mr-3 mt-1" />
+                  <div>
+                    <h3 className="font-semibold mb-1">Endereço</h3>
+                    <p className="text-gray-700">{vendor.address}</p>
                   </div>
-                </CarouselItem>
-              ))}
-            </CarouselContent>
-          </Carousel>
-        </div>
-
-        {/* Tablet/Desktop: Horizontal Scrollable Row */}
-        <div className="hidden md:block">
-          <Carousel>
-            <CarouselContent className="-ml-2 md:-ml-4">
-              {displayImages.map((image, index) => (
-                <CarouselItem key={index} className="pl-2 md:pl-4 md:basis-1/3 lg:basis-1/4">
-                  <div className="relative rounded-lg overflow-hidden h-48 lg:h-56">
-                    <OptimizedImage
-                      src={image}
-                      alt={`${vendor.name} - Imagem ${index + 1}`}
-                      className="object-cover w-full h-full"
-                    />
-                    <div className="absolute bottom-2 right-2">
-                      <span className="bg-black/70 text-white px-2 py-1 rounded text-xs">
-                        {index + 1}
-                      </span>
+                </div>
+              )}
+              
+              {vendor.working_hours && (
+                <div className="flex items-start">
+                  <Clock size={20} className="text-iparty mr-3 mt-1" />
+                  <div>
+                    <h3 className="font-semibold mb-1">Horário de Atendimento</h3>
+                    <p className="text-gray-700">{vendor.working_hours}</p>
+                  </div>
+                </div>
+              )}
+              
+              {availableDays && availableDays.length > 0 && (
+                <div className="flex items-start">
+                  <Calendar size={20} className="text-iparty mr-3 mt-1" />
+                  <div>
+                    <h3 className="font-semibold mb-1">Dias Disponíveis</h3>
+                    <div className="flex flex-wrap gap-2 mt-2">
+                      {availableDays.map((day) => (
+                        <Badge key={day} variant="secondary" className="text-xs">
+                          {day}
+                        </Badge>
+                      ))}
                     </div>
                   </div>
-                </CarouselItem>
-              ))}
-            </CarouselContent>
-          </Carousel>
-        </div>
-
-        <div className="flex justify-center mt-2">
-          <p className="text-xs text-muted-foreground">
-            {displayImages.length} {displayImages.length === 1 ? 'imagem' : 'imagens'}
-          </p>
-        </div>
-      </div>
-
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold mb-2">{vendor.name}</h1>
-        <Badge variant="outline" className="mb-4 bg-secondary">
-          {vendor.category}
-        </Badge>
-        
-        <p className="text-gray-700 mb-6">{vendor.description}</p>
-        
-        <div className="space-y-4">
-          <div className="flex items-start">
-            <Phone size={20} className="text-iparty mr-3 mt-1" />
-            <div>
-              <h3 className="font-semibold mb-1">Contato</h3>
-              <p className="text-gray-700">{vendor.contact_number}</p>
+                </div>
+              )}
             </div>
           </div>
           
-          {vendor.address && (
-            <div className="flex items-start">
-              <MapPin size={20} className="text-iparty mr-3 mt-1" />
-              <div>
-                <h3 className="font-semibold mb-1">Endereço</h3>
-                <p className="text-gray-700">{vendor.address}</p>
-              </div>
-            </div>
+          <Button 
+            className="w-full mb-4 bg-green-600 text-white hover:bg-green-700" 
+            onClick={handleWhatsApp}
+          >
+            <Phone className="mr-2" size={18} />
+            WhatsApp
+          </Button>
+
+          {/* Admin Delete Button */}
+          {(isAdmin || isSuperAdmin) && (
+            <Button
+              variant="destructive"
+              className="w-full mb-4 flex items-center justify-center"
+              onClick={() => setDeleteDialogOpen(true)}
+              disabled={deleting}
+            >
+              <Trash2 className="mr-2" size={18} />
+              {deleting ? "Excluindo..." : "Excluir Fornecedor"}
+            </Button>
           )}
-          
-          {vendor.working_hours && (
-            <div className="flex items-start">
-              <Clock size={20} className="text-iparty mr-3 mt-1" />
-              <div>
-                <h3 className="font-semibold mb-1">Horário de Atendimento</h3>
-                <p className="text-gray-700">{vendor.working_hours}</p>
-              </div>
-            </div>
-          )}
-          
-          {availableDays && availableDays.length > 0 && (
-            <div className="flex items-start">
-              <Calendar size={20} className="text-iparty mr-3 mt-1" />
-              <div>
-                <h3 className="font-semibold mb-1">Dias Disponíveis</h3>
-                <div className="flex flex-wrap gap-2 mt-2">
-                  {availableDays.map((day) => (
-                    <Badge key={day} variant="secondary" className="text-xs">
-                      {day}
-                    </Badge>
-                  ))}
-                </div>
-              </div>
-            </div>
-          )}
+
+          {/* Delete Confirmation Dialog */}
+          <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Excluir Fornecedor</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Tem certeza que deseja excluir este fornecedor? Esta ação não pode ser
+                  desfeita.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <Textarea
+                placeholder="Motivo da exclusão (obrigatório)"
+                value={deleteReason}
+                onChange={(e) => setDeleteReason(e.target.value)}
+                className="mt-4"
+                rows={3}
+              />
+              <AlertDialogFooter className="mt-4">
+                <AlertDialogCancel disabled={deleting}>Cancelar</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={handleDeleteVendor}
+                  disabled={deleting || !deleteReason.trim()}
+                  className="bg-red-600 hover:bg-red-700"
+                >
+                  {deleting ? "Excluindo..." : "Excluir"}
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+
+          <div className="h-20"></div> {/* Space for bottom nav */}
         </div>
       </div>
-      
-      <Button 
-        className="w-full mb-4 bg-green-600 text-white hover:bg-green-700" 
-        onClick={handleWhatsApp}
-      >
-        <Phone className="mr-2" size={18} />
-        WhatsApp
-      </Button>
-
-      {/* Admin Delete Button */}
-      {(isAdmin || isSuperAdmin) && (
-        <Button
-          variant="destructive"
-          className="w-full mb-4 flex items-center justify-center"
-          onClick={() => setDeleteDialogOpen(true)}
-          disabled={deleting}
-        >
-          <Trash2 className="mr-2" size={18} />
-          {deleting ? "Excluindo..." : "Excluir Fornecedor"}
-        </Button>
-      )}
-
-      {/* Delete Confirmation Dialog */}
-      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Excluir Fornecedor</AlertDialogTitle>
-            <AlertDialogDescription>
-              Tem certeza que deseja excluir este fornecedor? Esta ação não pode ser
-              desfeita.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <Textarea
-            placeholder="Motivo da exclusão (obrigatório)"
-            value={deleteReason}
-            onChange={(e) => setDeleteReason(e.target.value)}
-            className="mt-4"
-            rows={3}
-          />
-          <AlertDialogFooter className="mt-4">
-            <AlertDialogCancel disabled={deleting}>Cancelar</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDeleteVendor}
-              disabled={deleting || !deleteReason.trim()}
-              className="bg-red-600 hover:bg-red-700"
-            >
-              {deleting ? "Excluindo..." : "Excluir"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      <div className="h-20"></div> {/* Space for bottom nav */}
     </div>
   );
 };
