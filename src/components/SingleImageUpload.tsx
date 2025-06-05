@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { X, Images } from "lucide-react";
 import { toast } from "sonner";
@@ -179,12 +180,12 @@ const SingleImageUpload: React.FC<SingleImageUploadProps> = ({
         ))}
         
         {previewUrls.length < maxImages && (
-          <label className="cursor-pointer border-2 border-dashed border-gray-300 rounded-lg flex flex-col items-center justify-center min-h-[180px] p-6">
-            <Images size={36} className="text-gray-300 mb-3" />
-            <span className="text-sm text-gray-500 text-center px-2 mb-2">
+          <label className="cursor-pointer border-2 border-dashed border-gray-300 rounded-lg flex flex-col items-center justify-center min-h-[220px] p-8">
+            <Images size={40} className="text-gray-300 mb-4" />
+            <span className="text-sm text-gray-500 text-center px-2 mb-3">
               {isUploading ? "Enviando..." : "Adicionar imagens"}
             </span>
-            <span className="text-xs text-gray-400 text-center px-2 mb-1">
+            <span className="text-xs text-gray-400 text-center px-2 mb-2">
               ({aspectRatio}, max {maxSize}MB)
             </span>
             <span className="text-xs text-gray-400 text-center px-2">
