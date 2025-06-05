@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { z } from "zod";
@@ -26,6 +27,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import SingleImageUpload from "@/components/SingleImageUpload";
 import AddressAutoComplete from "@/components/AddressAutoComplete";
+import LocationMap from "@/components/LocationMap";
 import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale"; 
@@ -66,6 +68,7 @@ const formSchema = z.object({
   contactNumber: z.string().min(8, { message: "Insira um número de telefone válido" }),
   description: z.string().min(10, { message: "A descrição deve ter pelo menos 10 caracteres" }),
   address: z.string().min(5, { message: "Insira um endereço válido" }),
+  zipCode: z.string().min(8, { message: "Insira um CEP válido" }),
   workingHours: z.string().optional(),
   availableDays: z.array(z.string()).optional(),
 });
@@ -78,7 +81,8 @@ const RegisterVendor = () => {
   const [uploading, setUploading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [selectedDays, setSelectedDays] = useState<string[]>([]);
-  const [location, setLocation] = useState<{ lat: number; lng: number; locationName: string } | null>(null);
+  const [mapLocation, setMapLocation] = useState<{ lat: number; lng: number } | null>(null);
+  const [mapCenter, setMapCenter] = useState<{ lat: number; lng: number } | null>(null);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -88,6 +92,7 @@ const RegisterVendor = () => {
       contactNumber: "",
       description: "",
       address: "",
+      zipCode: "",
       workingHours: "",
       availableDays: [],
     },
@@ -98,9 +103,36 @@ const RegisterVendor = () => {
   };
 
   const handleLocationSelected = (selectedLocation: { lat: number; lng: number; locationName: string }) => {
-    setLocation(selectedLocation);
+    setMapCenter({ lat: selectedLocation.lat, lng: selectedLocation.lng });
     form.setValue('address', selectedLocation.locationName);
     console.log('Localização selecionada para o fornecedor:', selectedLocation);
+  };
+
+  const handleCepGeocoding = async (cep: string) => {
+    if (cep.length >= 8) {
+      try {
+        const { data, error } = await supabase.functions.invoke('geocode-address', {
+          body: { address: cep }
+        });
+
+        if (error) {
+          console.error('Erro ao geocodificar CEP:', error);
+          return;
+        }
+
+        if (data && data.lat && data.lng) {
+          setMapCenter({ lat: data.lat, lng: data.lng });
+          console.log('CEP geocodificado:', data);
+        }
+      } catch (error) {
+        console.error('Erro ao geocodificar CEP:', error);
+      }
+    }
+  };
+
+  const handleMapLocationSelected = (lat: number, lng: number) => {
+    setMapLocation({ lat, lng });
+    console.log('Localização selecionada no mapa:', { lat, lng });
   };
 
   const toggleDay = (day: string) => {
@@ -118,8 +150,8 @@ const RegisterVendor = () => {
       return;
     }
 
-    if (!location) {
-      toast.error("Por favor, selecione um endereço usando o campo de busca");
+    if (!mapLocation) {
+      toast.error("Por favor, selecione uma localização no mapa");
       return;
     }
 
@@ -147,8 +179,8 @@ const RegisterVendor = () => {
         user_id: userId,
         status: 'pending',
         available_days: selectedDays,
-        latitude: location.lat,
-        longitude: location.lng,
+        latitude: mapLocation.lat,
+        longitude: mapLocation.lng,
       });
 
       const { error } = await supabase
@@ -164,8 +196,8 @@ const RegisterVendor = () => {
           user_id: userId,
           status: 'pending',
           available_days: selectedDays,
-          latitude: location.lat,
-          longitude: location.lng,
+          latitude: mapLocation.lat,
+          longitude: mapLocation.lng,
         });
         
       if (error) {
@@ -266,6 +298,27 @@ const RegisterVendor = () => {
               </FormItem>
             )}
           />
+
+          <FormField
+            control={form.control}
+            name="zipCode"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>CEP</FormLabel>
+                <FormControl>
+                  <Input 
+                    placeholder="00000-000" 
+                    {...field} 
+                    onChange={(e) => {
+                      field.onChange(e);
+                      handleCepGeocoding(e.target.value);
+                    }}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
           
           <FormField
             control={form.control}
@@ -285,6 +338,21 @@ const RegisterVendor = () => {
               </FormItem>
             )}
           />
+
+          <div className="space-y-2">
+            <FormLabel>Selecionar Localização no Mapa</FormLabel>
+            <p className="text-sm text-muted-foreground">
+              Clique no mapa para marcar a localização exata do seu negócio
+            </p>
+            <div className="h-96 w-full border rounded-lg">
+              <LocationMap
+                onLocationSelected={handleMapLocationSelected}
+                initialLocation={mapCenter}
+                viewOnly={false}
+                spaces={[]}
+              />
+            </div>
+          </div>
 
           <FormField
             control={form.control}
