@@ -180,7 +180,7 @@ const SingleImageUpload: React.FC<SingleImageUploadProps> = ({
         ))}
         
         {previewUrls.length < maxImages && (
-          <label className="cursor-pointer aspect-square border-2 border-dashed border-gray-300 rounded-lg flex flex-col items-center justify-center">
+          <label className="cursor-pointer border-2 border-dashed border-gray-300 rounded-lg flex flex-col items-center justify-center min-h-[140px] p-4">
             <Images size={36} className="text-gray-300 mb-2" />
             <span className="text-sm text-gray-500 text-center px-2">
               {isUploading ? "Enviando..." : "Adicionar imagens"}
