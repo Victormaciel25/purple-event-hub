@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import ReportForm from "@/components/ReportForm";
 import {
   Carousel,
   CarouselContent,
@@ -66,6 +67,8 @@ const VendorDetails = () => {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleteReason, setDeleteReason] = useState("");
   const [deleting, setDeleting] = useState(false);
+  // State for report form
+  const [reportFormOpen, setReportFormOpen] = useState(false);
 
   useEffect(() => {
     const fetchVendorDetails = async () => {
@@ -158,7 +161,7 @@ const VendorDetails = () => {
   };
 
   const handleReport = () => {
-    toast.success("Denúncia enviada. Nossa equipe irá analisá-la.");
+    setReportFormOpen(true);
   };
 
   // Handler for vendor deletion
@@ -425,6 +428,15 @@ const VendorDetails = () => {
               </AlertDialogFooter>
             </AlertDialogContent>
           </AlertDialog>
+
+          {/* Report Form */}
+          <ReportForm
+            isOpen={reportFormOpen}
+            onClose={() => setReportFormOpen(false)}
+            reportedItemName={vendor.name}
+            reportedItemUrl={window.location.href}
+            reportType="vendor"
+          />
 
           <div className="h-20"></div> {/* Space for bottom nav */}
         </div>

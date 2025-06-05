@@ -49,6 +49,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import ReportForm from "@/components/ReportForm";
 
 type SpaceDetails = {
   id: string;
@@ -84,6 +85,7 @@ const EventSpaceDetails: React.FC = () => {
   const [spaceOwner, setSpaceOwner] = useState<{ id: string; name: string } | null>(null);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [processingChat, setProcessingChat] = useState(false);
+  const [reportFormOpen, setReportFormOpen] = useState(false);
 
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleteReason, setDeleteReason] = useState("");
@@ -236,7 +238,7 @@ const EventSpaceDetails: React.FC = () => {
   };
 
   const handleReport = () => {
-    toast.success("Denúncia enviada. Nossa equipe irá analisá-la.");
+    setReportFormOpen(true);
   };
 
   // Fix the handleDeleteSpace function to avoid void truthiness checks
@@ -497,6 +499,15 @@ const EventSpaceDetails: React.FC = () => {
               </AlertDialogFooter>
             </AlertDialogContent>
           </AlertDialog>
+
+          {/* Report Form */}
+          <ReportForm
+            isOpen={reportFormOpen}
+            onClose={() => setReportFormOpen(false)}
+            reportedItemName={space.name}
+            reportedItemUrl={window.location.href}
+            reportType="space"
+          />
         </div>
       </div>
     </div>
