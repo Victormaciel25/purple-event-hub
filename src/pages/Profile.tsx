@@ -8,10 +8,12 @@ import EditProfileDialog from "@/components/EditProfileDialog";
 import ProfileHeader from "@/components/profile/ProfileHeader";
 import MenuCard from "@/components/profile/MenuCard";
 import SignOutButton from "@/components/profile/SignOutButton";
+import RegistrationOptions from "@/components/profile/RegistrationOptions";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
 const Profile = () => {
   const [showFavorites, setShowFavorites] = useState(false);
+  const [showRegistration, setShowRegistration] = useState(false);
   const [loading, setLoading] = useState(true);
   const [signingOut, setSigningOut] = useState(false);
   const [profile, setProfile] = useState<any>(null);
@@ -252,13 +254,8 @@ const Profile = () => {
   const spaceManagementItems = [
     { 
       icon: Plus, 
-      label: "Cadastrar espaço", 
-      onClick: () => navigate("/register-space") 
-    },
-    { 
-      icon: Plus, 
-      label: "Cadastrar fornecedor",
-      onClick: () => navigate("/register-vendor")
+      label: "Cadastrar", 
+      onClick: () => setShowRegistration(true)
     },
     { 
       icon: Home, 
@@ -369,6 +366,8 @@ const Profile = () => {
           </div>
           <FavoriteSpaces />
         </>
+      ) : showRegistration ? (
+        <RegistrationOptions onBack={() => setShowRegistration(false)} />
       ) : (
         <>
           <MenuCard items={spaceManagementItems} />
