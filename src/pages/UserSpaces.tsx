@@ -2,12 +2,14 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardFooter } from "@/components/ui/card";
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { ChevronLeft, Edit, Trash2, Clock } from "lucide-react";
+import { ArrowLeft, Edit, Trash2, Clock, Plus, RefreshCw } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { toast } from "sonner";
 
 type UserSpace = {
   id: string;
@@ -29,6 +31,7 @@ const UserSpaces: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState("all");
   const navigate = useNavigate();
   
   useEffect(() => {
@@ -81,6 +84,11 @@ const UserSpaces: React.FC = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleRefresh = () => {
+    fetchUserSpaces();
+    toast.info("Atualizando lista de espaços...");
   };
   
   const handleEdit = (spaceId: string) => {
@@ -158,17 +166,46 @@ const UserSpaces: React.FC = () => {
     }
   };
 
-  const renderEmptyState = () => (
-    <Card className="p-6 text-center">
-      <p className="mb-4">Você ainda não cadastrou nenhum espaço.</p>
-      <Button onClick={() => navigate("/register-space")} className="bg-iparty">
-        Cadastrar Primeiro Espaço
-      </Button>
-    </Card>
-  );
+  const pendingCount = spaces.filter(s => s.status === "pending").length;
+  const approvedCount = spaces.filter(s => s.status === "approved").length;
+  const rejectedCount = spaces.filter(s => s.status === "rejected").length;
+  const filteredSpaces = spaces.filter(s => activeTab === "all" ? true : s.status === activeTab);
 
-  const renderSpaceCards = () => (
-    <ScrollArea className="h-[calc(100vh-220px)]">
+  return (
+    <div className="container px-4 py-6 max-w-4xl mx-auto">
+      {/* header */}
+      <div className="flex items-center mb-6">
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => navigate("/profile")}
+          className="mr-2"
+        >
+          <ArrowLeft size={20} />
+        </Button>
+        <h1 className="text-2xl font-semibold">Meus Espaços</h1>
+      </div>
+
+      {/* actions */}
+      <div className="flex justify-between items-center mb-6">
+        <Button
+          onClick={() => navigate("/register-space")}
+          className="bg-iparty hover:bg-iparty/90"
+        >
+          <Plus size={16} className="mr-2" /> Cadastrar Espaço
+        </Button>
+        <Button
+          variant="outline"
+          onClick={handleRefresh}
+          disabled={loading}
+          className="flex items-center"
+        >
+          <RefreshCw size={16} className={`mr-2 ${loading ? "animate-spin" : ""}`} />
+          Atualizar
+        </Button>
+      </div>
+
+      {/* Error and Success Messages */}
       {deleteError && (
         <Alert variant="destructive" className="mb-4">
           <AlertDescription>
@@ -184,113 +221,151 @@ const UserSpaces: React.FC = () => {
           </AlertDescription>
         </Alert>
       )}
-      
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-1">
-        {spaces.map((space) => (
-          <Card key={space.id} className="border shadow-sm">
-            <CardContent className="p-4">
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <h3 className="font-medium text-lg">{space.name}</h3>
-                  <div className="flex gap-2">
-                    {getStatusBadge(space.status)}
-                    {space.promotion && (
-                      <Badge className="bg-yellow-500 text-white">
-                        Em Destaque
-                      </Badge>
-                    )}
-                  </div>
-                </div>
-                
-                {space.promotion && (
-                  <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
-                    <div className="flex items-center gap-2 text-yellow-800">
-                      <Clock size={16} />
-                      <span className="text-sm font-medium">
-                        Promoção ativa: {getPromotionTimeLeft(space.promotion.expires_at)}
-                      </span>
+
+      {/* tabs */}
+      <Tabs
+        defaultValue="all"
+        value={activeTab}
+        onValueChange={setActiveTab}
+        className="w-full"
+      >
+        {/* duas colunas por linha */}
+        <TabsList className="w-full grid grid-cols-2 gap-2 mb-10">
+          <TabsTrigger value="all" className="rounded-md w-full h-full">
+            Todos ({spaces.length})
+          </TabsTrigger>
+          <TabsTrigger value="pending" className="rounded-md w-full h-full">
+            Pendentes ({pendingCount})
+          </TabsTrigger>
+          <TabsTrigger
+            value="approved"
+            className="rounded-md w-full h-full"
+          >
+            Aprovados ({approvedCount})
+          </TabsTrigger>
+          <TabsTrigger
+            value="rejected"
+            className="rounded-md w-full h-full"
+          >
+            Rejeitados ({rejectedCount})
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value={activeTab} className="mt-4">
+          {loading ? (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-center">Carregando espaços…</CardTitle>
+              </CardHeader>
+            </Card>
+          ) : filteredSpaces.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {filteredSpaces.map((space) => (
+                <Card key={space.id} className="border shadow-sm">
+                  <CardContent className="p-4">
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <h3 className="font-medium text-lg">{space.name}</h3>
+                        <div className="flex gap-2">
+                          {getStatusBadge(space.status)}
+                          {space.promotion && (
+                            <Badge className="bg-yellow-500 text-white">
+                              Em Destaque
+                            </Badge>
+                          )}
+                        </div>
+                      </div>
+                      
+                      {space.promotion && (
+                        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+                          <div className="flex items-center gap-2 text-yellow-800">
+                            <Clock size={16} />
+                            <span className="text-sm font-medium">
+                              Promoção ativa: {getPromotionTimeLeft(space.promotion.expires_at)}
+                            </span>
+                          </div>
+                        </div>
+                      )}
+                      
+                      <div className="grid grid-cols-2 gap-2 text-sm">
+                        <div>
+                          <p className="text-muted-foreground">Endereço:</p>
+                          <p className="truncate" title={`${space.address}, ${space.state}`}>
+                            {space.address}, {space.state}
+                          </p>
+                        </div>
+                        
+                        <div>
+                          <p className="text-muted-foreground">Preço:</p>
+                          <p className="font-medium">{formatPrice(space.price)}</p>
+                        </div>
+                        
+                        <div>
+                          <p className="text-muted-foreground">Cadastrado em:</p>
+                          <p>{formatDate(space.created_at)}</p>
+                        </div>
+                        
+                        {space.status === 'rejected' && space.rejection_reason && (
+                          <div className="col-span-2">
+                            <p className="text-muted-foreground">Motivo da rejeição:</p>
+                            <p className="text-red-600">{space.rejection_reason}</p>
+                          </div>
+                        )}
+                      </div>
                     </div>
+                  </CardContent>
+                  
+                  <CardFooter className="p-4 pt-0 flex justify-end gap-2">
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={() => handleEdit(space.id)}
+                      className="flex items-center"
+                    >
+                      <Edit size={16} className="mr-1" />
+                      Editar
+                    </Button>
+                    <Button 
+                      variant="destructive" 
+                      size="sm"
+                      onClick={() => handleDelete(space.id)}
+                      className="flex items-center"
+                      disabled={loading}
+                    >
+                      <Trash2 size={16} className="mr-1" />
+                      Excluir
+                    </Button>
+                  </CardFooter>
+                </Card>
+              ))}
+            </div>
+          ) : (
+            <Card>
+              <CardContent className="pt-6">
+                <p className="text-center text-muted-foreground">
+                  {activeTab === "all"
+                    ? "Você ainda não cadastrou nenhum espaço."
+                    : activeTab === "pending"
+                    ? "Você não tem espaços pendentes de aprovação."
+                    : activeTab === "approved"
+                    ? "Você não tem espaços aprovados."
+                    : "Você não tem espaços rejeitados."}
+                </p>
+                {activeTab === "all" && (
+                  <div className="flex justify-center mt-4">
+                    <Button
+                      onClick={() => navigate("/register-space")}
+                      className="bg-iparty hover:bg-iparty/90"
+                    >
+                      <Plus size={16} className="mr-2" /> Cadastrar Espaço
+                    </Button>
                   </div>
                 )}
-                
-                <div className="grid grid-cols-2 gap-2 text-sm">
-                  <div>
-                    <p className="text-muted-foreground">Endereço:</p>
-                    <p className="truncate" title={`${space.address}, ${space.state}`}>
-                      {space.address}, {space.state}
-                    </p>
-                  </div>
-                  
-                  <div>
-                    <p className="text-muted-foreground">Preço:</p>
-                    <p className="font-medium">{formatPrice(space.price)}</p>
-                  </div>
-                  
-                  <div>
-                    <p className="text-muted-foreground">Cadastrado em:</p>
-                    <p>{formatDate(space.created_at)}</p>
-                  </div>
-                  
-                  {space.status === 'rejected' && space.rejection_reason && (
-                    <div className="col-span-2">
-                      <p className="text-muted-foreground">Motivo da rejeição:</p>
-                      <p className="text-red-600">{space.rejection_reason}</p>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </CardContent>
-            
-            <CardFooter className="p-4 pt-0 flex justify-end gap-2">
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={() => handleEdit(space.id)}
-                className="flex items-center"
-              >
-                <Edit size={16} className="mr-1" />
-                Editar
-              </Button>
-              <Button 
-                variant="destructive" 
-                size="sm"
-                onClick={() => handleDelete(space.id)}
-                className="flex items-center"
-                disabled={loading}
-              >
-                <Trash2 size={16} className="mr-1" />
-                Excluir
-              </Button>
-            </CardFooter>
-          </Card>
-        ))}
-      </div>
-    </ScrollArea>
-  );
-  
-  return (
-    <div className="container px-4 py-6 max-w-5xl mx-auto">
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center">
-          <Button variant="ghost" size="sm" onClick={() => navigate("/profile")} className="mr-2">
-            <ChevronLeft size={20} />
-          </Button>
-          <h1 className="text-2xl font-bold">Meus Espaços</h1>
-        </div>
-        <Button onClick={() => navigate("/register-space")} className="bg-iparty">
-          Cadastrar Novo Espaço
-        </Button>
-      </div>
-      
-      {loading ? (
-        <div className="flex justify-center items-center py-12">
-          <p>Carregando seus espaços...</p>
-        </div>
-      ) : spaces.length === 0 ? (
-        renderEmptyState()
-      ) : (
-        renderSpaceCards()
-      )}
+              </CardContent>
+            </Card>
+          )}
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };
