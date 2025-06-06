@@ -27,7 +27,7 @@ interface AddAdminFormProps {
   onAdminAdded: () => void;
 }
 
-const AddAdminForm = ({ onAdminFormProps }: AddAdminFormProps) => {
+const AddAdminForm = ({ onAdminAdded }: AddAdminFormProps) => {
   const [loading, setLoading] = useState(false);
   
   const form = useForm<FormValues>({
