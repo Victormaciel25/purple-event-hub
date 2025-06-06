@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { ChevronLeft } from "lucide-react";
@@ -75,7 +76,7 @@ const AdminManagement = () => {
         <Button variant="ghost" size="sm" onClick={() => navigate("/profile")}>
           <ChevronLeft size={20} />
         </Button>
-        <h1 className="text-2xl font-bold absolute left-1/2 transform -translate-x-1/2">Gerenciamento de Administradores</h1>
+        <h1 className="text-lg font-bold absolute left-1/2 transform -translate-x-1/2">Gerenciamento de Administradores</h1>
         <div></div> {/* Empty div for spacing */}
       </div>
       
