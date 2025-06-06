@@ -27,7 +27,7 @@ interface AddAdminFormProps {
   onAdminAdded: () => void;
 }
 
-const AddAdminForm = ({ onAdminAdded }: AddAdminFormProps) => {
+const AddAdminForm = ({ onAdminFormProps }: AddAdminFormProps) => {
   const [loading, setLoading] = useState(false);
   
   const form = useForm<FormValues>({
@@ -47,22 +47,29 @@ const AddAdminForm = ({ onAdminAdded }: AddAdminFormProps) => {
         { email_input: data.email }
       );
       
-      if (userError) throw userError;
+      if (userError) {
+        console.error("Error getting user by email:", userError);
+        toast.error("Erro ao buscar usuário");
+        return;
+      }
+      
       if (!userId) {
         toast.error("Usuário não encontrado");
         return;
       }
       
-      // Check if user already has admin role
+      // Check if user already has admin role - use maybeSingle() instead of single()
       const { data: existingRole, error: roleError } = await supabase
         .from("user_roles")
         .select("id")
         .eq("user_id", userId)
         .eq("role", "admin")
-        .single();
+        .maybeSingle();
         
-      if (roleError && !roleError.message.includes("No rows found")) {
-        throw roleError;
+      if (roleError) {
+        console.error("Error checking existing role:", roleError);
+        toast.error("Erro ao verificar role existente");
+        return;
       }
       
       if (existingRole) {
@@ -78,7 +85,11 @@ const AddAdminForm = ({ onAdminAdded }: AddAdminFormProps) => {
           role: "admin"
         });
         
-      if (insertError) throw insertError;
+      if (insertError) {
+        console.error("Error inserting admin role:", insertError);
+        toast.error("Erro ao adicionar administrador");
+        return;
+      }
       
       toast.success("Administrador adicionado com sucesso");
       form.reset();
