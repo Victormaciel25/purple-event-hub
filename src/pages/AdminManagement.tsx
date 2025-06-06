@@ -26,34 +26,73 @@ const AdminManagement = () => {
 
   const fetchAdmins = async () => {
     try {
-      const { data, error } = await supabase
+      console.log("Fetching admins...");
+      
+      // First get all admin user_roles
+      const { data: adminRoles, error: rolesError } = await supabase
         .from("user_roles")
-        .select(`
-          id,
-          role,
-          created_at,
-          user_id,
-          profiles:profiles!user_id(
-            id,
-            email:id,
-            first_name,
-            last_name
-          )
-        `)
+        .select("user_id, role, created_at")
         .eq("role", "admin");
 
-      if (error) throw error;
+      if (rolesError) {
+        console.error("Error fetching admin roles:", rolesError);
+        throw rolesError;
+      }
 
-      // Transform the data into a more usable format
-      const adminData: AdminUser[] = data.map((item: any) => ({
-        id: item.user_id,
-        email: item.profiles.email || "N/A",
-        role: item.role,
-        created_at: item.created_at,
-        first_name: item.profiles.first_name || null,
-        last_name: item.profiles.last_name || null,
-      }));
+      console.log("Admin roles found:", adminRoles);
 
+      if (!adminRoles || adminRoles.length === 0) {
+        console.log("No admin roles found");
+        setAdminUsers([]);
+        setLoading(false);
+        return;
+      }
+
+      // Get user IDs
+      const userIds = adminRoles.map(role => role.user_id);
+      console.log("User IDs to fetch:", userIds);
+
+      // Get profiles for these users
+      const { data: profiles, error: profilesError } = await supabase
+        .from("profiles")
+        .select("id, first_name, last_name")
+        .in("id", userIds);
+
+      if (profilesError) {
+        console.error("Error fetching profiles:", profilesError);
+        throw profilesError;
+      }
+
+      console.log("Profiles found:", profiles);
+
+      // Get user emails using the edge function
+      const { data: emailData, error: emailError } = await supabase.functions.invoke('get_admin_emails', {
+        body: { userIds }
+      });
+
+      if (emailError) {
+        console.error("Error fetching emails:", emailError);
+        throw emailError;
+      }
+
+      console.log("Email data:", emailData);
+
+      // Combine all data
+      const adminData: AdminUser[] = adminRoles.map(role => {
+        const profile = profiles?.find(p => p.id === role.user_id);
+        const emailInfo = emailData?.emails?.find((e: any) => e.userId === role.user_id);
+        
+        return {
+          id: role.user_id,
+          email: emailInfo?.email || "Email não encontrado",
+          role: role.role,
+          created_at: role.created_at,
+          first_name: profile?.first_name || null,
+          last_name: profile?.last_name || null,
+        };
+      });
+
+      console.log("Final admin data:", adminData);
       setAdminUsers(adminData);
     } catch (error) {
       console.error("Error fetching admins:", error);
@@ -76,7 +115,7 @@ const AdminManagement = () => {
         <Button variant="ghost" size="sm" onClick={() => navigate("/profile")}>
           <ChevronLeft size={20} />
         </Button>
-        <h1 className="text-lg font-bold absolute left-1/2 transform -translate-x-1/2">Gerenciamento de Administradores</h1>
+        <h1 className="text-base font-bold absolute left-1/2 transform -translate-x-1/2">Gerenciamento de Administradores</h1>
         <div></div> {/* Empty div for spacing */}
       </div>
       
