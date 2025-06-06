@@ -75,7 +75,7 @@ const AdminManagement = () => {
         <Button variant="ghost" size="sm" onClick={() => navigate("/profile")}>
           <ChevronLeft size={20} />
         </Button>
-        <h1 className="text-2xl font-bold absolute left-1/2 transform -translate-x-1/2">Gerenciamento de Administradores</h1>
+        <h2 className="text-2xl font-bold absolute left-1/2 transform -translate-x-1/2">Gerenciamento de Administradores</h2>
         <div></div> {/* Empty div for spacing */}
       </div>
       
