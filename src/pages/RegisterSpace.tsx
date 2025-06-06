@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -248,8 +249,13 @@ const RegisterSpace = () => {
   return (
     <div className="container px-4 py-6 max-w-3xl mx-auto mb-24">
       <div className="flex items-center mb-6">
-        <Button variant="ghost" onClick={goBack} className="mr-2 p-0 h-auto">
-          <ArrowLeft size={24} />
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={goBack}
+          className="mr-2"
+        >
+          <ArrowLeft size={20} />
         </Button>
         <h1 className="text-2xl font-bold">Cadastrar Espaço</h1>
       </div>
