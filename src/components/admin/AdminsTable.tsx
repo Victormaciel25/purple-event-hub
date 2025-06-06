@@ -51,6 +51,10 @@ const AdminsTable = ({ adminUsers, loading, onAdminRemoved }: AdminsTableProps) 
     return new Date(dateString).toLocaleDateString('pt-BR');
   };
 
+  const isSuperAdmin = (admin: AdminUser) => {
+    return admin.role === 'super_admin';
+  };
+
   return (
     <div className="bg-white rounded-lg shadow">
       <h2 className="text-lg font-medium p-4 flex items-center border-b">
@@ -70,6 +74,7 @@ const AdminsTable = ({ adminUsers, loading, onAdminRemoved }: AdminsTableProps) 
             <TableRow>
               <TableHead>Email</TableHead>
               <TableHead>Nome</TableHead>
+              <TableHead>Tipo</TableHead>
               <TableHead>Adicionado em</TableHead>
               <TableHead>Ações</TableHead>
             </TableRow>
@@ -81,16 +86,31 @@ const AdminsTable = ({ adminUsers, loading, onAdminRemoved }: AdminsTableProps) 
                 <TableCell>
                   {admin.first_name} {admin.last_name}
                 </TableCell>
+                <TableCell>
+                  <span className={`px-2 py-1 rounded text-xs font-medium ${
+                    isSuperAdmin(admin) 
+                      ? 'bg-purple-100 text-purple-800' 
+                      : 'bg-blue-100 text-blue-800'
+                  }`}>
+                    {isSuperAdmin(admin) ? 'Super Admin' : 'Admin'}
+                  </span>
+                </TableCell>
                 <TableCell>{formatDate(admin.created_at)}</TableCell>
                 <TableCell>
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    onClick={() => removeAdmin(admin.id)}
-                  >
-                    <X size={16} className="mr-1" />
-                    Remover
-                  </Button>
+                  {isSuperAdmin(admin) ? (
+                    <span className="text-gray-400 text-sm">
+                      Não pode ser removido
+                    </span>
+                  ) : (
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={() => removeAdmin(admin.id)}
+                    >
+                      <X size={16} className="mr-1" />
+                      Remover
+                    </Button>
+                  )}
                 </TableCell>
               </TableRow>
             ))}
