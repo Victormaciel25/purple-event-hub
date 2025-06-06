@@ -1,5 +1,5 @@
 
-import React from "react";
+import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Shield, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -12,6 +12,17 @@ import {
   TableHeader, 
   TableRow 
 } from "@/components/ui/table";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 export type AdminUser = {
   id: string;
@@ -29,6 +40,8 @@ interface AdminsTableProps {
 }
 
 const AdminsTable = ({ adminUsers, loading, onAdminRemoved }: AdminsTableProps) => {
+  const [adminToRemove, setAdminToRemove] = useState<AdminUser | null>(null);
+
   const removeAdmin = async (userId: string) => {
     try {
       const { error } = await supabase
@@ -41,6 +54,7 @@ const AdminsTable = ({ adminUsers, loading, onAdminRemoved }: AdminsTableProps) 
 
       toast.success("Administrador removido com sucesso");
       onAdminRemoved();
+      setAdminToRemove(null);
     } catch (error) {
       console.error("Error removing admin:", error);
       toast.error("Erro ao remover administrador");
@@ -102,14 +116,35 @@ const AdminsTable = ({ adminUsers, loading, onAdminRemoved }: AdminsTableProps) 
                       Não pode ser removido
                     </span>
                   ) : (
-                    <Button
-                      variant="destructive"
-                      size="sm"
-                      onClick={() => removeAdmin(admin.id)}
-                    >
-                      <X size={16} className="mr-1" />
-                      Remover
-                    </Button>
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                        >
+                          <X size={16} className="mr-1" />
+                          Remover
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Confirmar remoção</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            Tem certeza que deseja remover o administrador{" "}
+                            <strong>{admin.email}</strong>? Esta ação não pode ser desfeita.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                          <AlertDialogAction
+                            onClick={() => removeAdmin(admin.id)}
+                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                          >
+                            Remover
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
                   )}
                 </TableCell>
               </TableRow>
