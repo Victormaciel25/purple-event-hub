@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { z } from "zod";
@@ -243,17 +242,19 @@ const RegisterVendor = () => {
       
       <div className="mb-6">
         <p className="text-muted-foreground text-sm mb-2">Imagens do fornecedor</p>
-        <SingleImageUpload
-          onImageChange={handleImageChange}
-          uploadPath="vendors"
-          aspectRatio="16:9"
-          maxSize={2}
-          initialImages={imageUrls}
-          isUploading={uploading}
-          setIsUploading={setUploading}
-          className="w-full"
-          maxImages={5}
-        />
+        <div className="w-full">
+          <SingleImageUpload
+            onImageChange={handleImageChange}
+            uploadPath="vendors"
+            aspectRatio="16:9"
+            maxSize={2}
+            initialImages={imageUrls}
+            isUploading={uploading}
+            setIsUploading={setUploading}
+            className="w-full"
+            maxImages={5}
+          />
+        </div>
       </div>
 
       <Form {...form}>

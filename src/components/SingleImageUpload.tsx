@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { X, Images } from "lucide-react";
 import { toast } from "sonner";
@@ -157,7 +156,7 @@ const SingleImageUpload: React.FC<SingleImageUploadProps> = ({
 
   return (
     <div className={className}>
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 mb-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 mb-4 w-full">
         {previewUrls.map((url, index) => (
           <div 
             key={`image-${index}`} 
@@ -180,16 +179,16 @@ const SingleImageUpload: React.FC<SingleImageUploadProps> = ({
         ))}
         
         {previewUrls.length < maxImages && (
-          <label className="cursor-pointer border-2 border-dashed border-gray-300 rounded-lg flex flex-col items-center justify-center min-h-[220px] p-8">
-            <Images size={40} className="text-gray-300 mb-4" />
-            <span className="text-sm text-gray-500 text-center px-2 mb-3">
-              {isUploading ? "Enviando..." : "Adicionar imagens"}
+          <label className="cursor-pointer border-2 border-dashed border-gray-300 rounded-lg flex flex-col items-center justify-center aspect-square p-4">
+            <Images size={32} className="text-gray-300 mb-2" />
+            <span className="text-sm text-gray-500 text-center mb-2">
+              {isUploading ? "Enviando..." : "Adicionar"}
             </span>
-            <span className="text-xs text-gray-400 text-center px-2 mb-2">
+            <span className="text-xs text-gray-400 text-center mb-1">
               ({aspectRatio}, max {maxSize}MB)
             </span>
-            <span className="text-xs text-gray-400 text-center px-2">
-              Imagens grandes serão comprimidas automaticamente
+            <span className="text-xs text-gray-400 text-center">
+              Compressão automática
             </span>
             <input
               type="file"
