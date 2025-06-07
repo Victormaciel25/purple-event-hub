@@ -135,13 +135,14 @@ const LocationMap = ({
         const position = { lat: space.latitude, lng: space.longitude };
         mapRef.current.panTo(position);
         
-        // Then calculate and apply the offset position
+        // Then calculate and apply the offset position with additional 40px
         setTimeout(() => {
           if (mapRef.current) {
             const projection = mapRef.current.getProjection();
             if (projection) {
               const point = projection.fromLatLngToPoint(new google.maps.LatLng(position.lat, position.lng));
-              point.y -= 130 / Math.pow(2, mapRef.current.getZoom() || 0);
+              // Increased offset from 130px to 170px (130 + 40)
+              point.y -= 170 / Math.pow(2, mapRef.current.getZoom() || 0);
               const newLatLng = projection.fromPointToLatLng(point);
               
               // Store the offset position for future use
