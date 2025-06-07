@@ -60,8 +60,10 @@ const SpaceApproval = () => {
 
   const fetchSpaces = async () => {
     try {
-      console.log("Fetching spaces for approval...");
+      setLoading(true);
+      console.log("Fetching ALL spaces for approval...");
       
+      // Primeiro, vamos buscar todos os espaços sem filtro de status
       const { data, error } = await supabase
         .from("spaces")
         .select(`
@@ -78,14 +80,28 @@ const SpaceApproval = () => {
         `)
         .order('created_at', { ascending: false });
 
-      console.log("Spaces query result:", { data, error });
+      console.log("Raw spaces query result:", { data, error, totalCount: data?.length });
 
       if (error) {
         console.error("Error fetching spaces:", error);
         throw error;
       }
 
-      console.log(`Found ${data?.length || 0} spaces`);
+      // Log detalhado de cada espaço
+      if (data && data.length > 0) {
+        console.log("Detailed spaces data:");
+        data.forEach((space, index) => {
+          console.log(`Space ${index + 1}:`, {
+            id: space.id,
+            name: space.name,
+            status: space.status,
+            created_at: space.created_at,
+            user_id: space.user_id
+          });
+        });
+      }
+
+      console.log(`Found ${data?.length || 0} total spaces`);
 
       // Count photos for each space
       const spacesWithCounts = await Promise.all(
@@ -115,6 +131,21 @@ const SpaceApproval = () => {
       );
 
       console.log("Spaces with photo counts:", spacesWithCounts);
+      
+      // Separar por status e mostrar contadores
+      const pending = spacesWithCounts.filter(s => s.status === 'pending');
+      const approved = spacesWithCounts.filter(s => s.status === 'approved');
+      const rejected = spacesWithCounts.filter(s => s.status === 'rejected');
+      const unknown = spacesWithCounts.filter(s => !['pending', 'approved', 'rejected'].includes(s.status));
+      
+      console.log("Spaces by status:", {
+        pending: pending.length,
+        approved: approved.length,
+        rejected: rejected.length,
+        unknown: unknown.length,
+        unknownStatuses: unknown.map(s => ({ id: s.id, status: s.status }))
+      });
+      
       setSpaces(spacesWithCounts as SpaceWithProfileInfo[]);
     } catch (error) {
       console.error("Error fetching spaces:", error);
