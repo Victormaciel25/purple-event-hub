@@ -121,7 +121,6 @@ const SpaceApproval = () => {
             isPendingLoose: String(space.status) === 'pending',
             isNull: space.status === null,
             isUndefined: space.status === undefined,
-            isEmpty: space.status === '',
             created_at: space.created_at
           };
           
@@ -138,13 +137,13 @@ const SpaceApproval = () => {
       const pendingSpacesMethod1 = allData?.filter(s => s.status === 'pending') || [];
       const pendingSpacesMethod2 = allData?.filter(s => String(s.status) === 'pending') || [];
       const pendingSpacesMethod3 = allData?.filter(s => s.status?.toString() === 'pending') || [];
-      const nullStatusSpaces = allData?.filter(s => s.status === null || s.status === undefined || s.status === '') || [];
+      const nullStatusSpaces = allData?.filter(s => s.status === null || s.status === undefined) || [];
 
       console.log("🔄 FILTERING METHODS COMPARISON:");
       console.log("Method 1 (strict ===):", pendingSpacesMethod1.length, pendingSpacesMethod1.map(s => s.name));
       console.log("Method 2 (String conversion):", pendingSpacesMethod2.length, pendingSpacesMethod2.map(s => s.name));
       console.log("Method 3 (toString):", pendingSpacesMethod3.length, pendingSpacesMethod3.map(s => s.name));
-      console.log("Null/undefined/empty status:", nullStatusSpaces.length, nullStatusSpaces.map(s => s.name));
+      console.log("Null/undefined status:", nullStatusSpaces.length, nullStatusSpaces.map(s => s.name));
 
       // Se não encontramos espaços pendentes com métodos normais, vamos usar o que funcionar
       let finalPendingSpaces = pendingSpacesMethod1;

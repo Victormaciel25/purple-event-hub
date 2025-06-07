@@ -31,7 +31,8 @@ const SpaceList: React.FC<SpaceListProps> = ({ spaces, loading, onViewDetails })
     // Tentar diferentes formas de identificar espaços pendentes
     const strictPending = space.status === "pending";
     const stringPending = String(space.status) === "pending";
-    const nullStatus = space.status === null || space.status === undefined || space.status === '';
+    // Remover verificação de string vazia pois não é compatível com o tipo
+    const nullStatus = space.status === null || space.status === undefined;
     
     console.log(`Checking space "${space.name}":`, {
       status: space.status,
