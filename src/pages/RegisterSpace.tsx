@@ -24,6 +24,44 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+
+// Lista de estados brasileiros com suas siglas
+const BRAZILIAN_STATES = [
+  { value: "AC", label: "AC - Acre" },
+  { value: "AL", label: "AL - Alagoas" },
+  { value: "AP", label: "AP - Amapá" },
+  { value: "AM", label: "AM - Amazonas" },
+  { value: "BA", label: "BA - Bahia" },
+  { value: "CE", label: "CE - Ceará" },
+  { value: "DF", label: "DF - Distrito Federal" },
+  { value: "ES", label: "ES - Espírito Santo" },
+  { value: "GO", label: "GO - Goiás" },
+  { value: "MA", label: "MA - Maranhão" },
+  { value: "MT", label: "MT - Mato Grosso" },
+  { value: "MS", label: "MS - Mato Grosso do Sul" },
+  { value: "MG", label: "MG - Minas Gerais" },
+  { value: "PA", label: "PA - Pará" },
+  { value: "PB", label: "PB - Paraíba" },
+  { value: "PR", label: "PR - Paraná" },
+  { value: "PE", label: "PE - Pernambuco" },
+  { value: "PI", label: "PI - Piauí" },
+  { value: "RJ", label: "RJ - Rio de Janeiro" },
+  { value: "RN", label: "RN - Rio Grande do Norte" },
+  { value: "RS", label: "RS - Rio Grande do Sul" },
+  { value: "RO", label: "RO - Rondônia" },
+  { value: "RR", label: "RR - Roraima" },
+  { value: "SC", label: "SC - Santa Catarina" },
+  { value: "SP", label: "SP - São Paulo" },
+  { value: "SE", label: "SE - Sergipe" },
+  { value: "TO", label: "TO - Tocantins" }
+];
 
 // Define the form schema using Zod
 const formSchema = z.object({
@@ -345,12 +383,20 @@ const RegisterSpace = () => {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Estado</FormLabel>
-                      <FormControl>
-                        <div className="relative">
-                          <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" size={18} />
-                          <Input placeholder="Estado" className="pl-10" {...field} />
-                        </div>
-                      </FormControl>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Selecione o estado" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {BRAZILIAN_STATES.map((state) => (
+                            <SelectItem key={state.value} value={state.value}>
+                              {state.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                       <FormMessage />
                     </FormItem>
                   )}
