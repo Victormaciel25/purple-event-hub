@@ -26,17 +26,41 @@ type SpaceListProps = {
 };
 
 const SpaceList: React.FC<SpaceListProps> = ({ spaces, loading, onViewDetails }) => {
-  // Filtrar espaços por status
-  const pendingSpaces = spaces.filter((space) => space.status === "pending");
-  const approvedSpaces = spaces.filter((space) => space.status === "approved");
-  const rejectedSpaces = spaces.filter((space) => space.status === "rejected");
+  // Filtrar espaços por status com múltiplas abordagens
+  const pendingSpaces = spaces.filter((space) => {
+    // Tentar diferentes formas de identificar espaços pendentes
+    const strictPending = space.status === "pending";
+    const stringPending = String(space.status) === "pending";
+    const nullStatus = space.status === null || space.status === undefined || space.status === '';
+    
+    console.log(`Checking space "${space.name}":`, {
+      status: space.status,
+      statusType: typeof space.status,
+      strictPending,
+      stringPending,
+      nullStatus
+    });
+    
+    // Retornar true se qualquer uma das condições for verdadeira
+    return strictPending || stringPending || nullStatus;
+  });
+  
+  const approvedSpaces = spaces.filter((space) => {
+    return space.status === "approved" || String(space.status) === "approved";
+  });
+  
+  const rejectedSpaces = spaces.filter((space) => {
+    return space.status === "rejected" || String(space.status) === "rejected";
+  });
 
-  console.log("SpaceList render:", { 
+  console.log("🎯 SpaceList filtering results:", { 
     totalSpaces: spaces.length, 
     pendingCount: pendingSpaces.length, 
     approvedCount: approvedSpaces.length, 
     rejectedCount: rejectedSpaces.length,
-    loading 
+    loading,
+    pendingSpaceNames: pendingSpaces.map(s => s.name),
+    allSpaceStatuses: spaces.map(s => ({ name: s.name, status: s.status, type: typeof s.status }))
   });
 
   if (loading) {
@@ -96,7 +120,18 @@ const SpaceList: React.FC<SpaceListProps> = ({ spaces, loading, onViewDetails })
                 ))}
               </div>
             ) : (
-              <p className="text-muted-foreground">Nenhum espaço pendente de aprovação.</p>
+              <div>
+                <p className="text-muted-foreground mb-4">Nenhum espaço pendente de aprovação encontrado.</p>
+                <div className="bg-yellow-50 border border-yellow-200 p-4 rounded-lg">
+                  <h4 className="font-medium text-yellow-800 mb-2">Debug Information:</h4>
+                  <p className="text-sm text-yellow-700">
+                    Total de espaços: {spaces.length}
+                  </p>
+                  <p className="text-sm text-yellow-700">
+                    Espaços encontrados: {spaces.map(s => `"${s.name}" (status: ${s.status})`).join(", ")}
+                  </p>
+                </div>
+              </div>
             )}
           </CardContent>
         </Card>

@@ -61,10 +61,30 @@ const SpaceApproval = () => {
   const fetchSpaces = async () => {
     try {
       setLoading(true);
-      console.log("Fetching ALL spaces for approval...");
+      console.log("🔍 STARTING SPACE FETCH - NEW APPROACH");
       
-      // Buscar todos os espaços com informações detalhadas de status
-      const { data, error } = await supabase
+      // Primeira query: buscar apenas espaços com status explicitamente 'pending'
+      const { data: pendingData, error: pendingError } = await supabase
+        .from("spaces")
+        .select(`
+          id,
+          name,
+          created_at,
+          status,
+          user_id,
+          price,
+          profiles:profiles!user_id (
+            first_name, 
+            last_name
+          )
+        `)
+        .eq('status', 'pending')
+        .order('created_at', { ascending: false });
+
+      console.log("📋 PENDING SPACES QUERY:", { pendingData, pendingError });
+
+      // Segunda query: buscar TODOS os espaços para comparação
+      const { data: allData, error: allError } = await supabase
         .from("spaces")
         .select(`
           id,
@@ -80,55 +100,70 @@ const SpaceApproval = () => {
         `)
         .order('created_at', { ascending: false });
 
-      console.log("Raw spaces query result:", { data, error, totalCount: data?.length });
+      console.log("📊 ALL SPACES QUERY:", { allData, allError, totalCount: allData?.length });
 
-      if (error) {
-        console.error("Error fetching spaces:", error);
-        throw error;
+      if (allError) {
+        console.error("❌ Error fetching all spaces:", allError);
+        throw allError;
       }
 
-      // Verificar se algum espaço tem status null ou undefined
-      if (data && data.length > 0) {
-        console.log("=== DETAILED SPACES ANALYSIS ===");
-        data.forEach((space, index) => {
-          console.log(`Space ${index + 1}: "${space.name}"`, {
+      // Análise detalhada de cada espaço
+      if (allData && allData.length > 0) {
+        console.log("🔍 DETAILED ANALYSIS OF ALL SPACES:");
+        allData.forEach((space, index) => {
+          const statusInfo = {
             id: space.id,
             name: space.name,
             status: space.status,
             statusType: typeof space.status,
-            statusValue: JSON.stringify(space.status),
-            statusIsNull: space.status === null,
-            statusIsUndefined: space.status === undefined,
-            statusLength: space.status?.length,
-            created_at: space.created_at,
-            user_id: space.user_id
-          });
+            statusRaw: JSON.stringify(space.status),
+            isPendingStrict: space.status === 'pending',
+            isPendingLoose: String(space.status) === 'pending',
+            isNull: space.status === null,
+            isUndefined: space.status === undefined,
+            isEmpty: space.status === '',
+            created_at: space.created_at
+          };
           
-          // Verificação específica para espaços com nomes que contenham "sitio"
+          console.log(`Space ${index + 1}:`, statusInfo);
+          
+          // Verificação especial para espaços que contenham "sitio" no nome
           if (space.name && space.name.toLowerCase().includes("sitio")) {
-            console.log(`🔍 FOUND SITIO: "${space.name}"`, {
-              fullName: space.name,
-              status: space.status,
-              statusExactValue: `"${space.status}"`,
-              isPending: space.status === 'pending',
-              isApproved: space.status === 'approved',
-              isRejected: space.status === 'rejected',
-              statusComparison: {
-                pending: space.status === 'pending',
-                'pending_string': space.status === "pending",
-                'pending_strict': space.status === 'pending' && typeof space.status === 'string'
-              }
-            });
+            console.log(`🎯 SITIO FOUND: "${space.name}"`, statusInfo);
           }
         });
-        console.log("=== END ANALYSIS ===");
       }
 
-      console.log(`Found ${data?.length || 0} total spaces`);
+      // Tentar diferentes formas de filtrar espaços pendentes
+      const pendingSpacesMethod1 = allData?.filter(s => s.status === 'pending') || [];
+      const pendingSpacesMethod2 = allData?.filter(s => String(s.status) === 'pending') || [];
+      const pendingSpacesMethod3 = allData?.filter(s => s.status?.toString() === 'pending') || [];
+      const nullStatusSpaces = allData?.filter(s => s.status === null || s.status === undefined || s.status === '') || [];
+
+      console.log("🔄 FILTERING METHODS COMPARISON:");
+      console.log("Method 1 (strict ===):", pendingSpacesMethod1.length, pendingSpacesMethod1.map(s => s.name));
+      console.log("Method 2 (String conversion):", pendingSpacesMethod2.length, pendingSpacesMethod2.map(s => s.name));
+      console.log("Method 3 (toString):", pendingSpacesMethod3.length, pendingSpacesMethod3.map(s => s.name));
+      console.log("Null/undefined/empty status:", nullStatusSpaces.length, nullStatusSpaces.map(s => s.name));
+
+      // Se não encontramos espaços pendentes com métodos normais, vamos usar o que funcionar
+      let finalPendingSpaces = pendingSpacesMethod1;
+      if (finalPendingSpaces.length === 0) {
+        finalPendingSpaces = pendingSpacesMethod2;
+      }
+      if (finalPendingSpaces.length === 0) {
+        finalPendingSpaces = pendingSpacesMethod3;
+      }
+      if (finalPendingSpaces.length === 0) {
+        // Se ainda não encontrou, talvez os espaços pendentes tenham status null
+        finalPendingSpaces = nullStatusSpaces;
+      }
+
+      console.log("✅ FINAL PENDING SPACES:", finalPendingSpaces.length, finalPendingSpaces.map(s => s.name));
 
       // Count photos for each space
       const spacesWithCounts = await Promise.all(
-        (data || []).map(async (space: any) => {
+        (allData || []).map(async (space: any) => {
           try {
             const { count, error: countError } = await supabase
               .from("space_photos")
@@ -153,56 +188,11 @@ const SpaceApproval = () => {
         })
       );
 
-      console.log("Spaces with photo counts:", spacesWithCounts);
-      
-      // Separar por status com análise detalhada do problema
-      const pending = spacesWithCounts.filter(s => {
-        const isPending = s.status === 'pending';
-        console.log(`Checking space "${s.name}":`, {
-          status: s.status,
-          isPending,
-          statusCheck: s.status === 'pending',
-          statusStrictCheck: s.status === 'pending' && typeof s.status === 'string'
-        });
-        return isPending;
-      });
-      
-      const approved = spacesWithCounts.filter(s => s.status === 'approved');
-      const rejected = spacesWithCounts.filter(s => s.status === 'rejected');
-      const unknown = spacesWithCounts.filter(s => !['pending', 'approved', 'rejected'].includes(s.status));
-      
-      console.log("=== STATUS BREAKDOWN ===");
-      console.log("Spaces by status:", {
-        pending: pending.length,
-        approved: approved.length,
-        rejected: rejected.length,
-        unknown: unknown.length,
-        unknownStatuses: unknown.map(s => ({ id: s.id, name: s.name, status: s.status, statusType: typeof s.status }))
-      });
-      
-      // Log específico dos espaços pendentes
-      if (pending.length > 0) {
-        console.log("📋 PENDING SPACES:", pending.map(s => ({ name: s.name, status: s.status })));
-      } else {
-        console.log("⚠️ NO PENDING SPACES FOUND");
-        
-        // Verificar se há espaços que deveriam estar pendentes
-        const possiblePendingSpaces = spacesWithCounts.filter(s => 
-          !s.status || s.status === null || s.status === undefined || s.status === ''
-        );
-        
-        if (possiblePendingSpaces.length > 0) {
-          console.log("🚨 SPACES WITH NULL/UNDEFINED/EMPTY STATUS:", possiblePendingSpaces.map(s => ({
-            name: s.name,
-            status: s.status,
-            statusType: typeof s.status
-          })));
-        }
-      }
+      console.log("📸 SPACES WITH PHOTO COUNTS:", spacesWithCounts.length);
       
       setSpaces(spacesWithCounts as SpaceWithProfileInfo[]);
     } catch (error) {
-      console.error("Error fetching spaces:", error);
+      console.error("❌ Error fetching spaces:", error);
       toast.error("Erro ao buscar espaços");
     } finally {
       setLoading(false);
