@@ -176,7 +176,9 @@ const RegisterSpace = () => {
         if (finalData.categoryBirthdays) categories.push("birthdays");
         if (finalData.categoryGraduations) categories.push("graduations");
         
-        // Acesso direto à tabela agora que o RLS está desativado
+        console.log("Creating space with status 'pending'");
+        
+        // Insert space with explicit pending status
         const { data: spaceData, error: spaceError } = await supabase.from("spaces")
           .insert({
             name: finalData.name,
@@ -198,7 +200,7 @@ const RegisterSpace = () => {
             latitude: location?.lat || null,
             longitude: location?.lng || null,
             user_id: userId,
-            status: 'pending'
+            status: 'pending' // Garantindo que o status seja definido explicitamente como 'pending'
           })
           .select()
           .single();
@@ -209,7 +211,10 @@ const RegisterSpace = () => {
           return;
         }
 
-        // Upload photos if any - using simpler approach to avoid triggering role checks
+        console.log("Space created successfully:", spaceData);
+        console.log("Space status after creation:", spaceData.status);
+
+        // Upload photos if any
         if (selectedFiles.length > 0 && spaceData) {
           const spaceId = spaceData.id;
           console.log(`Uploading ${selectedFiles.length} photos for space ${spaceId}`);
