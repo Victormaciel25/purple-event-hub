@@ -142,7 +142,7 @@ const LocationMap = ({
             if (projection) {
               const point = projection.fromLatLngToPoint(new google.maps.LatLng(position.lat, position.lng));
               // Increased offset from 130px to 170px (130 + 40)
-              point.y -= 170 / Math.pow(2, mapRef.current.getZoom() || 0);
+              point.y -= 200 / Math.pow(2, mapRef.current.getZoom() || 0);
               const newLatLng = projection.fromPointToLatLng(point);
               
               // Store the offset position for future use
