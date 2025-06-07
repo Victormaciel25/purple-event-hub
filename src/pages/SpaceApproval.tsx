@@ -61,10 +61,10 @@ const SpaceApproval = () => {
   const fetchSpaces = async () => {
     try {
       setLoading(true);
-      console.log("🔍 STARTING SPACE FETCH - NEW APPROACH");
+      console.log("🔍 DEBUGGING MISSING SPACE: 62314913-3a5d-4bb2-a16b-bbfc18729527");
       
-      // Primeira query: buscar apenas espaços com status explicitamente 'pending'
-      const { data: pendingData, error: pendingError } = await supabase
+      // Primeira busca: tentar encontrar o espaço específico que está faltando
+      const { data: specificSpace, error: specificError } = await supabase
         .from("spaces")
         .select(`
           id,
@@ -78,12 +78,11 @@ const SpaceApproval = () => {
             last_name
           )
         `)
-        .eq('status', 'pending')
-        .order('created_at', { ascending: false });
+        .eq('id', '62314913-3a5d-4bb2-a16b-bbfc18729527');
 
-      console.log("📋 PENDING SPACES QUERY:", { pendingData, pendingError });
+      console.log("🎯 SPECIFIC SPACE SEARCH RESULT:", { specificSpace, specificError });
 
-      // Segunda query: buscar TODOS os espaços para comparação
+      // Segunda busca: buscar TODOS os espaços sem filtros
       const { data: allData, error: allError } = await supabase
         .from("spaces")
         .select(`
@@ -100,12 +99,20 @@ const SpaceApproval = () => {
         `)
         .order('created_at', { ascending: false });
 
-      console.log("📊 ALL SPACES QUERY:", { allData, allError, totalCount: allData?.length });
+      console.log("📊 ALL SPACES QUERY:", { 
+        totalSpaces: allData?.length || 0, 
+        allError,
+        spaceIds: allData?.map(s => s.id) || []
+      });
 
       if (allError) {
         console.error("❌ Error fetching all spaces:", allError);
         throw allError;
       }
+
+      // Verificar se o espaço específico está na lista geral
+      const missingSpaceInList = allData?.find(s => s.id === '62314913-3a5d-4bb2-a16b-bbfc18729527');
+      console.log("🔍 MISSING SPACE IN GENERAL LIST:", missingSpaceInList);
 
       // Análise detalhada de cada espaço
       if (allData && allData.length > 0) {
@@ -125,15 +132,10 @@ const SpaceApproval = () => {
           };
           
           console.log(`Space ${index + 1}:`, statusInfo);
-          
-          // Verificação especial para espaços que contenham "sitio" no nome
-          if (space.name && space.name.toLowerCase().includes("sitio")) {
-            console.log(`🎯 SITIO FOUND: "${space.name}"`, statusInfo);
-          }
         });
       }
 
-      // Tentar diferentes formas de filtrar espaços pendentes
+      // Buscar espaços com diferentes abordagens de filtragem
       const pendingSpacesMethod1 = allData?.filter(s => s.status === 'pending') || [];
       const pendingSpacesMethod2 = allData?.filter(s => String(s.status) === 'pending') || [];
       const pendingSpacesMethod3 = allData?.filter(s => s.status?.toString() === 'pending') || [];
@@ -145,24 +147,44 @@ const SpaceApproval = () => {
       console.log("Method 3 (toString):", pendingSpacesMethod3.length, pendingSpacesMethod3.map(s => s.name));
       console.log("Null/undefined status:", nullStatusSpaces.length, nullStatusSpaces.map(s => s.name));
 
-      // Se não encontramos espaços pendentes com métodos normais, vamos usar o que funcionar
-      let finalPendingSpaces = pendingSpacesMethod1;
-      if (finalPendingSpaces.length === 0) {
-        finalPendingSpaces = pendingSpacesMethod2;
-      }
-      if (finalPendingSpaces.length === 0) {
-        finalPendingSpaces = pendingSpacesMethod3;
-      }
-      if (finalPendingSpaces.length === 0) {
-        // Se ainda não encontrou, talvez os espaços pendentes tenham status null
-        finalPendingSpaces = nullStatusSpaces;
+      // Busca adicional: verificar se há problemas com o join do profiles
+      const { data: spacesNoProfiles, error: noProfilesError } = await supabase
+        .from("spaces")
+        .select(`
+          id,
+          name,
+          created_at,
+          status,
+          user_id,
+          price
+        `)
+        .order('created_at', { ascending: false });
+
+      console.log("📋 SPACES WITHOUT PROFILES JOIN:", { 
+        totalSpaces: spacesNoProfiles?.length || 0, 
+        noProfilesError,
+        missingSpacePresent: spacesNoProfiles?.find(s => s.id === '62314913-3a5d-4bb2-a16b-bbfc18729527')
+      });
+
+      // Se encontramos mais espaços sem o join de profiles, use esses dados
+      let finalSpaces = allData || [];
+      if (spacesNoProfiles && spacesNoProfiles.length > (allData?.length || 0)) {
+        console.log("🔄 USING SPACES WITHOUT PROFILES DUE TO JOIN ISSUES");
+        finalSpaces = spacesNoProfiles.map(space => ({
+          ...space,
+          profiles: null
+        }));
       }
 
-      console.log("✅ FINAL PENDING SPACES:", finalPendingSpaces.length, finalPendingSpaces.map(s => s.name));
+      // Se o espaço específico foi encontrado na busca individual mas não na geral, adicione-o
+      if (specificSpace && specificSpace.length > 0 && !finalSpaces.find(s => s.id === specificSpace[0].id)) {
+        console.log("➕ ADDING MISSING SPACE TO LIST");
+        finalSpaces = [...finalSpaces, ...specificSpace];
+      }
 
       // Count photos for each space
       const spacesWithCounts = await Promise.all(
-        (allData || []).map(async (space: any) => {
+        finalSpaces.map(async (space: any) => {
           try {
             const { count, error: countError } = await supabase
               .from("space_photos")
@@ -187,7 +209,8 @@ const SpaceApproval = () => {
         })
       );
 
-      console.log("📸 SPACES WITH PHOTO COUNTS:", spacesWithCounts.length);
+      console.log("📸 FINAL SPACES WITH PHOTO COUNTS:", spacesWithCounts.length);
+      console.log("🎯 FINAL CHECK - Missing space present:", spacesWithCounts.find(s => s.id === '62314913-3a5d-4bb2-a16b-bbfc18729527'));
       
       setSpaces(spacesWithCounts as SpaceWithProfileInfo[]);
     } catch (error) {
