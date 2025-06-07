@@ -224,12 +224,16 @@ const LocationMap = ({
               mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}
             >
               <div 
-                className="cursor-pointer overflow-hidden rounded-lg shadow-md bg-white transition-shadow duration-200 hover:shadow-lg"
+                className="cursor-pointer overflow-hidden rounded-2xl shadow-2xl bg-white transition-all duration-300 hover:shadow-3xl border border-gray-100 backdrop-blur-sm"
                 onClick={handleSpaceClick}
-                style={{ width: 280, transform: 'translate(-50%, -100%) translateY(-10px)' }}
+                style={{ 
+                  width: 300, 
+                  transform: 'translate(-50%, -100%) translateY(-15px)',
+                  boxShadow: '0 20px 60px -12px rgba(0, 0, 0, 0.25), 0 8px 25px -8px rgba(0, 0, 0, 0.1)'
+                }}
               >
-                <div className="flex justify-between items-center px-4 py-3 border-b border-gray-100">
-                  <h3 className="font-bold text-base text-iparty truncate pr-2">
+                <div className="flex justify-between items-center px-5 py-4 border-b border-gray-50 bg-gradient-to-r from-white to-gray-50/50">
+                  <h3 className="font-bold text-lg text-gray-900 truncate pr-3 leading-tight">
                     {selectedSpace.name}
                   </h3>
                   <button 
@@ -237,36 +241,41 @@ const LocationMap = ({
                       e.stopPropagation(); 
                       handleInfoWindowClose(); 
                     }} 
-                    className="text-gray-400 hover:text-gray-700 transition-colors p-2 rounded-full hover:bg-gray-100"
+                    className="text-gray-400 hover:text-gray-700 transition-all duration-200 p-2 rounded-full hover:bg-gray-100 flex-shrink-0 group"
                     aria-label="Fechar"
                   >
-                    <X size={20} />
+                    <X size={20} className="group-hover:rotate-90 transition-transform duration-200" />
                   </button>
                 </div>
 
                 {selectedSpace.imageUrl && (
-                  <div className="h-44 overflow-hidden bg-gray-50">
+                  <div className="h-48 overflow-hidden bg-gradient-to-br from-gray-50 to-gray-100 relative">
                     <OptimizedImage 
                       src={selectedSpace.imageUrl} 
                       alt={selectedSpace.name} 
-                      className="w-full h-full"
-                      loadingClassName="animate-pulse bg-gray-200 h-full w-full"
+                      className="w-full h-full transform hover:scale-105 transition-transform duration-500"
+                      loadingClassName="animate-pulse bg-gradient-to-br from-gray-200 to-gray-300 h-full w-full"
                     />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/10 to-transparent pointer-events-none" />
                   </div>
                 )}
 
-                <div className="p-4">
-                  <p className="text-sm text-gray-600 line-clamp-2">
-                    {selectedSpace.address}, {selectedSpace.number} - {selectedSpace.state}
-                  </p>
-                  {selectedSpace.zipCode && (
-                    <p className="text-sm text-gray-500 mt-1">
-                      CEP: {selectedSpace.zipCode}
+                <div className="p-5 bg-gradient-to-b from-white to-gray-50/30">
+                  <div className="space-y-3">
+                    <p className="text-sm text-gray-600 line-clamp-2 leading-relaxed">
+                      {selectedSpace.address}, {selectedSpace.number} - {selectedSpace.state}
                     </p>
-                  )}
-                  <div className="mt-3 flex justify-end">
-                    <div className="text-xs bg-iparty/10 text-iparty px-3 py-1.5 rounded-full font-medium hover:bg-iparty/20 transition-colors">
-                      Ver detalhes →
+                    {selectedSpace.zipCode && (
+                      <p className="text-sm text-gray-500 font-medium">
+                        CEP: {selectedSpace.zipCode}
+                      </p>
+                    )}
+                  </div>
+                  
+                  <div className="mt-4 flex justify-end">
+                    <div className="group flex items-center gap-2 bg-gradient-to-r from-iparty/10 to-iparty/5 text-iparty px-4 py-2.5 rounded-xl font-semibold text-sm hover:from-iparty/20 hover:to-iparty/10 transition-all duration-300 shadow-sm hover:shadow-md border border-iparty/20">
+                      <span>Ver detalhes</span>
+                      <span className="group-hover:translate-x-1 transition-transform duration-200">→</span>
                     </div>
                   </div>
                 </div>
