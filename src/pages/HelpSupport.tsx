@@ -38,7 +38,7 @@ const HelpSupport = () => {
     {
       icon: Lightbulb,
       question: "Tenho uma sugestão para o iParty, como enviar?",
-      answer: "Adoramos ouvir novas ideias! Envie sua sugestão pelo e-mail abaixo ou pelo nosso formulário de feedback."
+      answer: "Adoramos ouvir novas ideias! Envie sua sugestão pelo e-mail abaixo."
     }
   ];
 
