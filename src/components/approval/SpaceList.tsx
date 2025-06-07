@@ -26,33 +26,25 @@ type SpaceListProps = {
 };
 
 const SpaceList: React.FC<SpaceListProps> = ({ spaces, loading, onViewDetails }) => {
-  // Filtrar espaços por status com múltiplas abordagens
+  console.log("🎯 SpaceList - Processing spaces:", spaces.length);
+  
+  // Filtrar espaços por status com logs detalhados
   const pendingSpaces = spaces.filter((space) => {
-    // Tentar diferentes formas de identificar espaços pendentes
-    const strictPending = space.status === "pending";
-    const stringPending = String(space.status) === "pending";
-    // Remover verificação de string vazia pois não é compatível com o tipo
-    const nullStatus = space.status === null || space.status === undefined;
+    const isPending = space.status === "pending" || space.status === null || space.status === undefined;
     
-    console.log(`Checking space "${space.name}":`, {
+    console.log(`SpaceList - Checking "${space.name}":`, {
+      id: space.id,
       status: space.status,
       statusType: typeof space.status,
-      strictPending,
-      stringPending,
-      nullStatus
+      isPending,
+      rawValue: JSON.stringify(space.status)
     });
     
-    // Retornar true se qualquer uma das condições for verdadeira
-    return strictPending || stringPending || nullStatus;
+    return isPending;
   });
   
-  const approvedSpaces = spaces.filter((space) => {
-    return space.status === "approved" || String(space.status) === "approved";
-  });
-  
-  const rejectedSpaces = spaces.filter((space) => {
-    return space.status === "rejected" || String(space.status) === "rejected";
-  });
+  const approvedSpaces = spaces.filter((space) => space.status === "approved");
+  const rejectedSpaces = spaces.filter((space) => space.status === "rejected");
 
   console.log("🎯 SpaceList filtering results:", { 
     totalSpaces: spaces.length, 
@@ -61,7 +53,7 @@ const SpaceList: React.FC<SpaceListProps> = ({ spaces, loading, onViewDetails })
     rejectedCount: rejectedSpaces.length,
     loading,
     pendingSpaceNames: pendingSpaces.map(s => s.name),
-    allSpaceStatuses: spaces.map(s => ({ name: s.name, status: s.status, type: typeof s.status }))
+    pendingSpaceIds: pendingSpaces.map(s => s.id)
   });
 
   if (loading) {
@@ -129,7 +121,10 @@ const SpaceList: React.FC<SpaceListProps> = ({ spaces, loading, onViewDetails })
                     Total de espaços: {spaces.length}
                   </p>
                   <p className="text-sm text-yellow-700">
-                    Espaços encontrados: {spaces.map(s => `"${s.name}" (status: ${s.status})`).join(", ")}
+                    Espaços encontrados: {spaces.map(s => `"${s.name}" (status: ${s.status}, id: ${s.id})`).join(", ")}
+                  </p>
+                  <p className="text-sm text-yellow-700">
+                    O espaço de id 62314913-3a5d-4bb2-a16b-bbfc18729527 {spaces.find(s => s.id === '62314913-3a5d-4bb2-a16b-bbfc18729527') ? 'FOI ENCONTRADO' : 'NÃO FOI ENCONTRADO'}
                   </p>
                 </div>
               </div>

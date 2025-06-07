@@ -61,158 +61,89 @@ const SpaceApproval = () => {
   const fetchSpaces = async () => {
     try {
       setLoading(true);
-      console.log("🔍 DEBUGGING MISSING SPACE: 62314913-3a5d-4bb2-a16b-bbfc18729527");
+      console.log("🔍 SIMPLIFIED FETCH - Searching for missing space: 62314913-3a5d-4bb2-a16b-bbfc18729527");
       
-      // Primeira busca: tentar encontrar o espaço específico que está faltando
-      const { data: specificSpace, error: specificError } = await supabase
+      // Buscar TODOS os espaços sem joins complexos primeiro
+      const { data: rawSpaces, error: rawError } = await supabase
         .from("spaces")
-        .select(`
-          id,
-          name,
-          created_at,
-          status,
-          user_id,
-          price,
-          profiles:profiles!user_id (
-            first_name, 
-            last_name
-          )
-        `)
-        .eq('id', '62314913-3a5d-4bb2-a16b-bbfc18729527');
-
-      console.log("🎯 SPECIFIC SPACE SEARCH RESULT:", { specificSpace, specificError });
-
-      // Segunda busca: buscar TODOS os espaços sem filtros
-      const { data: allData, error: allError } = await supabase
-        .from("spaces")
-        .select(`
-          id,
-          name,
-          created_at,
-          status,
-          user_id,
-          price,
-          profiles:profiles!user_id (
-            first_name, 
-            last_name
-          )
-        `)
+        .select("*")
         .order('created_at', { ascending: false });
 
-      console.log("📊 ALL SPACES QUERY:", { 
-        totalSpaces: allData?.length || 0, 
-        allError,
-        spaceIds: allData?.map(s => s.id) || []
+      console.log("📊 RAW SPACES RESULT:", { 
+        total: rawSpaces?.length || 0, 
+        error: rawError,
+        missingSpaceFound: rawSpaces?.find(s => s.id === '62314913-3a5d-4bb2-a16b-bbfc18729527')
       });
 
-      if (allError) {
-        console.error("❌ Error fetching all spaces:", allError);
-        throw allError;
+      if (rawError) {
+        console.error("❌ Error in raw fetch:", rawError);
+        throw rawError;
       }
 
-      // Verificar se o espaço específico está na lista geral
-      const missingSpaceInList = allData?.find(s => s.id === '62314913-3a5d-4bb2-a16b-bbfc18729527');
-      console.log("🔍 MISSING SPACE IN GENERAL LIST:", missingSpaceInList);
+      if (!rawSpaces || rawSpaces.length === 0) {
+        console.log("⚠️ No spaces found at all");
+        setSpaces([]);
+        return;
+      }
 
-      // Análise detalhada de cada espaço
-      if (allData && allData.length > 0) {
-        console.log("🔍 DETAILED ANALYSIS OF ALL SPACES:");
-        allData.forEach((space, index) => {
-          const statusInfo = {
-            id: space.id,
-            name: space.name,
-            status: space.status,
-            statusType: typeof space.status,
-            statusRaw: JSON.stringify(space.status),
-            isPendingStrict: space.status === 'pending',
-            isPendingLoose: String(space.status) === 'pending',
-            isNull: space.status === null,
-            isUndefined: space.status === undefined,
-            created_at: space.created_at
-          };
+      // Log de todos os espaços encontrados
+      console.log("🔍 ALL SPACES FOUND:");
+      rawSpaces.forEach((space, index) => {
+        console.log(`Space ${index + 1}: ID=${space.id}, Name="${space.name}", Status=${space.status}`);
+      });
+
+      // Verificar se o espaço específico está presente
+      const missingSpace = rawSpaces.find(s => s.id === '62314913-3a5d-4bb2-a16b-bbfc18729527');
+      if (missingSpace) {
+        console.log("✅ MISSING SPACE FOUND:", missingSpace);
+      } else {
+        console.log("❌ MISSING SPACE NOT FOUND IN DATABASE");
+        
+        // Tentar busca direta por ID
+        const { data: directSearch, error: directError } = await supabase
+          .from("spaces")
+          .select("*")
+          .eq('id', '62314913-3a5d-4bb2-a16b-bbfc18729527');
           
-          console.log(`Space ${index + 1}:`, statusInfo);
-        });
+        console.log("🎯 DIRECT ID SEARCH:", { directSearch, directError });
       }
 
-      // Buscar espaços com diferentes abordagens de filtragem
-      const pendingSpacesMethod1 = allData?.filter(s => s.status === 'pending') || [];
-      const pendingSpacesMethod2 = allData?.filter(s => String(s.status) === 'pending') || [];
-      const pendingSpacesMethod3 = allData?.filter(s => s.status?.toString() === 'pending') || [];
-      const nullStatusSpaces = allData?.filter(s => s.status === null || s.status === undefined) || [];
-
-      console.log("🔄 FILTERING METHODS COMPARISON:");
-      console.log("Method 1 (strict ===):", pendingSpacesMethod1.length, pendingSpacesMethod1.map(s => s.name));
-      console.log("Method 2 (String conversion):", pendingSpacesMethod2.length, pendingSpacesMethod2.map(s => s.name));
-      console.log("Method 3 (toString):", pendingSpacesMethod3.length, pendingSpacesMethod3.map(s => s.name));
-      console.log("Null/undefined status:", nullStatusSpaces.length, nullStatusSpaces.map(s => s.name));
-
-      // Busca adicional: verificar se há problemas com o join do profiles
-      const { data: spacesNoProfiles, error: noProfilesError } = await supabase
-        .from("spaces")
-        .select(`
-          id,
-          name,
-          created_at,
-          status,
-          user_id,
-          price
-        `)
-        .order('created_at', { ascending: false });
-
-      console.log("📋 SPACES WITHOUT PROFILES JOIN:", { 
-        totalSpaces: spacesNoProfiles?.length || 0, 
-        noProfilesError,
-        missingSpacePresent: spacesNoProfiles?.find(s => s.id === '62314913-3a5d-4bb2-a16b-bbfc18729527')
-      });
-
-      // Se encontramos mais espaços sem o join de profiles, use esses dados
-      let finalSpaces = allData || [];
-      if (spacesNoProfiles && spacesNoProfiles.length > (allData?.length || 0)) {
-        console.log("🔄 USING SPACES WITHOUT PROFILES DUE TO JOIN ISSUES");
-        finalSpaces = spacesNoProfiles.map(space => ({
-          ...space,
-          profiles: null
-        }));
-      }
-
-      // Se o espaço específico foi encontrado na busca individual mas não na geral, adicione-o
-      if (specificSpace && specificSpace.length > 0 && !finalSpaces.find(s => s.id === specificSpace[0].id)) {
-        console.log("➕ ADDING MISSING SPACE TO LIST");
-        finalSpaces = [...finalSpaces, ...specificSpace];
-      }
-
-      // Count photos for each space
-      const spacesWithCounts = await Promise.all(
-        finalSpaces.map(async (space: any) => {
+      // Agora buscar os profiles separadamente
+      const spacesWithProfiles = await Promise.all(
+        rawSpaces.map(async (space) => {
           try {
-            const { count, error: countError } = await supabase
+            const { data: profile } = await supabase
+              .from("profiles")
+              .select("first_name, last_name")
+              .eq("id", space.user_id)
+              .single();
+
+            // Contar fotos
+            const { count: photoCount } = await supabase
               .from("space_photos")
               .select("id", { count: "exact" })
               .eq("space_id", space.id);
 
-            if (countError) {
-              console.error(`Error counting photos for space ${space.id}:`, countError);
-            }
-
             return {
               ...space,
-              photo_count: count || 0
+              profiles: profile,
+              photo_count: photoCount || 0
             };
           } catch (err) {
-            console.error(`Exception counting photos for space ${space.id}:`, err);
+            console.error(`Error processing space ${space.id}:`, err);
             return {
               ...space,
+              profiles: null,
               photo_count: 0
             };
           }
         })
       );
 
-      console.log("📸 FINAL SPACES WITH PHOTO COUNTS:", spacesWithCounts.length);
-      console.log("🎯 FINAL CHECK - Missing space present:", spacesWithCounts.find(s => s.id === '62314913-3a5d-4bb2-a16b-bbfc18729527'));
+      console.log("✅ FINAL SPACES WITH PROFILES:", spacesWithProfiles.length);
+      console.log("🎯 MISSING SPACE IN FINAL LIST:", spacesWithProfiles.find(s => s.id === '62314913-3a5d-4bb2-a16b-bbfc18729527'));
       
-      setSpaces(spacesWithCounts as SpaceWithProfileInfo[]);
+      setSpaces(spacesWithProfiles as SpaceWithProfileInfo[]);
     } catch (error) {
       console.error("❌ Error fetching spaces:", error);
       toast.error("Erro ao buscar espaços");
@@ -270,7 +201,6 @@ const SpaceApproval = () => {
           }
           
           try {
-            // Make sure we're using the full storage path
             const { data, error } = await supabase.storage
               .from('spaces')
               .createSignedUrl(photo.storage_path, 3600);
@@ -289,7 +219,6 @@ const SpaceApproval = () => {
         })
       );
       
-      // Filter out any null values and set the URLs
       const validUrls = urls.filter(url => url !== null) as string[];
       console.log("Final valid photo URLs:", validUrls);
       setPhotoUrls(validUrls);
