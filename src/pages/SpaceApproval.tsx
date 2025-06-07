@@ -87,18 +87,34 @@ const SpaceApproval = () => {
         throw error;
       }
 
-      // Log detalhado de cada espaço
+      // Log detalhado de cada espaço com foco no status
       if (data && data.length > 0) {
-        console.log("Detailed spaces data:");
+        console.log("=== DETAILED SPACES ANALYSIS ===");
         data.forEach((space, index) => {
-          console.log(`Space ${index + 1}:`, {
+          console.log(`Space ${index + 1}: "${space.name}"`, {
             id: space.id,
             name: space.name,
             status: space.status,
+            statusType: typeof space.status,
+            statusValue: JSON.stringify(space.status),
+            statusLength: space.status?.length,
             created_at: space.created_at,
             user_id: space.user_id
           });
+          
+          // Verificação específica para "Sitio do zé"
+          if (space.name && space.name.toLowerCase().includes("sitio do zé")) {
+            console.log("🔍 FOUND 'Sitio do zé':", {
+              fullName: space.name,
+              status: space.status,
+              statusExactValue: `"${space.status}"`,
+              isPending: space.status === 'pending',
+              isApproved: space.status === 'approved',
+              isRejected: space.status === 'rejected'
+            });
+          }
         });
+        console.log("=== END ANALYSIS ===");
       }
 
       console.log(`Found ${data?.length || 0} total spaces`);
@@ -132,19 +148,38 @@ const SpaceApproval = () => {
 
       console.log("Spaces with photo counts:", spacesWithCounts);
       
-      // Separar por status e mostrar contadores
-      const pending = spacesWithCounts.filter(s => s.status === 'pending');
+      // Separar por status e mostrar contadores com análise detalhada
+      const pending = spacesWithCounts.filter(s => {
+        const isPending = s.status === 'pending';
+        if (!isPending && s.name && s.name.toLowerCase().includes("sitio")) {
+          console.log(`❌ Space "${s.name}" NOT in pending because status is:`, {
+            status: s.status,
+            statusType: typeof s.status,
+            exactValue: JSON.stringify(s.status)
+          });
+        }
+        return isPending;
+      });
+      
       const approved = spacesWithCounts.filter(s => s.status === 'approved');
       const rejected = spacesWithCounts.filter(s => s.status === 'rejected');
       const unknown = spacesWithCounts.filter(s => !['pending', 'approved', 'rejected'].includes(s.status));
       
+      console.log("=== STATUS BREAKDOWN ===");
       console.log("Spaces by status:", {
         pending: pending.length,
         approved: approved.length,
         rejected: rejected.length,
         unknown: unknown.length,
-        unknownStatuses: unknown.map(s => ({ id: s.id, status: s.status }))
+        unknownStatuses: unknown.map(s => ({ id: s.id, name: s.name, status: s.status }))
       });
+      
+      // Log específico dos espaços pendentes
+      if (pending.length > 0) {
+        console.log("📋 PENDING SPACES:", pending.map(s => ({ name: s.name, status: s.status })));
+      } else {
+        console.log("⚠️ NO PENDING SPACES FOUND");
+      }
       
       setSpaces(spacesWithCounts as SpaceWithProfileInfo[]);
     } catch (error) {
