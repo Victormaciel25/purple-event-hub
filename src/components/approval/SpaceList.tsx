@@ -31,12 +31,35 @@ const SpaceList: React.FC<SpaceListProps> = ({ spaces, loading, onViewDetails })
   const approvedSpaces = spaces.filter((space) => space.status === "approved");
   const rejectedSpaces = spaces.filter((space) => space.status === "rejected");
 
+  console.log("SpaceList render:", { 
+    totalSpaces: spaces.length, 
+    pendingCount: pendingSpaces.length, 
+    approvedCount: approvedSpaces.length, 
+    rejectedCount: rejectedSpaces.length,
+    loading 
+  });
+
   if (loading) {
     return (
       <Card>
         <CardHeader>
           <CardTitle>Carregando espaços...</CardTitle>
         </CardHeader>
+      </Card>
+    );
+  }
+
+  if (spaces.length === 0) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Nenhum espaço encontrado</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-muted-foreground">
+            Não há espaços cadastrados no sistema no momento.
+          </p>
+        </CardContent>
       </Card>
     );
   }
@@ -52,8 +75,8 @@ const SpaceList: React.FC<SpaceListProps> = ({ spaces, loading, onViewDetails })
             </span>
           )}
         </TabsTrigger>
-        <TabsTrigger value="approved">Aprovados</TabsTrigger>
-        <TabsTrigger value="rejected">Rejeitados</TabsTrigger>
+        <TabsTrigger value="approved">Aprovados ({approvedSpaces.length})</TabsTrigger>
+        <TabsTrigger value="rejected">Rejeitados ({rejectedSpaces.length})</TabsTrigger>
       </TabsList>
 
       <TabsContent value="pending">

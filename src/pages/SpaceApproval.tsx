@@ -60,6 +60,8 @@ const SpaceApproval = () => {
 
   const fetchSpaces = async () => {
     try {
+      console.log("Fetching spaces for approval...");
+      
       const { data, error } = await supabase
         .from("spaces")
         .select(`
@@ -76,25 +78,43 @@ const SpaceApproval = () => {
         `)
         .order('created_at', { ascending: false });
 
+      console.log("Spaces query result:", { data, error });
+
       if (error) {
+        console.error("Error fetching spaces:", error);
         throw error;
       }
+
+      console.log(`Found ${data?.length || 0} spaces`);
 
       // Count photos for each space
       const spacesWithCounts = await Promise.all(
         (data || []).map(async (space: any) => {
-          const { count } = await supabase
-            .from("space_photos")
-            .select("id", { count: "exact" })
-            .eq("space_id", space.id);
+          try {
+            const { count, error: countError } = await supabase
+              .from("space_photos")
+              .select("id", { count: "exact" })
+              .eq("space_id", space.id);
 
-          return {
-            ...space,
-            photo_count: count || 0
-          };
+            if (countError) {
+              console.error(`Error counting photos for space ${space.id}:`, countError);
+            }
+
+            return {
+              ...space,
+              photo_count: count || 0
+            };
+          } catch (err) {
+            console.error(`Exception counting photos for space ${space.id}:`, err);
+            return {
+              ...space,
+              photo_count: 0
+            };
+          }
         })
       );
 
+      console.log("Spaces with photo counts:", spacesWithCounts);
       setSpaces(spacesWithCounts as SpaceWithProfileInfo[]);
     } catch (error) {
       console.error("Error fetching spaces:", error);
