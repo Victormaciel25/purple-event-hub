@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { ChevronLeft } from "lucide-react";
@@ -62,7 +61,10 @@ const SpaceApproval = () => {
   const fetchSpaces = async () => {
     try {
       setLoading(true);
-      const { data: spaceData, error } = await supabase
+      console.log("Fetching all spaces for admin approval...");
+      
+      // Buscar TODOS os espaços do sistema, não apenas do usuário logado
+      const { data: spacesData, error } = await supabase
         .from("spaces")
         .select(`
           id,
@@ -70,41 +72,57 @@ const SpaceApproval = () => {
           created_at,
           status,
           user_id,
-          price
+          price,
+          profiles:profiles!user_id (
+            first_name,
+            last_name
+          )
         `)
         .order('created_at', { ascending: false });
 
       if (error) {
+        console.error("Error fetching spaces:", error);
         throw error;
       }
 
-      // Buscar perfis separadamente e juntar os dados
-      const spacesWithProfiles: SpaceWithProfileInfo[] = [];
+      console.log("Raw spaces data:", spacesData);
 
-      for (const space of spaceData || []) {
-        // Buscar o perfil associado ao usuário do espaço
-        const { data: profileData } = await supabase
-          .from("profiles")
-          .select("first_name, last_name")
-          .eq("id", space.user_id)
-          .single();
-
-        // Buscar contagem de fotos
-        const { count: photoCount } = await supabase
-          .from("space_photos")
-          .select("id", { count: "exact" })
-          .eq("space_id", space.id);
-
-        spacesWithProfiles.push({
-          ...space,
-          profiles: profileData || null,
-          photo_count: photoCount || 0
-        });
+      if (!spacesData) {
+        console.log("No spaces data returned");
+        setSpaces([]);
+        return;
       }
 
-      setSpaces(spacesWithProfiles);
+      // Processar os dados e buscar contagem de fotos para cada espaço
+      const spacesWithPhotos = await Promise.all(
+        spacesData.map(async (space) => {
+          // Buscar contagem de fotos
+          const { count: photoCount } = await supabase
+            .from("space_photos")
+            .select("id", { count: "exact" })
+            .eq("space_id", space.id);
+
+          return {
+            ...space,
+            photo_count: photoCount || 0,
+            profiles: space.profiles || null
+          };
+        })
+      );
+
+      console.log("Processed spaces with photos:", spacesWithPhotos);
+      console.log("Total spaces found:", spacesWithPhotos.length);
+      
+      // Contar espaços por status
+      const pendingCount = spacesWithPhotos.filter(s => !s.status || s.status === 'pending').length;
+      const approvedCount = spacesWithPhotos.filter(s => s.status === 'approved').length;
+      const rejectedCount = spacesWithPhotos.filter(s => s.status === 'rejected').length;
+      
+      console.log("Spaces by status:", { pendingCount, approvedCount, rejectedCount });
+
+      setSpaces(spacesWithPhotos);
     } catch (error) {
-      console.error("Erro ao buscar espaços:", error);
+      console.error("Error in fetchSpaces:", error);
       toast.error("Erro ao buscar espaços");
     } finally {
       setLoading(false);
