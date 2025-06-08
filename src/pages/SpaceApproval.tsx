@@ -63,31 +63,22 @@ const SpaceApproval = () => {
       setLoading(true);
       console.log("Fetching all spaces for admin approval...");
       
-      // Usar RPC ou service role para garantir que admins vejam todos os espaços
+      // Buscar TODOS os espaços diretamente (admins devem ver todos os espaços)
       const { data: spacesData, error } = await supabase
-        .rpc('admin_get_all_spaces')
-        .then(async (result) => {
-          if (result.error) {
-            // Fallback: tentar consulta direta se RPC não existir
-            console.log("RPC not found, using direct query with service role simulation");
-            return await supabase
-              .from("spaces")
-              .select(`
-                id,
-                name,
-                created_at,
-                status,
-                user_id,
-                price,
-                profiles:profiles!user_id (
-                  first_name,
-                  last_name
-                )
-              `)
-              .order('created_at', { ascending: false });
-          }
-          return result;
-        });
+        .from("spaces")
+        .select(`
+          id,
+          name,
+          created_at,
+          status,
+          user_id,
+          price,
+          profiles:profiles!user_id (
+            first_name,
+            last_name
+          )
+        `)
+        .order('created_at', { ascending: false });
 
       if (error) {
         console.error("Error fetching spaces:", error);
