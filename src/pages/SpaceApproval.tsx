@@ -37,7 +37,7 @@ const SpaceApproval = () => {
   const [sheetOpen, setSheetOpen] = useState(false);
   const [rejectionReason, setRejectionReason] = useState("");
   const [photoUrls, setPhotoUrls] = useState<string[]>([]);
-  const { isAdmin, loading: roleLoading } = useUserRoles();
+  const { isAdmin, loading: roleLoading, userId } = useUserRoles();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -63,13 +63,30 @@ const SpaceApproval = () => {
       setLoading(true);
       
       console.log("=== INICIANDO BUSCA DE ESPAÇOS ===");
+      console.log("Usuário logado:", userId);
+      console.log("É admin:", isAdmin);
       
-      // Primeiro, vamos fazer uma busca simples apenas da tabela spaces
+      // Primeiro, verificar se conseguimos acessar o espaço específico
+      const { data: specificSpace, error: specificError } = await supabase
+        .from("spaces")
+        .select("*")
+        .eq("id", "62314913-3a5d-4bb2-a16b-bbfc18729527")
+        .single();
+      
+      console.log("Busca do espaço específico:", specificSpace);
+      console.log("Erro na busca específica:", specificError);
+      
+      // Verificar sessão atual
+      const { data: session } = await supabase.auth.getSession();
+      console.log("Sessão atual:", session.session?.user?.id);
+      
+      // Buscar todos os espaços sem filtros
       const { data: rawSpaces, error: spacesError } = await supabase
         .from("spaces")
         .select("*")
         .order('created_at', { ascending: false });
 
+      console.log("Total de espaços retornados:", rawSpaces?.length);
       console.log("Query direta na tabela spaces:", rawSpaces);
       console.log("Erro na query (se houver):", spacesError);
 
@@ -80,12 +97,16 @@ const SpaceApproval = () => {
 
       // Verificar especificamente o espaço que está faltando
       const targetSpace = rawSpaces?.find(space => space.id === "62314913-3a5d-4bb2-a16b-bbfc18729527");
-      console.log("Espaço alvo encontrado:", targetSpace);
+      console.log("Espaço alvo encontrado na lista geral:", targetSpace);
+
+      // Verificar se há algum espaço com status pending
+      const pendingInRaw = rawSpaces?.filter(space => space.status === 'pending');
+      console.log("Espaços com status 'pending' na query geral:", pendingInRaw);
 
       // Buscar perfis separadamente para cada espaço
       const spacesWithProfiles = await Promise.all(
         (rawSpaces || []).map(async (space) => {
-          console.log(`Processando espaço: ${space.name} (${space.id}) - Status: ${space.status}`);
+          console.log(`Processando espaço: ${space.name} (${space.id}) - Status: "${space.status}"`);
           
           // Buscar perfil do usuário
           const { data: profile } = await supabase
@@ -111,10 +132,12 @@ const SpaceApproval = () => {
       console.log("Espaços processados com perfis:", spacesWithProfiles);
       console.log("Total de espaços após processamento:", spacesWithProfiles.length);
       
-      // Verificar quantos espaços pendentes temos
-      const pendingSpaces = spacesWithProfiles.filter(space => 
-        space.status === 'pending' || space.status === null || space.status === undefined
-      );
+      // Verificar quantos espaços pendentes temos após processamento
+      const pendingSpaces = spacesWithProfiles.filter(space => {
+        const isPending = space.status === 'pending' || space.status === null || space.status === undefined;
+        console.log(`Espaço ${space.name}: status="${space.status}", isPending=${isPending}`);
+        return isPending;
+      });
       console.log("Espaços pendentes encontrados:", pendingSpaces.length);
       console.log("Espaços pendentes:", pendingSpaces);
 
