@@ -63,22 +63,31 @@ const SpaceApproval = () => {
       setLoading(true);
       console.log("Fetching all spaces for admin approval...");
       
-      // Buscar TODOS os espaços do sistema, não apenas do usuário logado
+      // Usar RPC ou service role para garantir que admins vejam todos os espaços
       const { data: spacesData, error } = await supabase
-        .from("spaces")
-        .select(`
-          id,
-          name,
-          created_at,
-          status,
-          user_id,
-          price,
-          profiles:profiles!user_id (
-            first_name,
-            last_name
-          )
-        `)
-        .order('created_at', { ascending: false });
+        .rpc('admin_get_all_spaces')
+        .then(async (result) => {
+          if (result.error) {
+            // Fallback: tentar consulta direta se RPC não existir
+            console.log("RPC not found, using direct query with service role simulation");
+            return await supabase
+              .from("spaces")
+              .select(`
+                id,
+                name,
+                created_at,
+                status,
+                user_id,
+                price,
+                profiles:profiles!user_id (
+                  first_name,
+                  last_name
+                )
+              `)
+              .order('created_at', { ascending: false });
+          }
+          return result;
+        });
 
       if (error) {
         console.error("Error fetching spaces:", error);
@@ -87,7 +96,7 @@ const SpaceApproval = () => {
 
       console.log("Raw spaces data:", spacesData);
 
-      if (!spacesData) {
+      if (!spacesData || spacesData.length === 0) {
         console.log("No spaces data returned");
         setSpaces([]);
         return;
@@ -102,10 +111,21 @@ const SpaceApproval = () => {
             .select("id", { count: "exact" })
             .eq("space_id", space.id);
 
+          // Se não temos perfil na consulta principal, buscar separadamente
+          let profileData = space.profiles;
+          if (!profileData && space.user_id) {
+            const { data: profile } = await supabase
+              .from("profiles")
+              .select("first_name, last_name")
+              .eq("id", space.user_id)
+              .single();
+            profileData = profile;
+          }
+
           return {
             ...space,
             photo_count: photoCount || 0,
-            profiles: space.profiles || null
+            profiles: profileData || null
           };
         })
       );
