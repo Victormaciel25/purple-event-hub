@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { ChevronLeft } from "lucide-react";
@@ -61,91 +62,46 @@ const SpaceApproval = () => {
   const fetchSpaces = async () => {
     try {
       setLoading(true);
-      console.log("🔍 SIMPLIFIED FETCH - Searching for missing space: 62314913-3a5d-4bb2-a16b-bbfc18729527");
       
-      // Buscar TODOS os espaços sem joins complexos primeiro
-      const { data: rawSpaces, error: rawError } = await supabase
+      // Buscar espaços com join simples
+      const { data: spacesData, error } = await supabase
         .from("spaces")
-        .select("*")
+        .select(`
+          id,
+          name,
+          created_at,
+          status,
+          user_id,
+          price,
+          profiles:profiles!user_id (
+            first_name,
+            last_name
+          )
+        `)
         .order('created_at', { ascending: false });
 
-      console.log("📊 RAW SPACES RESULT:", { 
-        total: rawSpaces?.length || 0, 
-        error: rawError,
-        missingSpaceFound: rawSpaces?.find(s => s.id === '62314913-3a5d-4bb2-a16b-bbfc18729527')
-      });
-
-      if (rawError) {
-        console.error("❌ Error in raw fetch:", rawError);
-        throw rawError;
+      if (error) {
+        throw error;
       }
 
-      if (!rawSpaces || rawSpaces.length === 0) {
-        console.log("⚠️ No spaces found at all");
-        setSpaces([]);
-        return;
-      }
+      // Buscar contagem de fotos para cada espaço
+      const spacesWithPhotos = await Promise.all(
+        (spacesData || []).map(async (space) => {
+          const { count: photoCount } = await supabase
+            .from("space_photos")
+            .select("id", { count: "exact" })
+            .eq("space_id", space.id);
 
-      // Log de todos os espaços encontrados
-      console.log("🔍 ALL SPACES FOUND:");
-      rawSpaces.forEach((space, index) => {
-        console.log(`Space ${index + 1}: ID=${space.id}, Name="${space.name}", Status=${space.status}`);
-      });
-
-      // Verificar se o espaço específico está presente
-      const missingSpace = rawSpaces.find(s => s.id === '62314913-3a5d-4bb2-a16b-bbfc18729527');
-      if (missingSpace) {
-        console.log("✅ MISSING SPACE FOUND:", missingSpace);
-      } else {
-        console.log("❌ MISSING SPACE NOT FOUND IN DATABASE");
-        
-        // Tentar busca direta por ID
-        const { data: directSearch, error: directError } = await supabase
-          .from("spaces")
-          .select("*")
-          .eq('id', '62314913-3a5d-4bb2-a16b-bbfc18729527');
-          
-        console.log("🎯 DIRECT ID SEARCH:", { directSearch, directError });
-      }
-
-      // Agora buscar os profiles separadamente
-      const spacesWithProfiles = await Promise.all(
-        rawSpaces.map(async (space) => {
-          try {
-            const { data: profile } = await supabase
-              .from("profiles")
-              .select("first_name, last_name")
-              .eq("id", space.user_id)
-              .single();
-
-            // Contar fotos
-            const { count: photoCount } = await supabase
-              .from("space_photos")
-              .select("id", { count: "exact" })
-              .eq("space_id", space.id);
-
-            return {
-              ...space,
-              profiles: profile,
-              photo_count: photoCount || 0
-            };
-          } catch (err) {
-            console.error(`Error processing space ${space.id}:`, err);
-            return {
-              ...space,
-              profiles: null,
-              photo_count: 0
-            };
-          }
+          return {
+            ...space,
+            photo_count: photoCount || 0
+          };
         })
       );
 
-      console.log("✅ FINAL SPACES WITH PROFILES:", spacesWithProfiles.length);
-      console.log("🎯 MISSING SPACE IN FINAL LIST:", spacesWithProfiles.find(s => s.id === '62314913-3a5d-4bb2-a16b-bbfc18729527'));
-      
-      setSpaces(spacesWithProfiles as SpaceWithProfileInfo[]);
+      setSpaces(spacesWithPhotos as SpaceWithProfileInfo[]);
     } catch (error) {
-      console.error("❌ Error fetching spaces:", error);
+      console.error("Erro ao buscar espaços:", error);
       toast.error("Erro ao buscar espaços");
     } finally {
       setLoading(false);

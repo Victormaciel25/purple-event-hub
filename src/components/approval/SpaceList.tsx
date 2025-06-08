@@ -26,35 +26,15 @@ type SpaceListProps = {
 };
 
 const SpaceList: React.FC<SpaceListProps> = ({ spaces, loading, onViewDetails }) => {
-  console.log("🎯 SpaceList - Processing spaces:", spaces.length);
-  
-  // Filtrar espaços por status com logs detalhados
-  const pendingSpaces = spaces.filter((space) => {
-    const isPending = space.status === "pending" || space.status === null || space.status === undefined;
-    
-    console.log(`SpaceList - Checking "${space.name}":`, {
-      id: space.id,
-      status: space.status,
-      statusType: typeof space.status,
-      isPending,
-      rawValue: JSON.stringify(space.status)
-    });
-    
-    return isPending;
-  });
+  // Filtrar espaços por status
+  const pendingSpaces = spaces.filter((space) => 
+    space.status === "pending" || 
+    space.status === null || 
+    space.status === undefined
+  );
   
   const approvedSpaces = spaces.filter((space) => space.status === "approved");
   const rejectedSpaces = spaces.filter((space) => space.status === "rejected");
-
-  console.log("🎯 SpaceList filtering results:", { 
-    totalSpaces: spaces.length, 
-    pendingCount: pendingSpaces.length, 
-    approvedCount: approvedSpaces.length, 
-    rejectedCount: rejectedSpaces.length,
-    loading,
-    pendingSpaceNames: pendingSpaces.map(s => s.name),
-    pendingSpaceIds: pendingSpaces.map(s => s.id)
-  });
 
   if (loading) {
     return (
@@ -113,21 +93,7 @@ const SpaceList: React.FC<SpaceListProps> = ({ spaces, loading, onViewDetails })
                 ))}
               </div>
             ) : (
-              <div>
-                <p className="text-muted-foreground mb-4">Nenhum espaço pendente de aprovação encontrado.</p>
-                <div className="bg-yellow-50 border border-yellow-200 p-4 rounded-lg">
-                  <h4 className="font-medium text-yellow-800 mb-2">Debug Information:</h4>
-                  <p className="text-sm text-yellow-700">
-                    Total de espaços: {spaces.length}
-                  </p>
-                  <p className="text-sm text-yellow-700">
-                    Espaços encontrados: {spaces.map(s => `"${s.name}" (status: ${s.status}, id: ${s.id})`).join(", ")}
-                  </p>
-                  <p className="text-sm text-yellow-700">
-                    O espaço de id 62314913-3a5d-4bb2-a16b-bbfc18729527 {spaces.find(s => s.id === '62314913-3a5d-4bb2-a16b-bbfc18729527') ? 'FOI ENCONTRADO' : 'NÃO FOI ENCONTRADO'}
-                  </p>
-                </div>
-              </div>
+              <p className="text-muted-foreground">Nenhum espaço pendente de aprovação encontrado.</p>
             )}
           </CardContent>
         </Card>
