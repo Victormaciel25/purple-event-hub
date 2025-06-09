@@ -125,7 +125,27 @@ const SpaceApproval = () => {
       console.log("🚀 === FETCHING SPACE DETAILS ===");
       console.log("🚀 Space ID:", spaceId);
       
-      // Buscar todos os dados do espaço diretamente da tabela spaces
+      // Primeiro, vamos verificar se conseguimos acessar as fotos diretamente como admin
+      console.log("📸 === ADMIN FETCHING PHOTOS DIRECTLY ===");
+      console.log("📸 Checking as admin for space_id:", spaceId);
+      
+      // Use o cliente Supabase diretamente para buscar as fotos SEM filtro de usuário
+      const { data: directPhotosData, error: directPhotosError } = await supabase
+        .from("space_photos")
+        .select("*")
+        .eq("space_id", spaceId)
+        .order('created_at', { ascending: true });
+
+      console.log("📸 Direct admin query result:");
+      console.log("📸 Error:", directPhotosError);
+      console.log("📸 Data:", directPhotosData);
+      console.log("📸 Photos found:", directPhotosData?.length || 0);
+
+      if (directPhotosError) {
+        console.error("❌ Admin direct query failed:", directPhotosError);
+      }
+
+      // Agora buscar os dados do espaço
       const { data: spaceData, error: spaceError } = await supabase
         .from("spaces")
         .select("*")
@@ -148,43 +168,11 @@ const SpaceApproval = () => {
 
       console.log("👤 Profile data:", profileData);
 
-      // Buscar fotos do espaço - COM RLS DESABILITADO deve funcionar para todos
-      console.log("📸 === FETCHING PHOTOS ===");
-      console.log("📸 Searching photos for space_id:", spaceId);
-      
-      const { data: photosData, error: photosError } = await supabase
-        .from("space_photos")
-        .select("*")
-        .eq("space_id", spaceId)
-        .order('created_at', { ascending: true });
-
-      if (photosError) {
-        console.error("❌ Error fetching photos:", photosError);
-        console.error("❌ Photos error details:", JSON.stringify(photosError, null, 2));
-      } else {
-        console.log("✅ Successfully fetched photos data:", photosData);
-        console.log("✅ Number of photos found:", photosData?.length || 0);
-        
-        // Log detalhado de cada foto
-        if (photosData && photosData.length > 0) {
-          photosData.forEach((photo, index) => {
-            console.log(`📸 Photo ${index + 1}:`, {
-              id: photo.id,
-              space_id: photo.space_id,
-              storage_path: photo.storage_path,
-              created_at: photo.created_at
-            });
-          });
-        } else {
-          console.log("📸 No photos found in database for this space");
-        }
-      }
-
-      // Combinar todos os dados
+      // Combinar todos os dados - usar as fotos do query direto
       const combinedData = {
         ...spaceData,
         profiles: profileData || null,
-        photos: photosData || []
+        photos: directPhotosData || []
       };
 
       console.log("🎯 Combined space details with photos:", combinedData);
