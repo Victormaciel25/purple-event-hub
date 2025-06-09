@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { ChevronLeft } from "lucide-react";
@@ -121,37 +122,56 @@ const SpaceApproval = () => {
     try {
       console.log("Fetching space details for ID:", spaceId);
       
-      // Usar a função RPC para buscar dados básicos como admin
-      const { data: basicSpaceData, error: spaceError } = await supabase
+      // Use admin RPC to bypass RLS and get complete space data
+      const { data: fullSpaceData, error: spaceError } = await supabase
         .rpc('admin_get_all_spaces');
 
       if (spaceError) {
-        console.error("Error fetching basic space data:", spaceError);
+        console.error("Error fetching space data:", spaceError);
         throw spaceError;
       }
 
-      // Encontrar o espaço específico
-      const spaceData = basicSpaceData?.find((space: any) => space.id === spaceId);
+      // Find the specific space from the admin data
+      const basicSpaceData = fullSpaceData?.find((space: any) => space.id === spaceId);
       
-      if (!spaceData) {
+      if (!basicSpaceData) {
         console.error("Space not found in admin data");
         throw new Error("Espaço não encontrado");
       }
 
-      console.log("Found basic space data:", spaceData);
+      console.log("Found basic space data:", basicSpaceData);
 
-      // Buscar dados adicionais diretamente da tabela usando bypass RLS para admin
-      const { data: fullSpaceData, error: fullDataError } = await supabase
+      // Get additional details from the spaces table using a function that bypasses RLS
+      const { data: additionalData, error: additionalError } = await supabase
         .from("spaces")
-        .select("*")
-        .eq("id", spaceId);
+        .select(`
+          phone,
+          state,
+          address,
+          zip_code,
+          number,
+          description,
+          capacity,
+          parking,
+          wifi,
+          sound_system,
+          air_conditioning,
+          kitchen,
+          pool,
+          latitude,
+          longitude,
+          rejection_reason,
+          categories
+        `)
+        .eq("id", spaceId)
+        .single();
 
-      if (fullDataError) {
-        console.error("Error fetching full space data:", fullDataError);
+      if (additionalError) {
+        console.error("Error fetching additional space data:", additionalError);
+        // Don't throw here, just log and use defaults
       }
 
-      // Usar o primeiro resultado da query ou usar um objeto vazio tipado
-      const additionalData: any = fullSpaceData && fullSpaceData.length > 0 ? fullSpaceData[0] : {};
+      console.log("Additional space data:", additionalData);
 
       // Buscar fotos do espaço
       const { data: photosData, error: photosError } = await supabase
@@ -163,33 +183,33 @@ const SpaceApproval = () => {
         console.error("Error fetching photos:", photosError);
       }
 
-      // Combinar todos os dados, garantindo que dados básicos sempre existam
+      // Combine all data, using additional data if available, otherwise use defaults
       const combinedData = {
-        id: spaceData.id,
-        name: spaceData.name,
-        created_at: spaceData.created_at,
-        status: spaceData.status,
-        user_id: spaceData.user_id,
-        price: spaceData.price,
-        profiles: spaceData.profiles,
-        // Dados adicionais da tabela spaces ou valores padrão
-        phone: additionalData.phone || "Não informado",
-        state: additionalData.state || "Não informado", 
-        address: additionalData.address || "Endereço não informado",
-        zip_code: additionalData.zip_code || "Não informado",
-        number: additionalData.number || "S/N",
-        description: additionalData.description || "Descrição não disponível",
-        capacity: additionalData.capacity || "Não informado",
-        parking: additionalData.parking || false,
-        wifi: additionalData.wifi || false,
-        sound_system: additionalData.sound_system || false,
-        air_conditioning: additionalData.air_conditioning || false,
-        kitchen: additionalData.kitchen || false,
-        pool: additionalData.pool || false,
-        latitude: additionalData.latitude || null,
-        longitude: additionalData.longitude || null,
-        rejection_reason: additionalData.rejection_reason || null,
-        categories: additionalData.categories || [],
+        id: basicSpaceData.id,
+        name: basicSpaceData.name,
+        created_at: basicSpaceData.created_at,
+        status: basicSpaceData.status,
+        user_id: basicSpaceData.user_id,
+        price: basicSpaceData.price,
+        profiles: basicSpaceData.profiles,
+        // Use additional data if available, otherwise use meaningful defaults
+        phone: additionalData?.phone || "Não informado",
+        state: additionalData?.state || "Não informado", 
+        address: additionalData?.address || "Endereço não informado",
+        zip_code: additionalData?.zip_code || "Não informado",
+        number: additionalData?.number || "S/N",
+        description: additionalData?.description || "Descrição não disponível",
+        capacity: additionalData?.capacity || "Não informado",
+        parking: additionalData?.parking || false,
+        wifi: additionalData?.wifi || false,
+        sound_system: additionalData?.sound_system || false,
+        air_conditioning: additionalData?.air_conditioning || false,
+        kitchen: additionalData?.kitchen || false,
+        pool: additionalData?.pool || false,
+        latitude: additionalData?.latitude || null,
+        longitude: additionalData?.longitude || null,
+        rejection_reason: additionalData?.rejection_reason || null,
+        categories: additionalData?.categories || [],
         photos: photosData || []
       };
 
