@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { toast } from '@/components/ui/use-toast';
 import { Button } from "@/components/ui/button";
@@ -552,7 +553,7 @@ const SubscriptionCheckout: React.FC<SubscriptionCheckoutProps> = ({
         </div>
         
         <button type="submit" id="subscription-form-checkout__submit" ${processingPayment ? 'disabled' : ''}>
-          ${processingPayment ? 'Processando assinatura...' : 'Criar Assinatura Mensal'}
+          ${processingPayment ? 'Processando...' : 'Promover'}
         </button>
         <progress value="0" class="subscription-progress-bar" id="subscription-payment-progress">Carregando...</progress>
       </form>
@@ -631,7 +632,7 @@ const SubscriptionCheckout: React.FC<SubscriptionCheckoutProps> = ({
           ) : (
             <>
               <Check size={20} className="mr-2" />
-              Criar Assinatura Mensal
+              Promover
             </>
           )}
         </Button>
