@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { ChevronLeft } from "lucide-react";
@@ -121,7 +122,7 @@ const SpaceApproval = () => {
     try {
       console.log("Fetching space details for ID:", spaceId);
       
-      // Primeiro, buscar os dados básicos do espaço usando a função RPC
+      // Usar a função RPC para buscar dados básicos como admin
       const { data: basicSpaceData, error: spaceError } = await supabase
         .rpc('admin_get_all_spaces');
 
@@ -130,7 +131,7 @@ const SpaceApproval = () => {
         throw spaceError;
       }
 
-      // Encontrar o espaço específico nos dados retornados
+      // Encontrar o espaço específico
       const spaceData = basicSpaceData?.find((space: any) => space.id === spaceId);
       
       if (!spaceData) {
@@ -140,18 +141,18 @@ const SpaceApproval = () => {
 
       console.log("Found basic space data:", spaceData);
 
-      // Buscar dados adicionais do espaço (como descrição, endereço, etc.)
+      // Buscar dados adicionais diretamente da tabela usando bypass RLS para admin
       const { data: fullSpaceData, error: fullDataError } = await supabase
         .from("spaces")
         .select("*")
-        .eq("id", spaceId)
-        .single();
+        .eq("id", spaceId);
 
       if (fullDataError) {
         console.error("Error fetching full space data:", fullDataError);
-        // Se não conseguir buscar da tabela diretamente, usar os dados básicos
-        console.log("Using basic data only");
       }
+
+      // Usar o primeiro resultado da query ou fallback para dados básicos
+      const additionalData = fullSpaceData && fullSpaceData.length > 0 ? fullSpaceData[0] : {};
 
       // Buscar fotos do espaço
       const { data: photosData, error: photosError } = await supabase
@@ -163,12 +164,34 @@ const SpaceApproval = () => {
         console.error("Error fetching photos:", photosError);
       }
 
-      // Combinar os dados
+      // Combinar todos os dados, garantindo que dados básicos sempre existam
       const combinedData = {
-        ...spaceData,
-        ...(fullSpaceData || {}),
-        photos: photosData || [],
-        profiles: spaceData.profiles
+        id: spaceData.id,
+        name: spaceData.name,
+        created_at: spaceData.created_at,
+        status: spaceData.status,
+        user_id: spaceData.user_id,
+        price: spaceData.price,
+        profiles: spaceData.profiles,
+        // Dados adicionais da tabela spaces ou valores padrão
+        phone: additionalData.phone || "Não informado",
+        state: additionalData.state || "Não informado", 
+        address: additionalData.address || "Endereço não informado",
+        zip_code: additionalData.zip_code || "Não informado",
+        number: additionalData.number || "S/N",
+        description: additionalData.description || "Descrição não disponível",
+        capacity: additionalData.capacity || "Não informado",
+        parking: additionalData.parking || false,
+        wifi: additionalData.wifi || false,
+        sound_system: additionalData.sound_system || false,
+        air_conditioning: additionalData.air_conditioning || false,
+        kitchen: additionalData.kitchen || false,
+        pool: additionalData.pool || false,
+        latitude: additionalData.latitude || null,
+        longitude: additionalData.longitude || null,
+        rejection_reason: additionalData.rejection_reason || null,
+        categories: additionalData.categories || [],
+        photos: photosData || []
       };
 
       console.log("Combined space details:", combinedData);
