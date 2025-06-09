@@ -66,7 +66,8 @@ const SubscriptionsManagement = () => {
 
       if (error) throw error;
       
-      setSubscriptions(data || []);
+      // Type assertion to handle the Supabase response structure
+      setSubscriptions((data as any[]) || []);
     } catch (err: any) {
       console.error("Error fetching subscriptions:", err);
       setError(err.message || "Erro ao carregar assinaturas");
