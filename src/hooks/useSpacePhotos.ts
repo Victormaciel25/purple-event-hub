@@ -59,57 +59,17 @@ export const useSpacePhotos = (spaceId: string | null) => {
           console.log("Processando foto:", photo.id, "com storage_path:", photo.storage_path);
 
           try {
-            // Verificar se o arquivo existe primeiro
-            const { data: listData, error: listError } = await supabase.storage
-              .from('spaces')
-              .list('', {
-                search: photo.storage_path.split('/').pop()
-              });
-
-            if (listError) {
-              console.error("Erro ao verificar arquivo:", listError);
-            } else {
-              console.log("Arquivos encontrados:", listData);
-            }
-
-            // Tentar URL pública primeiro
+            // Usar URL pública diretamente já que agora temos acesso público de leitura
             const { data: publicUrlData } = supabase.storage
               .from('spaces')
               .getPublicUrl(photo.storage_path);
 
             if (publicUrlData?.publicUrl) {
               console.log("URL pública criada para foto:", photo.id, "->", publicUrlData.publicUrl);
-              
-              // Verificar se a URL pública é acessível
-              try {
-                const response = await fetch(publicUrlData.publicUrl, { method: 'HEAD' });
-                if (response.ok) {
-                  console.log("URL pública verificada com sucesso para foto:", photo.id);
-                  return publicUrlData.publicUrl;
-                } else {
-                  console.warn("URL pública não acessível, tentando URL assinada para foto:", photo.id);
-                }
-              } catch (fetchError) {
-                console.warn("Erro ao verificar URL pública, tentando URL assinada:", fetchError);
-              }
+              return publicUrlData.publicUrl;
             }
 
-            // Fallback para URL assinada
-            const { data: signedData, error: signedError } = await supabase.storage
-              .from('spaces')
-              .createSignedUrl(photo.storage_path, 3600);
-
-            if (signedError) {
-              console.error("Erro ao criar URL assinada para foto:", photo.id, signedError);
-              return null;
-            }
-
-            if (signedData?.signedUrl) {
-              console.log("URL assinada criada para foto:", photo.id, "->", signedData.signedUrl);
-              return signedData.signedUrl;
-            }
-
-            console.error("Não foi possível criar nenhuma URL para foto:", photo.id);
+            console.error("Não foi possível criar URL pública para foto:", photo.id);
             return null;
           } catch (err) {
             console.error("Erro ao criar URL para foto:", photo.id, err);
