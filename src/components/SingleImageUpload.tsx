@@ -58,6 +58,51 @@ const SingleImageUpload: React.FC<SingleImageUploadProps> = ({
     }
   };
 
+  const ensureBucketExists = async () => {
+    try {
+      console.log("🔍 Verificando se bucket 'spaces' existe...");
+      
+      // Primeiro, tentar listar os buckets
+      const { data: buckets, error: listError } = await supabase.storage.listBuckets();
+      
+      if (listError) {
+        console.error("❌ Erro ao listar buckets:", listError);
+        return false;
+      }
+      
+      console.log("📋 Buckets encontrados:", buckets?.map(b => b.name) || []);
+      
+      // Verificar se o bucket 'spaces' existe
+      const spacesBucket = buckets?.find(bucket => bucket.name === 'spaces');
+      
+      if (spacesBucket) {
+        console.log("✅ Bucket 'spaces' já existe:", spacesBucket);
+        return true;
+      }
+      
+      console.log("⚠️ Bucket 'spaces' não encontrado, tentando criar...");
+      
+      // Tentar criar o bucket
+      const { data: createData, error: createError } = await supabase.storage.createBucket('spaces', {
+        public: true,
+        fileSizeLimit: 52428800, // 50MB
+        allowedMimeTypes: ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
+      });
+      
+      if (createError) {
+        console.error("❌ Erro ao criar bucket:", createError);
+        return false;
+      }
+      
+      console.log("✅ Bucket 'spaces' criado com sucesso:", createData);
+      return true;
+      
+    } catch (error) {
+      console.error("💥 Erro ao verificar/criar bucket:", error);
+      return false;
+    }
+  };
+
   const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     if (!event.target.files || event.target.files.length === 0) return;
     
@@ -71,24 +116,12 @@ const SingleImageUpload: React.FC<SingleImageUploadProps> = ({
     setIsUploading(true);
     
     try {
-      // Verificar se o bucket existe antes de fazer upload
-      console.log("🔍 Verificando bucket 'spaces'...");
-      const { data: buckets, error: bucketsError } = await supabase.storage.listBuckets();
-      
-      if (bucketsError) {
-        console.error("❌ Erro ao listar buckets:", bucketsError);
-        toast.error("Erro ao acessar armazenamento");
+      // Garantir que o bucket existe
+      const bucketExists = await ensureBucketExists();
+      if (!bucketExists) {
+        toast.error("Não foi possível acessar o armazenamento. Tente novamente.");
         return;
       }
-      
-      const spacesBucket = buckets?.find(bucket => bucket.name === 'spaces');
-      if (!spacesBucket) {
-        console.error("❌ Bucket 'spaces' não encontrado!");
-        toast.error("Bucket de armazenamento não encontrado");
-        return;
-      }
-      
-      console.log("✅ Bucket 'spaces' encontrado:", spacesBucket);
       
       const newUrls: string[] = [];
       
