@@ -249,6 +249,9 @@ const SpaceDetails: React.FC<SpaceDetailsProps> = ({
               <div className="text-center py-8">
                 <Image size={48} className="mx-auto text-gray-300 mb-2" />
                 <p className="text-gray-500">Nenhuma foto disponível</p>
+                <p className="text-xs text-gray-400 mt-1">
+                  Verifique se as fotos foram enviadas corretamente
+                </p>
               </div>
             ) : (
               <>
@@ -259,9 +262,10 @@ const SpaceDetails: React.FC<SpaceDetailsProps> = ({
                         src={url} 
                         alt={`Espaço ${selectedSpace.name} ${index + 1}`}
                         className="w-full h-40 object-cover rounded-md"
+                        onLoad={() => console.log(`Image ${index + 1} loaded successfully`)}
                         onError={(e) => {
-                          console.error(`Error loading image at ${url}`);
-                          e.currentTarget.src = 'https://source.unsplash.com/random/600x400?event';
+                          console.error(`Error loading image ${index + 1} at ${url}`);
+                          e.currentTarget.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZGRkIi8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxNCIgZmlsbD0iIzk5OSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPkltYWdlbSBuJmFtcDthZ3JhdmU7byBkaXNwb24mYWdyYXZlO3ZlbDwvdGV4dD48L3N2Zz4=';
                         }}
                       />
                       <span className="absolute bottom-2 right-2 bg-black/50 text-white text-xs px-2 py-1 rounded">
@@ -278,22 +282,42 @@ const SpaceDetails: React.FC<SpaceDetailsProps> = ({
         
         <TabsContent value="location" className="mt-4">
           <Card className="p-4">
-            {selectedSpace.latitude && selectedSpace.longitude ? (
-              <div className="h-[200px] bg-gray-100 rounded-md overflow-hidden">
-                <iframe
-                  width="100%"
-                  height="100%"
-                  frameBorder="0"
-                  src={`https://www.google.com/maps/embed/v1/place?key=AIzaSyDmquKmV6OtKkJCG2eEe4NIPE8MzcrkUyw&q=${selectedSpace.latitude},${selectedSpace.longitude}`}
-                  allowFullScreen
-                ></iframe>
+            <div className="space-y-4">
+              <div>
+                <h4 className="text-sm font-medium text-gray-700 mb-2">Endereço Completo</h4>
+                <p className="text-sm text-gray-600">
+                  {selectedSpace.address}, {selectedSpace.number} - {selectedSpace.state}
+                </p>
+                <p className="text-sm text-gray-600">CEP: {selectedSpace.zip_code}</p>
               </div>
-            ) : (
-              <div className="text-center py-8">
-                <MapPin size={48} className="mx-auto text-gray-300 mb-2" />
-                <p className="text-gray-500">Localização não definida</p>
-              </div>
-            )}
+              
+              {selectedSpace.latitude && selectedSpace.longitude ? (
+                <div>
+                  <h4 className="text-sm font-medium text-gray-700 mb-2">Mapa</h4>
+                  <div className="h-[200px] bg-gray-100 rounded-md overflow-hidden">
+                    <iframe
+                      width="100%"
+                      height="100%"
+                      frameBorder="0"
+                      src={`https://www.google.com/maps/embed/v1/place?key=AIzaSyDmquKmV6OtKkJCG2eEe4NIPE8MzcrkUyw&q=${selectedSpace.latitude},${selectedSpace.longitude}&zoom=15`}
+                      allowFullScreen
+                      title={`Localização de ${selectedSpace.name}`}
+                    ></iframe>
+                  </div>
+                  <p className="text-xs text-gray-500 mt-2">
+                    Coordenadas: {selectedSpace.latitude}, {selectedSpace.longitude}
+                  </p>
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  <MapPin size={48} className="mx-auto text-gray-300 mb-2" />
+                  <p className="text-gray-500">Coordenadas não definidas</p>
+                  <p className="text-xs text-gray-400 mt-1">
+                    O proprietário não definiu a localização exata no mapa
+                  </p>
+                </div>
+              )}
+            </div>
           </Card>
         </TabsContent>
       </Tabs>

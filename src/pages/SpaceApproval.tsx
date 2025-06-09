@@ -189,19 +189,42 @@ const SpaceApproval = () => {
           }
           
           try {
-            const { data, error } = await supabase.storage
+            // Primeiro, verificar se o arquivo existe no storage
+            const { data: fileData, error: fileError } = await supabase.storage
+              .from('spaces')
+              .list(photo.storage_path.split('/').slice(0, -1).join('/'), {
+                search: photo.storage_path.split('/').pop()
+              });
+
+            if (fileError || !fileData || fileData.length === 0) {
+              console.error("File not found in storage:", photo.storage_path);
+              return null;
+            }
+
+            // Criar URL pública para o arquivo
+            const { data: urlData } = supabase.storage
+              .from('spaces')
+              .getPublicUrl(photo.storage_path);
+            
+            if (urlData?.publicUrl) {
+              console.log("Created public URL for photo:", photo.id, urlData.publicUrl);
+              return urlData.publicUrl;
+            }
+
+            // Fallback: tentar criar signed URL
+            const { data: signedData, error: signedError } = await supabase.storage
               .from('spaces')
               .createSignedUrl(photo.storage_path, 3600);
             
-            if (error) {
-              console.error("Error creating signed URL:", error, "for path:", photo.storage_path);
+            if (signedError) {
+              console.error("Error creating signed URL:", signedError, "for path:", photo.storage_path);
               return null;
             }
             
-            console.log("Created signed URL for photo:", photo.id, data.signedUrl);
-            return data.signedUrl;
+            console.log("Created signed URL for photo:", photo.id, signedData.signedUrl);
+            return signedData.signedUrl;
           } catch (err) {
-            console.error("Exception when creating signed URL:", err);
+            console.error("Exception when creating URL:", err);
             return null;
           }
         })
