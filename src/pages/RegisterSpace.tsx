@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -143,8 +142,19 @@ const RegisterSpace = () => {
     },
   });
 
+  // Função para verificar se pelo menos uma categoria está selecionada
+  const hasAtLeastOneCategory = (data: FormValues) => {
+    return data.categoryWeddings || data.categoryCorporate || data.categoryBirthdays || data.categoryGraduations;
+  };
+
   const onSubmit = async (data: FormValues) => {
     if (currentStep < 4) {
+      // Se estamos na etapa 2 e tentando avançar para a 3, validar categorias
+      if (currentStep === 2 && !hasAtLeastOneCategory(data)) {
+        toast.error("Selecione pelo menos uma categoria de evento para continuar");
+        return;
+      }
+      
       setFormData({ ...formData, ...data });
       setCurrentStep(currentStep + 1);
     } else {
@@ -626,7 +636,7 @@ const RegisterSpace = () => {
               <div className="mt-8">
                 <h3 className="text-lg font-medium mb-4">Categorias de Eventos</h3>
                 <p className="text-sm text-muted-foreground mb-4">
-                  Selecione as categorias de eventos que seu espaço atende:
+                  Selecione pelo menos uma categoria de eventos que seu espaço atende:
                 </p>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
