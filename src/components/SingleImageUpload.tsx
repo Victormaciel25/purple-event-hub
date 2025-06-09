@@ -3,7 +3,6 @@ import React, { useState } from "react";
 import { X, Images } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { STORAGE } from "@/config/app-config";
 import imageCompression from "browser-image-compression";
 
 interface SingleImageUploadProps {
@@ -31,7 +30,6 @@ const SingleImageUpload: React.FC<SingleImageUploadProps> = ({
 }) => {
   const [previewUrls, setPreviewUrls] = useState<string[]>(initialImages);
 
-  // Função para comprimir a imagem
   const compressImage = async (file: File): Promise<File> => {
     try {
       const options = {
@@ -73,6 +71,25 @@ const SingleImageUpload: React.FC<SingleImageUploadProps> = ({
     setIsUploading(true);
     
     try {
+      // Verificar se o bucket existe antes de fazer upload
+      console.log("🔍 Verificando bucket 'spaces'...");
+      const { data: buckets, error: bucketsError } = await supabase.storage.listBuckets();
+      
+      if (bucketsError) {
+        console.error("❌ Erro ao listar buckets:", bucketsError);
+        toast.error("Erro ao acessar armazenamento");
+        return;
+      }
+      
+      const spacesBucket = buckets?.find(bucket => bucket.name === 'spaces');
+      if (!spacesBucket) {
+        console.error("❌ Bucket 'spaces' não encontrado!");
+        toast.error("Bucket de armazenamento não encontrado");
+        return;
+      }
+      
+      console.log("✅ Bucket 'spaces' encontrado:", spacesBucket);
+      
       const newUrls: string[] = [];
       
       for (const file of files) {
@@ -92,31 +109,30 @@ const SingleImageUpload: React.FC<SingleImageUploadProps> = ({
           continue;
         }
         
-        // Usar o bucket 'spaces' que já existe
         const fileExt = fileToUpload.name.split('.').pop();
         const fileName = `${Math.random().toString(36).substring(2, 15)}.${fileExt}`;
         const filePath = `${uploadPath}/${fileName}`;
         
-        console.log(`📤 Uploading to bucket 'spaces' with path: ${filePath}`);
+        console.log(`📤 Fazendo upload para bucket 'spaces' com caminho: ${filePath}`);
         
         const { data, error } = await supabase.storage
           .from('spaces')
           .upload(filePath, fileToUpload);
         
         if (error) {
-          console.error("Error uploading image:", error);
+          console.error("❌ Erro no upload:", error);
           toast.error(`Erro ao enviar imagem ${fileToUpload.name}: ${error.message}`);
           continue;
         }
         
-        console.log(`✅ Upload successful:`, data);
+        console.log(`✅ Upload realizado com sucesso:`, data);
         
-        // Get the public URL
+        // Obter a URL pública
         const { data: publicURLData } = supabase.storage
           .from('spaces')
           .getPublicUrl(filePath);
         
-        console.log(`🔗 Public URL created:`, publicURLData.publicUrl);
+        console.log(`🔗 URL pública criada:`, publicURLData.publicUrl);
         newUrls.push(publicURLData.publicUrl);
       }
       
@@ -127,7 +143,7 @@ const SingleImageUpload: React.FC<SingleImageUploadProps> = ({
         toast.success(`${newUrls.length} ${newUrls.length === 1 ? 'imagem enviada' : 'imagens enviadas'} com sucesso!`);
       }
     } catch (error) {
-      console.error("Error uploading images:", error);
+      console.error("💥 Erro geral no upload:", error);
       toast.error("Erro ao enviar as imagens. Tente novamente.");
     } finally {
       setIsUploading(false);
