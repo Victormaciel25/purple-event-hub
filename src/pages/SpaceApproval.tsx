@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { ChevronLeft } from "lucide-react";
@@ -151,8 +150,8 @@ const SpaceApproval = () => {
         console.error("Error fetching full space data:", fullDataError);
       }
 
-      // Usar o primeiro resultado da query ou fallback para dados básicos
-      const additionalData = fullSpaceData && fullSpaceData.length > 0 ? fullSpaceData[0] : {};
+      // Usar o primeiro resultado da query ou usar um objeto vazio tipado
+      const additionalData: any = fullSpaceData && fullSpaceData.length > 0 ? fullSpaceData[0] : {};
 
       // Buscar fotos do espaço
       const { data: photosData, error: photosError } = await supabase
