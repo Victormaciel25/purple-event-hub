@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { ChevronLeft } from "lucide-react";
@@ -52,8 +53,11 @@ const SpaceApproval = () => {
 
   useEffect(() => {
     if (selectedSpace?.photos) {
+      console.log("Selected space changed, fetching photo URLs for space:", selectedSpace.id);
+      console.log("Photos from selected space:", selectedSpace.photos);
       fetchPhotoUrls(selectedSpace.photos);
     } else {
+      console.log("No photos found for selected space or space is null");
       setPhotoUrls([]);
     }
   }, [selectedSpace]);
@@ -154,8 +158,8 @@ const SpaceApproval = () => {
       if (photosError) {
         console.error("Error fetching photos:", photosError);
       } else {
-        console.log("Successfully fetched photos data:", photosData);
-        console.log("Number of photos found:", photosData?.length || 0);
+        console.log("✓ Successfully fetched photos data:", photosData);
+        console.log("✓ Number of photos found:", photosData?.length || 0);
       }
 
       // Combinar todos os dados
@@ -165,7 +169,7 @@ const SpaceApproval = () => {
         photos: photosData || []
       };
 
-      console.log("Combined space details:", combinedData);
+      console.log("✓ Combined space details with photos:", combinedData);
       setSelectedSpace(combinedData as unknown as SpaceDetailsType);
       setSheetOpen(true);
     } catch (error) {
@@ -176,11 +180,11 @@ const SpaceApproval = () => {
 
   const fetchPhotoUrls = async (photos: { id: string; storage_path: string }[]) => {
     try {
-      console.log("Starting fetchPhotoUrls with photos:", photos);
-      console.log("Total photos to process:", photos?.length || 0);
+      console.log("🔍 Starting fetchPhotoUrls with photos:", photos);
+      console.log("🔍 Total photos to process:", photos?.length || 0);
       
       if (!photos || photos.length === 0) {
-        console.log("No photos available");
+        console.log("❌ No photos available");
         setPhotoUrls([]);
         return;
       }
@@ -188,12 +192,12 @@ const SpaceApproval = () => {
       const urls = await Promise.all(
         photos.map(async (photo, index) => {
           if (!photo.storage_path) {
-            console.error("Missing storage path for photo:", photo);
+            console.error(`❌ Missing storage path for photo ${index + 1}:`, photo);
             return null;
           }
           
           try {
-            console.log(`Processing photo ${index + 1}/${photos.length} with storage_path:`, photo.storage_path);
+            console.log(`🔄 Processing photo ${index + 1}/${photos.length} with storage_path:`, photo.storage_path);
             
             // Primeiro, verificar se o bucket 'spaces' existe e está configurado corretamente
             const { data: publicUrlData } = supabase.storage
@@ -201,41 +205,41 @@ const SpaceApproval = () => {
               .getPublicUrl(photo.storage_path);
             
             if (publicUrlData?.publicUrl) {
-              console.log(`Public URL created for photo ${index + 1}:`, publicUrlData.publicUrl);
+              console.log(`✅ Public URL created for photo ${index + 1}:`, publicUrlData.publicUrl);
               return publicUrlData.publicUrl;
             }
 
             // Fallback: tentar criar signed URL se a URL pública não funcionar
-            console.log(`Trying signed URL for photo ${index + 1}`);
+            console.log(`🔄 Trying signed URL for photo ${index + 1}`);
             const { data: signedData, error: signedError } = await supabase.storage
               .from('spaces')
               .createSignedUrl(photo.storage_path, 3600);
             
             if (signedError) {
-              console.error(`Error creating signed URL for photo ${index + 1}:`, signedError);
+              console.error(`❌ Error creating signed URL for photo ${index + 1}:`, signedError);
               return null;
             }
             
             if (signedData?.signedUrl) {
-              console.log(`Signed URL created for photo ${index + 1}:`, signedData.signedUrl);
+              console.log(`✅ Signed URL created for photo ${index + 1}:`, signedData.signedUrl);
               return signedData.signedUrl;
             }
             
             return null;
           } catch (err) {
-            console.error(`Exception when creating URL for photo ${index + 1}:`, photo.id, err);
+            console.error(`❌ Exception when creating URL for photo ${index + 1}:`, photo.id, err);
             return null;
           }
         })
       );
       
       const validUrls = urls.filter(url => url !== null) as string[];
-      console.log("Final valid photo URLs:", validUrls);
-      console.log("Total valid URLs found:", validUrls.length, "out of", photos.length);
+      console.log("🎯 Final valid photo URLs:", validUrls);
+      console.log("🎯 Total valid URLs found:", validUrls.length, "out of", photos.length);
       
       setPhotoUrls(validUrls);
     } catch (error) {
-      console.error("Error in fetchPhotoUrls:", error);
+      console.error("❌ Error in fetchPhotoUrls:", error);
       toast.error("Erro ao carregar fotos");
       setPhotoUrls([]);
     }

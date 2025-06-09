@@ -130,12 +130,15 @@ const SpaceDetails: React.FC<SpaceDetailsProps> = ({
     }
   };
 
+  console.log("SpaceDetails received photoUrls:", photoUrls);
+  console.log("Total photoUrls count:", photoUrls?.length || 0);
+
   return (
     <div className="mt-6">
       <Tabs defaultValue="details" className="w-full">
         <TabsList className="w-full">
           <TabsTrigger value="details" className="flex-1">Detalhes</TabsTrigger>
-          <TabsTrigger value="photos" className="flex-1">Fotos ({photoUrls.length})</TabsTrigger>
+          <TabsTrigger value="photos" className="flex-1">Fotos ({photoUrls?.length || 0})</TabsTrigger>
           <TabsTrigger value="location" className="flex-1">Localização</TabsTrigger>
         </TabsList>
         
@@ -245,7 +248,7 @@ const SpaceDetails: React.FC<SpaceDetailsProps> = ({
         
         <TabsContent value="photos" className="mt-4">
           <Card className="p-4">
-            {photoUrls.length === 0 ? (
+            {!photoUrls || photoUrls.length === 0 ? (
               <div className="text-center py-8">
                 <Image size={48} className="mx-auto text-gray-300 mb-2" />
                 <p className="text-gray-500">Nenhuma foto disponível</p>
@@ -256,25 +259,35 @@ const SpaceDetails: React.FC<SpaceDetailsProps> = ({
             ) : (
               <>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {photoUrls.map((url, index) => (
-                    <div key={index} className="relative">
-                      <img 
-                        src={url} 
-                        alt={`Espaço ${selectedSpace.name} ${index + 1}`}
-                        className="w-full h-40 object-cover rounded-md"
-                        onLoad={() => console.log(`Image ${index + 1} loaded successfully`)}
-                        onError={(e) => {
-                          console.error(`Error loading image ${index + 1} at ${url}`);
-                          e.currentTarget.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZGRkIi8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxNCIgZmlsbD0iIzk5OSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPkltYWdlbSBuJmFtcDthZ3JhdmU7byBkaXNwb24mYWdyYXZlO3ZlbDwvdGV4dD48L3N2Zz4=';
-                        }}
-                      />
-                      <span className="absolute bottom-2 right-2 bg-black/50 text-white text-xs px-2 py-1 rounded">
-                        {index + 1}/{photoUrls.length}
-                      </span>
-                    </div>
-                  ))}
+                  {photoUrls.map((url, index) => {
+                    console.log(`Rendering photo ${index + 1} with URL:`, url);
+                    return (
+                      <div key={index} className="relative">
+                        <img 
+                          src={url} 
+                          alt={`Espaço ${selectedSpace.name} ${index + 1}`}
+                          className="w-full h-40 object-cover rounded-md border"
+                          onLoad={() => {
+                            console.log(`✓ Photo ${index + 1} loaded successfully from:`, url);
+                          }}
+                          onError={(e) => {
+                            console.error(`✗ Error loading photo ${index + 1} from:`, url);
+                            console.error("Image error event:", e);
+                            // Fallback para uma imagem de placeholder
+                            e.currentTarget.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZGRkIi8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxNCIgZmlsbD0iIzk5OSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPkVycm8gYW8gY2FycmVnYXIgaW1hZ2VtPC90ZXh0Pjwvc3ZnPg==';
+                          }}
+                        />
+                        <span className="absolute bottom-2 right-2 bg-black/50 text-white text-xs px-2 py-1 rounded">
+                          {index + 1}/{photoUrls.length}
+                        </span>
+                      </div>
+                    );
+                  })}
                 </div>
                 <h3 className="text-lg font-medium mt-4 text-center">{selectedSpace.name}</h3>
+                <p className="text-sm text-gray-500 text-center mt-2">
+                  {photoUrls.length} foto{photoUrls.length !== 1 ? 's' : ''} encontrada{photoUrls.length !== 1 ? 's' : ''}
+                </p>
               </>
             )}
           </Card>
