@@ -1,0 +1,220 @@
+
+import React from "react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Card } from "@/components/ui/card";
+import { Image, MapPin, Home, User, Phone, DollarSign, Check, X } from "lucide-react";
+import type { SpaceWithProfile } from "@/types/approval";
+
+interface SpaceDetailsTabsProps {
+  space: SpaceWithProfile;
+  photoUrls: string[];
+  photosLoading: boolean;
+}
+
+const SpaceDetailsTabs: React.FC<SpaceDetailsTabsProps> = ({ 
+  space, 
+  photoUrls, 
+  photosLoading 
+}) => {
+  return (
+    <Tabs defaultValue="details" className="w-full">
+      <TabsList className="w-full">
+        <TabsTrigger value="details" className="flex-1">Detalhes</TabsTrigger>
+        <TabsTrigger value="photos" className="flex-1">
+          Fotos ({photoUrls?.length || 0})
+        </TabsTrigger>
+        <TabsTrigger value="location" className="flex-1">Localização</TabsTrigger>
+      </TabsList>
+      
+      <TabsContent value="details" className="mt-4 space-y-4">
+        <Card className="p-4">
+          <div className="flex items-start">
+            <Home className="text-gray-400 mt-1 mr-3" size={18} />
+            <div>
+              <p className="text-sm font-medium text-gray-500">Descrição</p>
+              <p className="text-sm">{space.description}</p>
+            </div>
+          </div>
+        </Card>
+
+        <div className="grid grid-cols-2 gap-4">
+          <Card className="p-4">
+            <div className="flex items-center">
+              <Phone className="text-gray-400 mr-3" size={18} />
+              <div>
+                <p className="text-sm font-medium text-gray-500">Telefone</p>
+                <p className="text-sm">{space.phone}</p>
+              </div>
+            </div>
+          </Card>
+
+          <Card className="p-4">
+            <div className="flex items-center">
+              <User className="text-gray-400 mr-3" size={18} />
+              <div>
+                <p className="text-sm font-medium text-gray-500">Capacidade</p>
+                <p className="text-sm">{space.capacity} pessoas</p>
+              </div>
+            </div>
+          </Card>
+        </div>
+
+        <Card className="p-4">
+          <div className="flex items-center">
+            <DollarSign className="text-gray-400 mr-3" size={18} />
+            <div>
+              <p className="text-sm font-medium text-gray-500">Valor</p>
+              <p className="text-sm">R$ {space.price}</p>
+            </div>
+          </div>
+        </Card>
+
+        <Card className="p-4">
+          <div className="flex items-center">
+            <MapPin className="text-gray-400 mr-3" size={18} />
+            <div>
+              <p className="text-sm font-medium text-gray-500">Endereço</p>
+              <p className="text-sm">
+                {space.address}, {space.number} - {space.state}, {space.zip_code}
+              </p>
+            </div>
+          </div>
+        </Card>
+
+        <Card className="p-4">
+          <p className="text-sm font-medium text-gray-500 mb-2">Comodidades</p>
+          <div className="grid grid-cols-2 gap-2">
+            <div className="flex items-center">
+              {space.wifi ? 
+                <Check size={16} className="text-green-500 mr-1" /> : 
+                <X size={16} className="text-red-500 mr-1" />
+              }
+              <span className="text-sm">Wi-Fi</span>
+            </div>
+            <div className="flex items-center">
+              {space.parking ? 
+                <Check size={16} className="text-green-500 mr-1" /> : 
+                <X size={16} className="text-red-500 mr-1" />
+              }
+              <span className="text-sm">Estacionamento</span>
+            </div>
+            <div className="flex items-center">
+              {space.sound_system ? 
+                <Check size={16} className="text-green-500 mr-1" /> : 
+                <X size={16} className="text-red-500 mr-1" />
+              }
+              <span className="text-sm">Sistema de som</span>
+            </div>
+            <div className="flex items-center">
+              {space.air_conditioning ? 
+                <Check size={16} className="text-green-500 mr-1" /> : 
+                <X size={16} className="text-red-500 mr-1" />
+              }
+              <span className="text-sm">Ar-condicionado</span>
+            </div>
+            <div className="flex items-center">
+              {space.kitchen ? 
+                <Check size={16} className="text-green-500 mr-1" /> : 
+                <X size={16} className="text-red-500 mr-1" />
+              }
+              <span className="text-sm">Cozinha</span>
+            </div>
+            <div className="flex items-center">
+              {space.pool ? 
+                <Check size={16} className="text-green-500 mr-1" /> : 
+                <X size={16} className="text-red-500 mr-1" />
+              }
+              <span className="text-sm">Piscina</span>
+            </div>
+          </div>
+        </Card>
+      </TabsContent>
+      
+      <TabsContent value="photos" className="mt-4">
+        <Card className="p-4">
+          {photosLoading ? (
+            <div className="text-center py-8">
+              <p className="text-gray-500">Carregando fotos...</p>
+            </div>
+          ) : !photoUrls || photoUrls.length === 0 ? (
+            <div className="text-center py-8">
+              <Image size={48} className="mx-auto text-gray-300 mb-2" />
+              <p className="text-gray-500">Nenhuma foto disponível</p>
+              <p className="text-xs text-gray-400 mt-1">
+                Verifique se as fotos foram enviadas corretamente
+              </p>
+            </div>
+          ) : (
+            <>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {photoUrls.map((url, index) => (
+                  <div key={index} className="relative">
+                    <img 
+                      src={url} 
+                      alt={`${space.name} ${index + 1}`}
+                      className="w-full h-40 object-cover rounded-md border"
+                      onError={(e) => {
+                        console.error(`Erro ao carregar foto ${index + 1}:`, url);
+                        e.currentTarget.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZGRkIi8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxNCIgZmlsbD0iIzk5OSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPkVycm8gYW8gY2FycmVnYXIgaW1hZ2VtPC90ZXh0Pjwvc3ZnPg==';
+                      }}
+                    />
+                    <span className="absolute bottom-2 right-2 bg-black/50 text-white text-xs px-2 py-1 rounded">
+                      {index + 1}/{photoUrls.length}
+                    </span>
+                  </div>
+                ))}
+              </div>
+              <h3 className="text-lg font-medium mt-4 text-center">{space.name}</h3>
+              <p className="text-sm text-gray-500 text-center mt-2">
+                {photoUrls.length} foto{photoUrls.length !== 1 ? 's' : ''} encontrada{photoUrls.length !== 1 ? 's' : ''}
+              </p>
+            </>
+          )}
+        </Card>
+      </TabsContent>
+      
+      <TabsContent value="location" className="mt-4">
+        <Card className="p-4">
+          <div className="space-y-4">
+            <div>
+              <h4 className="text-sm font-medium text-gray-700 mb-2">Endereço Completo</h4>
+              <p className="text-sm text-gray-600">
+                {space.address}, {space.number} - {space.state}
+              </p>
+              <p className="text-sm text-gray-600">CEP: {space.zip_code}</p>
+            </div>
+            
+            {space.latitude && space.longitude ? (
+              <div>
+                <h4 className="text-sm font-medium text-gray-700 mb-2">Mapa</h4>
+                <div className="h-[200px] bg-gray-100 rounded-md overflow-hidden">
+                  <iframe
+                    width="100%"
+                    height="100%"
+                    frameBorder="0"
+                    src={`https://www.google.com/maps/embed/v1/place?key=AIzaSyDmquKmV6OtKkJCG2eEe4NIPE8MzcrkUyw&q=${space.latitude},${space.longitude}&zoom=15`}
+                    allowFullScreen
+                    title={`Localização de ${space.name}`}
+                  ></iframe>
+                </div>
+                <p className="text-xs text-gray-500 mt-2">
+                  Coordenadas: {space.latitude}, {space.longitude}
+                </p>
+              </div>
+            ) : (
+              <div className="text-center py-8">
+                <MapPin size={48} className="mx-auto text-gray-300 mb-2" />
+                <p className="text-gray-500">Coordenadas não definidas</p>
+                <p className="text-xs text-gray-400 mt-1">
+                  O proprietário não definiu a localização exata no mapa
+                </p>
+              </div>
+            )}
+          </div>
+        </Card>
+      </TabsContent>
+    </Tabs>
+  );
+};
+
+export default SpaceDetailsTabs;
