@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { X, Images } from "lucide-react";
 import { toast } from "sonner";
@@ -33,34 +34,29 @@ const SingleImageUpload: React.FC<SingleImageUploadProps> = ({
   // Função para comprimir a imagem
   const compressImage = async (file: File): Promise<File> => {
     try {
-      // Opções para compressão
       const options = {
-        maxSizeMB: 1.9, // Comprime para menos de 2MB
-        maxWidthOrHeight: 1280, // Limita a largura/altura
+        maxSizeMB: 1.9,
+        maxWidthOrHeight: 1280,
         useWebWorker: true,
         fileType: file.type,
       };
       
-      // Log inicial do tamanho da imagem
       console.log(`Comprimindo imagem: ${file.name} (${(file.size / 1024 / 1024).toFixed(2)}MB)`);
       
-      // Comprimir a imagem
       const compressedFile = await imageCompression(file, options);
       
-      // Criando um novo arquivo com o mesmo nome (para manter a extensão original)
       const resultFile = new File([compressedFile], file.name, {
         type: file.type,
         lastModified: new Date().getTime(),
       });
       
-      // Log do resultado da compressão
       console.log(`Imagem comprimida: ${file.name} (${(resultFile.size / 1024 / 1024).toFixed(2)}MB)`);
       
       return resultFile;
     } catch (error) {
       console.error("Erro ao comprimir imagem:", error);
       toast.error(`Erro ao comprimir a imagem ${file.name}`);
-      return file; // Retorna arquivo original em caso de falha na compressão
+      return file;
     }
   };
 
@@ -79,11 +75,9 @@ const SingleImageUpload: React.FC<SingleImageUploadProps> = ({
     try {
       const newUrls: string[] = [];
       
-      // Process each file
       for (const file of files) {
         const fileSizeInMB = file.size / (1024 * 1024);
         
-        // Verificar se precisamos comprimir (imagens maiores que 1.9MB)
         let fileToUpload = file;
         if (fileSizeInMB > 1.9) {
           toast.info(`Comprimindo imagem: ${file.name}`);
@@ -92,40 +86,37 @@ const SingleImageUpload: React.FC<SingleImageUploadProps> = ({
           console.log(`Imagem já está abaixo do limite: ${file.name} (${fileSizeInMB.toFixed(2)}MB)`);
         }
         
-        // Verificar novamente o tamanho após a compressão
         const finalSizeInMB = fileToUpload.size / (1024 * 1024);
         if (finalSizeInMB > maxSize) {
           toast.error(`A imagem ${file.name} ainda é muito grande mesmo após compressão. Tamanho máximo: ${maxSize}MB`);
           continue;
         }
         
-        // Create a local preview
-        const objectUrl = URL.createObjectURL(fileToUpload);
-        
-        // Upload to Supabase Storage
+        // Usar o bucket 'spaces' que já existe
         const fileExt = fileToUpload.name.split('.').pop();
         const fileName = `${Math.random().toString(36).substring(2, 15)}.${fileExt}`;
-        const filePath = `${fileName}`;
+        const filePath = `${uploadPath}/${fileName}`;
         
-        // Check if bucket exists, if not we'll use the spaces bucket from config
-        const bucketName = STORAGE.SPACES_BUCKET || "spaces";
+        console.log(`📤 Uploading to bucket 'spaces' with path: ${filePath}`);
         
         const { data, error } = await supabase.storage
-          .from(bucketName)
-          .upload(uploadPath ? `${uploadPath}/${filePath}` : filePath, fileToUpload);
+          .from('spaces')
+          .upload(filePath, fileToUpload);
         
         if (error) {
           console.error("Error uploading image:", error);
-          toast.error(`Erro ao enviar imagem ${fileToUpload.name}.`);
-          URL.revokeObjectURL(objectUrl);
+          toast.error(`Erro ao enviar imagem ${fileToUpload.name}: ${error.message}`);
           continue;
         }
         
+        console.log(`✅ Upload successful:`, data);
+        
         // Get the public URL
         const { data: publicURLData } = supabase.storage
-          .from(bucketName)
-          .getPublicUrl(uploadPath ? `${uploadPath}/${filePath}` : filePath);
+          .from('spaces')
+          .getPublicUrl(filePath);
         
+        console.log(`🔗 Public URL created:`, publicURLData.publicUrl);
         newUrls.push(publicURLData.publicUrl);
       }
       
@@ -140,7 +131,6 @@ const SingleImageUpload: React.FC<SingleImageUploadProps> = ({
       toast.error("Erro ao enviar as imagens. Tente novamente.");
     } finally {
       setIsUploading(false);
-      // Reset the file input
       if (event.target) {
         event.target.value = '';
       }
