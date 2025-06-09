@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { Heart, HelpCircle, Plus, Home, Shield, CheckSquare, Users, Briefcase, Clipboard, FileText } from "lucide-react";
+import { Heart, HelpCircle, Plus, Home, Shield, CheckSquare, Users, Briefcase, Clipboard, FileText, CreditCard } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useUserRoles } from "@/hooks/useUserRoles";
 import FavoriteSpaces from "../components/FavoriteSpaces";
@@ -161,6 +161,24 @@ const Profile = () => {
     navigate("/admin-management");
   };
 
+  const handleSubscriptionsAccess = () => {
+    if (!isSuperAdmin) {
+      setAlert({
+        message: "Você não tem permissões de super administrador",
+        type: 'error'
+      });
+      
+      // Clear alert after 3 seconds
+      setTimeout(() => {
+        setAlert({ message: '', type: null });
+      }, 3000);
+      
+      return;
+    }
+    
+    navigate("/subscriptions-management");
+  };
+
   const refreshProfile = async () => {
     if (!session?.user?.id) return;
     
@@ -295,6 +313,13 @@ const Profile = () => {
         icon: Users,
         label: "Administradores",
         onClick: handleSuperAdminAccess,
+        iconClassName: "text-red-600"
+      });
+      
+      adminItems.push({
+        icon: CreditCard,
+        label: "Assinaturas",
+        onClick: handleSubscriptionsAccess,
         iconClassName: "text-red-600"
       });
     }

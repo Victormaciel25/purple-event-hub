@@ -30,6 +30,7 @@ import UserSpaces from "./pages/UserSpaces";
 import UserVendors from "./pages/UserVendors";
 import EditSpace from "./pages/EditSpace";
 import PromoteSpace from "./pages/PromoteSpace";
+import SubscriptionsManagement from "./pages/SubscriptionsManagement";
 import Index from "./pages/Index";
 import { useSpaceDeletionNotifications } from "./hooks/useSpaceDeletionNotifications";
 import { useVendorDeletionNotifications } from "./hooks/useVendorDeletionNotifications";
@@ -141,6 +142,7 @@ const App: React.FC = () => {
               <Route path="/space-approval" element={<SpaceApproval />} />
               <Route path="/vendor-approval" element={<VendorApproval />} />
               <Route path="/admin-management" element={<AdminManagement />} />
+              <Route path="/subscriptions-management" element={<SubscriptionsManagement />} />
               <Route path="/user-spaces" element={<UserSpaces />} />
               <Route path="/user-vendors" element={<UserVendors />} />
               <Route path="/edit-space/:id" element={<EditSpace />} />
