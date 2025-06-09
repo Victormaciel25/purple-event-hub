@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft, Save } from "lucide-react";
@@ -214,7 +213,11 @@ const EditVendor = () => {
 
             <div>
               <Label htmlFor="category">Categoria *</Label>
-              <Select value={formData.category} onValueChange={(value) => handleInputChange("category", value)}>
+              <Select 
+                value={formData.category} 
+                onValueChange={(value) => handleInputChange("category", value)}
+                required
+              >
                 <SelectTrigger>
                   <SelectValue placeholder="Selecione uma categoria" />
                 </SelectTrigger>
@@ -316,7 +319,7 @@ const EditVendor = () => {
           </CardContent>
         </Card>
 
-        <div className="flex justify-end space-x-4">
+        <div className="flex justify-end space-x-4 sticky bottom-4 bg-background p-4 border-t">
           <Button
             type="button"
             variant="outline"
