@@ -119,28 +119,60 @@ const SpaceApproval = () => {
 
   const fetchSpaceDetails = async (spaceId: string) => {
     try {
-      const { data, error } = await supabase
+      console.log("Fetching space details for ID:", spaceId);
+      
+      // Primeiro, buscar os dados básicos do espaço usando a função RPC
+      const { data: basicSpaceData, error: spaceError } = await supabase
+        .rpc('admin_get_all_spaces');
+
+      if (spaceError) {
+        console.error("Error fetching basic space data:", spaceError);
+        throw spaceError;
+      }
+
+      // Encontrar o espaço específico nos dados retornados
+      const spaceData = basicSpaceData?.find((space: any) => space.id === spaceId);
+      
+      if (!spaceData) {
+        console.error("Space not found in admin data");
+        throw new Error("Espaço não encontrado");
+      }
+
+      console.log("Found basic space data:", spaceData);
+
+      // Buscar dados adicionais do espaço (como descrição, endereço, etc.)
+      const { data: fullSpaceData, error: fullDataError } = await supabase
         .from("spaces")
-        .select(`
-          *,
-          profiles:profiles!user_id (
-            first_name, 
-            last_name
-          ),
-          photos:space_photos (
-            id, 
-            storage_path
-          )
-        `)
+        .select("*")
         .eq("id", spaceId)
         .single();
 
-      if (error) {
-        throw error;
+      if (fullDataError) {
+        console.error("Error fetching full space data:", fullDataError);
+        // Se não conseguir buscar da tabela diretamente, usar os dados básicos
+        console.log("Using basic data only");
       }
 
-      console.log("Fetched space details:", data);
-      setSelectedSpace(data as unknown as SpaceDetailsType);
+      // Buscar fotos do espaço
+      const { data: photosData, error: photosError } = await supabase
+        .from("space_photos")
+        .select("id, storage_path")
+        .eq("space_id", spaceId);
+
+      if (photosError) {
+        console.error("Error fetching photos:", photosError);
+      }
+
+      // Combinar os dados
+      const combinedData = {
+        ...spaceData,
+        ...(fullSpaceData || {}),
+        photos: photosData || [],
+        profiles: spaceData.profiles
+      };
+
+      console.log("Combined space details:", combinedData);
+      setSelectedSpace(combinedData as unknown as SpaceDetailsType);
       setSheetOpen(true);
     } catch (error) {
       console.error("Error fetching space details:", error);
