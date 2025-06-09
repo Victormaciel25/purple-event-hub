@@ -33,6 +33,7 @@ import EditVendor from "./pages/EditVendor";
 import PromoteSpace from "./pages/PromoteSpace";
 import SubscriptionsManagement from "./pages/SubscriptionsManagement";
 import Index from "./pages/Index";
+import VendorPendingApproval from "./components/VendorPendingApproval";
 import { useSpaceDeletionNotifications } from "./hooks/useSpaceDeletionNotifications";
 import { useVendorDeletionNotifications } from "./hooks/useVendorDeletionNotifications";
 
@@ -133,6 +134,7 @@ const App: React.FC = () => {
               <Route path="/explore" element={<Explore />} />
               <Route path="/vendors" element={<Vendors />} />
               <Route path="/vendor/:id" element={<VendorDetails />} />
+              <Route path="/vendor-pending/:id" element={<VendorPendingApproval />} />
               <Route path="/register-vendor" element={<RegisterVendor />} />
               <Route path="/edit-vendor/:id" element={<EditVendor />} />
               <Route path="/map" element={<Map />} />

@@ -31,7 +31,11 @@ const VendorCard: React.FC<VendorProps> = ({
   const navigate = useNavigate();
 
   const handleClick = () => {
-    navigate(`/vendor/${id}`);
+    if (status === 'pending') {
+      navigate(`/vendor-pending/${id}`);
+    } else {
+      navigate(`/vendor/${id}`);
+    }
   };
 
   const handlePhoneClick = (e: React.MouseEvent) => {
