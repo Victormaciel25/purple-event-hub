@@ -15,12 +15,13 @@ interface Subscription {
   user_id: string;
   space_id: string;
   plan_id: string;
-  payment_id: string | null;
-  payment_status: string;
+  subscription_id: string;
+  status: string;
   amount: number;
+  payer_email: string;
   created_at: string;
-  expires_at: string | null;
-  active: boolean;
+  started_at: string | null;
+  next_billing_date: string | null;
   user_profile: {
     first_name: string | null;
     last_name: string | null;
@@ -54,23 +55,23 @@ const SubscriptionsManagement = () => {
       setLoading(true);
       setError(null);
       
-      // First get the promotions
-      const { data: promotionsData, error: promotionsError } = await supabase
-        .from("space_promotions")
+      // Buscar assinaturas na tabela space_subscriptions com plan_id correto
+      const { data: subscriptionsData, error: subscriptionsError } = await supabase
+        .from("space_subscriptions")
         .select("*")
-        .eq("plan_id", "monthly_recurring")
+        .eq("plan_id", "monthly-recurring")
         .order("created_at", { ascending: false });
 
-      if (promotionsError) throw promotionsError;
+      if (subscriptionsError) throw subscriptionsError;
 
-      if (!promotionsData || promotionsData.length === 0) {
+      if (!subscriptionsData || subscriptionsData.length === 0) {
         setSubscriptions([]);
         return;
       }
 
       // Get unique user IDs and space IDs
-      const userIds = [...new Set(promotionsData.map(p => p.user_id))];
-      const spaceIds = [...new Set(promotionsData.map(p => p.space_id))];
+      const userIds = [...new Set(subscriptionsData.map(s => s.user_id))];
+      const spaceIds = [...new Set(subscriptionsData.map(s => s.space_id))];
 
       // Fetch profiles for these users
       const { data: profilesData, error: profilesError } = await supabase
@@ -93,10 +94,10 @@ const SubscriptionsManagement = () => {
       const spacesMap = new Map(spacesData?.map(s => [s.id, s]) || []);
 
       // Combine the data
-      const subscriptionsWithDetails = promotionsData.map(promotion => ({
-        ...promotion,
-        user_profile: profilesMap.get(promotion.user_id) || null,
-        space: spacesMap.get(promotion.space_id) || null
+      const subscriptionsWithDetails = subscriptionsData.map(subscription => ({
+        ...subscription,
+        user_profile: profilesMap.get(subscription.user_id) || null,
+        space: spacesMap.get(subscription.space_id) || null
       }));
 
       setSubscriptions(subscriptionsWithDetails);
@@ -125,18 +126,16 @@ const SubscriptionsManagement = () => {
     });
   };
 
-  const getStatusBadge = (status: string, active: boolean) => {
-    if (!active) {
-      return <Badge variant="destructive">Inativa</Badge>;
-    }
-    
+  const getStatusBadge = (status: string) => {
     switch (status) {
-      case 'approved':
-        return <Badge variant="default" className="bg-green-500">Aprovada</Badge>;
+      case 'authorized':
+        return <Badge variant="default" className="bg-green-500">Autorizada</Badge>;
       case 'pending':
         return <Badge variant="secondary">Pendente</Badge>;
-      case 'rejected':
-        return <Badge variant="destructive">Rejeitada</Badge>;
+      case 'cancelled':
+        return <Badge variant="destructive">Cancelada</Badge>;
+      case 'paused':
+        return <Badge variant="secondary">Pausada</Badge>;
       default:
         return <Badge variant="secondary">{status}</Badge>;
     }
@@ -208,11 +207,13 @@ const SubscriptionsManagement = () => {
                   <TableRow>
                     <TableHead>Usuário</TableHead>
                     <TableHead>Espaço</TableHead>
+                    <TableHead>Email do Pagador</TableHead>
                     <TableHead>Valor</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Criada em</TableHead>
-                    <TableHead>Expira em</TableHead>
-                    <TableHead>ID do Pagamento</TableHead>
+                    <TableHead>Iniciada em</TableHead>
+                    <TableHead>Próxima Cobrança</TableHead>
+                    <TableHead>ID da Assinatura</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -232,11 +233,16 @@ const SubscriptionsManagement = () => {
                       <TableCell>
                         {subscription.space?.name || 'Espaço não encontrado'}
                       </TableCell>
+                      <TableCell>
+                        <code className="text-xs bg-muted px-2 py-1 rounded">
+                          {subscription.payer_email}
+                        </code>
+                      </TableCell>
                       <TableCell className="font-medium">
                         {formatCurrency(subscription.amount)}
                       </TableCell>
                       <TableCell>
-                        {getStatusBadge(subscription.payment_status, subscription.active)}
+                        {getStatusBadge(subscription.status)}
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2 text-sm">
@@ -245,10 +251,20 @@ const SubscriptionsManagement = () => {
                         </div>
                       </TableCell>
                       <TableCell>
-                        {subscription.expires_at ? (
+                        {subscription.started_at ? (
                           <div className="flex items-center gap-2 text-sm">
                             <Calendar size={14} className="text-muted-foreground" />
-                            {formatDate(subscription.expires_at)}
+                            {formatDate(subscription.started_at)}
+                          </div>
+                        ) : (
+                          <span className="text-muted-foreground">-</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {subscription.next_billing_date ? (
+                          <div className="flex items-center gap-2 text-sm">
+                            <Calendar size={14} className="text-muted-foreground" />
+                            {formatDate(subscription.next_billing_date)}
                           </div>
                         ) : (
                           <span className="text-muted-foreground">-</span>
@@ -256,7 +272,7 @@ const SubscriptionsManagement = () => {
                       </TableCell>
                       <TableCell>
                         <code className="text-xs bg-muted px-2 py-1 rounded">
-                          {subscription.payment_id || 'N/A'}
+                          {subscription.subscription_id}
                         </code>
                       </TableCell>
                     </TableRow>
@@ -270,8 +286,8 @@ const SubscriptionsManagement = () => {
 
       <div className="mt-6 text-sm text-muted-foreground">
         <p>Total de assinaturas: {subscriptions.length}</p>
-        <p>Assinaturas ativas: {subscriptions.filter(s => s.active).length}</p>
-        <p>Assinaturas inativas: {subscriptions.filter(s => !s.active).length}</p>
+        <p>Assinaturas autorizadas: {subscriptions.filter(s => s.status === 'authorized').length}</p>
+        <p>Outras assinaturas: {subscriptions.filter(s => s.status !== 'authorized').length}</p>
       </div>
     </div>
   );
