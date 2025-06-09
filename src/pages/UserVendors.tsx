@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, Plus, RefreshCw } from "lucide-react";
@@ -92,7 +93,6 @@ const UserVendors = () => {
         onValueChange={setActiveTab}
         className="w-full"
       >
-        {/* duas colunas por linha */}
         <TabsList className="w-full grid grid-cols-2 gap-2 mb-10">
           <TabsTrigger value="all" className="rounded-md w-full h-full">
             Todos ({vendors.length})
@@ -131,9 +131,9 @@ const UserVendors = () => {
                   category={vendor.category}
                   rating={0}
                   contactNumber={vendor.contact_number}
-                  image={
-                    vendor.images?.[0] ?? "/placeholder.svg"
-                  }
+                  image={vendor.images?.[0] ?? "/placeholder.svg"}
+                  status={vendor.status}
+                  showEditButton={true}
                 />
               ))}
             </div>

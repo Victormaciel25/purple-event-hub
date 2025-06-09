@@ -29,6 +29,7 @@ import AdminManagement from "./pages/AdminManagement";
 import UserSpaces from "./pages/UserSpaces";
 import UserVendors from "./pages/UserVendors";
 import EditSpace from "./pages/EditSpace";
+import EditVendor from "./pages/EditVendor";
 import PromoteSpace from "./pages/PromoteSpace";
 import SubscriptionsManagement from "./pages/SubscriptionsManagement";
 import Index from "./pages/Index";
@@ -133,6 +134,7 @@ const App: React.FC = () => {
               <Route path="/vendors" element={<Vendors />} />
               <Route path="/vendor/:id" element={<VendorDetails />} />
               <Route path="/register-vendor" element={<RegisterVendor />} />
+              <Route path="/edit-vendor/:id" element={<EditVendor />} />
               <Route path="/map" element={<Map />} />
               <Route path="/messages" element={<Messages />} />
               <Route path="/profile" element={<Profile />} />

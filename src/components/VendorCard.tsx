@@ -2,7 +2,8 @@
 import React from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Phone } from "lucide-react";
+import { Phone, Edit } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import OptimizedImage from "./OptimizedImage";
 import { useNavigate } from "react-router-dom";
 
@@ -13,15 +14,19 @@ interface VendorProps {
   rating: number;
   contactNumber: string;
   image: string;
+  status?: 'pending' | 'approved' | 'rejected';
+  showEditButton?: boolean;
 }
 
 const VendorCard: React.FC<VendorProps> = ({
   id,
   name,
   category,
-  rating, // We'll keep this in the props interface for now to avoid breaking existing code
+  rating,
   contactNumber,
   image,
+  status,
+  showEditButton = false,
 }) => {
   const navigate = useNavigate();
 
@@ -30,7 +35,29 @@ const VendorCard: React.FC<VendorProps> = ({
   };
 
   const handlePhoneClick = (e: React.MouseEvent) => {
-    e.stopPropagation(); // Prevent card click when clicking on phone
+    e.stopPropagation();
+  };
+
+  const handleEditClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    navigate(`/edit-vendor/${id}`);
+  };
+
+  const getStatusBadge = () => {
+    if (!status) return null;
+    
+    const statusConfig = {
+      pending: { label: "Pendente", className: "bg-yellow-100 text-yellow-800" },
+      approved: { label: "Aprovado", className: "bg-green-100 text-green-800" },
+      rejected: { label: "Rejeitado", className: "bg-red-100 text-red-800" }
+    };
+
+    const config = statusConfig[status];
+    return (
+      <Badge variant="outline" className={`mt-2 text-xs ${config.className}`}>
+        {config.label}
+      </Badge>
+    );
   };
 
   return (
@@ -47,10 +74,26 @@ const VendorCard: React.FC<VendorProps> = ({
           />
         </div>
         <CardContent className="p-0 flex-1">
-          <h3 className="font-semibold text-base">{name}</h3>
-          <Badge variant="outline" className="mt-1 bg-secondary text-xs">
-            {category}
-          </Badge>
+          <div className="flex justify-between items-start">
+            <div className="flex-1">
+              <h3 className="font-semibold text-base">{name}</h3>
+              <Badge variant="outline" className="mt-1 bg-secondary text-xs">
+                {category}
+              </Badge>
+              {getStatusBadge()}
+            </div>
+            {showEditButton && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleEditClick}
+                className="ml-2"
+              >
+                <Edit size={14} className="mr-1" />
+                Editar
+              </Button>
+            )}
+          </div>
           <button 
             className="flex items-center text-iparty text-sm mt-2"
             onClick={handlePhoneClick}
