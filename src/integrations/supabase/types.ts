@@ -476,6 +476,18 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      admin_get_all_spaces: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          id: string
+          name: string
+          created_at: string
+          status: Database["public"]["Enums"]["space_approval_status"]
+          user_id: string
+          price: string
+          profiles: Json
+        }[]
+      }
       check_user_role: {
         Args: { user_id: string; requested_role: string }
         Returns: boolean

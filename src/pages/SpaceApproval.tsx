@@ -63,29 +63,17 @@ const SpaceApproval = () => {
       setLoading(true);
       console.log("Fetching all spaces for admin approval...");
       
-      // Buscar TODOS os espaços diretamente (admins devem ver todos os espaços)
+      // Usar a função RPC admin_get_all_spaces para garantir que admins vejam todos os espaços
       const { data: spacesData, error } = await supabase
-        .from("spaces")
-        .select(`
-          id,
-          name,
-          created_at,
-          status,
-          user_id,
-          price,
-          profiles:profiles!user_id (
-            first_name,
-            last_name
-          )
-        `)
-        .order('created_at', { ascending: false });
+        .rpc('admin_get_all_spaces');
 
       if (error) {
         console.error("Error fetching spaces:", error);
-        throw error;
+        toast.error("Erro ao buscar espaços: " + error.message);
+        return;
       }
 
-      console.log("Raw spaces data:", spacesData);
+      console.log("Raw spaces data from RPC:", spacesData);
 
       if (!spacesData || spacesData.length === 0) {
         console.log("No spaces data returned");
@@ -95,28 +83,17 @@ const SpaceApproval = () => {
 
       // Processar os dados e buscar contagem de fotos para cada espaço
       const spacesWithPhotos = await Promise.all(
-        spacesData.map(async (space) => {
+        spacesData.map(async (space: any) => {
           // Buscar contagem de fotos
           const { count: photoCount } = await supabase
             .from("space_photos")
             .select("id", { count: "exact" })
             .eq("space_id", space.id);
 
-          // Se não temos perfil na consulta principal, buscar separadamente
-          let profileData = space.profiles;
-          if (!profileData && space.user_id) {
-            const { data: profile } = await supabase
-              .from("profiles")
-              .select("first_name, last_name")
-              .eq("id", space.user_id)
-              .single();
-            profileData = profile;
-          }
-
           return {
             ...space,
             photo_count: photoCount || 0,
-            profiles: profileData || null
+            profiles: space.profiles || null
           };
         })
       );
