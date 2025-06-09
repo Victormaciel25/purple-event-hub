@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { ChevronLeft } from "lucide-react";
@@ -155,6 +154,8 @@ const SpaceApproval = () => {
         console.error("Error fetching photos:", photosError);
       }
 
+      console.log("Photos data from database:", photosData);
+
       // Combinar todos os dados
       const combinedData = {
         ...spaceData,
@@ -173,7 +174,7 @@ const SpaceApproval = () => {
 
   const fetchPhotoUrls = async (photos: { id: string; storage_path: string }[]) => {
     try {
-      console.log("Photos to fetch:", photos);
+      console.log("Starting fetchPhotoUrls with photos:", photos);
       
       if (!photos || photos.length === 0) {
         console.log("No photos available");
@@ -189,42 +190,46 @@ const SpaceApproval = () => {
           }
           
           try {
-            // Primeiro, verificar se o arquivo existe no storage
-            const { data: fileData, error: fileError } = await supabase.storage
-              .from('spaces')
-              .list(photo.storage_path.split('/').slice(0, -1).join('/'), {
-                search: photo.storage_path.split('/').pop()
-              });
-
-            if (fileError || !fileData || fileData.length === 0) {
-              console.error("File not found in storage:", photo.storage_path);
-              return null;
-            }
-
-            // Criar URL pública para o arquivo
-            const { data: urlData } = supabase.storage
+            console.log("Processing photo with storage_path:", photo.storage_path);
+            
+            // Tentar criar URL pública primeiro
+            const { data: publicUrlData } = supabase.storage
               .from('spaces')
               .getPublicUrl(photo.storage_path);
             
-            if (urlData?.publicUrl) {
-              console.log("Created public URL for photo:", photo.id, urlData.publicUrl);
-              return urlData.publicUrl;
+            if (publicUrlData?.publicUrl) {
+              console.log("Created public URL:", publicUrlData.publicUrl);
+              
+              // Verificar se a URL é acessível
+              try {
+                const response = await fetch(publicUrlData.publicUrl, { method: 'HEAD' });
+                if (response.ok) {
+                  console.log("Public URL is accessible:", publicUrlData.publicUrl);
+                  return publicUrlData.publicUrl;
+                }
+              } catch (fetchError) {
+                console.log("Public URL not accessible, trying signed URL");
+              }
             }
 
             // Fallback: tentar criar signed URL
             const { data: signedData, error: signedError } = await supabase.storage
               .from('spaces')
-              .createSignedUrl(photo.storage_path, 3600);
+              .createSignedUrl(photo.storage_path, 3600); // 1 hour expiry
             
             if (signedError) {
               console.error("Error creating signed URL:", signedError, "for path:", photo.storage_path);
               return null;
             }
             
-            console.log("Created signed URL for photo:", photo.id, signedData.signedUrl);
-            return signedData.signedUrl;
+            if (signedData?.signedUrl) {
+              console.log("Created signed URL:", signedData.signedUrl);
+              return signedData.signedUrl;
+            }
+            
+            return null;
           } catch (err) {
-            console.error("Exception when creating URL:", err);
+            console.error("Exception when creating URL for photo:", photo.id, err);
             return null;
           }
         })
@@ -232,9 +237,11 @@ const SpaceApproval = () => {
       
       const validUrls = urls.filter(url => url !== null) as string[];
       console.log("Final valid photo URLs:", validUrls);
+      console.log("Total valid URLs found:", validUrls.length);
+      
       setPhotoUrls(validUrls);
     } catch (error) {
-      console.error("Error fetching photo URLs:", error);
+      console.error("Error in fetchPhotoUrls:", error);
       toast.error("Erro ao carregar fotos");
       setPhotoUrls([]);
     }
