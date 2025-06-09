@@ -15,7 +15,10 @@ export const useSpacePhotos = (spaceId: string | null) => {
       console.log("Buscando fotos para espaço:", id);
 
       const { data: photosData, error } = await supabase
-        .rpc('admin_get_space_photos', { space_id_param: id });
+        .from('space_photos')
+        .select('*')
+        .eq('space_id', id)
+        .order('created_at', { ascending: true });
 
       if (error) {
         console.error("Erro ao buscar fotos:", error);

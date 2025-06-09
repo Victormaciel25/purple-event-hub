@@ -13,7 +13,38 @@ export const useSpaceApproval = () => {
       setLoading(true);
       console.log("Buscando espaços para aprovação...");
       
-      const { data: spacesData, error } = await supabase.rpc('admin_get_all_spaces');
+      const { data: spacesData, error } = await supabase
+        .from("spaces")
+        .select(`
+          id,
+          name,
+          created_at,
+          status,
+          user_id,
+          price,
+          phone,
+          description,
+          address,
+          state,
+          number,
+          zip_code,
+          capacity,
+          parking,
+          wifi,
+          sound_system,
+          air_conditioning,
+          kitchen,
+          pool,
+          latitude,
+          longitude,
+          rejection_reason,
+          categories,
+          profiles!spaces_user_id_fkey (
+            first_name,
+            last_name
+          )
+        `)
+        .order('created_at', { ascending: false });
 
       if (error) {
         console.error("Erro ao buscar espaços:", error);

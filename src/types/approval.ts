@@ -24,6 +24,7 @@ export type SpaceWithProfile = {
   latitude: number | null;
   longitude: number | null;
   rejection_reason: string | null;
+  categories: string[];
   profiles?: {
     first_name: string | null;
     last_name: string | null;

@@ -2,7 +2,7 @@
 import React from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card } from "@/components/ui/card";
-import { Image, MapPin, Home, User, Phone, DollarSign, Check, X } from "lucide-react";
+import { Image, MapPin, Home, User, Phone, DollarSign, Check, X, Tag } from "lucide-react";
 import type { SpaceWithProfile } from "@/types/approval";
 
 interface SpaceDetailsTabsProps {
@@ -30,9 +30,11 @@ const SpaceDetailsTabs: React.FC<SpaceDetailsTabsProps> = ({
         <Card className="p-4">
           <div className="flex items-start">
             <Home className="text-gray-400 mt-1 mr-3" size={18} />
-            <div>
+            <div className="flex-1">
               <p className="text-sm font-medium text-gray-500">Descrição</p>
-              <p className="text-sm">{space.description}</p>
+              <p className="text-sm text-gray-700 mt-1">
+                {space.description || "Nenhuma descrição fornecida"}
+              </p>
             </div>
           </div>
         </Card>
@@ -43,7 +45,7 @@ const SpaceDetailsTabs: React.FC<SpaceDetailsTabsProps> = ({
               <Phone className="text-gray-400 mr-3" size={18} />
               <div>
                 <p className="text-sm font-medium text-gray-500">Telefone</p>
-                <p className="text-sm">{space.phone}</p>
+                <p className="text-sm text-gray-700">{space.phone || "Não informado"}</p>
               </div>
             </div>
           </Card>
@@ -53,7 +55,9 @@ const SpaceDetailsTabs: React.FC<SpaceDetailsTabsProps> = ({
               <User className="text-gray-400 mr-3" size={18} />
               <div>
                 <p className="text-sm font-medium text-gray-500">Capacidade</p>
-                <p className="text-sm">{space.capacity} pessoas</p>
+                <p className="text-sm text-gray-700">
+                  {space.capacity ? `${space.capacity} pessoas` : "Não informado"}
+                </p>
               </div>
             </div>
           </Card>
@@ -64,67 +68,93 @@ const SpaceDetailsTabs: React.FC<SpaceDetailsTabsProps> = ({
             <DollarSign className="text-gray-400 mr-3" size={18} />
             <div>
               <p className="text-sm font-medium text-gray-500">Valor</p>
-              <p className="text-sm">R$ {space.price}</p>
-            </div>
-          </div>
-        </Card>
-
-        <Card className="p-4">
-          <div className="flex items-center">
-            <MapPin className="text-gray-400 mr-3" size={18} />
-            <div>
-              <p className="text-sm font-medium text-gray-500">Endereço</p>
-              <p className="text-sm">
-                {space.address}, {space.number} - {space.state}, {space.zip_code}
+              <p className="text-sm text-gray-700">
+                {space.price ? `R$ ${space.price}` : "Não informado"}
               </p>
             </div>
           </div>
         </Card>
 
         <Card className="p-4">
-          <p className="text-sm font-medium text-gray-500 mb-2">Comodidades</p>
-          <div className="grid grid-cols-2 gap-2">
+          <div className="flex items-start">
+            <MapPin className="text-gray-400 mt-1 mr-3" size={18} />
+            <div>
+              <p className="text-sm font-medium text-gray-500">Endereço</p>
+              <p className="text-sm text-gray-700">
+                {space.address && space.number ? 
+                  `${space.address}, ${space.number} - ${space.state || ''}, ${space.zip_code || ''}`.trim() :
+                  "Endereço não informado"
+                }
+              </p>
+            </div>
+          </div>
+        </Card>
+
+        {space.categories && space.categories.length > 0 && (
+          <Card className="p-4">
+            <div className="flex items-start">
+              <Tag className="text-gray-400 mt-1 mr-3" size={18} />
+              <div>
+                <p className="text-sm font-medium text-gray-500 mb-2">Categorias</p>
+                <div className="flex flex-wrap gap-2">
+                  {space.categories.map((category, index) => (
+                    <span 
+                      key={index}
+                      className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800"
+                    >
+                      {category}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </Card>
+        )}
+
+        <Card className="p-4">
+          <p className="text-sm font-medium text-gray-500 mb-3">Comodidades</p>
+          <div className="grid grid-cols-2 gap-3">
             <div className="flex items-center">
               {space.wifi ? 
-                <Check size={16} className="text-green-500 mr-1" /> : 
-                <X size={16} className="text-red-500 mr-1" />
+                <Check size={16} className="text-green-500 mr-2" /> : 
+                <X size={16} className="text-red-500 mr-2" />
               }
-              <span className="text-sm">Wi-Fi</span>
+              <span className="text-sm text-gray-700">Wi-Fi</span>
             </div>
             <div className="flex items-center">
               {space.parking ? 
-                <Check size={16} className="text-green-500 mr-1" /> : 
-                <X size={16} className="text-red-500 mr-1" />
+                <Check size={16} className="text-green-500 mr-2" /> : 
+                <X size={16} className="text-red-500 mr-2" />
               }
-              <span className="text-sm">Estacionamento</span>
+              <span className="text-sm text-gray-700">Estacionamento</span>
             </div>
             <div className="flex items-center">
               {space.sound_system ? 
-                <Check size={16} className="text-green-500 mr-1" /> : 
-                <X size={16} className="text-red-500 mr-1" />
+                <Check size={16} className="text-green-500 mr-2" /> : 
+                <X size={16} className="text-red-500 mr-2" />
               }
-              <span className="text-sm">Sistema de som</span>
+              <span className="text-sm text-gray-700">Sistema de som</span>
             </div>
             <div className="flex items-center">
               {space.air_conditioning ? 
-                <Check size={16} className="text-green-500 mr-1" /> : 
-                <X size={16} className="text-red-500 mr-1" />
+                <Check size={16} className="text-green-500 mr-2" /> : 
+                <X size={16} className="text-red-500 mr-2" />
               }
-              <span className="text-sm">Ar-condicionado</span>
+              <span className="text-sm text-gray-700">Ar-condicionado</span>
             </div>
             <div className="flex items-center">
               {space.kitchen ? 
-                <Check size={16} className="text-green-500 mr-1" /> : 
-                <X size={16} className="text-red-500 mr-1" />
+                <Check size={16} className="text-green-500 mr-2" /> : 
+                <X size={16} className="text-red-500 mr-2" />
               }
-              <span className="text-sm">Cozinha</span>
+              <span className="text-sm text-gray-700">Cozinha</span>
             </div>
             <div className="flex items-center">
               {space.pool ? 
-                <Check size={16} className="text-green-500 mr-1" /> : 
-                <X size={16} className="text-red-500 mr-1" />
+                <Check size={16} className="text-green-500 mr-2" /> : 
+                <X size={16} className="text-red-500 mr-2" />
               }
-              <span className="text-sm">Piscina</span>
+              <span className="text-sm text-gray-700">Piscina</span>
             </div>
           </div>
         </Card>
@@ -178,10 +208,11 @@ const SpaceDetailsTabs: React.FC<SpaceDetailsTabsProps> = ({
           <div className="space-y-4">
             <div>
               <h4 className="text-sm font-medium text-gray-700 mb-2">Endereço Completo</h4>
-              <p className="text-sm text-gray-600">
-                {space.address}, {space.number} - {space.state}
-              </p>
-              <p className="text-sm text-gray-600">CEP: {space.zip_code}</p>
+              <div className="text-sm text-gray-600 space-y-1">
+                <p>{space.address && space.number ? `${space.address}, ${space.number}` : "Endereço não informado"}</p>
+                <p>{space.state ? `Estado: ${space.state}` : "Estado não informado"}</p>
+                <p>{space.zip_code ? `CEP: ${space.zip_code}` : "CEP não informado"}</p>
+              </div>
             </div>
             
             {space.latitude && space.longitude ? (
