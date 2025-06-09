@@ -488,6 +488,15 @@ export type Database = {
           profiles: Json
         }[]
       }
+      admin_get_space_photos: {
+        Args: { space_id_param: string }
+        Returns: {
+          id: string
+          space_id: string
+          storage_path: string
+          created_at: string
+        }[]
+      }
       check_user_role: {
         Args: { user_id: string; requested_role: string }
         Returns: boolean

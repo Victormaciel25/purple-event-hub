@@ -148,42 +148,17 @@ const SpaceApproval = () => {
 
       console.log("👤 Profile data:", profileData);
 
-      // Buscar fotos usando uma query SQL raw para contornar RLS
-      console.log("📸 === FETCHING PHOTOS WITH RAW SQL ===");
+      // Buscar fotos usando a nova função RPC específica para admins
+      console.log("📸 === FETCHING PHOTOS WITH ADMIN RPC ===");
       
       const { data: photosData, error: photosError } = await supabase
-        .rpc('admin_get_all_spaces')
-        .then(async () => {
-          // Como já confirmamos que somos admin, fazer query direta
-          return await supabase
-            .from("space_photos")
-            .select("*")
-            .eq("space_id", spaceId)
-            .order('created_at', { ascending: true });
-        });
+        .rpc('admin_get_space_photos', { space_id_param: spaceId });
 
       if (photosError) {
-        console.error("❌ Error fetching photos with RPC:", photosError);
-        // Fallback: tentar query normal
-        const { data: fallbackPhotos, error: fallbackError } = await supabase
-          .from("space_photos")
-          .select("*")
-          .eq("space_id", spaceId)
-          .order('created_at', { ascending: true });
-          
-        if (!fallbackError) {
-          console.log("✅ Fallback query succeeded:", fallbackPhotos);
-          const combinedData = {
-            ...spaceData,
-            profiles: profileData || null,
-            photos: fallbackPhotos || []
-          };
-          setSelectedSpace(combinedData as unknown as SpaceDetailsType);
-          setSheetOpen(true);
-          return;
-        }
+        console.error("❌ Error fetching photos with admin RPC:", photosError);
+        toast.error("Erro ao buscar fotos do espaço");
       } else {
-        console.log("✅ RPC query succeeded, photos found:", photosData?.length || 0);
+        console.log("✅ Admin RPC query succeeded, photos found:", photosData?.length || 0);
         if (photosData && photosData.length > 0) {
           photosData.forEach((photo, index) => {
             console.log(`📸 Photo ${index + 1}:`, {
