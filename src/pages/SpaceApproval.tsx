@@ -37,9 +37,18 @@ const SpaceApproval = () => {
   const handleViewDetails = async (spaceId: string) => {
     const space = spaces.find(s => s.id === spaceId);
     if (space) {
-      console.log("Selecionando espaço para detalhes:", space);
-      setSelectedSpace(space);
-      setSheetOpen(true);
+      console.log("🎯 Selecionando espaço para detalhes:", space);
+      
+      // Primeiro limpar o estado anterior
+      setSelectedSpace(null);
+      setSheetOpen(false);
+      
+      // Pequeno delay para garantir que o estado seja limpo antes de definir o novo
+      setTimeout(() => {
+        setSelectedSpace(space);
+        setSheetOpen(true);
+        console.log("📂 Modal aberto para espaço:", space.id);
+      }, 50);
     }
   };
 
@@ -54,6 +63,17 @@ const SpaceApproval = () => {
     await rejectSpace(selectedSpace.id, reason);
     setSheetOpen(false);
   };
+
+  // Log quando as fotos mudam
+  React.useEffect(() => {
+    if (selectedSpace) {
+      console.log("📸 Estado das fotos para espaço", selectedSpace.id, ":", {
+        photoUrls: photoUrls,
+        count: photoUrls?.length || 0,
+        loading: photosLoading
+      });
+    }
+  }, [photoUrls, photosLoading, selectedSpace]);
 
   if (roleLoading) {
     return (
