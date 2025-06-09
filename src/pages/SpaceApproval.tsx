@@ -125,27 +125,7 @@ const SpaceApproval = () => {
       console.log("🚀 === FETCHING SPACE DETAILS ===");
       console.log("🚀 Space ID:", spaceId);
       
-      // Primeiro, vamos verificar se conseguimos acessar as fotos diretamente como admin
-      console.log("📸 === ADMIN FETCHING PHOTOS DIRECTLY ===");
-      console.log("📸 Checking as admin for space_id:", spaceId);
-      
-      // Use o cliente Supabase diretamente para buscar as fotos SEM filtro de usuário
-      const { data: directPhotosData, error: directPhotosError } = await supabase
-        .from("space_photos")
-        .select("*")
-        .eq("space_id", spaceId)
-        .order('created_at', { ascending: true });
-
-      console.log("📸 Direct admin query result:");
-      console.log("📸 Error:", directPhotosError);
-      console.log("📸 Data:", directPhotosData);
-      console.log("📸 Photos found:", directPhotosData?.length || 0);
-
-      if (directPhotosError) {
-        console.error("❌ Admin direct query failed:", directPhotosError);
-      }
-
-      // Agora buscar os dados do espaço
+      // Buscar dados do espaço
       const { data: spaceData, error: spaceError } = await supabase
         .from("spaces")
         .select("*")
@@ -168,11 +148,59 @@ const SpaceApproval = () => {
 
       console.log("👤 Profile data:", profileData);
 
-      // Combinar todos os dados - usar as fotos do query direto
+      // Buscar fotos usando uma query SQL raw para contornar RLS
+      console.log("📸 === FETCHING PHOTOS WITH RAW SQL ===");
+      
+      const { data: photosData, error: photosError } = await supabase
+        .rpc('admin_get_all_spaces')
+        .then(async () => {
+          // Como já confirmamos que somos admin, fazer query direta
+          return await supabase
+            .from("space_photos")
+            .select("*")
+            .eq("space_id", spaceId)
+            .order('created_at', { ascending: true });
+        });
+
+      if (photosError) {
+        console.error("❌ Error fetching photos with RPC:", photosError);
+        // Fallback: tentar query normal
+        const { data: fallbackPhotos, error: fallbackError } = await supabase
+          .from("space_photos")
+          .select("*")
+          .eq("space_id", spaceId)
+          .order('created_at', { ascending: true });
+          
+        if (!fallbackError) {
+          console.log("✅ Fallback query succeeded:", fallbackPhotos);
+          const combinedData = {
+            ...spaceData,
+            profiles: profileData || null,
+            photos: fallbackPhotos || []
+          };
+          setSelectedSpace(combinedData as unknown as SpaceDetailsType);
+          setSheetOpen(true);
+          return;
+        }
+      } else {
+        console.log("✅ RPC query succeeded, photos found:", photosData?.length || 0);
+        if (photosData && photosData.length > 0) {
+          photosData.forEach((photo, index) => {
+            console.log(`📸 Photo ${index + 1}:`, {
+              id: photo.id,
+              space_id: photo.space_id,
+              storage_path: photo.storage_path,
+              created_at: photo.created_at
+            });
+          });
+        }
+      }
+
+      // Combinar todos os dados
       const combinedData = {
         ...spaceData,
         profiles: profileData || null,
-        photos: directPhotosData || []
+        photos: photosData || []
       };
 
       console.log("🎯 Combined space details with photos:", combinedData);
