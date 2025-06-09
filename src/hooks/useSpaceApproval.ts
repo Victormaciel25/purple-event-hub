@@ -58,9 +58,24 @@ export const useSpaceApproval = () => {
         return;
       }
 
-      // Buscar contagem de fotos para cada espaço
+      // Filtrar espaços antigos (aprovados ou rejeitados há mais de 30 dias)
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+      
+      const filteredSpaces = spacesData.filter((space: any) => {
+        // Se está pendente, sempre mostrar
+        if (space.status === 'pending' || !space.status) {
+          return true;
+        }
+        
+        // Se foi aprovado ou rejeitado, verificar se foi há menos de 30 dias
+        const spaceDate = new Date(space.created_at);
+        return spaceDate > thirtyDaysAgo;
+      });
+
+      // Buscar contagem de fotos para cada espaço filtrado
       const spacesWithPhotos = await Promise.all(
-        spacesData.map(async (space: any) => {
+        filteredSpaces.map(async (space: any) => {
           const { count: photoCount } = await supabase
             .from("space_photos")
             .select("id", { count: "exact" })
