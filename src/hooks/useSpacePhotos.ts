@@ -49,34 +49,27 @@ export const useSpacePhotos = (spaceId: string | null) => {
     try {
       console.log("Criando URLs para", photosData.length, "fotos");
       
-      const urls = await Promise.all(
-        photosData.map(async (photo) => {
-          if (!photo.storage_path) {
-            console.error("Caminho de armazenamento ausente para foto:", photo.id);
-            return null;
-          }
+      const urls = photosData.map((photo) => {
+        if (!photo.storage_path) {
+          console.error("Caminho de armazenamento ausente para foto:", photo.id);
+          return null;
+        }
 
-          console.log("Processando foto:", photo.id, "com storage_path:", photo.storage_path);
+        console.log("Processando foto:", photo.id, "com storage_path:", photo.storage_path);
 
-          try {
-            // Usar URL pública diretamente já que agora temos acesso público de leitura
-            const { data: publicUrlData } = supabase.storage
-              .from('spaces')
-              .getPublicUrl(photo.storage_path);
+        // Usar URL pública diretamente já que agora o bucket é público
+        const { data: publicUrlData } = supabase.storage
+          .from('spaces')
+          .getPublicUrl(photo.storage_path);
 
-            if (publicUrlData?.publicUrl) {
-              console.log("URL pública criada para foto:", photo.id, "->", publicUrlData.publicUrl);
-              return publicUrlData.publicUrl;
-            }
+        if (publicUrlData?.publicUrl) {
+          console.log("URL pública criada para foto:", photo.id, "->", publicUrlData.publicUrl);
+          return publicUrlData.publicUrl;
+        }
 
-            console.error("Não foi possível criar URL pública para foto:", photo.id);
-            return null;
-          } catch (err) {
-            console.error("Erro ao criar URL para foto:", photo.id, err);
-            return null;
-          }
-        })
-      );
+        console.error("Não foi possível criar URL pública para foto:", photo.id);
+        return null;
+      });
 
       const validUrls = urls.filter(url => url !== null) as string[];
       console.log("URLs válidas criadas:", validUrls.length, "de", photosData.length, "fotos");
