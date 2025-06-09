@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft, Save } from "lucide-react";
@@ -181,7 +182,7 @@ const EditVendor = () => {
   }
 
   return (
-    <div className="container px-4 py-6 max-w-4xl mx-auto">
+    <div className="container px-4 py-6 max-w-4xl mx-auto pb-32">
       <div className="flex items-center mb-6">
         <Button
           variant="ghost"
@@ -318,25 +319,30 @@ const EditVendor = () => {
             />
           </CardContent>
         </Card>
-
-        <div className="flex justify-end space-x-4 sticky bottom-4 bg-background p-4 border-t">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => navigate("/user-vendors")}
-          >
-            Cancelar
-          </Button>
-          <Button
-            type="submit"
-            disabled={saving}
-            className="bg-iparty hover:bg-iparty/90"
-          >
-            <Save size={16} className="mr-2" />
-            {saving ? "Salvando..." : "Salvar Alterações"}
-          </Button>
-        </div>
       </form>
+
+      {/* Fixed bottom buttons */}
+      <div className="fixed bottom-0 left-0 right-0 bg-background border-t shadow-lg z-50">
+        <div className="container max-w-4xl mx-auto px-4 py-4">
+          <div className="flex justify-end space-x-4">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => navigate("/user-vendors")}
+            >
+              Cancelar
+            </Button>
+            <Button
+              onClick={handleSubmit}
+              disabled={saving}
+              className="bg-iparty hover:bg-iparty/90"
+            >
+              <Save size={16} className="mr-2" />
+              {saving ? "Salvando..." : "Salvar Alterações"}
+            </Button>
+          </div>
+        </div>
+      </div>
     </div>
   );
 };
