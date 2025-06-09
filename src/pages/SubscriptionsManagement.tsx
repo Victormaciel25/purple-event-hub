@@ -21,11 +21,11 @@ interface Subscription {
   created_at: string;
   expires_at: string | null;
   active: boolean;
-  profiles: {
+  user_profile: {
     first_name: string | null;
     last_name: string | null;
   } | null;
-  spaces: {
+  space: {
     name: string;
   } | null;
 }
@@ -54,20 +54,52 @@ const SubscriptionsManagement = () => {
       setLoading(true);
       setError(null);
       
-      const { data, error } = await supabase
+      // First get the promotions
+      const { data: promotionsData, error: promotionsError } = await supabase
         .from("space_promotions")
-        .select(`
-          *,
-          profiles!space_promotions_user_id_fkey(first_name, last_name),
-          spaces!space_promotions_space_id_fkey(name)
-        `)
+        .select("*")
         .eq("plan_id", "monthly_recurring")
         .order("created_at", { ascending: false });
 
-      if (error) throw error;
-      
-      // Type assertion to handle the Supabase response structure
-      setSubscriptions((data as any[]) || []);
+      if (promotionsError) throw promotionsError;
+
+      if (!promotionsData || promotionsData.length === 0) {
+        setSubscriptions([]);
+        return;
+      }
+
+      // Get unique user IDs and space IDs
+      const userIds = [...new Set(promotionsData.map(p => p.user_id))];
+      const spaceIds = [...new Set(promotionsData.map(p => p.space_id))];
+
+      // Fetch profiles for these users
+      const { data: profilesData, error: profilesError } = await supabase
+        .from("profiles")
+        .select("id, first_name, last_name")
+        .in("id", userIds);
+
+      if (profilesError) throw profilesError;
+
+      // Fetch spaces for these space IDs
+      const { data: spacesData, error: spacesError } = await supabase
+        .from("spaces")
+        .select("id, name")
+        .in("id", spaceIds);
+
+      if (spacesError) throw spacesError;
+
+      // Create lookup maps
+      const profilesMap = new Map(profilesData?.map(p => [p.id, p]) || []);
+      const spacesMap = new Map(spacesData?.map(s => [s.id, s]) || []);
+
+      // Combine the data
+      const subscriptionsWithDetails = promotionsData.map(promotion => ({
+        ...promotion,
+        user_profile: profilesMap.get(promotion.user_id) || null,
+        space: spacesMap.get(promotion.space_id) || null
+      }));
+
+      setSubscriptions(subscriptionsWithDetails);
     } catch (err: any) {
       console.error("Error fetching subscriptions:", err);
       setError(err.message || "Erro ao carregar assinaturas");
@@ -190,15 +222,15 @@ const SubscriptionsManagement = () => {
                         <div className="flex items-center gap-2">
                           <User size={16} className="text-muted-foreground" />
                           <span>
-                            {subscription.profiles 
-                              ? `${subscription.profiles.first_name || ''} ${subscription.profiles.last_name || ''}`.trim() || 'Nome não disponível'
+                            {subscription.user_profile 
+                              ? `${subscription.user_profile.first_name || ''} ${subscription.user_profile.last_name || ''}`.trim() || 'Nome não disponível'
                               : 'Nome não disponível'
                             }
                           </span>
                         </div>
                       </TableCell>
                       <TableCell>
-                        {subscription.spaces?.name || 'Espaço não encontrado'}
+                        {subscription.space?.name || 'Espaço não encontrado'}
                       </TableCell>
                       <TableCell className="font-medium">
                         {formatCurrency(subscription.amount)}
