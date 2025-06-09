@@ -122,56 +122,28 @@ const SpaceApproval = () => {
     try {
       console.log("Fetching space details for ID:", spaceId);
       
-      // Use admin RPC to bypass RLS and get complete space data
-      const { data: fullSpaceData, error: spaceError } = await supabase
-        .rpc('admin_get_all_spaces');
+      // Buscar todos os dados do espaço diretamente da tabela spaces
+      const { data: spaceData, error: spaceError } = await supabase
+        .from("spaces")
+        .select("*")
+        .eq("id", spaceId)
+        .single();
 
       if (spaceError) {
         console.error("Error fetching space data:", spaceError);
         throw spaceError;
       }
 
-      // Find the specific space from the admin data
-      const basicSpaceData = fullSpaceData?.find((space: any) => space.id === spaceId);
-      
-      if (!basicSpaceData) {
-        console.error("Space not found in admin data");
-        throw new Error("Espaço não encontrado");
-      }
+      console.log("Found space data:", spaceData);
 
-      console.log("Found basic space data:", basicSpaceData);
-
-      // Get additional details from the spaces table using a function that bypasses RLS
-      const { data: additionalData, error: additionalError } = await supabase
-        .from("spaces")
-        .select(`
-          phone,
-          state,
-          address,
-          zip_code,
-          number,
-          description,
-          capacity,
-          parking,
-          wifi,
-          sound_system,
-          air_conditioning,
-          kitchen,
-          pool,
-          latitude,
-          longitude,
-          rejection_reason,
-          categories
-        `)
-        .eq("id", spaceId)
+      // Buscar informações do perfil do usuário
+      const { data: profileData } = await supabase
+        .from("profiles")
+        .select("first_name, last_name")
+        .eq("id", spaceData.user_id)
         .single();
 
-      if (additionalError) {
-        console.error("Error fetching additional space data:", additionalError);
-        // Don't throw here, just log and use defaults
-      }
-
-      console.log("Additional space data:", additionalData);
+      console.log("Profile data:", profileData);
 
       // Buscar fotos do espaço
       const { data: photosData, error: photosError } = await supabase
@@ -183,33 +155,10 @@ const SpaceApproval = () => {
         console.error("Error fetching photos:", photosError);
       }
 
-      // Combine all data, using additional data if available, otherwise use defaults
+      // Combinar todos os dados
       const combinedData = {
-        id: basicSpaceData.id,
-        name: basicSpaceData.name,
-        created_at: basicSpaceData.created_at,
-        status: basicSpaceData.status,
-        user_id: basicSpaceData.user_id,
-        price: basicSpaceData.price,
-        profiles: basicSpaceData.profiles,
-        // Use additional data if available, otherwise use meaningful defaults
-        phone: additionalData?.phone || "Não informado",
-        state: additionalData?.state || "Não informado", 
-        address: additionalData?.address || "Endereço não informado",
-        zip_code: additionalData?.zip_code || "Não informado",
-        number: additionalData?.number || "S/N",
-        description: additionalData?.description || "Descrição não disponível",
-        capacity: additionalData?.capacity || "Não informado",
-        parking: additionalData?.parking || false,
-        wifi: additionalData?.wifi || false,
-        sound_system: additionalData?.sound_system || false,
-        air_conditioning: additionalData?.air_conditioning || false,
-        kitchen: additionalData?.kitchen || false,
-        pool: additionalData?.pool || false,
-        latitude: additionalData?.latitude || null,
-        longitude: additionalData?.longitude || null,
-        rejection_reason: additionalData?.rejection_reason || null,
-        categories: additionalData?.categories || [],
+        ...spaceData,
+        profiles: profileData || null,
         photos: photosData || []
       };
 
