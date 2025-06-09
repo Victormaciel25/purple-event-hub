@@ -2,19 +2,22 @@
 import React from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card } from "@/components/ui/card";
-import { Image, MapPin, Home, User, Phone, DollarSign, Check, X, Tag } from "lucide-react";
+import { Image, MapPin, Home, User, Phone, DollarSign, Check, X, Tag, RefreshCw } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import type { SpaceWithProfile } from "@/types/approval";
 
 interface SpaceDetailsTabsProps {
   space: SpaceWithProfile;
   photoUrls: string[];
   photosLoading: boolean;
+  onRefreshPhotos?: () => void;
 }
 
 const SpaceDetailsTabs: React.FC<SpaceDetailsTabsProps> = ({ 
   space, 
   photoUrls, 
-  photosLoading 
+  photosLoading,
+  onRefreshPhotos
 }) => {
   return (
     <Tabs defaultValue="details" className="w-full">
@@ -162,6 +165,21 @@ const SpaceDetailsTabs: React.FC<SpaceDetailsTabsProps> = ({
       
       <TabsContent value="photos" className="mt-4">
         <Card className="p-4">
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="text-lg font-medium">Fotos do Espaço</h3>
+            {onRefreshPhotos && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={onRefreshPhotos}
+                disabled={photosLoading}
+              >
+                <RefreshCw size={16} className={`mr-2 ${photosLoading ? 'animate-spin' : ''}`} />
+                Recarregar
+              </Button>
+            )}
+          </div>
+          
           {photosLoading ? (
             <div className="text-center py-8">
               <p className="text-gray-500">Carregando fotos...</p>
@@ -183,8 +201,11 @@ const SpaceDetailsTabs: React.FC<SpaceDetailsTabsProps> = ({
                       src={url} 
                       alt={`${space.name} ${index + 1}`}
                       className="w-full h-40 object-cover rounded-md border"
+                      onLoad={() => {
+                        console.log(`✓ Foto ${index + 1} carregada com sucesso:`, url);
+                      }}
                       onError={(e) => {
-                        console.error(`Erro ao carregar foto ${index + 1}:`, url);
+                        console.error(`✗ Erro ao carregar foto ${index + 1}:`, url);
                         e.currentTarget.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZGRkIi8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxNCIgZmlsbD0iIzk5OSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPkVycm8gYW8gY2FycmVnYXIgaW1hZ2VtPC90ZXh0Pjwvc3ZnPg==';
                       }}
                     />

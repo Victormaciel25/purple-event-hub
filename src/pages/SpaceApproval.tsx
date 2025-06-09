@@ -26,7 +26,7 @@ const SpaceApproval = () => {
   const navigate = useNavigate();
   
   const { spaces, loading, approveSpace, rejectSpace } = useSpaceApproval();
-  const { photoUrls, loading: photosLoading } = useSpacePhotos(selectedSpace?.id || null);
+  const { photoUrls, loading: photosLoading, refetch: refetchPhotos } = useSpacePhotos(selectedSpace?.id || null);
 
   React.useEffect(() => {
     if (!roleLoading && !isAdmin) {
@@ -37,6 +37,7 @@ const SpaceApproval = () => {
   const handleViewDetails = async (spaceId: string) => {
     const space = spaces.find(s => s.id === spaceId);
     if (space) {
+      console.log("Selecionando espaço para detalhes:", space);
       setSelectedSpace(space);
       setSheetOpen(true);
     }
@@ -101,6 +102,7 @@ const SpaceApproval = () => {
                 space={selectedSpace}
                 photoUrls={photoUrls}
                 photosLoading={photosLoading}
+                onRefreshPhotos={refetchPhotos}
               />
 
               {selectedSpace.status === "pending" && (
