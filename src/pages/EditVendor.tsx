@@ -104,6 +104,29 @@ const EditVendor = () => {
     }));
   };
 
+  const handleAddressChange = (location: any) => {
+    setFormData(prev => ({
+      ...prev,
+      address: location.locationName
+    }));
+  };
+
+  const handleImagesChange = (files: File[]) => {
+    // Convert File objects to URLs for display (this would need proper upload handling)
+    const urls = files.map(file => URL.createObjectURL(file));
+    setFormData(prev => ({
+      ...prev,
+      images: [...prev.images, ...urls]
+    }));
+  };
+
+  const handleRemoveImage = (index: number) => {
+    setFormData(prev => ({
+      ...prev,
+      images: prev.images.filter((_, i) => i !== index)
+    }));
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -238,8 +261,8 @@ const EditVendor = () => {
             <div>
               <Label htmlFor="address">Endereço *</Label>
               <AddressAutoComplete
-                value={formData.address}
-                onChange={(value) => handleInputChange("address", value)}
+                initialValue={formData.address}
+                onLocationSelected={handleAddressChange}
                 placeholder="Digite o endereço completo"
               />
             </div>
@@ -285,8 +308,9 @@ const EditVendor = () => {
           </CardHeader>
           <CardContent>
             <ImageUpload
-              images={formData.images}
-              onImagesChange={(images) => handleInputChange("images", images)}
+              previewUrls={formData.images}
+              onImagesChange={handleImagesChange}
+              onRemovePreview={handleRemoveImage}
               maxImages={5}
             />
           </CardContent>
