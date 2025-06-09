@@ -70,10 +70,31 @@ const VendorApproval = () => {
         throw error;
       }
 
+      if (!vendorData || vendorData.length === 0) {
+        console.log("Nenhum fornecedor encontrado");
+        setVendors([]);
+        return;
+      }
+
+      // Filtrar fornecedores antigos (aprovados ou rejeitados há mais de 30 dias)
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+      
+      const filteredVendors = vendorData.filter((vendor: any) => {
+        // Se está pendente, sempre mostrar
+        if (vendor.status === 'pending' || !vendor.status) {
+          return true;
+        }
+        
+        // Se foi aprovado ou rejeitado, verificar se foi há menos de 30 dias
+        const vendorDate = new Date(vendor.created_at);
+        return vendorDate > thirtyDaysAgo;
+      });
+
       // Buscar perfis separadamente e juntar os dados
       const vendorsWithProfiles: VendorWithProfileInfo[] = [];
 
-      for (const vendor of vendorData || []) {
+      for (const vendor of filteredVendors) {
         // Buscar o perfil associado ao usuário do fornecedor
         const { data: profileData } = await supabase
           .from("profiles")
@@ -87,6 +108,7 @@ const VendorApproval = () => {
         });
       }
 
+      console.log("Fornecedores processados:", vendorsWithProfiles.length);
       setVendors(vendorsWithProfiles);
     } catch (error) {
       console.error("Erro ao buscar fornecedores:", error);
