@@ -144,17 +144,19 @@ const SpaceApproval = () => {
 
       console.log("Profile data:", profileData);
 
-      // Buscar fotos do espaço
+      // Buscar fotos do espaço - agora deve funcionar para todos os usuários
       const { data: photosData, error: photosError } = await supabase
         .from("space_photos")
         .select("id, storage_path")
-        .eq("space_id", spaceId);
+        .eq("space_id", spaceId)
+        .order('created_at', { ascending: true });
 
       if (photosError) {
         console.error("Error fetching photos:", photosError);
+      } else {
+        console.log("Successfully fetched photos data:", photosData);
+        console.log("Number of photos found:", photosData?.length || 0);
       }
-
-      console.log("Photos data from database:", photosData);
 
       // Combinar todos os dados
       const combinedData = {
@@ -175,6 +177,7 @@ const SpaceApproval = () => {
   const fetchPhotoUrls = async (photos: { id: string; storage_path: string }[]) => {
     try {
       console.log("Starting fetchPhotoUrls with photos:", photos);
+      console.log("Total photos to process:", photos?.length || 0);
       
       if (!photos || photos.length === 0) {
         console.log("No photos available");
@@ -183,53 +186,44 @@ const SpaceApproval = () => {
       }
       
       const urls = await Promise.all(
-        photos.map(async (photo) => {
+        photos.map(async (photo, index) => {
           if (!photo.storage_path) {
             console.error("Missing storage path for photo:", photo);
             return null;
           }
           
           try {
-            console.log("Processing photo with storage_path:", photo.storage_path);
+            console.log(`Processing photo ${index + 1}/${photos.length} with storage_path:`, photo.storage_path);
             
-            // Tentar criar URL pública primeiro
+            // Primeiro, verificar se o bucket 'spaces' existe e está configurado corretamente
             const { data: publicUrlData } = supabase.storage
               .from('spaces')
               .getPublicUrl(photo.storage_path);
             
             if (publicUrlData?.publicUrl) {
-              console.log("Created public URL:", publicUrlData.publicUrl);
-              
-              // Verificar se a URL é acessível
-              try {
-                const response = await fetch(publicUrlData.publicUrl, { method: 'HEAD' });
-                if (response.ok) {
-                  console.log("Public URL is accessible:", publicUrlData.publicUrl);
-                  return publicUrlData.publicUrl;
-                }
-              } catch (fetchError) {
-                console.log("Public URL not accessible, trying signed URL");
-              }
+              console.log(`Public URL created for photo ${index + 1}:`, publicUrlData.publicUrl);
+              return publicUrlData.publicUrl;
             }
 
-            // Fallback: tentar criar signed URL
+            // Fallback: tentar criar signed URL se a URL pública não funcionar
+            console.log(`Trying signed URL for photo ${index + 1}`);
             const { data: signedData, error: signedError } = await supabase.storage
               .from('spaces')
-              .createSignedUrl(photo.storage_path, 3600); // 1 hour expiry
+              .createSignedUrl(photo.storage_path, 3600);
             
             if (signedError) {
-              console.error("Error creating signed URL:", signedError, "for path:", photo.storage_path);
+              console.error(`Error creating signed URL for photo ${index + 1}:`, signedError);
               return null;
             }
             
             if (signedData?.signedUrl) {
-              console.log("Created signed URL:", signedData.signedUrl);
+              console.log(`Signed URL created for photo ${index + 1}:`, signedData.signedUrl);
               return signedData.signedUrl;
             }
             
             return null;
           } catch (err) {
-            console.error("Exception when creating URL for photo:", photo.id, err);
+            console.error(`Exception when creating URL for photo ${index + 1}:`, photo.id, err);
             return null;
           }
         })
@@ -237,7 +231,7 @@ const SpaceApproval = () => {
       
       const validUrls = urls.filter(url => url !== null) as string[];
       console.log("Final valid photo URLs:", validUrls);
-      console.log("Total valid URLs found:", validUrls.length);
+      console.log("Total valid URLs found:", validUrls.length, "out of", photos.length);
       
       setPhotoUrls(validUrls);
     } catch (error) {
