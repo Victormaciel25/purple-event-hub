@@ -111,42 +111,17 @@ const PromoteVendor: React.FC = () => {
 
   const handlePaymentSuccess = async () => {
     try {
-      const { data: sessionData } = await supabase.auth.getSession();
-      if (!sessionData.session) {
-        console.error("No active session found");
-        return;
-      }
-
-      const userId = sessionData.session.user.id;
+      setPaymentSuccess(true);
       
-      // Query the vendor_promotions table for this vendor and verify it's active
-      const { data: promotionData, error } = await supabase
-        .from("vendor_promotions")
-        .select("payment_status")
-        .eq("vendor_id", selectedVendor)
-        .eq("user_id", userId)
-        .eq("plan_id", selectedPlan)
-        .order("created_at", { ascending: false })
-        .limit(1);
+      toast({
+        title: "Sucesso",
+        description: "Pagamento realizado com sucesso!",
+        variant: "default"
+      });
       
-      if (error) {
-        console.error("Error verifying payment status:", error);
-        return;
-      }
-
-      if (promotionData && promotionData.length > 0 && promotionData[0].payment_status === "approved") {
-        setPaymentSuccess(true);
-        
-        setTimeout(() => {
-          navigate("/profile");
-        }, 3000);
-      } else {
-        toast({
-          title: "Aguardando",
-          description: "Aguardando confirmação de pagamento do processador",
-          variant: "default"
-        });
-      }
+      setTimeout(() => {
+        navigate("/profile");
+      }, 3000);
     } catch (error) {
       console.error("Error validating payment success:", error);
     }
@@ -310,7 +285,6 @@ const PromoteVendor: React.FC = () => {
                   spaceName={vendors.find(vendor => vendor.id === selectedVendor)?.name || ""}
                   plan={plans.find(plan => plan.id === selectedPlan) || plans[0]}
                   onSuccess={handlePaymentSuccess}
-                  isVendor={true}
                 />
               </CardContent>
             </Card>
@@ -324,7 +298,6 @@ const PromoteVendor: React.FC = () => {
                   spaceName={vendors.find(vendor => vendor.id === selectedVendor)?.name || ""}
                   plan={plans.find(plan => plan.id === selectedPlan) || plans[0]}
                   onSuccess={handlePaymentSuccess}
-                  isVendor={true}
                 />
               </CardContent>
             </Card>

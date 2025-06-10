@@ -417,6 +417,56 @@ export type Database = {
         }
         Relationships: []
       }
+      vendor_promotions: {
+        Row: {
+          active: boolean
+          amount: number
+          created_at: string
+          expires_at: string | null
+          id: string
+          payment_id: string | null
+          payment_status: string
+          plan_id: string
+          preference_id: string | null
+          user_id: string
+          vendor_id: string
+        }
+        Insert: {
+          active?: boolean
+          amount: number
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          payment_id?: string | null
+          payment_status?: string
+          plan_id: string
+          preference_id?: string | null
+          user_id: string
+          vendor_id: string
+        }
+        Update: {
+          active?: boolean
+          amount?: number
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          payment_id?: string | null
+          payment_status?: string
+          plan_id?: string
+          preference_id?: string | null
+          user_id?: string
+          vendor_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vendor_promotions_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "vendors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       vendors: {
         Row: {
           address: string
