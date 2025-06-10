@@ -60,6 +60,7 @@ const PromoteVendor: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [paymentSuccess, setPaymentSuccess] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<"card" | "pix">("card");
+  const [pixPaymentStatus, setPixPaymentStatus] = useState<'pending' | 'completed' | null>(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -125,6 +126,23 @@ const PromoteVendor: React.FC = () => {
     } catch (error) {
       console.error("Error validating payment success:", error);
     }
+  };
+
+  const handlePixPaymentCreated = (paymentData: any) => {
+    console.log("PIX payment created:", paymentData);
+    setPixPaymentStatus('pending');
+    
+    toast({
+      title: "PIX Gerado",
+      description: "QR Code PIX gerado. Aguardando pagamento...",
+      variant: "default"
+    });
+  };
+
+  const handlePixPaymentSuccess = async () => {
+    console.log("PIX payment confirmed");
+    setPixPaymentStatus('completed');
+    await handlePaymentSuccess();
   };
 
   const formatPrice = (price: number) => {
@@ -293,11 +311,23 @@ const PromoteVendor: React.FC = () => {
           <TabsContent value="pix" className="mt-4">
             <Card>
               <CardContent className="pt-4">
+                {pixPaymentStatus === 'pending' && (
+                  <div className="text-center py-4 mb-4">
+                    <p className="text-amber-600 font-medium">
+                      Aguardando confirmação do pagamento PIX...
+                    </p>
+                    <p className="text-sm text-muted-foreground mt-2">
+                      O pagamento será confirmado automaticamente após a transferência.
+                    </p>
+                  </div>
+                )}
+                
                 <PixPayment
                   spaceId={selectedVendor}
                   spaceName={vendors.find(vendor => vendor.id === selectedVendor)?.name || ""}
                   plan={plans.find(plan => plan.id === selectedPlan) || plans[0]}
-                  onSuccess={handlePaymentSuccess}
+                  onSuccess={handlePixPaymentSuccess}
+                  onPaymentCreated={handlePixPaymentCreated}
                 />
               </CardContent>
             </Card>
