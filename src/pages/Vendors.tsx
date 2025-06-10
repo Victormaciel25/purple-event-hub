@@ -4,7 +4,7 @@ import VendorCard from "@/components/VendorCard";
 import { Input } from "@/components/ui/input";
 import { Search, ChefHat, Camera, Video, FileText, Shirt, Palette, Cookie, Cake, Sparkles, Clipboard } from "lucide-react";
 import { toast } from "sonner";
-import { useVendorsWithLocation } from "@/hooks/useVendorsWithLocation";
+import { usePromotedVendors } from "@/hooks/usePromotedVendors";
 
 const predefinedCategories = [
   { name: "Todos", icon: Sparkles },
@@ -23,7 +23,7 @@ const predefinedCategories = [
 const Vendors = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("Todos");
-  const { vendors, loading, error } = useVendorsWithLocation();
+  const { vendors, loading, error } = usePromotedVendors();
 
   React.useEffect(() => {
     if (error) {
@@ -119,6 +119,7 @@ const Vendors = () => {
                   rating={0}
                   contactNumber={vendor.contact_number}
                   image={vendor.images[0] || "https://source.unsplash.com/random/200x200?food"}
+                  isPromoted={vendor.isPromoted}
                 />
               ))
             ) : (
