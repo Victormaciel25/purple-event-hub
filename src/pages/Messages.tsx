@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { Input } from "@/components/ui/input";
 import { Search, MessageSquare, ArrowLeft, Trash2, Loader2, User } from "lucide-react";
@@ -273,7 +274,10 @@ const Messages = () => {
 
   // Function to get user display name
   const getUserDisplayName = (): string => {
-    console.log("Getting user display name, otherUserProfile:", otherUserProfile);
+    console.log("=== getUserDisplayName called ===");
+    console.log("Current otherUserProfile:", otherUserProfile);
+    console.log("Current userId:", userId);
+    console.log("Current chatInfo:", chatInfo);
     
     if (!otherUserProfile) {
       console.log("No otherUserProfile found, returning 'Usuário'");
@@ -281,7 +285,7 @@ const Messages = () => {
     }
     
     const { first_name, last_name } = otherUserProfile;
-    console.log("User names:", { first_name, last_name });
+    console.log("User names from profile:", { first_name, last_name });
     
     if (first_name && last_name) {
       const fullName = `${first_name} ${last_name}`;
@@ -494,7 +498,7 @@ const Messages = () => {
 
   // Function to load chat details and messages
   const loadChatDetails = useCallback(async (chatId: string) => {
-    console.log("Loading chat details for:", chatId);
+    console.log("=== Loading chat details for:", chatId, "===");
     try {
       setChatLoadError(false);
       setChatErrorMessage("");
@@ -539,17 +543,23 @@ const Messages = () => {
       }
       
       const chatData = chatStatus.data;
-      console.log("Chat data loaded:", chatData);
+      console.log("=== Chat data loaded ===", chatData);
+      console.log("Chat user_id:", chatData.user_id);
+      console.log("Chat owner_id:", chatData.owner_id);
+      console.log("Current userId:", userId);
       
       // Set chat created date
       setChatCreatedAt(chatData.created_at);
       
       // Get the other user's profile (the one we're chatting with)
       const otherUserId = chatData.user_id === userId ? chatData.owner_id : chatData.user_id;
-      console.log("Other user ID:", otherUserId, "Current user ID:", userId);
+      console.log("=== Calculated otherUserId ===", otherUserId);
+      console.log("Logic: chatData.user_id === userId?", chatData.user_id === userId);
+      console.log("If true, use owner_id:", chatData.owner_id);
+      console.log("If false, use user_id:", chatData.user_id);
       
       if (otherUserId) {
-        console.log("Fetching profile for user:", otherUserId);
+        console.log("=== Fetching profile for user ===", otherUserId);
         
         // Fetch user profile from profiles table
         const { data: profileData, error: profileError } = await supabase
@@ -558,26 +568,33 @@ const Messages = () => {
           .eq("id", otherUserId)
           .maybeSingle();
         
-        console.log("Profile query result:", { profileData, profileError });
+        console.log("=== Profile query result ===", { profileData, profileError });
         
         if (profileError && profileError.code !== 'PGRST116') {
           console.error("Error fetching profile:", profileError);
           setOtherUserProfile(null);
         } else if (profileData) {
-          console.log("Setting profile data:", profileData);
+          console.log("=== Setting profile data ===", profileData);
           setOtherUserProfile(profileData);
+          
+          // Force a re-render to update the display name
+          console.log("Profile set, calling getUserDisplayName to verify:");
+          const displayName = getUserDisplayName();
+          console.log("Display name after setting profile:", displayName);
         } else {
           console.log("No profile data found - user may not have completed profile");
           // Set a basic profile with the user ID
-          setOtherUserProfile({
+          const fallbackProfile = {
             id: otherUserId,
             first_name: null,
             last_name: null,
             avatar_url: null
-          });
+          };
+          console.log("=== Setting fallback profile ===", fallbackProfile);
+          setOtherUserProfile(fallbackProfile);
         }
       } else {
-        console.log("No other user ID found");
+        console.log("=== No other user ID found ===");
         setOtherUserProfile(null);
       }
       
