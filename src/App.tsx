@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -30,7 +29,9 @@ import UserSpaces from "./pages/UserSpaces";
 import UserVendors from "./pages/UserVendors";
 import EditSpace from "./pages/EditSpace";
 import EditVendor from "./pages/EditVendor";
+import Promote from "./pages/Promote";
 import PromoteSpace from "./pages/PromoteSpace";
+import PromoteVendor from "./pages/PromoteVendor";
 import SubscriptionsManagement from "./pages/SubscriptionsManagement";
 import Index from "./pages/Index";
 import VendorPendingApproval from "./components/VendorPendingApproval";
@@ -150,7 +151,9 @@ const App: React.FC = () => {
               <Route path="/user-spaces" element={<UserSpaces />} />
               <Route path="/user-vendors" element={<UserVendors />} />
               <Route path="/edit-space/:id" element={<EditSpace />} />
+              <Route path="/promote" element={<Promote />} />
               <Route path="/promote-space" element={<PromoteSpace />} />
+              <Route path="/promote-vendor" element={<PromoteVendor />} />
             </Route>
             
             {/* Catch-all route */}

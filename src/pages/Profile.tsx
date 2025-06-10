@@ -287,8 +287,8 @@ const Profile = () => {
     },
     { 
       icon: Shield, 
-      label: "Promover Espaço",
-      onClick: () => navigate("/promote-space")
+      label: "Promover",
+      onClick: () => navigate("/promote")
     }
   ];
 
