@@ -271,6 +271,33 @@ const Messages = () => {
   const [otherUserProfile, setOtherUserProfile] = useState<UserProfile | null>(null);
   const [chatCreatedAt, setChatCreatedAt] = useState<string | null>(null);
 
+  // Function to get user display name
+  const getUserDisplayName = (): string => {
+    console.log("Getting user display name, otherUserProfile:", otherUserProfile);
+    
+    if (!otherUserProfile) {
+      console.log("No otherUserProfile found, returning 'Usuário'");
+      return 'Usuário';
+    }
+    
+    const { first_name, last_name } = otherUserProfile;
+    console.log("User names:", { first_name, last_name });
+    
+    if (first_name && last_name) {
+      const fullName = `${first_name} ${last_name}`;
+      console.log("Returning full name:", fullName);
+      return fullName;
+    }
+    
+    if (first_name) {
+      console.log("Returning first name only:", first_name);
+      return first_name;
+    }
+    
+    console.log("No valid names found, returning 'Usuário'");
+    return 'Usuário';
+  };
+
   // Function to process chats data
   const processChatsData = useCallback(async (chatsData: any[], currentUserId: string) => {
     // Collect all space IDs to fetch their images
@@ -519,16 +546,57 @@ const Messages = () => {
       
       // Get the other user's profile (the one we're chatting with)
       const otherUserId = chatData.user_id === userId ? chatData.owner_id : chatData.user_id;
+      console.log("Other user ID:", otherUserId, "Current user ID:", userId);
+      
       if (otherUserId) {
-        const { data: profileData } = await supabase
+        console.log("Fetching profile for user:", otherUserId);
+        
+        // Try both profiles table and auth.users in case profile doesn't exist
+        const { data: profileData, error: profileError } = await supabase
           .from("profiles")
-          .select("*")
+          .select("id, first_name, last_name, avatar_url")
           .eq("id", otherUserId)
           .single();
         
-        if (profileData) {
+        console.log("Profile query result:", { profileData, profileError });
+        
+        if (profileError) {
+          console.error("Error fetching profile:", profileError);
+          
+          // Fallback: try to get basic user info from auth metadata
+          console.log("Trying fallback: fetching from auth.users");
+          try {
+            const { data: authData, error: authError } = await supabase.auth.admin.getUserById(otherUserId);
+            console.log("Auth user data:", { authData, authError });
+            
+            if (authData?.user) {
+              const userData = authData.user;
+              const fallbackProfile: UserProfile = {
+                id: userData.id,
+                first_name: userData.user_metadata?.first_name || userData.user_metadata?.name || null,
+                last_name: userData.user_metadata?.last_name || null,
+                avatar_url: userData.user_metadata?.avatar_url || null
+              };
+              console.log("Setting fallback profile:", fallbackProfile);
+              setOtherUserProfile(fallbackProfile);
+            } else {
+              console.log("No auth user data found, setting null profile");
+              setOtherUserProfile(null);
+            }
+          } catch (authErr) {
+            console.error("Error fetching auth user:", authErr);
+            setOtherUserProfile(null);
+          }
+        } else if (profileData) {
+          console.log("Setting profile data:", profileData);
           setOtherUserProfile(profileData);
+        } else {
+          console.log("No profile data found, setting null");
+          setOtherUserProfile(null);
         }
+      } else {
+        console.log("No other user ID found");
+        setOtherUserProfile(null);
       }
       
       // Find chat info in the existing list or create a new entry
@@ -914,12 +982,7 @@ const Messages = () => {
                 <ArrowLeft size={20} />
               </Button>
               
-              <h2 className="font-medium">
-                {otherUserProfile?.first_name && otherUserProfile?.last_name 
-                  ? `${otherUserProfile.first_name} ${otherUserProfile.last_name}` 
-                  : otherUserProfile?.first_name || 'Usuário'
-                }
-              </h2>
+              <h2 className="font-medium">{getUserDisplayName()}</h2>
             </div>
 
             {/* Delete chat button */}
