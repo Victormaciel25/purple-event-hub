@@ -505,20 +505,21 @@ const Messages = () => {
       console.log("Chat owner_id:", chatData.owner_id);
       console.log("Other user ID to fetch profile for:", otherUserId);
 
-      // First check if there's a profile for this user
-      const { data: profileData, error: profileError } = await supabase
+      // First check if there's a profile for this user - testing without .maybeSingle()
+      const { data: profilesData, error: profileError } = await supabase
         .from("profiles")
         .select("id, first_name, last_name, avatar_url")
-        .eq("id", otherUserId)
-        .maybeSingle();
+        .eq("id", otherUserId);
 
-      console.log("Profile query result - Data:", profileData, "Error:", profileError);
+      console.log("profilesData:", profilesData);
+      console.log("Profile query error:", profileError);
 
-      if (profileData) {
+      if (profilesData && profilesData.length > 0) {
+        const profileData = profilesData[0];
         console.log("Setting otherUserProfile to:", profileData);
         setOtherUserProfile(profileData);
       } else {
-        console.log("No profile found, setting to null. Profile may not exist in profiles table.");
+        console.log("No profile found in array, setting to null. Profile may not exist in profiles table.");
         setOtherUserProfile(null);
         
         // Try to get user email from auth.users as fallback using edge function
@@ -1041,3 +1042,5 @@ const Messages = () => {
 };
 
 export default Messages;
+
+}
