@@ -505,7 +505,7 @@ const Messages = () => {
       console.log("Chat owner_id:", chatData.owner_id);
       console.log("Other user ID to fetch profile for:", otherUserId);
 
-      // First check if there's a profile for this user - testing without .maybeSingle()
+      // First check if there's a profile for this user
       const { data: profilesData, error: profileError } = await supabase
         .from("profiles")
         .select("id, first_name, last_name, avatar_url")
@@ -1042,5 +1042,3 @@ const Messages = () => {
 };
 
 export default Messages;
-
-}
