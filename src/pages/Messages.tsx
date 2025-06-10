@@ -1,12 +1,13 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { Input } from "@/components/ui/input";
-import { Search, MessageSquare, ArrowLeft, Trash2, Loader2 } from "lucide-react";
+import { Search, MessageSquare, ArrowLeft, Trash2, Loader2, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { useSearchParams, useLocation, useNavigate } from "react-router-dom";
 import OptimizedImage from "@/components/OptimizedImage";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -39,6 +40,13 @@ interface MessageProps {
   is_mine: boolean;
 }
 
+interface UserProfile {
+  id: string;
+  first_name?: string;
+  last_name?: string;
+  avatar_url?: string;
+}
+
 // Helper Components
 const ChatItem = ({ chat, onClick }: { chat: ChatProps; onClick: () => void }) => {
   return (
@@ -65,6 +73,90 @@ const ChatItem = ({ chat, onClick }: { chat: ChatProps; onClick: () => void }) =
       </div>
       {chat.unread && (
         <div className="ml-2 h-2 w-2 bg-iparty rounded-full"></div>
+      )}
+    </div>
+  );
+};
+
+const ChatHeader = ({ 
+  userProfile, 
+  chatInfo, 
+  spaceImages, 
+  chatCreatedAt 
+}: { 
+  userProfile: UserProfile | null;
+  chatInfo: ChatProps | null;
+  spaceImages: Record<string, string>;
+  chatCreatedAt: string | null;
+}) => {
+  const formatChatDate = (isoString: string): string => {
+    const date = new Date(isoString);
+    const today = new Date();
+    const diffDays = Math.floor((today.getTime() - date.getTime()) / (1000 * 60 * 60 * 24));
+    
+    if (diffDays === 0) {
+      return `hoje, ${date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`;
+    } else if (diffDays === 1) {
+      return `ontem, ${date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`;
+    } else {
+      return date.toLocaleDateString('pt-BR', { 
+        weekday: 'long', 
+        day: 'numeric', 
+        month: 'long',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    }
+  };
+
+  if (!chatInfo) return null;
+
+  return (
+    <div className="p-4 bg-white border-b space-y-3">
+      {/* User Info */}
+      {userProfile && (
+        <div className="flex items-center space-x-3">
+          <Avatar className="h-12 w-12">
+            <AvatarImage 
+              src={userProfile.avatar_url || ""} 
+              alt={`${userProfile.first_name || ''} ${userProfile.last_name || ''}`.trim() || 'Usuário'} 
+            />
+            <AvatarFallback>
+              <User className="h-6 w-6" />
+            </AvatarFallback>
+          </Avatar>
+          <div>
+            <h3 className="font-medium text-base">
+              {`${userProfile.first_name || ''} ${userProfile.last_name || ''}`.trim() || 'Usuário'}
+            </h3>
+            <p className="text-sm text-muted-foreground">Conversando sobre</p>
+          </div>
+        </div>
+      )}
+
+      {/* Space Info */}
+      <div className="flex items-center space-x-3">
+        <div className="h-12 w-12 rounded-lg overflow-hidden">
+          <OptimizedImage 
+            src={chatInfo.space_id ? spaceImages[chatInfo.space_id] || chatInfo.avatar : chatInfo.avatar}
+            alt={chatInfo.name} 
+            className="w-full h-full object-cover"
+            fallbackSrc="https://images.unsplash.com/photo-1566681855366-282a74153321?q=80&w=200&auto=format&fit=crop"
+          />
+        </div>
+        <div>
+          <h3 className="font-medium text-base">{chatInfo.name}</h3>
+          <p className="text-sm text-muted-foreground">Espaço para eventos</p>
+        </div>
+      </div>
+
+      {/* Chat Date */}
+      {chatCreatedAt && (
+        <div className="text-center">
+          <span className="text-sm text-muted-foreground bg-gray-100 px-3 py-1 rounded-full">
+            {formatChatDate(chatCreatedAt)}
+          </span>
+        </div>
       )}
     </div>
   );
@@ -170,6 +262,8 @@ const Messages = () => {
   const [initialLoadComplete, setInitialLoadComplete] = useState<boolean>(false);
   const [chatDeleted, setChatDeleted] = useState<boolean>(false);
   const [creatingNewChat, setCreatingNewChat] = useState<boolean>(false);
+  const [otherUserProfile, setOtherUserProfile] = useState<UserProfile | null>(null);
+  const [chatCreatedAt, setChatCreatedAt] = useState<string | null>(null);
 
   // Function to process chats data
   const processChatsData = useCallback(async (chatsData: any[], currentUserId: string) => {
@@ -413,6 +507,23 @@ const Messages = () => {
       
       const chatData = chatStatus.data;
       console.log("Chat data loaded:", chatData);
+      
+      // Set chat created date
+      setChatCreatedAt(chatData.created_at);
+      
+      // Get the other user's profile (the one we're chatting with)
+      const otherUserId = chatData.user_id === userId ? chatData.owner_id : chatData.user_id;
+      if (otherUserId) {
+        const { data: profileData } = await supabase
+          .from("profiles")
+          .select("*")
+          .eq("id", otherUserId)
+          .single();
+        
+        if (profileData) {
+          setOtherUserProfile(profileData);
+        }
+      }
       
       // Find chat info in the existing list or create a new entry
       const existingChat = chats.find(c => c.id === chatId);
@@ -732,6 +843,8 @@ const Messages = () => {
     setChatLoadError(false);
     setChatErrorMessage("");
     setChatDeleted(false);
+    setOtherUserProfile(null);
+    setChatCreatedAt(null);
     // Re-fetch non-deleted chats
     fetchChats(false);
   }, [fetchChats]);
@@ -783,7 +896,7 @@ const Messages = () => {
       ) : (
         // Chat detail view
         <div className="flex flex-col h-[calc(100vh-64px)]">
-          {/* Chat header */}
+          {/* Chat header with back button */}
           <div className="flex items-center justify-between p-4 border-b bg-white rounded-t-xl shadow-sm">
             <div className="flex items-center">
               <Button 
@@ -795,21 +908,7 @@ const Messages = () => {
                 <ArrowLeft size={20} />
               </Button>
               
-              {chatInfo && (
-                <div className="flex items-center">
-                  <div className="h-10 w-10 rounded-full overflow-hidden mr-3">
-                    <OptimizedImage 
-                      src={chatInfo.space_id ? spaceImages[chatInfo.space_id] || chatInfo.avatar : chatInfo.avatar}
-                      alt={chatInfo.name} 
-                      className="w-full h-full"
-                      fallbackSrc="https://images.unsplash.com/photo-1566681855366-282a74153321?q=80&w=200&auto=format&fit=crop"
-                    />
-                  </div>
-                  <div className="max-w-[180px]">
-                    <h3 className="font-medium truncate text-sm" title={chatInfo.name}>{chatInfo.name}</h3>
-                  </div>
-                </div>
-              )}
+              <h2 className="font-medium">Chat</h2>
             </div>
 
             {/* Delete chat button */}
@@ -824,6 +923,14 @@ const Messages = () => {
               </Button>
             )}
           </div>
+
+          {/* Chat info header */}
+          <ChatHeader 
+            userProfile={otherUserProfile}
+            chatInfo={chatInfo}
+            spaceImages={spaceImages}
+            chatCreatedAt={chatCreatedAt}
+          />
           
           {/* Messages area */}
           <div className="flex-grow overflow-y-auto p-4 bg-gray-50">
