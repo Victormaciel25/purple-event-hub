@@ -858,7 +858,9 @@ const Messages = () => {
   // Get user display name for header
   const getUserDisplayName = () => {
     if (otherUserProfile) {
-      const fullName = `${otherUserProfile.first_name || ''} ${otherUserProfile.last_name || ''}`.trim();
+      const firstName = otherUserProfile.first_name || '';
+      const lastName = otherUserProfile.last_name || '';
+      const fullName = `${firstName} ${lastName}`.trim();
       return fullName || 'Usuário';
     }
     return 'Usuário';
