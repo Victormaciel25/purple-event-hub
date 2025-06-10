@@ -110,11 +110,12 @@ export const usePromotedSpaces = () => {
 
       console.log('All spaces found:', allSpaces?.length || 0);
 
-      // Buscar promoções ativas
+      // Buscar promoções ativas com payment_status aprovado
       const { data: activePromotions, error: promotionsError } = await supabase
         .from('space_promotions')
         .select('space_id, expires_at, plan_id')
         .eq('active', true)
+        .eq('payment_status', 'approved')
         .gt('expires_at', new Date().toISOString());
 
       if (promotionsError) {
@@ -122,7 +123,7 @@ export const usePromotedSpaces = () => {
         // Não falhar se não conseguir buscar promoções, apenas mostrar sem destaque
       }
 
-      console.log('Active promotions found:', activePromotions?.length || 0);
+      console.log('Active approved promotions found:', activePromotions?.length || 0);
 
       // Criar um map de promoções por space_id
       const promotionsMap = new Map();
