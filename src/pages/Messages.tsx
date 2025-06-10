@@ -244,6 +244,7 @@ const Messages = () => {
 
   // Function to get user display name
   const getUserDisplayName = (): string => {
+    console.log("getUserDisplayName called, otherUserProfile:", otherUserProfile);
     if (!otherUserProfile) return 'Usuário';
     const { first_name, last_name } = otherUserProfile;
     if (first_name && last_name) return `${first_name} ${last_name}`;
@@ -499,20 +500,38 @@ const Messages = () => {
       
       // Get the other user's profile (the one we're chatting with)
       const otherUserId = chatData.user_id === userId ? chatData.owner_id : chatData.user_id;
-      console.log("Buscando perfil para ID:", otherUserId);
+      console.log("Current userId:", userId);
+      console.log("Chat user_id:", chatData.user_id);
+      console.log("Chat owner_id:", chatData.owner_id);
+      console.log("Other user ID to fetch profile for:", otherUserId);
 
+      // First check if there's a profile for this user
       const { data: profileData, error: profileError } = await supabase
         .from("profiles")
         .select("id, first_name, last_name, avatar_url")
         .eq("id", otherUserId)
-        .single();
+        .maybeSingle();
 
-      console.log("Resultado do profileData:", profileData, "Erro:", profileError);
+      console.log("Profile query result - Data:", profileData, "Error:", profileError);
 
       if (profileData) {
+        console.log("Setting otherUserProfile to:", profileData);
         setOtherUserProfile(profileData);
       } else {
+        console.log("No profile found, setting to null. Profile may not exist in profiles table.");
         setOtherUserProfile(null);
+        
+        // Try to get user email from auth.users as fallback using edge function
+        try {
+          const { data: userData, error: userError } = await supabase.functions
+            .invoke('get_user_by_email', {
+              body: { user_id: otherUserId }
+            });
+          
+          console.log("User data from edge function:", userData, "Error:", userError);
+        } catch (error) {
+          console.log("Could not fetch user data:", error);
+        }
       }
       
       // Find chat info in the existing list or create a new entry
@@ -1022,3 +1041,5 @@ const Messages = () => {
 };
 
 export default Messages;
+
+}
