@@ -119,7 +119,10 @@ const ChatHeader = ({
           <Avatar className="h-12 w-12">
             <AvatarImage 
               src={userProfile.avatar_url || ""} 
-              alt={`${userProfile.first_name || ''} ${userProfile.last_name || ''}`.trim() || 'Usuário'} 
+              alt={userProfile.first_name && userProfile.last_name 
+                ? `${userProfile.first_name} ${userProfile.last_name}` 
+                : userProfile.first_name || 'Usuário'
+              } 
             />
             <AvatarFallback>
               <User className="h-6 w-6" />
