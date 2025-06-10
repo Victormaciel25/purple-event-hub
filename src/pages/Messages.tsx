@@ -66,27 +66,27 @@ const ChatItem = ({ chat, onClick, otherUserName }: {
           fallbackSrc="https://images.unsplash.com/photo-1566681855366-282a74153321?q=80&w=200&auto=format&fit=crop"
         />
       </div>
-      <div className="flex-1">
-        <div className="flex justify-between">
-          <div className="flex flex-col truncate max-w-[160px]">
-            {otherUserName && (
-              <h3 className="font-bold text-sm truncate" title={otherUserName}>
-                {otherUserName}
-              </h3>
-            )}
-            <h4 className="font-normal text-sm text-muted-foreground truncate" title={chat.name}>
-              {chat.name}
-            </h4>
-          </div>
-          <span className="text-xs text-muted-foreground">{chat.time}</span>
+      <div className="flex-1 flex items-center justify-between">
+        <div className="flex flex-col truncate max-w-[200px]">
+          {otherUserName && (
+            <h3 className="font-bold text-sm truncate" title={otherUserName}>
+              {otherUserName}
+            </h3>
+          )}
+          <h4 className="font-normal text-sm text-muted-foreground truncate" title={chat.name}>
+            {chat.name}
+          </h4>
+          <p className={`text-sm truncate ${chat.unread ? "font-medium text-foreground" : "text-muted-foreground"}`}>
+            {chat.lastMessage}
+          </p>
         </div>
-        <p className={`text-sm truncate ${chat.unread ? "font-medium text-foreground" : "text-muted-foreground"}`}>
-          {chat.lastMessage}
-        </p>
+        <div className="flex flex-col items-end ml-4">
+          <span className="text-xs text-muted-foreground mb-1">{chat.time}</span>
+          {chat.unread && (
+            <div className="h-2 w-2 bg-iparty rounded-full"></div>
+          )}
+        </div>
       </div>
-      {chat.unread && (
-        <div className="ml-2 h-2 w-2 bg-iparty rounded-full"></div>
-      )}
     </div>
   );
 };
@@ -1103,3 +1103,5 @@ const Messages = () => {
 };
 
 export default Messages;
+
+}
