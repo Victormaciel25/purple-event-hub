@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { Input } from "@/components/ui/input";
 import { Search, MessageSquare, ArrowLeft, Trash2, Loader2, User } from "lucide-react";
@@ -80,12 +79,10 @@ const ChatItem = ({ chat, onClick }: { chat: ChatProps; onClick: () => void }) =
 };
 
 const ChatHeader = ({ 
-  userProfile, 
   chatInfo, 
   spaceImages, 
   chatCreatedAt 
 }: { 
-  userProfile: UserProfile | null;
   chatInfo: ChatProps | null;
   spaceImages: Record<string, string>;
   chatCreatedAt: string | null;
@@ -114,33 +111,6 @@ const ChatHeader = ({
 
   return (
     <div className="p-4 bg-white border-b space-y-3">
-      {/* User Info */}
-      {userProfile && (
-        <div className="flex items-center space-x-3">
-          <Avatar className="h-12 w-12">
-            <AvatarImage 
-              src={userProfile.avatar_url || ""} 
-              alt={userProfile.first_name && userProfile.last_name 
-                ? `${userProfile.first_name} ${userProfile.last_name}` 
-                : userProfile.first_name || 'Usuário'
-              } 
-            />
-            <AvatarFallback>
-              <User className="h-6 w-6" />
-            </AvatarFallback>
-          </Avatar>
-          <div>
-            <h3 className="font-medium text-base">
-              {userProfile.first_name && userProfile.last_name 
-                ? `${userProfile.first_name} ${userProfile.last_name}` 
-                : userProfile.first_name || 'Usuário'
-              }
-            </h3>
-            <p className="text-sm text-muted-foreground">Conversando sobre</p>
-          </div>
-        </div>
-      )}
-
       {/* Space Info */}
       <div className="flex items-center space-x-3">
         <div className="h-12 w-12 rounded-lg overflow-hidden">
@@ -999,7 +969,6 @@ const Messages = () => {
 
           {/* Chat info header */}
           <ChatHeader 
-            userProfile={otherUserProfile}
             chatInfo={chatInfo}
             spaceImages={spaceImages}
             chatCreatedAt={chatCreatedAt}
@@ -1106,3 +1075,5 @@ const Messages = () => {
 };
 
 export default Messages;
+
+}
