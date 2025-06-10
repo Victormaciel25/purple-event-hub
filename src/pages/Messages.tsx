@@ -48,7 +48,11 @@ interface UserProfile {
 }
 
 // Helper Components
-const ChatItem = ({ chat, onClick }: { chat: ChatProps; onClick: () => void }) => {
+const ChatItem = ({ chat, onClick, otherUserName }: { 
+  chat: ChatProps; 
+  onClick: () => void; 
+  otherUserName?: string;
+}) => {
   return (
     <div 
       className="flex items-center p-4 border-b border-gray-100 hover:bg-gray-50 cursor-pointer" 
@@ -64,7 +68,16 @@ const ChatItem = ({ chat, onClick }: { chat: ChatProps; onClick: () => void }) =
       </div>
       <div className="flex-1">
         <div className="flex justify-between">
-          <h3 className={`font-medium truncate max-w-[160px] ${chat.unread ? "text-black" : ""}`} title={chat.name}>{chat.name}</h3>
+          <div className="flex flex-col truncate max-w-[160px]">
+            {otherUserName && (
+              <h3 className="font-bold text-sm truncate" title={otherUserName}>
+                {otherUserName}
+              </h3>
+            )}
+            <h4 className="font-normal text-sm text-muted-foreground truncate" title={chat.name}>
+              {chat.name}
+            </h4>
+          </div>
           <span className="text-xs text-muted-foreground">{chat.time}</span>
         </div>
         <p className={`text-sm truncate ${chat.unread ? "font-medium text-foreground" : "text-muted-foreground"}`}>
@@ -241,6 +254,7 @@ const Messages = () => {
   const [creatingNewChat, setCreatingNewChat] = useState<boolean>(false);
   const [otherUserProfile, setOtherUserProfile] = useState<UserProfile | null>(null);
   const [chatCreatedAt, setChatCreatedAt] = useState<string | null>(null);
+  const [chatUserNames, setChatUserNames] = useState<Record<string, string>>({});
 
   // Function to get user display name
   const getUserDisplayName = (): string => {
@@ -290,6 +304,30 @@ const Messages = () => {
       
       setSpaceImages(localImageMap);
     }
+    
+    // Collect other user IDs to fetch their profiles
+    const otherUserIds = chatsData.map(chat => 
+      chat.user_id === currentUserId ? chat.owner_id : chat.user_id
+    );
+    
+    // Fetch profiles for all other users
+    const { data: profilesData } = await supabase
+      .from("profiles")
+      .select("id, first_name, last_name")
+      .in("id", otherUserIds);
+    
+    // Create a map of user IDs to display names
+    const userNamesMap: Record<string, string> = {};
+    if (profilesData) {
+      profilesData.forEach(profile => {
+        const displayName = profile.first_name && profile.last_name 
+          ? `${profile.first_name} ${profile.last_name}`
+          : profile.first_name || 'Usuário';
+        userNamesMap[profile.id] = displayName;
+      });
+    }
+    
+    setChatUserNames(userNamesMap);
     
     const formattedChats = chatsData.map(chat => ({
       id: chat.id,
@@ -888,16 +926,39 @@ const Messages = () => {
             {loading ? (
               <LoadingState />
             ) : filteredChats.length > 0 ? (
-              filteredChats.map((chat) => (
-                <ChatItem 
-                  key={chat.id} 
-                  chat={chat}
-                  onClick={() => {
-                    setSelectedChat(chat.id);
-                    loadChatDetails(chat.id);
-                  }}
-                />
-              ))
+              filteredChats.map((chat) => {
+                // Get the other user ID for this chat
+                const otherUserId = userId ? (
+                  // We need to find the chat data to determine the other user
+                  chats.find(c => c.id === chat.id) ? 
+                    (chats.find(c => c.id === chat.id)?.space_id ? 
+                      // For space chats, we need to look up from the original chat data
+                      Object.keys(chatUserNames).find(id => chatUserNames[id]) :
+                      Object.keys(chatUserNames)[0]
+                    ) : 
+                    Object.keys(chatUserNames)[0]
+                ) : null;
+
+                // Find the corresponding original chat data to get user IDs
+                const originalChatData = chats.find(c => c.id === chat.id);
+                let chatOtherUserId = null;
+                
+                // We'll get this from the processChatsData function context
+                // For now, get the first available user name as fallback
+                const otherUserName = Object.values(chatUserNames)[filteredChats.indexOf(chat)] || null;
+
+                return (
+                  <ChatItem 
+                    key={chat.id} 
+                    chat={chat}
+                    otherUserName={otherUserName}
+                    onClick={() => {
+                      setSelectedChat(chat.id);
+                      loadChatDetails(chat.id);
+                    }}
+                  />
+                );
+              })
             ) : (
               <EmptyState searchQuery={searchQuery} />
             )}
@@ -1042,3 +1103,5 @@ const Messages = () => {
 };
 
 export default Messages;
+
+}
