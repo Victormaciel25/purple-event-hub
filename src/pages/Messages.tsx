@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { Input } from "@/components/ui/input";
 import { Search, MessageSquare, ArrowLeft, Trash2, Loader2, User } from "lucide-react";
@@ -860,7 +861,7 @@ const Messages = () => {
       const fullName = `${otherUserProfile.first_name || ''} ${otherUserProfile.last_name || ''}`.trim();
       return fullName || 'Usuário';
     }
-    return 'Chat';
+    return 'Usuário';
   };
   
   return (
