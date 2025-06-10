@@ -2,7 +2,7 @@
 import React from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Phone, Edit } from "lucide-react";
+import { Phone, Edit, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import OptimizedImage from "./OptimizedImage";
 import { useNavigate } from "react-router-dom";
@@ -16,6 +16,7 @@ interface VendorProps {
   image: string;
   status?: 'pending' | 'approved' | 'rejected';
   showEditButton?: boolean;
+  isPromoted?: boolean;
 }
 
 const VendorCard: React.FC<VendorProps> = ({
@@ -27,6 +28,7 @@ const VendorCard: React.FC<VendorProps> = ({
   image,
   status,
   showEditButton = false,
+  isPromoted = false,
 }) => {
   const navigate = useNavigate();
 
@@ -66,21 +68,35 @@ const VendorCard: React.FC<VendorProps> = ({
 
   return (
     <Card 
-      className="overflow-hidden border-0 card-shadow cursor-pointer transition-transform hover:scale-[1.01]" 
+      className={`overflow-hidden border-0 card-shadow cursor-pointer transition-transform hover:scale-[1.01] ${
+        isPromoted ? 'ring-2 ring-iparty' : ''
+      }`}
       onClick={handleClick}
     >
       <div className="flex p-4">
-        <div className="h-20 w-20 rounded-full overflow-hidden mr-4">
+        <div className="h-20 w-20 rounded-full overflow-hidden mr-4 relative">
           <OptimizedImage
             src={image}
             alt={name}
             className="w-full h-full"
           />
+          {isPromoted && (
+            <div className="absolute -top-1 -right-1 bg-iparty rounded-full p-1">
+              <Star size={12} className="text-white fill-white" />
+            </div>
+          )}
         </div>
         <CardContent className="p-0 flex-1">
           <div className="flex justify-between items-start">
             <div className="flex-1">
-              <h3 className="font-semibold text-base">{name}</h3>
+              <div className="flex items-center gap-2">
+                <h3 className="font-semibold text-base">{name}</h3>
+                {isPromoted && (
+                  <Badge variant="default" className="bg-iparty text-white text-xs">
+                    Destaque
+                  </Badge>
+                )}
+              </div>
               <Badge variant="outline" className="mt-1 bg-secondary text-xs">
                 {category}
               </Badge>
