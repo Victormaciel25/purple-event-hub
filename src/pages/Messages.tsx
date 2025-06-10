@@ -859,17 +859,6 @@ const Messages = () => {
   const filteredChats = chats.filter(chat => 
     !chat.deleted && chat.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
-
-  // Get user display name for header
-  const getUserDisplayName = () => {
-    if (otherUserProfile) {
-      const firstName = otherUserProfile.first_name || '';
-      const lastName = otherUserProfile.last_name || '';
-      const fullName = `${firstName} ${lastName}`.trim();
-      return fullName || 'Usuário';
-    }
-    return 'Usuário';
-  };
   
   return (
     <div className="container px-4 pb-16 max-w-4xl mx-auto">
@@ -1055,3 +1044,5 @@ const Messages = () => {
 };
 
 export default Messages;
+
+}
