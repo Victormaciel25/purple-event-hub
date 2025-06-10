@@ -128,7 +128,10 @@ const ChatHeader = ({
           </Avatar>
           <div>
             <h3 className="font-medium text-base">
-              {`${userProfile.first_name || ''} ${userProfile.last_name || ''}`.trim() || 'Usuário'}
+              {userProfile.first_name && userProfile.last_name 
+                ? `${userProfile.first_name} ${userProfile.last_name}` 
+                : userProfile.first_name || userProfile.last_name || 'Usuário'
+              }
             </h3>
             <p className="text-sm text-muted-foreground">Conversando sobre</p>
           </div>
@@ -920,7 +923,12 @@ const Messages = () => {
                 <ArrowLeft size={20} />
               </Button>
               
-              <h2 className="font-medium">{getUserDisplayName()}</h2>
+              <h2 className="font-medium">
+                {otherUserProfile?.first_name && otherUserProfile?.last_name 
+                  ? `${otherUserProfile.first_name} ${otherUserProfile.last_name}` 
+                  : otherUserProfile?.first_name || otherUserProfile?.last_name || 'Usuário'
+                }
+              </h2>
             </div>
 
             {/* Delete chat button */}
