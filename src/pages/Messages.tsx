@@ -551,48 +551,30 @@ const Messages = () => {
       if (otherUserId) {
         console.log("Fetching profile for user:", otherUserId);
         
-        // Try both profiles table and auth.users in case profile doesn't exist
+        // Fetch user profile from profiles table
         const { data: profileData, error: profileError } = await supabase
           .from("profiles")
           .select("id, first_name, last_name, avatar_url")
           .eq("id", otherUserId)
-          .single();
+          .maybeSingle();
         
         console.log("Profile query result:", { profileData, profileError });
         
-        if (profileError) {
+        if (profileError && profileError.code !== 'PGRST116') {
           console.error("Error fetching profile:", profileError);
-          
-          // Fallback: try to get basic user info from auth metadata
-          console.log("Trying fallback: fetching from auth.users");
-          try {
-            const { data: authData, error: authError } = await supabase.auth.admin.getUserById(otherUserId);
-            console.log("Auth user data:", { authData, authError });
-            
-            if (authData?.user) {
-              const userData = authData.user;
-              const fallbackProfile: UserProfile = {
-                id: userData.id,
-                first_name: userData.user_metadata?.first_name || userData.user_metadata?.name || null,
-                last_name: userData.user_metadata?.last_name || null,
-                avatar_url: userData.user_metadata?.avatar_url || null
-              };
-              console.log("Setting fallback profile:", fallbackProfile);
-              setOtherUserProfile(fallbackProfile);
-            } else {
-              console.log("No auth user data found, setting null profile");
-              setOtherUserProfile(null);
-            }
-          } catch (authErr) {
-            console.error("Error fetching auth user:", authErr);
-            setOtherUserProfile(null);
-          }
+          setOtherUserProfile(null);
         } else if (profileData) {
           console.log("Setting profile data:", profileData);
           setOtherUserProfile(profileData);
         } else {
-          console.log("No profile data found, setting null");
-          setOtherUserProfile(null);
+          console.log("No profile data found - user may not have completed profile");
+          // Set a basic profile with the user ID
+          setOtherUserProfile({
+            id: otherUserId,
+            first_name: null,
+            last_name: null,
+            avatar_url: null
+          });
         }
       } else {
         console.log("No other user ID found");
