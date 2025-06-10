@@ -244,31 +244,10 @@ const Messages = () => {
 
   // Function to get user display name
   const getUserDisplayName = (): string => {
-    console.log("=== getUserDisplayName called ===");
-    console.log("Current otherUserProfile:", otherUserProfile);
-    console.log("Current userId:", userId);
-    console.log("Current chatInfo:", chatInfo);
-    
-    if (!otherUserProfile) {
-      console.log("No otherUserProfile found, returning 'Usuário'");
-      return 'Usuário';
-    }
-    
+    if (!otherUserProfile) return 'Usuário';
     const { first_name, last_name } = otherUserProfile;
-    console.log("User names from profile:", { first_name, last_name });
-    
-    if (first_name && last_name) {
-      const fullName = `${first_name} ${last_name}`;
-      console.log("Returning full name:", fullName);
-      return fullName;
-    }
-    
-    if (first_name) {
-      console.log("Returning first name only:", first_name);
-      return first_name;
-    }
-    
-    console.log("No valid names found, returning 'Usuário'");
+    if (first_name && last_name) return `${first_name} ${last_name}`;
+    if (first_name) return first_name;
     return 'Usuário';
   };
 
@@ -514,57 +493,25 @@ const Messages = () => {
       
       const chatData = chatStatus.data;
       console.log("=== Chat data loaded ===", chatData);
-      console.log("Chat user_id:", chatData.user_id);
-      console.log("Chat owner_id:", chatData.owner_id);
-      console.log("Current userId:", userId);
       
       // Set chat created date
       setChatCreatedAt(chatData.created_at);
       
       // Get the other user's profile (the one we're chatting with)
       const otherUserId = chatData.user_id === userId ? chatData.owner_id : chatData.user_id;
-      console.log("=== Calculated otherUserId ===", otherUserId);
-      console.log("Logic: chatData.user_id === userId?", chatData.user_id === userId);
-      console.log("If true, use owner_id:", chatData.owner_id);
-      console.log("If false, use user_id:", chatData.user_id);
-      
-      if (otherUserId) {
-        console.log("=== Fetching profile for user ===", otherUserId);
-        
-        // Fetch user profile from profiles table
-        const { data: profileData, error: profileError } = await supabase
-          .from("profiles")
-          .select("id, first_name, last_name, avatar_url")
-          .eq("id", otherUserId)
-          .maybeSingle();
-        
-        console.log("=== Profile query result ===", { profileData, profileError });
-        
-        if (profileError && profileError.code !== 'PGRST116') {
-          console.error("Error fetching profile:", profileError);
-          setOtherUserProfile(null);
-        } else if (profileData) {
-          console.log("=== Setting profile data ===", profileData);
-          setOtherUserProfile(profileData);
-          
-          // Force a re-render to update the display name
-          console.log("Profile set, calling getUserDisplayName to verify:");
-          const displayName = getUserDisplayName();
-          console.log("Display name after setting profile:", displayName);
-        } else {
-          console.log("No profile data found - user may not have completed profile");
-          // Set a basic profile with the user ID
-          const fallbackProfile = {
-            id: otherUserId,
-            first_name: null,
-            last_name: null,
-            avatar_url: null
-          };
-          console.log("=== Setting fallback profile ===", fallbackProfile);
-          setOtherUserProfile(fallbackProfile);
-        }
+      console.log("Buscando perfil para ID:", otherUserId);
+
+      const { data: profileData, error: profileError } = await supabase
+        .from("profiles")
+        .select("id, first_name, last_name, avatar_url")
+        .eq("id", otherUserId)
+        .single();
+
+      console.log("Resultado do profileData:", profileData, "Erro:", profileError);
+
+      if (profileData) {
+        setOtherUserProfile(profileData);
       } else {
-        console.log("=== No other user ID found ===");
         setOtherUserProfile(null);
       }
       
@@ -1075,3 +1022,5 @@ const Messages = () => {
 };
 
 export default Messages;
+
+}
