@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { Input } from "@/components/ui/input";
 import { Search, MessageSquare, ArrowLeft, Trash2, Loader2, User } from "lucide-react";
@@ -130,7 +129,7 @@ const ChatHeader = ({
             <h3 className="font-medium text-base">
               {userProfile.first_name && userProfile.last_name 
                 ? `${userProfile.first_name} ${userProfile.last_name}` 
-                : userProfile.first_name || userProfile.last_name || 'Usuário'
+                : userProfile.first_name || 'Usuário'
               }
             </h3>
             <p className="text-sm text-muted-foreground">Conversando sobre</p>
@@ -926,7 +925,7 @@ const Messages = () => {
               <h2 className="font-medium">
                 {otherUserProfile?.first_name && otherUserProfile?.last_name 
                   ? `${otherUserProfile.first_name} ${otherUserProfile.last_name}` 
-                  : otherUserProfile?.first_name || otherUserProfile?.last_name || 'Usuário'
+                  : otherUserProfile?.first_name || 'Usuário'
                 }
               </h2>
             </div>
@@ -1053,3 +1052,5 @@ const Messages = () => {
 };
 
 export default Messages;
+
+}
