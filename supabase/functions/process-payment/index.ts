@@ -33,6 +33,7 @@ async function processPayment(req: Request) {
       email, 
       identification,
       space_id,
+      vendor_id,
       plan_id,
       user_id,
       payer,
@@ -41,14 +42,19 @@ async function processPayment(req: Request) {
 
     console.log("Processing payment with data:", requestData);
 
+    // Determine if it's a space or vendor promotion
+    const isVendorPromotion = !!vendor_id;
+    const entityId = vendor_id || space_id;
+    const entityType = isVendorPromotion ? 'vendor' : 'space';
+
     // Validate required fields based on payment method
     if (payment_method_id === "pix") {
       // PIX payments require different validations
-      if (!transaction_amount || !payer || !space_id || !plan_id || !user_id) {
+      if (!transaction_amount || !payer || !entityId || !plan_id || !user_id) {
         return new Response(
           JSON.stringify({ 
             success: false, 
-            error: "Missing required payment information for PIX" 
+            error: `Missing required payment information for PIX ${entityType} promotion` 
           }),
           { 
             status: 400,
@@ -90,22 +96,22 @@ async function processPayment(req: Request) {
     // Prepare the base request data
     let mpRequestData: any = {
       transaction_amount: parseFloat(transaction_amount),
-      description: requestData.description || `Space promotion: ${plan_id}`,
+      description: requestData.description || `${entityType} promotion: ${plan_id}`,
       payment_method_id: payment_method_id,
       additional_info: {
         items: [
           {
-            id: space_id,
-            title: requestData.description || `Space promotion plan ${plan_id}`,
-            description: `Promotion for space ID ${space_id}`,
-            category_id: "event_space",
+            id: entityId,
+            title: requestData.description || `${entityType} promotion plan ${plan_id}`,
+            description: `Promotion for ${entityType} ID ${entityId}`,
+            category_id: isVendorPromotion ? "vendor_service" : "event_space",
             quantity: 1,
             unit_price: parseFloat(transaction_amount)
           }
         ]
       },
       notification_url: "https://your-app-url.com/api/notifications/mercadopago",
-      statement_descriptor: "iParty Spaces",
+      statement_descriptor: "iParty Vendors",
     };
 
     // Add device_id if available
@@ -217,8 +223,12 @@ async function processPayment(req: Request) {
           expiresAt = new Date(new Date().getTime() + 30 * 24 * 60 * 60 * 1000); // 30 days
         }
         
-        console.log("About to insert into space_promotions table with data:", {
-          space_id,
+        // Choose the correct table based on entity type
+        const tableName = isVendorPromotion ? 'vendor_promotions' : 'space_promotions';
+        const entityColumn = isVendorPromotion ? 'vendor_id' : 'space_id';
+        
+        console.log(`About to insert into ${tableName} table with data:`, {
+          [entityColumn]: entityId,
           plan_id,
           payment_id: mpData.id,
           payment_status: mpData.status,
@@ -230,9 +240,9 @@ async function processPayment(req: Request) {
         // For PIX, record is pending until payment is confirmed
         // Insert directly using service role client to bypass RLS
         const { data: insertData, error: dbError } = await supabase
-          .from('space_promotions')
+          .from(tableName)
           .insert({
-            space_id,
+            [entityColumn]: entityId,
             plan_id,
             payment_id: mpData.id,
             payment_status: mpData.status,
@@ -242,7 +252,7 @@ async function processPayment(req: Request) {
           })
           .select();
 
-        console.log("Database insert result:", insertData, dbError);
+        console.log(`Database insert result for ${tableName}:`, insertData, dbError);
 
         if (dbError) {
           console.error("Error storing payment:", dbError);

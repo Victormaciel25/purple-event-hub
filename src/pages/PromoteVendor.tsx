@@ -292,9 +292,9 @@ const PromoteVendor: React.FC = () => {
           <TabsContent value="pix" className="mt-4">
             <Card>
               <CardContent className="pt-4">
-                <PixPayment
-                  spaceId={selectedVendor}
-                  spaceName={vendors.find(vendor => vendor.id === selectedVendor)?.name || ""}
+                <VendorPixPayment
+                  vendorId={selectedVendor}
+                  vendorName={vendors.find(vendor => vendor.id === selectedVendor)?.name || ""}
                   plan={plans.find(plan => plan.id === selectedPlan) || plans[0]}
                   onSuccess={handlePaymentSuccess}
                 />
