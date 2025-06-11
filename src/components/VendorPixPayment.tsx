@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { toast } from '@/components/ui/use-toast';
 import { Button } from "@/components/ui/button";
@@ -41,6 +40,8 @@ const VendorPixPayment: React.FC<VendorPixPaymentProps> = ({
   const [mercadoPagoPublicKey, setMercadoPagoPublicKey] = useState<string | null>(null);
   const [identificationTypes, setIdentificationTypes] = useState<Array<{id: string, name: string}>>([]);
   const [paymentId, setPaymentId] = useState<string | null>(null);
+  const [checkingPayment, setCheckingPayment] = useState(false);
+  const paymentCheckInterval = useRef<NodeJS.Timeout | null>(null);
   const formCheckoutRef = useRef<HTMLFormElement>(null);
   const pixCodeInputRef = useRef<HTMLInputElement>(null);
 
@@ -173,6 +174,76 @@ const VendorPixPayment: React.FC<VendorPixPaymentProps> = ({
     selectElem.appendChild(tempOptions);
   };
 
+  const startPaymentStatusPolling = (paymentId: string) => {
+    console.log("Starting payment status polling for payment ID:", paymentId);
+    setCheckingPayment(true);
+    
+    // Check immediately
+    checkPaymentStatus(paymentId);
+    
+    // Then check every 5 seconds
+    paymentCheckInterval.current = setInterval(() => {
+      checkPaymentStatus(paymentId);
+    }, 5000);
+    
+    // Stop checking after 10 minutes
+    setTimeout(() => {
+      if (paymentCheckInterval.current) {
+        clearInterval(paymentCheckInterval.current);
+        setCheckingPayment(false);
+        toast({
+          title: "Tempo limite",
+          description: "Verificação de pagamento interrompida. Por favor, verifique manualmente.",
+          variant: "default"
+        });
+      }
+    }, 600000); // 10 minutes
+  };
+
+  const checkPaymentStatus = async (paymentId: string) => {
+    try {
+      const { data, error } = await supabase.functions.invoke('check-payment-status', {
+        body: {
+          payment_id: paymentId,
+          entity_type: 'vendor'
+        }
+      });
+
+      if (error) throw error;
+
+      console.log("Payment status check result:", data);
+
+      if (data.payment_status === 'approved') {
+        // Payment approved!
+        if (paymentCheckInterval.current) {
+          clearInterval(paymentCheckInterval.current);
+        }
+        setCheckingPayment(false);
+        
+        toast({
+          title: "Sucesso!",
+          description: "Pagamento confirmado com sucesso!",
+          variant: "default"
+        });
+
+        if (onSuccess) {
+          onSuccess();
+        }
+      }
+    } catch (error) {
+      console.error("Error checking payment status:", error);
+    }
+  };
+
+  // Cleanup interval on component unmount
+  useEffect(() => {
+    return () => {
+      if (paymentCheckInterval.current) {
+        clearInterval(paymentCheckInterval.current);
+      }
+    };
+  }, []);
+
   // Process PIX payment
   const generatePix = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -262,6 +333,7 @@ const VendorPixPayment: React.FC<VendorPixPaymentProps> = ({
         setPixQrCodeUrl("https://chart.googleapis.com/chart?chs=300x300&cht=qr&chl=00020126580014br.gov.bcb.pix0136123e4567-e12b-12d1-a456-4266554400005204000053039865802BR5913Recipient+Name6008BRASILIA62070503***6304A1BC&choe=UTF-8");
         setShowQrCode(true);
         setPaymentId(paymentData.id);
+        startPaymentStatusPolling(paymentData.id);
       }
       
       setLoading(false);
@@ -282,22 +354,6 @@ const VendorPixPayment: React.FC<VendorPixPaymentProps> = ({
         onError();
       }
     }
-  };
-
-  // Poll for payment status updates
-  const startPaymentStatusPolling = (paymentId: string) => {
-    // In a real implementation, you would poll the vendor_promotions table 
-    // to check if payment_status changed to 'approved'
-    console.log("Payment created with ID:", paymentId);
-    console.log("Aguardando confirmação do pagamento PIX...");
-    
-    // For now, we'll just show the QR code and wait for manual confirmation
-    // In production, you would implement polling to check payment status
-    toast({
-      title: "PIX Gerado",
-      description: "Escaneie o QR code ou copie o código PIX para realizar o pagamento",
-      variant: "default"
-    });
   };
 
   const handleCopyPixCode = () => {
@@ -451,7 +507,7 @@ const VendorPixPayment: React.FC<VendorPixPaymentProps> = ({
 
           <h3 className="text-lg font-bold mb-2">Pagamento via PIX</h3>
           <p className="text-sm text-gray-600 mb-6">
-            Escaneie o QR code acima ou copie e cole o código PIX no seu aplicativo bancário
+            Escaneie o QR code acima ou copie o código PIX no seu aplicativo bancário
           </p>
           
           {pixCode && (
@@ -496,9 +552,18 @@ const VendorPixPayment: React.FC<VendorPixPaymentProps> = ({
           )}
 
           <Alert className="mb-4">
-            <AlertTitle>Aguardando Pagamento</AlertTitle>
+            <AlertTitle>
+              {checkingPayment ? "Verificando Pagamento..." : "Aguardando Pagamento"}
+            </AlertTitle>
             <AlertDescription>
-              Após realizar o pagamento, a promoção será ativada automaticamente quando o pagamento for confirmado.
+              {checkingPayment ? (
+                <div className="flex items-center gap-2">
+                  <Loader2 size={16} className="animate-spin" />
+                  Verificando status do pagamento automaticamente...
+                </div>
+              ) : (
+                "Após realizar o pagamento, a promoção será ativada automaticamente quando o pagamento for confirmado."
+              )}
               {paymentId && (
                 <div className="mt-2 text-xs text-gray-500">
                   ID do Pagamento: {paymentId}
@@ -509,6 +574,10 @@ const VendorPixPayment: React.FC<VendorPixPaymentProps> = ({
 
           <Button
             onClick={() => {
+              if (paymentCheckInterval.current) {
+                clearInterval(paymentCheckInterval.current);
+              }
+              setCheckingPayment(false);
               setShowQrCode(false);
               setShowForm(true);
               setPixCode(null);

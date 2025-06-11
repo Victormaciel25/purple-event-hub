@@ -39,8 +39,11 @@ const PixPayment: React.FC<PixPaymentProps> = ({
   const [userId, setUserId] = useState<string | null>(null);
   const [mercadoPagoPublicKey, setMercadoPagoPublicKey] = useState<string | null>(null);
   const [identificationTypes, setIdentificationTypes] = useState<Array<{id: string, name: string}>>([]);
+  const [paymentId, setPaymentId] = useState<string | null>(null);
+  const [checkingPayment, setCheckingPayment] = useState(false);
   const formCheckoutRef = useRef<HTMLFormElement>(null);
   const pixCodeInputRef = useRef<HTMLInputElement>(null);
+  const paymentCheckInterval = useRef<NodeJS.Timeout | null>(null);
 
   // Get user ID and Mercado Pago public key on component mount
   useEffect(() => {
@@ -234,16 +237,11 @@ const PixPayment: React.FC<PixPaymentProps> = ({
         
         const txData = paymentData.point_of_interaction.transaction_data;
         setPixCode(txData.qr_code);
+        setPaymentId(paymentData.id);
         
-        // Log QR code data for debugging
-        console.log("QR Code received:", txData.qr_code);
-        console.log("QR Code Base64 received:", txData.qr_code_base64 ? "Yes (length: " + txData.qr_code_base64.length + ")" : "No");
-        
-        // Set QR code from base64 if available
         if (txData.qr_code_base64) {
           setQrCodeBase64(txData.qr_code_base64);
         } else {
-          // If no base64 QR code, use a generated one
           setPixQrCodeUrl(`https://chart.googleapis.com/chart?chs=300x300&cht=qr&chl=${encodeURIComponent(txData.qr_code)}&choe=UTF-8`);
         }
         
@@ -252,12 +250,12 @@ const PixPayment: React.FC<PixPaymentProps> = ({
         // Start polling for payment status
         startPaymentStatusPolling(paymentData.id);
       } else {
-        // If we're in test mode, we might not get a real QR code
-        // Show the test QR code instead
         console.log("No QR code in response, using test QR code");
         setPixCode("00020126580014br.gov.bcb.pix0136123e4567-e12b-12d1-a456-4266554400005204000053039865802BR5913Recipient Name6008BRASILIA62070503***6304A1BC");
         setPixQrCodeUrl("https://chart.googleapis.com/chart?chs=300x300&cht=qr&chl=00020126580014br.gov.bcb.pix0136123e4567-e12b-12d1-a456-4266554400005204000053039865802BR5913Recipient+Name6008BRASILIA62070503***6304A1BC&choe=UTF-8");
         setShowQrCode(true);
+        setPaymentId(paymentData.id);
+        startPaymentStatusPolling(paymentData.id);
       }
       
       setLoading(false);
@@ -282,27 +280,74 @@ const PixPayment: React.FC<PixPaymentProps> = ({
 
   // Poll for payment status updates
   const startPaymentStatusPolling = (paymentId: string) => {
-    // Here we would implement polling to check payment status
-    // For simplicity in this example, we'll just simulate a successful payment after 5 seconds
+    console.log("Starting payment status polling for payment ID:", paymentId);
+    setCheckingPayment(true);
     
-    // In a real implementation, you would call an endpoint to check the payment status
-    // Example:
-    // const checkPaymentStatus = async () => {
-    //   const { data } = await supabase.functions.invoke('check-payment-status', { 
-    //     body: { payment_id: paymentId }
-    //   });
-    //   if (data.status === 'approved') {
-    //     clearInterval(intervalId);
-    //     if (onSuccess) onSuccess();
-    //   }
-    // };
-    // const intervalId = setInterval(checkPaymentStatus, 5000);
+    // Check immediately
+    checkPaymentStatus(paymentId);
     
-    // Simulated success after 5 seconds (remove this in production)
-    setTimeout(() => {
-      if (onSuccess) onSuccess();
+    // Then check every 5 seconds
+    paymentCheckInterval.current = setInterval(() => {
+      checkPaymentStatus(paymentId);
     }, 5000);
+    
+    // Stop checking after 10 minutes
+    setTimeout(() => {
+      if (paymentCheckInterval.current) {
+        clearInterval(paymentCheckInterval.current);
+        setCheckingPayment(false);
+        toast({
+          title: "Tempo limite",
+          description: "Verificação de pagamento interrompida. Por favor, verifique manualmente.",
+          variant: "default"
+        });
+      }
+    }, 600000); // 10 minutes
   };
+
+  const checkPaymentStatus = async (paymentId: string) => {
+    try {
+      const { data, error } = await supabase.functions.invoke('check-payment-status', {
+        body: {
+          payment_id: paymentId,
+          entity_type: 'space'
+        }
+      });
+
+      if (error) throw error;
+
+      console.log("Payment status check result:", data);
+
+      if (data.payment_status === 'approved') {
+        // Payment approved!
+        if (paymentCheckInterval.current) {
+          clearInterval(paymentCheckInterval.current);
+        }
+        setCheckingPayment(false);
+        
+        toast({
+          title: "Sucesso!",
+          description: "Pagamento confirmado com sucesso!",
+          variant: "default"
+        });
+
+        if (onSuccess) {
+          onSuccess();
+        }
+      }
+    } catch (error) {
+      console.error("Error checking payment status:", error);
+    }
+  };
+
+  // Cleanup interval on component unmount
+  useEffect(() => {
+    return () => {
+      if (paymentCheckInterval.current) {
+        clearInterval(paymentCheckInterval.current);
+      }
+    };
+  }, []);
 
   const handleCopyPixCode = () => {
     if (!pixCode) return;
@@ -499,8 +544,33 @@ const PixPayment: React.FC<PixPaymentProps> = ({
             </div>
           )}
 
+          <Alert className="mb-4">
+            <AlertTitle>
+              {checkingPayment ? "Verificando Pagamento..." : "Aguardando Pagamento"}
+            </AlertTitle>
+            <AlertDescription>
+              {checkingPayment ? (
+                <div className="flex items-center gap-2">
+                  <Loader2 size={16} className="animate-spin" />
+                  Verificando status do pagamento automaticamente...
+                </div>
+              ) : (
+                "Após realizar o pagamento, a promoção será ativada automaticamente quando o pagamento for confirmado."
+              )}
+              {paymentId && (
+                <div className="mt-2 text-xs text-gray-500">
+                  ID do Pagamento: {paymentId}
+                </div>
+              )}
+            </AlertDescription>
+          </Alert>
+
           <Button
             onClick={() => {
+              if (paymentCheckInterval.current) {
+                clearInterval(paymentCheckInterval.current);
+              }
+              setCheckingPayment(false);
               setShowQrCode(false);
               setShowForm(true);
               setPixCode(null);
