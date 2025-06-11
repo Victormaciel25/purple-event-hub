@@ -9,7 +9,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import MercadoPagoCheckout from "@/components/MercadoPagoCheckout";
-import PixPayment from "@/components/PixPayment";
+import VendorPixPayment from "@/components/VendorPixPayment";
 
 type Vendor = {
   id: string;
