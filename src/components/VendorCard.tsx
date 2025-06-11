@@ -69,7 +69,7 @@ const VendorCard: React.FC<VendorProps> = ({
   return (
     <Card 
       className={`overflow-hidden border-0 card-shadow cursor-pointer transition-transform hover:scale-[1.01] ${
-        isPromoted ? 'ring-2 ring-iparty' : ''
+        isPromoted ? 'ring-2 ring-yellow-400' : ''
       }`}
       onClick={handleClick}
     >
@@ -81,7 +81,7 @@ const VendorCard: React.FC<VendorProps> = ({
             className="w-full h-full"
           />
           {isPromoted && (
-            <div className="absolute -top-1 -right-1 bg-iparty rounded-full p-1">
+            <div className="absolute -top-1 -right-1 bg-yellow-500 rounded-full p-1">
               <Star size={12} className="text-white fill-white" />
             </div>
           )}
@@ -89,30 +89,29 @@ const VendorCard: React.FC<VendorProps> = ({
         <CardContent className="p-0 flex-1">
           <div className="flex justify-between items-start">
             <div className="flex-1">
-              <div className="flex items-center gap-2">
-                <h3 className="font-semibold text-base">{name}</h3>
-                {isPromoted && (
-                  <Badge variant="default" className="bg-iparty text-white text-xs">
-                    Destaque
-                  </Badge>
-                )}
-              </div>
+              <h3 className="font-semibold text-base">{name}</h3>
               <Badge variant="outline" className="mt-1 bg-secondary text-xs">
                 {category}
               </Badge>
               {getStatusBadge()}
             </div>
-            {showEditButton && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleEditClick}
-                className="ml-2"
-              >
-                <Edit size={14} className="mr-1" />
-                Editar
-              </Button>
-            )}
+            <div className="flex items-center gap-2 ml-2">
+              {isPromoted && (
+                <Badge className="bg-yellow-500 hover:bg-yellow-600 text-white text-xs">
+                  Destaque
+                </Badge>
+              )}
+              {showEditButton && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleEditClick}
+                >
+                  <Edit size={14} className="mr-1" />
+                  Editar
+                </Button>
+              )}
+            </div>
           </div>
           <button 
             className="flex items-center text-iparty text-sm mt-2"
