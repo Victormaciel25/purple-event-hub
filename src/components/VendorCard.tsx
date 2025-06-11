@@ -2,7 +2,7 @@
 import React from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Phone, Edit, Star } from "lucide-react";
+import { MapPin, Edit, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import OptimizedImage from "./OptimizedImage";
 import { useNavigate } from "react-router-dom";
@@ -17,6 +17,7 @@ interface VendorProps {
   status?: 'pending' | 'approved' | 'rejected';
   showEditButton?: boolean;
   isPromoted?: boolean;
+  address?: string;
 }
 
 const VendorCard: React.FC<VendorProps> = ({
@@ -29,6 +30,7 @@ const VendorCard: React.FC<VendorProps> = ({
   status,
   showEditButton = false,
   isPromoted = false,
+  address,
 }) => {
   const navigate = useNavigate();
 
@@ -40,7 +42,7 @@ const VendorCard: React.FC<VendorProps> = ({
     }
   };
 
-  const handlePhoneClick = (e: React.MouseEvent) => {
+  const handleAddressClick = (e: React.MouseEvent) => {
     e.stopPropagation();
   };
 
@@ -114,13 +116,15 @@ const VendorCard: React.FC<VendorProps> = ({
               )}
             </div>
           </div>
-          <button 
-            className="flex items-center text-iparty text-sm mt-2"
-            onClick={handlePhoneClick}
-          >
-            <Phone size={14} className="mr-1" />
-            <span>{contactNumber}</span>
-          </button>
+          {address && (
+            <button 
+              className="flex items-center text-iparty text-sm mt-2"
+              onClick={handleAddressClick}
+            >
+              <MapPin size={14} className="mr-1" />
+              <span>{address}</span>
+            </button>
+          )}
         </CardContent>
       </div>
     </Card>

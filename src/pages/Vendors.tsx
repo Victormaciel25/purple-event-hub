@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import VendorCard from "@/components/VendorCard";
 import { Input } from "@/components/ui/input";
@@ -120,6 +119,7 @@ const Vendors = () => {
                   contactNumber={vendor.contact_number}
                   image={vendor.images[0] || "https://source.unsplash.com/random/200x200?food"}
                   isPromoted={vendor.isPromoted}
+                  address={vendor.address}
                 />
               ))
             ) : (

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, Plus, RefreshCw } from "lucide-react";
@@ -134,6 +133,7 @@ const UserVendors = () => {
                   image={vendor.images?.[0] ?? "/placeholder.svg"}
                   status={vendor.status}
                   showEditButton={true}
+                  address={vendor.address}
                 />
               ))}
             </div>
