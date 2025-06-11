@@ -90,14 +90,14 @@ const VendorCard: React.FC<VendorProps> = ({
         </div>
         <CardContent className="p-0 flex-1">
           <div className="flex justify-between items-start">
-            <div className="flex-1 min-w-0">
-              <h3 className="font-semibold text-base truncate pr-2">{name}</h3>
+            <div className="flex-1">
+              <h3 className="font-semibold text-base">{name}</h3>
               <Badge variant="outline" className="mt-1 bg-secondary text-xs">
                 {category}
               </Badge>
               {getStatusBadge()}
             </div>
-            <div className="flex items-center gap-2 ml-2 flex-shrink-0">
+            <div className="flex items-center gap-2 ml-2">
               {isPromoted && (
                 <Badge className="bg-yellow-500 hover:bg-yellow-600 text-white text-xs flex items-center gap-1">
                   <Star size={12} className="fill-current" />
@@ -118,11 +118,11 @@ const VendorCard: React.FC<VendorProps> = ({
           </div>
           {address && (
             <button 
-              className="flex items-center text-iparty text-sm mt-2 min-w-0 w-full"
+              className="flex items-center text-iparty text-sm mt-2"
               onClick={handleAddressClick}
             >
-              <MapPin size={14} className="mr-1 flex-shrink-0" />
-              <span className="truncate">{address}</span>
+              <MapPin size={14} className="mr-1" />
+              <span>{address}</span>
             </button>
           )}
         </CardContent>
