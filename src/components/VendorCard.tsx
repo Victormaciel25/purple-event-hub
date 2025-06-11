@@ -97,7 +97,8 @@ const VendorCard: React.FC<VendorProps> = ({
             </div>
             <div className="flex items-center gap-2 ml-2">
               {isPromoted && (
-                <Badge className="bg-yellow-500 hover:bg-yellow-600 text-white text-xs">
+                <Badge className="bg-yellow-500 hover:bg-yellow-600 text-white text-xs flex items-center gap-1">
+                  <Star size={12} className="fill-current" />
                   Destaque
                 </Badge>
               )}
