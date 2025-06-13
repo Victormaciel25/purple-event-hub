@@ -198,195 +198,277 @@ const PromoteSpace: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="container px-4 py-6 max-w-4xl mx-auto">
-        <div className="flex items-center mb-6">
-          <Button variant="ghost" size="sm" onClick={() => navigate("/profile")} className="mr-2">
-            <ChevronLeft size={20} />
-          </Button>
-          <h1 className="text-2xl font-bold">Promover Espaço</h1>
+      <div className="min-h-screen bg-gradient-to-br from-background via-secondary/20 to-accent/10">
+        <div className="container px-4 py-6 max-w-4xl mx-auto">
+          <div className="flex items-center mb-8 sticky top-0 bg-background/80 backdrop-blur-sm rounded-lg p-4 border shadow-sm">
+            <Button variant="ghost" size="sm" onClick={() => navigate("/profile")} className="mr-3 hover:bg-secondary">
+              <ChevronLeft size={20} />
+            </Button>
+            <div>
+              <h1 className="text-3xl font-bold bg-gradient-to-r from-iparty to-iparty-dark bg-clip-text text-transparent">
+                Promover Espaço
+              </h1>
+              <p className="text-muted-foreground text-sm mt-1">Destaque seu espaço e receba mais visualizações</p>
+            </div>
+          </div>
+          <Card className="p-8 text-center shadow-md border-0 bg-card/50 backdrop-blur-sm">
+            <div className="flex flex-col items-center justify-center space-y-4">
+              <div className="w-12 h-12 border-4 border-iparty border-t-transparent rounded-full animate-spin"></div>
+              <p className="text-lg font-medium text-muted-foreground">Carregando seus espaços...</p>
+            </div>
+          </Card>
         </div>
-        <p className="text-center py-10">Carregando seus espaços...</p>
       </div>
     );
   }
 
   if (spaces.length === 0) {
     return (
-      <div className="container px-4 py-6 max-w-4xl mx-auto">
-        <div className="flex items-center mb-6">
-          <Button variant="ghost" size="sm" onClick={() => navigate("/profile")} className="mr-2">
-            <ChevronLeft size={20} />
-          </Button>
-          <h1 className="text-2xl font-bold">Promover Espaço</h1>
+      <div className="min-h-screen bg-gradient-to-br from-background via-secondary/20 to-accent/10">
+        <div className="container px-4 py-6 max-w-4xl mx-auto">
+          <div className="flex items-center mb-8 sticky top-0 bg-background/80 backdrop-blur-sm rounded-lg p-4 border shadow-sm">
+            <Button variant="ghost" size="sm" onClick={() => navigate("/profile")} className="mr-3 hover:bg-secondary">
+              <ChevronLeft size={20} />
+            </Button>
+            <div>
+              <h1 className="text-3xl font-bold bg-gradient-to-r from-iparty to-iparty-dark bg-clip-text text-transparent">
+                Promover Espaço
+              </h1>
+              <p className="text-muted-foreground text-sm mt-1">Destaque seu espaço e receba mais visualizações</p>
+            </div>
+          </div>
+          <Card className="p-8 text-center shadow-md border-0 bg-card/50 backdrop-blur-sm">
+            <div className="flex flex-col items-center justify-center space-y-6">
+              <div className="w-16 h-16 bg-iparty/10 rounded-full flex items-center justify-center">
+                <div className="w-8 h-8 bg-iparty/20 rounded-full"></div>
+              </div>
+              <div className="space-y-2">
+                <h3 className="text-xl font-semibold">Nenhum espaço disponível</h3>
+                <p className="text-muted-foreground">Você precisa ter espaços aprovados para promovê-los.</p>
+              </div>
+              <Button onClick={() => navigate("/register-space")} className="bg-iparty hover:bg-iparty-dark px-6 py-3">
+                Cadastrar Novo Espaço
+              </Button>
+            </div>
+          </Card>
         </div>
-        <Card className="p-6 text-center">
-          <p className="mb-4">Você precisa ter espaços aprovados para promovê-los.</p>
-          <Button onClick={() => navigate("/register-space")} className="bg-iparty">
-            Cadastrar Novo Espaço
-          </Button>
-        </Card>
       </div>
     );
   }
 
   if (paymentSuccess) {
     return (
-      <div className="container px-4 py-6 max-w-4xl mx-auto">
-        <div className="flex items-center mb-6">
-          <Button variant="ghost" size="sm" onClick={() => navigate("/profile")} className="mr-2">
-            <ChevronLeft size={20} />
-          </Button>
-          <h1 className="text-2xl font-bold">Promover Espaço</h1>
-        </div>
-        <Card className="p-6 text-center">
-          <div className="flex flex-col items-center justify-center py-8">
-            <div className="rounded-full bg-green-100 p-3 mb-4">
-              <Check className="w-8 h-8 text-green-600" />
-            </div>
-            <h2 className="text-xl font-bold mb-2">Pagamento realizado com sucesso!</h2>
-            <p className="text-gray-600 mb-6">
-              Seu espaço "{spaces.find(space => space.id === selectedSpace)?.name}" 
-              foi promovido com o plano {plans.find(plan => plan.id === selectedPlan)?.name}.
-            </p>
-            <Button onClick={() => navigate("/profile")} className="bg-iparty">
-              Voltar ao perfil
+      <div className="min-h-screen bg-gradient-to-br from-background via-secondary/20 to-accent/10">
+        <div className="container px-4 py-6 max-w-4xl mx-auto">
+          <div className="flex items-center mb-8 sticky top-0 bg-background/80 backdrop-blur-sm rounded-lg p-4 border shadow-sm">
+            <Button variant="ghost" size="sm" onClick={() => navigate("/profile")} className="mr-3 hover:bg-secondary">
+              <ChevronLeft size={20} />
             </Button>
+            <div>
+              <h1 className="text-3xl font-bold bg-gradient-to-r from-iparty to-iparty-dark bg-clip-text text-transparent">
+                Promover Espaço
+              </h1>
+              <p className="text-muted-foreground text-sm mt-1">Destaque seu espaço e receba mais visualizações</p>
+            </div>
           </div>
-        </Card>
+          <Card className="p-8 text-center shadow-md border-0 bg-card/50 backdrop-blur-sm">
+            <div className="flex flex-col items-center justify-center space-y-6">
+              <div className="w-20 h-20 bg-gradient-to-r from-green-400 to-green-500 rounded-full flex items-center justify-center shadow-lg">
+                <Check className="w-10 h-10 text-white" />
+              </div>
+              <div className="space-y-3">
+                <h2 className="text-2xl font-bold bg-gradient-to-r from-green-600 to-green-700 bg-clip-text text-transparent">
+                  Pagamento realizado com sucesso!
+                </h2>
+                <p className="text-muted-foreground max-w-md mx-auto leading-relaxed">
+                  Seu espaço "<span className="font-semibold text-foreground">{spaces.find(space => space.id === selectedSpace)?.name}</span>" 
+                  foi promovido com o plano <span className="font-semibold text-foreground">{plans.find(plan => plan.id === selectedPlan)?.name}</span>.
+                </p>
+              </div>
+              <Button onClick={() => navigate("/profile")} className="bg-iparty hover:bg-iparty-dark px-8 py-3">
+                Voltar ao perfil
+              </Button>
+            </div>
+          </Card>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="container px-4 py-6 pb-20 max-w-4xl mx-auto">
-      <div className="flex items-center mb-6 bg-white">
-        <Button variant="ghost" size="sm" onClick={() => navigate("/profile")} className="mr-2">
-          <ChevronLeft size={20} />
-        </Button>
-        <h1 className="text-2xl font-bold">Promover Espaço</h1>
-      </div>
-
-      <div className="mb-8">
-        <h2 className="text-lg font-medium mb-2">Selecione um espaço para promover:</h2>
-        <Select 
-          value={selectedSpace} 
-          onValueChange={setSelectedSpace}
-        >
-          <SelectTrigger className="w-full">
-            <SelectValue placeholder="Selecione um espaço" />
-          </SelectTrigger>
-          <SelectContent>
-            {spaces.map((space) => (
-              <SelectItem key={space.id} value={space.id}>
-                {space.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-
-      <div className="mb-8">
-        <h2 className="text-lg font-medium mb-3">Escolha um plano de promoção:</h2>
-        <RadioGroup 
-          value={selectedPlan} 
-          onValueChange={setSelectedPlan}
-          className="grid grid-cols-1 md:grid-cols-2 gap-4"
-        >
-          {plans.map((plan) => (
-            <Card 
-              key={plan.id}
-              className={`border-2 ${selectedPlan === plan.id ? 'border-iparty' : 'border-gray-200'} cursor-pointer hover:border-iparty/70 transition-colors`}
-              onClick={() => setSelectedPlan(plan.id)}
-            >
-              <CardContent className="p-4">
-                <div className="flex items-start justify-between">
-                  <div>
-                    <h3 className="font-bold text-lg">{plan.name}</h3>
-                    <p className="text-muted-foreground">{plan.description}</p>
-                    <div className="mt-2">
-                      <span className="font-bold text-xl">{formatPrice(plan.price)}</span>
-                      {plan.recurring && <span className="text-sm text-muted-foreground">/mês</span>}
-                    </div>
-                    <p className="text-sm text-muted-foreground mt-1">Duração: {plan.duration}</p>
-                  </div>
-                  <RadioGroupItem 
-                    value={plan.id} 
-                    id={plan.id} 
-                    className="mt-1 h-5 w-5"
-                  />
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </RadioGroup>
-      </div>
-
-      <div className="mb-8">
-        <h2 className="text-lg font-medium mb-3">Escolha a forma de pagamento:</h2>
-        
-        {isRecurringPlan && (
-          <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-            <p className="text-sm text-yellow-800">
-              Para planos recorrentes, apenas pagamento por cartão de crédito está disponível.
-            </p>
+    <div className="min-h-screen bg-gradient-to-br from-background via-secondary/20 to-accent/10">
+      <div className="container px-4 py-6 pb-20 max-w-4xl mx-auto">
+        {/* Header */}
+        <div className="flex items-center mb-8 sticky top-0 bg-background/80 backdrop-blur-sm rounded-lg p-4 border shadow-sm">
+          <Button variant="ghost" size="sm" onClick={() => navigate("/profile")} className="mr-3 hover:bg-secondary">
+            <ChevronLeft size={20} />
+          </Button>
+          <div>
+            <h1 className="text-3xl font-bold bg-gradient-to-r from-iparty to-iparty-dark bg-clip-text text-transparent">
+              Promover Espaço
+            </h1>
+            <p className="text-muted-foreground text-sm mt-1">Destaque seu espaço e receba mais visualizações</p>
           </div>
-        )}
+        </div>
 
-        <Tabs 
-          value={paymentMethod} 
-          onValueChange={(value) => setPaymentMethod(value as "card" | "pix")}
-          className="w-full"
-        >
-          <TabsList className="grid w-full grid-cols-2 mb-4">
-            <TabsTrigger value="card" className="flex items-center gap-2">
-              <CreditCard size={18} />
-              <span>Cartão de Crédito</span>
-            </TabsTrigger>
-            <TabsTrigger 
-              value="pix" 
-              className="flex items-center gap-2"
-              disabled={isRecurringPlan}
+        {/* Space Selection */}
+        <div className="mb-8">
+          <Card className="p-6 shadow-md border-0 bg-card/50 backdrop-blur-sm">
+            <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
+              <div className="w-2 h-2 bg-iparty rounded-full"></div>
+              Selecione um espaço para promover
+            </h2>
+            <Select 
+              value={selectedSpace} 
+              onValueChange={setSelectedSpace}
             >
-              <QrCode size={18} />
-              <span>Pix</span>
-            </TabsTrigger>
-          </TabsList>
-          
-          <TabsContent value="card" className="mt-4">
-            <Card>
-              <CardContent className="pt-4">
-                {isRecurringPlan ? (
-                  <SubscriptionCheckout 
-                    spaceId={selectedSpace}
-                    spaceName={spaces.find(space => space.id === selectedSpace)?.name || ""}
-                    plan={plans.find(plan => plan.id === selectedPlan) || plans[0]}
-                    onSuccess={handlePaymentSuccess}
-                  />
-                ) : (
-                  <MercadoPagoCheckout 
-                    spaceId={selectedSpace}
-                    spaceName={spaces.find(space => space.id === selectedSpace)?.name || ""}
-                    plan={plans.find(plan => plan.id === selectedPlan) || plans[0]}
-                    onSuccess={handlePaymentSuccess}
-                  />
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-          
-          <TabsContent value="pix" className="mt-4">
-            <Card>
-              <CardContent className="pt-4">
-                <PixPayment
-                  spaceId={selectedSpace}
-                  spaceName={spaces.find(space => space.id === selectedSpace)?.name || ""}
-                  plan={plans.find(plan => plan.id === selectedPlan) || plans[0]}
-                  onSuccess={handlePaymentSuccess}
-                />
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
+              <SelectTrigger className="w-full h-12 border-2 hover:border-iparty/50 transition-colors">
+                <SelectValue placeholder="Selecione um espaço" />
+              </SelectTrigger>
+              <SelectContent>
+                {spaces.map((space) => (
+                  <SelectItem key={space.id} value={space.id}>
+                    {space.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </Card>
+        </div>
+
+        {/* Plans Selection */}
+        <div className="mb-8">
+          <Card className="p-6 shadow-md border-0 bg-card/50 backdrop-blur-sm">
+            <h2 className="text-xl font-semibold mb-6 flex items-center gap-2">
+              <div className="w-2 h-2 bg-iparty rounded-full"></div>
+              Escolha um plano de promoção
+            </h2>
+            <RadioGroup 
+              value={selectedPlan} 
+              onValueChange={setSelectedPlan}
+              className="grid grid-cols-1 md:grid-cols-2 gap-6"
+            >
+              {plans.map((plan) => (
+                <Card 
+                  key={plan.id}
+                  className={`border-2 cursor-pointer transition-all duration-300 hover:shadow-lg hover:-translate-y-1 ${
+                    selectedPlan === plan.id 
+                      ? 'border-iparty bg-iparty/5 shadow-lg shadow-iparty/20' 
+                      : 'border-border hover:border-iparty/50'
+                  }`}
+                  onClick={() => setSelectedPlan(plan.id)}
+                >
+                  <CardContent className="p-6">
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-2">
+                          <h3 className="font-bold text-lg">{plan.name}</h3>
+                          {plan.recurring && (
+                            <div className="px-2 py-1 bg-iparty/10 text-iparty text-xs rounded-full font-medium">
+                              Recorrente
+                            </div>
+                          )}
+                        </div>
+                        <p className="text-muted-foreground mb-3">{plan.description}</p>
+                        <div className="mb-2">
+                          <span className="font-bold text-2xl text-iparty">{formatPrice(plan.price)}</span>
+                          {plan.recurring && <span className="text-sm text-muted-foreground ml-1">/mês</span>}
+                        </div>
+                        <div className="inline-flex items-center gap-1 px-3 py-1 bg-secondary rounded-full">
+                          <span className="text-sm font-medium">Duração: {plan.duration}</span>
+                        </div>
+                      </div>
+                      <RadioGroupItem 
+                        value={plan.id} 
+                        id={plan.id} 
+                        className="mt-2 h-5 w-5 border-2"
+                      />
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </RadioGroup>
+          </Card>
+        </div>
+
+        {/* Payment Method */}
+        <div className="mb-8">
+          <Card className="p-6 shadow-md border-0 bg-card/50 backdrop-blur-sm">
+            <h2 className="text-xl font-semibold mb-6 flex items-center gap-2">
+              <div className="w-2 h-2 bg-iparty rounded-full"></div>
+              Escolha a forma de pagamento
+            </h2>
+            
+            {isRecurringPlan && (
+              <div className="mb-6 p-4 bg-gradient-to-r from-yellow-50 to-orange-50 border border-yellow-200 rounded-xl">
+                <div className="flex items-start gap-3">
+                  <div className="w-5 h-5 bg-yellow-400 rounded-full flex items-center justify-center mt-0.5">
+                    <div className="w-2 h-2 bg-white rounded-full"></div>
+                  </div>
+                  <p className="text-sm text-yellow-800 font-medium">
+                    Para planos recorrentes, apenas pagamento por cartão de crédito está disponível.
+                  </p>
+                </div>
+              </div>
+            )}
+
+            <Tabs 
+              value={paymentMethod} 
+              onValueChange={(value) => setPaymentMethod(value as "card" | "pix")}
+              className="w-full"
+            >
+              <TabsList className="grid w-full grid-cols-2 mb-6 h-12 p-1 bg-secondary/50">
+                <TabsTrigger value="card" className="flex items-center gap-2 h-10 font-medium">
+                  <CreditCard size={18} />
+                  <span>Cartão de Crédito</span>
+                </TabsTrigger>
+                <TabsTrigger 
+                  value="pix" 
+                  className="flex items-center gap-2 h-10 font-medium"
+                  disabled={isRecurringPlan}
+                >
+                  <QrCode size={18} />
+                  <span>Pix</span>
+                </TabsTrigger>
+              </TabsList>
+              
+              <TabsContent value="card" className="mt-0">
+                <Card className="border-2 border-dashed border-iparty/30 bg-gradient-to-br from-iparty/5 to-transparent">
+                  <CardContent className="pt-6">
+                    {isRecurringPlan ? (
+                      <SubscriptionCheckout 
+                        spaceId={selectedSpace}
+                        spaceName={spaces.find(space => space.id === selectedSpace)?.name || ""}
+                        plan={plans.find(plan => plan.id === selectedPlan) || plans[0]}
+                        onSuccess={handlePaymentSuccess}
+                      />
+                    ) : (
+                      <MercadoPagoCheckout 
+                        spaceId={selectedSpace}
+                        spaceName={spaces.find(space => space.id === selectedSpace)?.name || ""}
+                        plan={plans.find(plan => plan.id === selectedPlan) || plans[0]}
+                        onSuccess={handlePaymentSuccess}
+                      />
+                    )}
+                  </CardContent>
+                </Card>
+              </TabsContent>
+              
+              <TabsContent value="pix" className="mt-0">
+                <Card className="border-2 border-dashed border-green-300 bg-gradient-to-br from-green-50/50 to-transparent">
+                  <CardContent className="pt-6">
+                    <PixPayment
+                      spaceId={selectedSpace}
+                      spaceName={spaces.find(space => space.id === selectedSpace)?.name || ""}
+                      plan={plans.find(plan => plan.id === selectedPlan) || plans[0]}
+                      onSuccess={handlePaymentSuccess}
+                    />
+                  </CardContent>
+                </Card>
+              </TabsContent>
+            </Tabs>
+          </Card>
+        </div>
       </div>
     </div>
   );
