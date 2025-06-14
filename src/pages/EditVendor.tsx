@@ -11,7 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
-import ImageUpload from "@/components/ImageUpload";
+import SingleImageUpload from "@/components/SingleImageUpload";
 import AddressAutoComplete from "@/components/AddressAutoComplete";
 
 const EditVendor = () => {
@@ -20,6 +20,7 @@ const EditVendor = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [vendor, setVendor] = useState<any>(null);
+  const [isUploading, setIsUploading] = useState(false);
   const [formData, setFormData] = useState({
     name: "",
     category: "",
@@ -111,19 +112,10 @@ const EditVendor = () => {
     }));
   };
 
-  const handleImagesChange = (files: File[]) => {
-    // Convert File objects to URLs for display (this would need proper upload handling)
-    const urls = files.map(file => URL.createObjectURL(file));
+  const handleImagesChange = (urls: string[]) => {
     setFormData(prev => ({
       ...prev,
-      images: [...prev.images, ...urls]
-    }));
-  };
-
-  const handleRemoveImage = (index: number) => {
-    setFormData(prev => ({
-      ...prev,
-      images: prev.images.filter((_, i) => i !== index)
+      images: urls
     }));
   };
 
@@ -311,11 +303,13 @@ const EditVendor = () => {
             <CardTitle>Imagens</CardTitle>
           </CardHeader>
           <CardContent>
-            <ImageUpload
-              previewUrls={formData.images}
-              onImagesChange={handleImagesChange}
-              onRemovePreview={handleRemoveImage}
+            <SingleImageUpload
+              initialImages={formData.images}
+              onImageChange={handleImagesChange}
+              uploadPath="vendors"
               maxImages={5}
+              isUploading={isUploading}
+              setIsUploading={setIsUploading}
             />
           </CardContent>
         </Card>
