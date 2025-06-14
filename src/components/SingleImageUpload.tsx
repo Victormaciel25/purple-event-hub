@@ -104,14 +104,22 @@ const SingleImageUpload: React.FC<SingleImageUploadProps> = ({
   };
 
   const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    if (!event.target.files || event.target.files.length === 0) return;
+    console.log("🚀 UPLOAD DEBUG: Iniciando upload de arquivos...");
+    if (!event.target.files || event.target.files.length === 0) {
+      console.log("❌ UPLOAD DEBUG: Nenhum arquivo selecionado");
+      return;
+    }
     
     const files = Array.from(event.target.files);
+    console.log("📁 UPLOAD DEBUG: Arquivos selecionados:", files.length);
     
     if (previewUrls.length + files.length > maxImages) {
+      console.log("❌ UPLOAD DEBUG: Limite de imagens excedido");
       toast.error(`Você pode enviar no máximo ${maxImages} imagens`);
       return;
     }
+    
+    console.log("✅ UPLOAD DEBUG: Validações iniciais passaram, iniciando upload...");
     
     setIsUploading(true);
     
