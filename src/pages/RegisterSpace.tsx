@@ -145,12 +145,21 @@ const RegisterSpace = () => {
   };
 
   const onSubmit = async (values: FormValues) => {
+    console.log("🚀 SUBMIT DEBUG: Iniciando submissão do formulário...");
+    console.log("📋 SUBMIT DEBUG: Valores do formulário:", values);
+    console.log("🖼️ SUBMIT DEBUG: URLs das imagens:", imageUrls);
+    console.log("📍 SUBMIT DEBUG: Localização do mapa:", mapLocation);
+    console.log("🏷️ SUBMIT DEBUG: Categorias selecionadas:", selectedCategories);
+    console.log("🎥 SUBMIT DEBUG: URL do vídeo:", videoUrl);
+
     if (imageUrls.length === 0) {
+      console.log("❌ SUBMIT DEBUG: Nenhuma imagem foi enviada");
       toast.error("Por favor, faça o upload de pelo menos uma imagem");
       return;
     }
 
     if (!mapLocation) {
+      console.log("❌ SUBMIT DEBUG: Nenhuma localização foi selecionada no mapa");
       toast.error("Por favor, selecione uma localização no mapa");
       return;
     }
@@ -158,54 +167,72 @@ const RegisterSpace = () => {
     setSubmitting(true);
 
     try {
-      const { data: session } = await supabase.auth.getSession();
+      console.log("🔐 SUBMIT DEBUG: Verificando sessão do usuário...");
+      const { data: session, error: sessionError } = await supabase.auth.getSession();
       
+      if (sessionError) {
+        console.error("❌ SUBMIT DEBUG: Erro ao obter sessão:", sessionError);
+        toast.error("Erro de autenticação. Tente fazer login novamente.");
+        return;
+      }
+
       if (!session.session) {
+        console.log("❌ SUBMIT DEBUG: Usuário não está logado");
         toast.error("Você precisa estar logado para cadastrar um espaço");
         navigate("/login");
         return;
       }
 
       const userId = session.session.user.id;
+      console.log("✅ SUBMIT DEBUG: Usuário autenticado. ID:", userId);
+
+      const spaceData = {
+        name: values.name,
+        address: values.address,
+        number: values.number,
+        state: values.state,
+        zip_code: values.zipCode,
+        description: values.description,
+        price: values.price,
+        capacity: values.capacity,
+        phone: values.phone,
+        parking: values.parking,
+        wifi: values.wifi,
+        sound_system: values.soundSystem,
+        air_conditioning: values.airConditioning,
+        kitchen: values.kitchen,
+        pool: values.pool,
+        categories: selectedCategories,
+        images: imageUrls,
+        video_url: videoUrl,
+        user_id: userId,
+        status: 'pending',
+        latitude: mapLocation.lat,
+        longitude: mapLocation.lng,
+      };
+
+      console.log("📝 SUBMIT DEBUG: Dados do espaço para inserir:", spaceData);
       
-      const { error } = await supabase
+      const { data: insertData, error } = await supabase
         .from('spaces')
-        .insert({
-          name: values.name,
-          address: values.address,
-          number: values.number,
-          state: values.state,
-          zip_code: values.zipCode,
-          description: values.description,
-          price: values.price,
-          capacity: values.capacity,
-          phone: values.phone,
-          parking: values.parking,
-          wifi: values.wifi,
-          sound_system: values.soundSystem,
-          air_conditioning: values.airConditioning,
-          kitchen: values.kitchen,
-          pool: values.pool,
-          categories: selectedCategories,
-          images: imageUrls,
-          video_url: videoUrl,
-          user_id: userId,
-          status: 'pending',
-          latitude: mapLocation.lat,
-          longitude: mapLocation.lng,
-        });
+        .insert(spaceData)
+        .select();
         
       if (error) {
-        console.error("Error submitting space:", error);
-        toast.error("Erro ao cadastrar espaço. Tente novamente.");
+        console.error("❌ SUBMIT DEBUG: Erro ao inserir espaço no banco:", error);
+        console.error("❌ SUBMIT DEBUG: Detalhes do erro:", error.message);
+        console.error("❌ SUBMIT DEBUG: Código do erro:", error.code);
+        console.error("❌ SUBMIT DEBUG: Dica do erro:", error.hint);
+        toast.error(`Erro ao cadastrar espaço: ${error.message}`);
         return;
       }
       
+      console.log("✅ SUBMIT DEBUG: Espaço inserido com sucesso:", insertData);
       toast.success("Espaço cadastrado com sucesso!");
       navigate("/user-spaces");
     } catch (error) {
-      console.error("Error submitting space:", error);
-      toast.error("Erro ao cadastrar espaço. Tente novamente.");
+      console.error("💥 SUBMIT DEBUG: Erro geral na submissão:", error);
+      toast.error("Erro inesperado ao cadastrar espaço. Tente novamente.");
     } finally {
       setSubmitting(false);
     }
