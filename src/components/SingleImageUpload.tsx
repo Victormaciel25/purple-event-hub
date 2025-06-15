@@ -29,6 +29,7 @@ const SingleImageUpload: React.FC<SingleImageUploadProps> = ({
   maxImages = 5,
 }) => {
   const [previewUrls, setPreviewUrls] = useState<string[]>(initialImages);
+  const inputId = `image-upload-${Math.random().toString(36).substring(2, 15)}`;
 
   const compressImage = async (file: File): Promise<File> => {
     try {
@@ -223,14 +224,14 @@ const SingleImageUpload: React.FC<SingleImageUploadProps> = ({
             type="button"
             variant="outline"
             className="mt-4"
-            onClick={() => document.getElementById(`image-upload-${Date.now()}`)?.click()}
+            onClick={() => document.getElementById(inputId)?.click()}
             disabled={isUploading}
           >
             <Upload size={16} className="mr-2" />
             {isUploading ? "Enviando..." : "Selecionar Imagens"}
           </Button>
           <input
-            id={`image-upload-${Date.now()}`}
+            id={inputId}
             type="file"
             accept="image/*"
             onChange={handleFileChange}
