@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -34,6 +35,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
 import { useEventSpaceFavorites } from "../hooks/useEventSpaceFavorites";
+import { useSpacePhotos } from "../hooks/useSpacePhotos";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Textarea } from "@/components/ui/textarea";
@@ -68,7 +70,6 @@ type SpaceDetails = {
   air_conditioning: boolean;
   kitchen: boolean;
   pool: boolean;
-  images: string[];
   latitude?: number;
   longitude?: number;
   user_id?: string;
@@ -79,6 +80,9 @@ const EventSpaceDetails: React.FC = () => {
   const navigate = useNavigate();
   const { isFavorite, toggleFavorite } = useEventSpaceFavorites();
   const { isAdmin } = useUserRoles();
+  
+  // Use o hook useSpacePhotos para buscar as fotos
+  const { photoUrls, loading: photosLoading } = useSpacePhotos(id || null);
 
   const [space, setSpace] = useState<SpaceDetails | null>(null);
   const [loading, setLoading] = useState(true);
@@ -122,22 +126,8 @@ const EventSpaceDetails: React.FC = () => {
         });
         else setSpaceOwner({ id: sd.user_id, name: "Proprietário" });
       }
-      // fetch images…
-      const { data: photos } = await supabase
-        .from("space_photos")
-        .select("storage_path")
-        .eq("space_id", spaceId);
-      const urls: string[] = [];
-      if (photos?.length) {
-        for (const p of photos) {
-          const { data: u } = await supabase.storage
-            .from("spaces")
-            .createSignedUrl(p.storage_path, 3600);
-          if (u) urls.push(u.signedUrl);
-        }
-      }
-      if (!urls.length) urls.push("https://source.unsplash.com/random/600x400?event");
-      setSpace({ ...sd, images: urls });
+      
+      setSpace(sd);
     } catch (err) {
       console.error(err);
       toast.error("Erro ao carregar detalhes");
@@ -199,7 +189,7 @@ const EventSpaceDetails: React.FC = () => {
             owner_id: spaceOwner.id,
             space_id: space.id,
             space_name: space.name,
-            space_image: space.images[0] || null,
+            space_image: photoUrls[0] || null,
             last_message: "",
             last_message_time: new Date().toISOString(),
           })
@@ -291,6 +281,16 @@ const EventSpaceDetails: React.FC = () => {
     }
   };
 
+  // Determinar quais imagens/vídeos exibir
+  const displayMedia = photoUrls && photoUrls.length > 0 
+    ? photoUrls 
+    : ["https://source.unsplash.com/random/600x400?event"];
+
+  // Função para verificar se é vídeo
+  const isVideo = (url: string) => {
+    return url.includes('.mp4') || url.includes('.webm') || url.includes('.mov') || url.includes('video');
+  };
+
   if (loading || !space) {
     return (
       <div className="container px-4 py-6 flex items-center justify-center h-[70vh]">
@@ -334,55 +334,82 @@ const EventSpaceDetails: React.FC = () => {
             </DropdownMenu>
           </div>
 
-          {/* image display - responsive carousel for all screen sizes */}
+          {/* image/video display - responsive carousel for all screen sizes */}
           <div className="mb-6">
-            {/* Mobile: Carousel */}
-            <div className="block md:hidden">
-              <Carousel>
-                <CarouselContent>
-                  {space.images.map((img, i) => (
-                    <CarouselItem key={i}>
-                      <div className="relative rounded-lg overflow-hidden h-64">
-                        <OptimizedImage
-                          src={img}
-                          alt={`${space.name} ${i + 1}`}
-                          className="object-cover w-full h-full"
-                        />
-                        <div className="absolute bottom-2 right-2">
-                          <span className="bg-black/70 text-white px-2 py-1 rounded text-xs">
-                            {i + 1}/{space.images.length}
-                          </span>
-                        </div>
-                      </div>
-                    </CarouselItem>
-                  ))}
-                </CarouselContent>
-              </Carousel>
-            </div>
+            {photosLoading ? (
+              <div className="h-64 md:h-48 lg:h-56 bg-gray-200 rounded-lg flex items-center justify-center">
+                <Loader2 className="animate-spin h-8 w-8 text-gray-400" />
+                <span className="ml-2 text-gray-500">Carregando mídia...</span>
+              </div>
+            ) : (
+              <>
+                {/* Mobile: Carousel */}
+                <div className="block md:hidden">
+                  <Carousel>
+                    <CarouselContent>
+                      {displayMedia.map((media, i) => (
+                        <CarouselItem key={i}>
+                          <div className="relative rounded-lg overflow-hidden h-64">
+                            {isVideo(media) ? (
+                              <video
+                                src={media}
+                                controls
+                                className="w-full h-full object-cover"
+                                preload="metadata"
+                              />
+                            ) : (
+                              <OptimizedImage
+                                src={media}
+                                alt={`${space.name} ${i + 1}`}
+                                className="object-cover w-full h-full"
+                              />
+                            )}
+                            <div className="absolute bottom-2 right-2">
+                              <span className="bg-black/70 text-white px-2 py-1 rounded text-xs">
+                                {i + 1}/{displayMedia.length}
+                              </span>
+                            </div>
+                          </div>
+                        </CarouselItem>
+                      ))}
+                    </CarouselContent>
+                  </Carousel>
+                </div>
 
-            {/* Tablet/Desktop: Horizontal Scrollable Row */}
-            <div className="hidden md:block">
-              <Carousel>
-                <CarouselContent className="-ml-2 md:-ml-4">
-                  {space.images.map((img, i) => (
-                    <CarouselItem key={i} className="pl-2 md:pl-4 md:basis-1/3 lg:basis-1/4">
-                      <div className="relative rounded-lg overflow-hidden h-48 lg:h-56">
-                        <OptimizedImage
-                          src={img}
-                          alt={`${space.name} ${i + 1}`}
-                          className="object-cover w-full h-full"
-                        />
-                        <div className="absolute bottom-2 right-2">
-                          <span className="bg-black/70 text-white px-2 py-1 rounded text-xs">
-                            {i + 1}
-                          </span>
-                        </div>
-                      </div>
-                    </CarouselItem>
-                  ))}
-                </CarouselContent>
-              </Carousel>
-            </div>
+                {/* Tablet/Desktop: Horizontal Scrollable Row */}
+                <div className="hidden md:block">
+                  <Carousel>
+                    <CarouselContent className="-ml-2 md:-ml-4">
+                      {displayMedia.map((media, i) => (
+                        <CarouselItem key={i} className="pl-2 md:pl-4 md:basis-1/3 lg:basis-1/4">
+                          <div className="relative rounded-lg overflow-hidden h-48 lg:h-56">
+                            {isVideo(media) ? (
+                              <video
+                                src={media}
+                                controls
+                                className="w-full h-full object-cover"
+                                preload="metadata"
+                              />
+                            ) : (
+                              <OptimizedImage
+                                src={media}
+                                alt={`${space.name} ${i + 1}`}
+                                className="object-cover w-full h-full"
+                              />
+                            )}
+                            <div className="absolute bottom-2 right-2">
+                              <span className="bg-black/70 text-white px-2 py-1 rounded text-xs">
+                                {i + 1}
+                              </span>
+                            </div>
+                          </div>
+                        </CarouselItem>
+                      ))}
+                    </CarouselContent>
+                  </Carousel>
+                </div>
+              </>
+            )}
           </div>
 
           {/* title */}

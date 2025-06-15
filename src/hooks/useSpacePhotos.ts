@@ -55,33 +55,50 @@ export const useSpacePhotos = (spaceId: string | null) => {
     try {
       console.log("🔗 Criando URLs para", photosData.length, "fotos");
       
-      const urls = photosData.map((photo) => {
-        if (!photo.storage_path) {
-          console.error("❌ Caminho de armazenamento ausente para foto:", photo.id);
+      const urls = await Promise.all(
+        photosData.map(async (photo) => {
+          if (!photo.storage_path) {
+            console.error("❌ Caminho de armazenamento ausente para foto:", photo.id);
+            return null;
+          }
+
+          console.log("🔄 Processando foto:", photo.id, "com storage_path:", photo.storage_path);
+
+          // Verificar se o storage_path já é uma URL completa
+          if (photo.storage_path.startsWith('http')) {
+            console.log("✅ Storage path já é uma URL completa:", photo.storage_path);
+            return photo.storage_path;
+          }
+
+          try {
+            // Criar URL assinada com validade de 1 hora
+            const { data: signedUrlData, error: signedUrlError } = await supabase.storage
+              .from('spaces')
+              .createSignedUrl(photo.storage_path, 3600);
+
+            if (signedUrlError) {
+              console.error("❌ Erro ao criar URL assinada:", signedUrlError);
+              // Tentar URL pública como fallback
+              const { data: publicUrlData } = supabase.storage
+                .from('spaces')
+                .getPublicUrl(photo.storage_path);
+              
+              if (publicUrlData?.publicUrl) {
+                console.log("✅ URL pública criada como fallback:", publicUrlData.publicUrl);
+                return publicUrlData.publicUrl;
+              }
+            } else if (signedUrlData?.signedUrl) {
+              console.log("✅ URL assinada criada:", signedUrlData.signedUrl);
+              return signedUrlData.signedUrl;
+            }
+          } catch (urlError) {
+            console.error("❌ Erro ao processar URL:", urlError);
+          }
+
+          console.error("❌ Não foi possível criar URL para foto:", photo.id);
           return null;
-        }
-
-        console.log("🔄 Processando foto:", photo.id, "com storage_path:", photo.storage_path);
-
-        // Verificar se o storage_path já é uma URL completa
-        if (photo.storage_path.startsWith('http')) {
-          console.log("✅ Storage path já é uma URL completa:", photo.storage_path);
-          return photo.storage_path;
-        }
-
-        // Se não for uma URL completa, criar URL pública
-        const { data: publicUrlData } = supabase.storage
-          .from('spaces')
-          .getPublicUrl(photo.storage_path);
-
-        if (publicUrlData?.publicUrl) {
-          console.log("✅ URL pública criada para foto:", photo.id, "->", publicUrlData.publicUrl);
-          return publicUrlData.publicUrl;
-        }
-
-        console.error("❌ Não foi possível criar URL pública para foto:", photo.id);
-        return null;
-      });
+        })
+      );
 
       const validUrls = urls.filter(url => url !== null) as string[];
       console.log("🎯 URLs válidas criadas:", validUrls.length, "de", photosData.length, "fotos");
