@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { z } from "zod";
@@ -206,7 +207,7 @@ const RegisterSpace = () => {
         images: imageUrls,
         video_url: videoUrl,
         user_id: userId,
-        status: 'pending',
+        status: 'pending' as const,
         latitude: mapLocation.lat,
         longitude: mapLocation.lng,
       };
