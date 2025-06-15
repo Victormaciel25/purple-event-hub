@@ -560,25 +560,19 @@ const RegisterSpace = () => {
             <FormLabel>Categorias de Eventos</FormLabel>
             <div className="flex flex-wrap gap-2 mt-2">
               {categories.map((category) => (
-                <FormField
+                <div
                   key={category}
-                  control={form.control}
-                  name={category}
-                  render={() => (
-                    <FormItem className="flex flex-row items-center space-x-2 rounded-lg border p-2">
-                      <FormControl>
-                        <Checkbox
-                          id={category}
-                          checked={selectedCategories.includes(category)}
-                          onCheckedChange={() => toggleCategory(category)}
-                        />
-                      </FormControl>
-                      <FormLabel htmlFor={category} className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
-                        {category.charAt(0).toUpperCase() + category.slice(1)}
-                      </FormLabel>
-                    </FormItem>
-                  )}
-                />
+                  className="flex flex-row items-center space-x-2 rounded-lg border p-2"
+                >
+                  <Checkbox
+                    id={category}
+                    checked={selectedCategories.includes(category)}
+                    onCheckedChange={() => toggleCategory(category)}
+                  />
+                  <FormLabel htmlFor={category} className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                    {category.charAt(0).toUpperCase() + category.slice(1)}
+                  </FormLabel>
+                </div>
               ))}
             </div>
           </div>
