@@ -12,45 +12,26 @@ export const useSpacePhotos = (spaceId: string | null) => {
   const fetchPhotos = async (id: string) => {
     try {
       setLoading(true);
-      console.log("🔍 Buscando fotos para espaço (admin):", id);
+      console.log("🔍 Buscando fotos para espaço:", id);
 
       // Limpar estado anterior
       setPhotos([]);
       setPhotoUrls([]);
 
-      // Usar função administrativa para buscar fotos
+      // Buscar fotos diretamente da tabela space_photos
       const { data: photosData, error } = await supabase
-        .rpc('admin_get_space_photos', { space_id_param: id });
+        .from('space_photos')
+        .select('*')
+        .eq('space_id', id)
+        .order('created_at', { ascending: true });
 
       if (error) {
-        console.error("❌ Erro ao buscar fotos via função admin:", error);
-        
-        // Fallback para busca direta se a função admin falhar
-        console.log("🔄 Tentando busca direta...");
-        const { data: fallbackData, error: fallbackError } = await supabase
-          .from('space_photos')
-          .select('*')
-          .eq('space_id', id)
-          .order('created_at', { ascending: true });
-
-        if (fallbackError) {
-          console.error("❌ Erro na busca direta também:", fallbackError);
-          toast.error("Erro ao buscar fotos");
-          return;
-        }
-
-        console.log("✅ Busca direta funcionou, encontradas:", fallbackData?.length || 0, "fotos");
-        setPhotos(fallbackData || []);
-        
-        if (fallbackData && fallbackData.length > 0) {
-          await createPhotoUrls(fallbackData);
-        } else {
-          setPhotoUrls([]);
-        }
+        console.error("❌ Erro ao buscar fotos:", error);
+        toast.error("Erro ao buscar fotos");
         return;
       }
 
-      console.log("📸 Fotos encontradas via admin:", photosData?.length || 0);
+      console.log("📸 Fotos encontradas:", photosData?.length || 0);
       console.log("📋 Dados das fotos:", photosData);
       
       setPhotos(photosData || []);
@@ -82,7 +63,7 @@ export const useSpacePhotos = (spaceId: string | null) => {
 
         console.log("🔄 Processando foto:", photo.id, "com storage_path:", photo.storage_path);
 
-        // Usar URL pública diretamente já que agora o bucket é público
+        // Usar URL pública diretamente já que o bucket é público
         const { data: publicUrlData } = supabase.storage
           .from('spaces')
           .getPublicUrl(photo.storage_path);

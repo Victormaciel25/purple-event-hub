@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card } from "@/components/ui/card";
@@ -182,6 +181,7 @@ const SpaceDetailsTabs: React.FC<SpaceDetailsTabsProps> = ({
           
           {photosLoading ? (
             <div className="text-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto mb-2"></div>
               <p className="text-gray-500">Carregando fotos...</p>
             </div>
           ) : !photoUrls || photoUrls.length === 0 ? (
@@ -215,10 +215,12 @@ const SpaceDetailsTabs: React.FC<SpaceDetailsTabsProps> = ({
                   </div>
                 ))}
               </div>
-              <h3 className="text-lg font-medium mt-4 text-center">{space.name}</h3>
-              <p className="text-sm text-gray-500 text-center mt-2">
-                {photoUrls.length} foto{photoUrls.length !== 1 ? 's' : ''} encontrada{photoUrls.length !== 1 ? 's' : ''}
-              </p>
+              <div className="mt-4 text-center">
+                <h3 className="text-lg font-medium">{space.name}</h3>
+                <p className="text-sm text-gray-500 mt-2">
+                  {photoUrls.length} foto{photoUrls.length !== 1 ? 's' : ''} encontrada{photoUrls.length !== 1 ? 's' : ''}
+                </p>
+              </div>
             </>
           )}
         </Card>
