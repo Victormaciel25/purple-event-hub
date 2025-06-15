@@ -63,7 +63,13 @@ export const useSpacePhotos = (spaceId: string | null) => {
 
         console.log("🔄 Processando foto:", photo.id, "com storage_path:", photo.storage_path);
 
-        // Usar URL pública diretamente já que o bucket é público
+        // Verificar se o storage_path já é uma URL completa
+        if (photo.storage_path.startsWith('http')) {
+          console.log("✅ Storage path já é uma URL completa:", photo.storage_path);
+          return photo.storage_path;
+        }
+
+        // Se não for uma URL completa, criar URL pública
         const { data: publicUrlData } = supabase.storage
           .from('spaces')
           .getPublicUrl(photo.storage_path);
