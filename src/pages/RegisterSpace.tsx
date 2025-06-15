@@ -26,10 +26,10 @@ import LocationMap from "@/components/LocationMap";
 import VideoUpload from "@/components/VideoUpload";
 
 const categories = [
-  "weddings",
-  "corporate",
-  "birthdays",
-  "graduations",
+  "casamentos",
+  "corporativo",
+  "aniversários",
+  "formaturas",
 ];
 
 const formSchema = z.object({
