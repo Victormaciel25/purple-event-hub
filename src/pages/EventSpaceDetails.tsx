@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -82,7 +81,7 @@ const EventSpaceDetails: React.FC = () => {
   const { isAdmin } = useUserRoles();
   
   // Use o hook useSpacePhotos para buscar as fotos
-  const { photoUrls, loading: photosLoading } = useSpacePhotos(id || null);
+  const { photos, photoUrls, loading: photosLoading } = useSpacePhotos(id || null);
 
   const [space, setSpace] = useState<SpaceDetails | null>(null);
   const [loading, setLoading] = useState(true);
@@ -281,15 +280,36 @@ const EventSpaceDetails: React.FC = () => {
     }
   };
 
+  // Função melhorada para verificar se é vídeo
+  const isVideo = (url: string, photo?: any) => {
+    // Primeiro, verificar pela extensão do arquivo na URL
+    const videoExtensions = ['.mp4', '.webm', '.mov', '.avi', '.mkv', '.m4v'];
+    const urlLower = url.toLowerCase();
+    
+    if (videoExtensions.some(ext => urlLower.includes(ext))) {
+      return true;
+    }
+    
+    // Verificar pelo storage_path se disponível
+    if (photo && photo.storage_path) {
+      const pathLower = photo.storage_path.toLowerCase();
+      if (videoExtensions.some(ext => pathLower.includes(ext))) {
+        return true;
+      }
+    }
+    
+    // Verificar por indicadores de vídeo na URL
+    if (urlLower.includes('video') || urlLower.includes('.mp4') || urlLower.includes('.webm') || urlLower.includes('.mov')) {
+      return true;
+    }
+    
+    return false;
+  };
+
   // Determinar quais imagens/vídeos exibir
   const displayMedia = photoUrls && photoUrls.length > 0 
     ? photoUrls 
     : ["https://source.unsplash.com/random/600x400?event"];
-
-  // Função para verificar se é vídeo
-  const isVideo = (url: string) => {
-    return url.includes('.mp4') || url.includes('.webm') || url.includes('.mov') || url.includes('video');
-  };
 
   if (loading || !space) {
     return (
@@ -343,35 +363,48 @@ const EventSpaceDetails: React.FC = () => {
               </div>
             ) : (
               <>
+                {console.log("🎬 Renderizando mídia - URLs:", displayMedia)}
+                {console.log("🎬 Fotos originais:", photos)}
+                
                 {/* Mobile: Carousel */}
                 <div className="block md:hidden">
                   <Carousel>
                     <CarouselContent>
-                      {displayMedia.map((media, i) => (
-                        <CarouselItem key={i}>
-                          <div className="relative rounded-lg overflow-hidden h-64">
-                            {isVideo(media) ? (
-                              <video
-                                src={media}
-                                controls
-                                className="w-full h-full object-cover"
-                                preload="metadata"
-                              />
-                            ) : (
-                              <OptimizedImage
-                                src={media}
-                                alt={`${space.name} ${i + 1}`}
-                                className="object-cover w-full h-full"
-                              />
-                            )}
-                            <div className="absolute bottom-2 right-2">
-                              <span className="bg-black/70 text-white px-2 py-1 rounded text-xs">
-                                {i + 1}/{displayMedia.length}
-                              </span>
+                      {displayMedia.map((media, i) => {
+                        const photo = photos[i];
+                        const isVideoFile = isVideo(media, photo);
+                        console.log(`🎬 Item ${i}: ${media} - É vídeo? ${isVideoFile}`);
+                        
+                        return (
+                          <CarouselItem key={i}>
+                            <div className="relative rounded-lg overflow-hidden h-64">
+                              {isVideoFile ? (
+                                <video
+                                  src={media}
+                                  controls
+                                  className="w-full h-full object-cover"
+                                  preload="metadata"
+                                  onError={(e) => console.error("❌ Erro ao carregar vídeo:", e)}
+                                  onLoadStart={() => console.log("🎬 Iniciando carregamento do vídeo:", media)}
+                                >
+                                  Seu navegador não suporta vídeos.
+                                </video>
+                              ) : (
+                                <OptimizedImage
+                                  src={media}
+                                  alt={`${space.name} ${i + 1}`}
+                                  className="object-cover w-full h-full"
+                                />
+                              )}
+                              <div className="absolute bottom-2 right-2">
+                                <span className="bg-black/70 text-white px-2 py-1 rounded text-xs">
+                                  {i + 1}/{displayMedia.length}
+                                </span>
+                              </div>
                             </div>
-                          </div>
-                        </CarouselItem>
-                      ))}
+                          </CarouselItem>
+                        );
+                      })}
                     </CarouselContent>
                   </Carousel>
                 </div>
@@ -380,31 +413,41 @@ const EventSpaceDetails: React.FC = () => {
                 <div className="hidden md:block">
                   <Carousel>
                     <CarouselContent className="-ml-2 md:-ml-4">
-                      {displayMedia.map((media, i) => (
-                        <CarouselItem key={i} className="pl-2 md:pl-4 md:basis-1/3 lg:basis-1/4">
-                          <div className="relative rounded-lg overflow-hidden h-48 lg:h-56">
-                            {isVideo(media) ? (
-                              <video
-                                src={media}
-                                controls
-                                className="w-full h-full object-cover"
-                                preload="metadata"
-                              />
-                            ) : (
-                              <OptimizedImage
-                                src={media}
-                                alt={`${space.name} ${i + 1}`}
-                                className="object-cover w-full h-full"
-                              />
-                            )}
-                            <div className="absolute bottom-2 right-2">
-                              <span className="bg-black/70 text-white px-2 py-1 rounded text-xs">
-                                {i + 1}
-                              </span>
+                      {displayMedia.map((media, i) => {
+                        const photo = photos[i];
+                        const isVideoFile = isVideo(media, photo);
+                        console.log(`🎬 Desktop Item ${i}: ${media} - É vídeo? ${isVideoFile}`);
+                        
+                        return (
+                          <CarouselItem key={i} className="pl-2 md:pl-4 md:basis-1/3 lg:basis-1/4">
+                            <div className="relative rounded-lg overflow-hidden h-48 lg:h-56">
+                              {isVideoFile ? (
+                                <video
+                                  src={media}
+                                  controls
+                                  className="w-full h-full object-cover"
+                                  preload="metadata"
+                                  onError={(e) => console.error("❌ Erro ao carregar vídeo:", e)}
+                                  onLoadStart={() => console.log("🎬 Iniciando carregamento do vídeo:", media)}
+                                >
+                                  Seu navegador não suporta vídeos.
+                                </video>
+                              ) : (
+                                <OptimizedImage
+                                  src={media}
+                                  alt={`${space.name} ${i + 1}`}
+                                  className="object-cover w-full h-full"
+                                />
+                              )}
+                              <div className="absolute bottom-2 right-2">
+                                <span className="bg-black/70 text-white px-2 py-1 rounded text-xs">
+                                  {i + 1}
+                                </span>
+                              </div>
                             </div>
-                          </div>
-                        </CarouselItem>
-                      ))}
+                          </CarouselItem>
+                        );
+                      })}
                     </CarouselContent>
                   </Carousel>
                 </div>

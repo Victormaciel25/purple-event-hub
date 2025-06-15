@@ -53,7 +53,7 @@ export const useSpacePhotos = (spaceId: string | null) => {
 
   const createPhotoUrls = async (photosData: SpacePhoto[]) => {
     try {
-      console.log("🔗 Criando URLs para", photosData.length, "fotos");
+      console.log("🔗 Criando URLs para", photosData.length, "fotos/vídeos");
       
       const urls = await Promise.all(
         photosData.map(async (photo) => {
@@ -62,7 +62,7 @@ export const useSpacePhotos = (spaceId: string | null) => {
             return null;
           }
 
-          console.log("🔄 Processando foto:", photo.id, "com storage_path:", photo.storage_path);
+          console.log("🔄 Processando mídia:", photo.id, "com storage_path:", photo.storage_path);
 
           // Verificar se o storage_path já é uma URL completa
           if (photo.storage_path.startsWith('http')) {
@@ -95,17 +95,17 @@ export const useSpacePhotos = (spaceId: string | null) => {
             console.error("❌ Erro ao processar URL:", urlError);
           }
 
-          console.error("❌ Não foi possível criar URL para foto:", photo.id);
+          console.error("❌ Não foi possível criar URL para mídia:", photo.id);
           return null;
         })
       );
 
       const validUrls = urls.filter(url => url !== null) as string[];
-      console.log("🎯 URLs válidas criadas:", validUrls.length, "de", photosData.length, "fotos");
+      console.log("🎯 URLs válidas criadas:", validUrls.length, "de", photosData.length, "mídias");
       console.log("🔗 URLs válidas:", validUrls);
       setPhotoUrls(validUrls);
     } catch (error) {
-      console.error("💥 Erro ao criar URLs das fotos:", error);
+      console.error("💥 Erro ao criar URLs das mídias:", error);
       setPhotoUrls([]);
     }
   };
