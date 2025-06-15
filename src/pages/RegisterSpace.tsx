@@ -204,8 +204,6 @@ const RegisterSpace = () => {
         kitchen: values.kitchen,
         pool: values.pool,
         categories: selectedCategories,
-        images: imageUrls,
-        video_url: videoUrl,
         user_id: userId,
         status: 'pending' as const,
         latitude: mapLocation.lat,
@@ -229,6 +227,30 @@ const RegisterSpace = () => {
       }
       
       console.log("✅ SUBMIT DEBUG: Espaço inserido com sucesso:", insertData);
+
+      // Se há imagens, inserir na tabela space_photos
+      if (imageUrls.length > 0 && insertData && insertData[0]) {
+        const spaceId = insertData[0].id;
+        console.log("📸 SUBMIT DEBUG: Inserindo fotos para o espaço:", spaceId);
+        
+        const photoInserts = imageUrls.map(url => ({
+          space_id: spaceId,
+          storage_path: url
+        }));
+
+        const { error: photosError } = await supabase
+          .from('space_photos')
+          .insert(photoInserts);
+
+        if (photosError) {
+          console.error("❌ SUBMIT DEBUG: Erro ao inserir fotos:", photosError);
+          // Não bloquear o cadastro por erro nas fotos
+          toast.error("Espaço cadastrado, mas houve erro ao salvar algumas fotos");
+        } else {
+          console.log("✅ SUBMIT DEBUG: Fotos inseridas com sucesso");
+        }
+      }
+
       toast.success("Espaço cadastrado com sucesso!");
       navigate("/user-spaces");
     } catch (error) {
