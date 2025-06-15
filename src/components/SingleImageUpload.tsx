@@ -1,9 +1,9 @@
-
 import React, { useState } from "react";
-import { X, Images } from "lucide-react";
+import { X, Images, Upload } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import imageCompression from "browser-image-compression";
+import { Button } from "@/components/ui/button";
 
 interface SingleImageUploadProps {
   onImageChange: (urls: string[]) => void;
@@ -219,20 +219,25 @@ const SingleImageUpload: React.FC<SingleImageUploadProps> = ({
               Compressão automática aplicada
             </p>
           </div>
-          <label className="cursor-pointer mt-4">
-            <div className="bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-md transition-colors flex items-center gap-2">
-              <Images size={16} />
-              {isUploading ? "Enviando..." : "Selecionar Imagens"}
-            </div>
-            <input
-              type="file"
-              accept="image/*"
-              onChange={handleFileChange}
-              className="hidden"
-              disabled={isUploading}
-              multiple
-            />
-          </label>
+          <Button
+            type="button"
+            variant="outline"
+            className="mt-4"
+            onClick={() => document.getElementById(`image-upload-${Date.now()}`)?.click()}
+            disabled={isUploading}
+          >
+            <Upload size={16} className="mr-2" />
+            {isUploading ? "Enviando..." : "Selecionar Imagens"}
+          </Button>
+          <input
+            id={`image-upload-${Date.now()}`}
+            type="file"
+            accept="image/*"
+            onChange={handleFileChange}
+            className="hidden"
+            disabled={isUploading}
+            multiple
+          />
         </div>
       )}
     </div>
