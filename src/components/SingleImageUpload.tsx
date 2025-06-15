@@ -151,40 +151,79 @@ const SingleImageUpload: React.FC<SingleImageUploadProps> = ({
 
   return (
     <div className={className}>
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 mb-4 w-full">
-        {previewUrls.map((url, index) => (
-          <div 
-            key={`image-${index}`} 
-            className="relative aspect-square border border-gray-200 rounded-lg overflow-hidden"
-          >
-            <img
-              src={url}
-              alt={`Preview ${index + 1}`}
-              className="w-full h-full object-cover"
-            />
-            <button
-              type="button"
-              onClick={() => removeImage(index)}
-              className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1.5 hover:bg-red-600 transition-colors"
-              disabled={isUploading}
-            >
-              <X size={16} />
-            </button>
+      {previewUrls.length > 0 ? (
+        <div className="space-y-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 w-full">
+            {previewUrls.map((url, index) => (
+              <div 
+                key={`image-${index}`} 
+                className="relative aspect-square border border-gray-200 rounded-lg overflow-hidden"
+              >
+                <img
+                  src={url}
+                  alt={`Preview ${index + 1}`}
+                  className="w-full h-full object-cover"
+                />
+                <button
+                  type="button"
+                  onClick={() => removeImage(index)}
+                  className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1.5 hover:bg-red-600 transition-colors"
+                  disabled={isUploading}
+                >
+                  <X size={16} />
+                </button>
+              </div>
+            ))}
+            
+            {previewUrls.length < maxImages && (
+              <label className="cursor-pointer border-2 border-dashed border-gray-300 rounded-lg flex flex-col items-center justify-center aspect-square p-4">
+                <Images size={32} className="text-gray-300 mb-2" />
+                <span className="text-sm text-gray-500 text-center mb-2">
+                  {isUploading ? "Enviando..." : "Adicionar"}
+                </span>
+                <span className="text-xs text-gray-400 text-center mb-1">
+                  ({aspectRatio}, max {maxSize}MB)
+                </span>
+                <span className="text-xs text-gray-400 text-center">
+                  Compressão automática
+                </span>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleFileChange}
+                  className="hidden"
+                  disabled={isUploading}
+                  multiple
+                />
+              </label>
+            )}
           </div>
-        ))}
-        
-        {previewUrls.length < maxImages && (
-          <label className="cursor-pointer border-2 border-dashed border-gray-300 rounded-lg flex flex-col items-center justify-center aspect-square p-4">
-            <Images size={32} className="text-gray-300 mb-2" />
-            <span className="text-sm text-gray-500 text-center mb-2">
-              {isUploading ? "Enviando..." : "Adicionar"}
-            </span>
-            <span className="text-xs text-gray-400 text-center mb-1">
-              ({aspectRatio}, max {maxSize}MB)
-            </span>
-            <span className="text-xs text-gray-400 text-center">
-              Compressão automática
-            </span>
+          <p className="text-xs text-gray-500">
+            {previewUrls.length} de {maxImages} imagens
+          </p>
+        </div>
+      ) : (
+        <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 min-h-[200px] flex flex-col items-center justify-center">
+          <Images size={48} className="text-gray-300 mb-4" />
+          <div className="space-y-2 text-center">
+            <p className="text-sm text-gray-600">
+              {isUploading ? "Enviando imagens..." : "Adicionar imagens"}
+            </p>
+            <p className="text-xs text-gray-400">
+              Máximo {maxImages} imagens, até {maxSize}MB cada
+            </p>
+            <p className="text-xs text-gray-400">
+              Formatos: JPG, PNG, WebP
+            </p>
+            <p className="text-xs text-gray-400">
+              Compressão automática aplicada
+            </p>
+          </div>
+          <label className="cursor-pointer mt-4">
+            <div className="bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-md transition-colors flex items-center gap-2">
+              <Images size={16} />
+              {isUploading ? "Enviando..." : "Selecionar Imagens"}
+            </div>
             <input
               type="file"
               accept="image/*"
@@ -194,11 +233,8 @@ const SingleImageUpload: React.FC<SingleImageUploadProps> = ({
               multiple
             />
           </label>
-        )}
-      </div>
-      <p className="text-xs text-gray-500">
-        {previewUrls.length} de {maxImages} imagens
-      </p>
+        </div>
+      )}
     </div>
   );
 };
