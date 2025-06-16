@@ -34,12 +34,25 @@ export const useSpacePhotos = (spaceId: string | null) => {
       console.log("📸 Fotos encontradas:", photosData?.length || 0);
       console.log("📋 Dados das fotos:", photosData);
       
-      setPhotos(photosData || []);
-      
       if (photosData && photosData.length > 0) {
-        await createPhotoUrls(photosData);
+        // Ordenar as mídias: imagens primeiro, vídeos por último
+        const sortedPhotos = photosData.sort((a, b) => {
+          const aIsVideo = isVideoFile(a.storage_path);
+          const bIsVideo = isVideoFile(b.storage_path);
+          
+          // Se a é vídeo e b não é, a vem depois
+          if (aIsVideo && !bIsVideo) return 1;
+          // Se b é vídeo e a não é, b vem depois
+          if (!aIsVideo && bIsVideo) return -1;
+          // Se ambos são do mesmo tipo, manter ordem original
+          return 0;
+        });
+        
+        setPhotos(sortedPhotos);
+        await createPhotoUrls(sortedPhotos);
       } else {
         console.log("⚠️ Nenhuma foto encontrada para o espaço");
+        setPhotos([]);
         setPhotoUrls([]);
       }
     } catch (error) {
@@ -49,6 +62,12 @@ export const useSpacePhotos = (spaceId: string | null) => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const isVideoFile = (storagePath: string) => {
+    const videoExtensions = ['.mp4', '.webm', '.mov', '.avi', '.mkv', '.m4v'];
+    const pathLower = storagePath.toLowerCase();
+    return videoExtensions.some(ext => pathLower.includes(ext));
   };
 
   const createPhotoUrls = async (photosData: SpacePhoto[]) => {
