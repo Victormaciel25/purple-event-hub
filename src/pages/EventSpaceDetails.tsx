@@ -18,7 +18,8 @@ import {
   MoreVertical,
   Share,
   Flag,
-  MapPin
+  MapPin,
+  Star
 } from "lucide-react";
 import {
   Carousel,
@@ -314,68 +315,77 @@ const EventSpaceDetails: React.FC = () => {
 
   if (loading || !space) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="flex flex-col items-center space-y-4">
-          <Loader2 className="animate-spin text-gray-600 h-8 w-8" />
-          <p className="text-gray-600 text-sm">Carregando detalhes...</p>
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-50 via-pink-50 to-orange-50">
+        <div className="flex flex-col items-center space-y-6 p-8 bg-white/80 backdrop-blur-sm rounded-3xl shadow-xl">
+          <div className="relative">
+            <div className="w-16 h-16 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full animate-pulse"></div>
+            <Loader2 className="absolute inset-0 m-auto animate-spin text-white h-8 w-8" />
+          </div>
+          <p className="text-gray-700 text-lg font-medium">Carregando detalhes...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Fixed Header */}
-      <div className="sticky top-0 z-50 bg-white/95 backdrop-blur-sm border-b border-gray-100">
-        <div className="flex items-center justify-between px-4 py-3">
+    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-pink-50 to-orange-50">
+      {/* Fixed Header with Gradient */}
+      <div className="sticky top-0 z-50 bg-gradient-to-r from-purple-600 via-pink-500 to-orange-500 shadow-lg">
+        <div className="flex items-center justify-between px-4 py-4">
           <Button 
             variant="ghost" 
             size="sm" 
             onClick={() => navigate(-1)}
-            className="rounded-full hover:bg-gray-100"
+            className="rounded-full bg-white/20 hover:bg-white/30 text-white backdrop-blur-sm border border-white/20"
           >
             <ChevronLeft size={20} />
           </Button>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button 
-                variant="ghost" 
-                size="sm"
-                className="rounded-full hover:bg-gray-100"
-              >
-                <MoreVertical size={20} />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-56 bg-white border border-gray-200 shadow-lg">
-              <DropdownMenuItem onClick={() => toggleFavorite(space.id)} className="hover:bg-gray-50">
-                <Heart
-                  size={16}
-                  className={`mr-3 ${isFavorite(space.id) ? "fill-red-500 text-red-500" : "text-gray-500"}`}
-                />
-                {isFavorite(space.id) ? "Remover dos favoritos" : "Adicionar aos favoritos"}
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={handleShare} className="hover:bg-gray-50">
-                <Share size={16} className="mr-3 text-gray-500" />
-                Compartilhar
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={handleReport} className="hover:bg-gray-50">
-                <Flag size={16} className="mr-3 text-gray-500" />
-                Denunciar
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <div className="flex items-center space-x-2">
+            <div className="flex items-center text-white/90 text-sm">
+              <Star className="h-4 w-4 mr-1 fill-yellow-400 text-yellow-400" />
+              <span className="font-medium">4.8</span>
+            </div>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button 
+                  variant="ghost" 
+                  size="sm"
+                  className="rounded-full bg-white/20 hover:bg-white/30 text-white backdrop-blur-sm border border-white/20"
+                >
+                  <MoreVertical size={20} />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56 bg-white/95 backdrop-blur-sm border border-white/20 shadow-xl rounded-2xl">
+                <DropdownMenuItem onClick={() => toggleFavorite(space.id)} className="hover:bg-purple-50 rounded-xl m-1">
+                  <Heart
+                    size={16}
+                    className={`mr-3 ${isFavorite(space.id) ? "fill-red-500 text-red-500" : "text-gray-500"}`}
+                  />
+                  {isFavorite(space.id) ? "Remover dos favoritos" : "Adicionar aos favoritos"}
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleShare} className="hover:bg-purple-50 rounded-xl m-1">
+                  <Share size={16} className="mr-3 text-gray-500" />
+                  Compartilhar
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleReport} className="hover:bg-purple-50 rounded-xl m-1">
+                  <Flag size={16} className="mr-3 text-gray-500" />
+                  Denunciar
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         </div>
       </div>
 
       {/* Content */}
       <div className="max-w-4xl mx-auto">
         {/* Media Gallery */}
-        <div className="mb-8">
+        <div className="mb-8 -mt-1">
           {photosLoading ? (
-            <div className="h-80 bg-gray-200 flex items-center justify-center">
-              <div className="flex items-center space-x-3 text-gray-500">
+            <div className="h-80 bg-gradient-to-r from-purple-200 to-pink-200 flex items-center justify-center">
+              <div className="flex items-center space-x-3 text-purple-600">
                 <Loader2 className="animate-spin h-6 w-6" />
-                <span className="text-sm">Carregando mídia...</span>
+                <span className="text-sm font-medium">Carregando mídia...</span>
               </div>
             </div>
           ) : (
@@ -407,7 +417,7 @@ const EventSpaceDetails: React.FC = () => {
                                 className="object-cover w-full h-full"
                               />
                             )}
-                            <div className="absolute bottom-4 right-4 bg-black/70 text-white px-3 py-1 rounded-full text-sm">
+                            <div className="absolute bottom-4 right-4 bg-gradient-to-r from-purple-600 to-pink-600 text-white px-4 py-2 rounded-full text-sm font-medium shadow-lg">
                               {i + 1}/{displayMedia.length}
                             </div>
                           </div>
@@ -427,7 +437,7 @@ const EventSpaceDetails: React.FC = () => {
                   return (
                     <div 
                       key={i} 
-                      className={`relative overflow-hidden rounded-2xl ${i === 0 ? 'md:col-span-2 lg:col-span-2 lg:row-span-2' : ''}`}
+                      className={`relative overflow-hidden rounded-3xl shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 ${i === 0 ? 'md:col-span-2 lg:col-span-2 lg:row-span-2' : ''}`}
                     >
                       <div className={`${i === 0 ? 'h-96' : 'h-48'}`}>
                         {isVideoFile ? (
@@ -443,12 +453,12 @@ const EventSpaceDetails: React.FC = () => {
                           <OptimizedImage
                             src={media}
                             alt={`${space.name} ${i + 1}`}
-                            className="object-cover w-full h-full transition-transform duration-300 hover:scale-105"
+                            className="object-cover w-full h-full transition-transform duration-500 hover:scale-110"
                           />
                         )}
                       </div>
                       {displayMedia.length > 1 && (
-                        <div className="absolute bottom-3 right-3 bg-black/70 text-white px-2 py-1 rounded-lg text-xs">
+                        <div className="absolute bottom-3 right-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white px-3 py-1 rounded-full text-xs font-medium shadow-lg">
                           {i + 1}
                         </div>
                       )}
@@ -464,55 +474,71 @@ const EventSpaceDetails: React.FC = () => {
         <div className="px-6 pb-24">
           {/* Title and Price Section */}
           <div className="mb-8">
-            <div className="flex items-start justify-between mb-4">
-              <div className="flex-1">
-                <h1 className="text-3xl font-bold text-gray-900 mb-2">{space.name}</h1>
-                <div className="flex items-center text-gray-600 mb-4">
-                  <MapPin size={16} className="mr-2" />
-                  <span className="text-sm">{space.address}, {space.number} • {space.state}</span>
+            <div className="bg-white/80 backdrop-blur-sm rounded-3xl p-8 shadow-xl border border-white/50">
+              <div className="flex items-start justify-between mb-6">
+                <div className="flex-1">
+                  <h1 className="text-4xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent mb-3">
+                    {space.name}
+                  </h1>
+                  <div className="flex items-center text-gray-600 mb-4">
+                    <div className="p-2 bg-gradient-to-r from-purple-100 to-pink-100 rounded-full mr-3">
+                      <MapPin size={16} className="text-purple-600" />
+                    </div>
+                    <span className="text-sm font-medium">{space.address}, {space.number} • {space.state}</span>
+                  </div>
                 </div>
-              </div>
-              <div className="text-right">
-                <div className="text-3xl font-bold text-gray-900">{formatPrice(space.price)}</div>
-                <Badge variant="secondary" className="mt-2 bg-gray-100 text-gray-700">
-                  <Users className="mr-1" size={14} />
-                  Até {space.capacity} pessoas
-                </Badge>
+                <div className="text-right">
+                  <div className="text-4xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">
+                    {formatPrice(space.price)}
+                  </div>
+                  <Badge className="mt-3 bg-gradient-to-r from-blue-500 to-purple-500 text-white border-0 px-4 py-2 text-sm font-medium">
+                    <Users className="mr-2" size={14} />
+                    Até {space.capacity} pessoas
+                  </Badge>
+                </div>
               </div>
             </div>
           </div>
 
           {/* Description */}
-          <Card className="mb-8 border-0 shadow-sm">
-            <CardContent className="p-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-3">Sobre o espaço</h3>
-              <p className="text-gray-600 leading-relaxed">{space.description}</p>
+          <Card className="mb-8 border-0 shadow-xl bg-white/80 backdrop-blur-sm">
+            <CardContent className="p-8">
+              <h3 className="text-2xl font-bold text-gray-900 mb-4 flex items-center">
+                <div className="w-1 h-8 bg-gradient-to-b from-purple-500 to-pink-500 rounded-full mr-4"></div>
+                Sobre o espaço
+              </h3>
+              <p className="text-gray-700 leading-relaxed text-lg">{space.description}</p>
             </CardContent>
           </Card>
 
           {/* Amenities */}
-          <Card className="mb-8 border-0 shadow-sm">
-            <CardContent className="p-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Comodidades</h3>
+          <Card className="mb-8 border-0 shadow-xl bg-white/80 backdrop-blur-sm">
+            <CardContent className="p-8">
+              <h3 className="text-2xl font-bold text-gray-900 mb-6 flex items-center">
+                <div className="w-1 h-8 bg-gradient-to-b from-blue-500 to-cyan-500 rounded-full mr-4"></div>
+                Comodidades
+              </h3>
               <div className="grid grid-cols-2 gap-4">
                 {[
-                  { icon: ParkingMeter, label: "Estacionamento", available: space.parking },
-                  { icon: Wifi, label: "Wi-Fi", available: space.wifi },
-                  { icon: Speaker, label: "Sistema de som", available: space.sound_system },
-                  { icon: AirVent, label: "Ar condicionado", available: space.air_conditioning },
-                  { icon: Utensils, label: "Cozinha", available: space.kitchen },
-                  { icon: Waves, label: "Piscina", available: space.pool }
-                ].map(({ icon: Icon, label, available }) => (
+                  { icon: ParkingMeter, label: "Estacionamento", available: space.parking, color: "from-blue-500 to-cyan-500" },
+                  { icon: Wifi, label: "Wi-Fi", available: space.wifi, color: "from-green-500 to-emerald-500" },
+                  { icon: Speaker, label: "Sistema de som", available: space.sound_system, color: "from-purple-500 to-violet-500" },
+                  { icon: AirVent, label: "Ar condicionado", available: space.air_conditioning, color: "from-sky-500 to-blue-500" },
+                  { icon: Utensils, label: "Cozinha", available: space.kitchen, color: "from-orange-500 to-red-500" },
+                  { icon: Waves, label: "Piscina", available: space.pool, color: "from-cyan-500 to-teal-500" }
+                ].map(({ icon: Icon, label, available, color }) => (
                   <div 
                     key={label}
-                    className={`flex items-center p-3 rounded-xl transition-colors ${
+                    className={`flex items-center p-4 rounded-2xl transition-all duration-300 transform hover:scale-105 ${
                       available 
-                        ? "bg-green-50 text-green-700" 
-                        : "bg-gray-50 text-gray-400"
+                        ? `bg-gradient-to-r ${color} text-white shadow-lg` 
+                        : "bg-gray-100 text-gray-400"
                     }`}
                   >
-                    <Icon className="mr-3" size={20} />
-                    <span className="font-medium">{label}</span>
+                    <div className={`p-2 rounded-full mr-4 ${available ? "bg-white/20" : "bg-gray-200"}`}>
+                      <Icon size={20} />
+                    </div>
+                    <span className="font-semibold">{label}</span>
                   </div>
                 ))}
               </div>
@@ -522,15 +548,17 @@ const EventSpaceDetails: React.FC = () => {
           {/* Contact Buttons */}
           <div className="grid grid-cols-2 gap-4 mb-6">
             <Button 
-              className="h-14 bg-green-600 hover:bg-green-700 rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all" 
+              className="h-16 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 rounded-2xl font-bold text-lg shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:scale-105 border-0" 
               size="lg" 
               onClick={handleWhatsApp}
             >
-              <Phone className="mr-3" size={20} />
+              <div className="p-2 bg-white/20 rounded-full mr-3">
+                <Phone size={20} />
+              </div>
               WhatsApp
             </Button>
             <Button
-              className="h-14 bg-blue-600 hover:bg-blue-700 rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all"
+              className="h-16 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 rounded-2xl font-bold text-lg shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:scale-105 border-0"
               size="lg"
               onClick={startChat}
               disabled={currentUserId === spaceOwner?.id || processingChat}
@@ -538,7 +566,9 @@ const EventSpaceDetails: React.FC = () => {
               {processingChat ? (
                 <Loader2 className="mr-3 animate-spin" size={20} />
               ) : (
-                <MessageSquare className="mr-3" size={20} />
+                <div className="p-2 bg-white/20 rounded-full mr-3">
+                  <MessageSquare size={20} />
+                </div>
               )}
               Mensagem
             </Button>
@@ -548,11 +578,13 @@ const EventSpaceDetails: React.FC = () => {
           {isAdmin && (
             <Button
               variant="destructive"
-              className="w-full h-12 rounded-xl font-semibold"
+              className="w-full h-14 bg-gradient-to-r from-red-500 to-pink-600 hover:from-red-600 hover:to-pink-700 rounded-2xl font-bold text-lg shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:scale-105 border-0"
               size="lg"
               onClick={() => setDeleteDialogOpen(true)}
             >
-              <Trash2 className="mr-3" size={18} />
+              <div className="p-2 bg-white/20 rounded-full mr-3">
+                <Trash2 size={18} />
+              </div>
               Excluir Espaço
             </Button>
           )}
@@ -561,10 +593,10 @@ const EventSpaceDetails: React.FC = () => {
 
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <AlertDialogContent>
+        <AlertDialogContent className="bg-white/95 backdrop-blur-sm border border-white/20 rounded-3xl">
           <AlertDialogHeader>
-            <AlertDialogTitle>Excluir Espaço</AlertDialogTitle>
-            <AlertDialogDescription>
+            <AlertDialogTitle className="text-2xl font-bold text-gray-900">Excluir Espaço</AlertDialogTitle>
+            <AlertDialogDescription className="text-gray-600 text-lg">
               Tem certeza que deseja excluir este espaço? Esta ação não pode ser
               desfeita.
             </AlertDialogDescription>
@@ -573,15 +605,20 @@ const EventSpaceDetails: React.FC = () => {
             placeholder="Motivo da exclusão (obrigatório)"
             value={deleteReason}
             onChange={(e) => setDeleteReason(e.target.value)}
-            className="mt-4"
+            className="mt-4 rounded-2xl border-gray-200 focus:border-purple-500"
             rows={3}
           />
           <AlertDialogFooter className="mt-4">
-            <AlertDialogCancel disabled={deletingSpace}>Cancelar</AlertDialogCancel>
+            <AlertDialogCancel 
+              disabled={deletingSpace}
+              className="rounded-2xl bg-gray-100 hover:bg-gray-200 text-gray-700 border-0"
+            >
+              Cancelar
+            </AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDeleteSpace}
               disabled={deletingSpace}
-              className="bg-red-600 hover:bg-red-700"
+              className="bg-gradient-to-r from-red-500 to-pink-600 hover:from-red-600 hover:to-pink-700 rounded-2xl border-0"
             >
               {deletingSpace ? "Excluindo..." : "Excluir"}
             </AlertDialogAction>
