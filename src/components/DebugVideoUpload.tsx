@@ -97,7 +97,7 @@ const DebugVideoUpload: React.FC<DebugVideoUploadProps> = ({ spaceId }) => {
           .list('spaces', { limit: 100 });
 
         console.log("📂 DEBUG - Arquivos no bucket 'spaces':", {
-          files: files?.map(f => ({ name: f.name, size: f.size, updated_at: f.updated_at })),
+          files: files?.map(f => ({ name: f.name, updated_at: f.updated_at })),
           error: filesError
         });
       } else {
