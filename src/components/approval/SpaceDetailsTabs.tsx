@@ -19,60 +19,67 @@ const SpaceDetailsTabs: React.FC<SpaceDetailsTabsProps> = ({
   photosLoading,
   onRefreshPhotos
 }) => {
-  // Função melhorada para verificar se é vídeo
+  // Função melhorada para verificar se é vídeo (deve ser IDÊNTICA ao hook)
   const isVideo = (url: string) => {
-    const videoExtensions = ['.mp4', '.webm', '.mov', '.avi', '.mkv', '.m4v', '.3gp', '.flv', '.wmv'];
+    const videoExtensions = ['.mp4', '.webm', '.mov', '.avi', '.mkv', '.m4v', '.3gp', '.flv', '.wmv', '.ogg', '.ogv'];
+    
+    // Extrair nome do arquivo da URL
+    const getFileName = (path: string) => {
+      const parts = path.split('/');
+      return parts[parts.length - 1] || path;
+    };
+    
+    const fileName = getFileName(url).toLowerCase();
     const urlLower = url.toLowerCase();
     
-    // Verificar extensões de vídeo
-    const hasVideoExtension = videoExtensions.some(ext => urlLower.includes(ext));
+    // Verificar extensões de vídeo no nome do arquivo
+    const hasVideoExtension = videoExtensions.some(ext => fileName.endsWith(ext));
     
-    // Verificar se contém palavras-chave de vídeo no nome ou path
+    // Verificar se contém palavras-chave de vídeo
     const hasVideoKeyword = urlLower.includes('video') || 
                            urlLower.includes('movie') ||
                            urlLower.includes('/videos/') ||
                            urlLower.includes('_video_') ||
-                           urlLower.includes('-video-');
+                           urlLower.includes('-video-') ||
+                           fileName.includes('video');
     
     const result = hasVideoExtension || hasVideoKeyword;
     
-    console.log(`🎬 SpaceDetailsTabs - Verificando se é vídeo:`, {
+    console.log(`🎬 SpaceDetailsTabs - DETECÇÃO DE VÍDEO:`, {
       url: url,
+      fileName: fileName,
       hasVideoExtension,
       hasVideoKeyword,
       isVideo: result,
-      matchingExtensions: videoExtensions.filter(ext => urlLower.includes(ext))
+      matchingExtensions: videoExtensions.filter(ext => fileName.endsWith(ext))
     });
     
     return result;
   };
 
-  // Separar e contar mídias
+  // Separar e contar mídias com logs detalhados
   const videos = photoUrls.filter(url => isVideo(url));
   const images = photoUrls.filter(url => !isVideo(url));
   const totalMedia = photoUrls.length;
   
-  console.log(`📊 SpaceDetailsTabs - Estatísticas de mídia DETALHADAS:`, {
+  console.log(`📊 SpaceDetailsTabs - ESTATÍSTICAS FINAIS:`, {
     totalUrls: photoUrls.length,
     images: images.length,
     videos: videos.length,
+    spaceName: space.name,
     allUrls: photoUrls,
-    detalhesVideos: videos.map(url => ({
-      url,
-      isVideo: isVideo(url)
-    })),
-    detalhesImagens: images.map(url => ({
-      url,
-      isVideo: isVideo(url)
-    }))
+    videoUrls: videos,
+    imageUrls: images
   });
 
   // URLs já vêm ordenadas do hook (imagens primeiro, vídeos por último)
   const sortedPhotoUrls = [...images, ...videos];
 
-  console.log(`🎯 SpaceDetailsTabs - URLs finais ordenadas:`, {
+  console.log(`🎯 SpaceDetailsTabs - ORDEM FINAL:`, {
     sortedUrls: sortedPhotoUrls,
-    totalFinal: sortedPhotoUrls.length
+    totalFinal: sortedPhotoUrls.length,
+    orderedVideos: videos,
+    orderedImages: images
   });
 
   return (
@@ -235,7 +242,7 @@ const SpaceDetailsTabs: React.FC<SpaceDetailsTabsProps> = ({
                 variant="outline"
                 size="sm"
                 onClick={() => {
-                  console.log("🔄 Botão recarregar clicado");
+                  console.log("🔄 BOTÃO RECARREGAR clicado");
                   onRefreshPhotos();
                 }}
                 disabled={photosLoading}
@@ -272,12 +279,11 @@ const SpaceDetailsTabs: React.FC<SpaceDetailsTabsProps> = ({
             </div>
           ) : (
             <>
-              {/* DEBUG: Log antes de renderizar */}
-              {console.log("🎬 RENDERIZAÇÃO - Prestes a renderizar mídias:", {
+              {console.log("🎬 RENDERIZAÇÃO - Iniciando renderização das mídias:", {
                 images: images.length,
                 videos: videos.length,
                 sortedUrls: sortedPhotoUrls.length,
-                todosOsUrls: sortedPhotoUrls
+                spaceName: space.name
               })}
 
               {/* Mostrar imagens primeiro */}
@@ -288,7 +294,7 @@ const SpaceDetailsTabs: React.FC<SpaceDetailsTabsProps> = ({
                   </h4>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {images.map((url, index) => {
-                      console.log(`🖼️ Renderizando imagem ${index + 1}:`, url);
+                      console.log(`🖼️ RENDERIZANDO imagem ${index + 1}:`, url);
                       return (
                         <div key={`image-${index}`} className="relative">
                           <img 
@@ -296,10 +302,10 @@ const SpaceDetailsTabs: React.FC<SpaceDetailsTabsProps> = ({
                             alt={`${space.name} ${index + 1}`}
                             className="w-full h-40 object-cover rounded-md border"
                             onLoad={() => {
-                              console.log(`✓ Imagem ${index + 1} carregada:`, url);
+                              console.log(`✓ IMAGEM ${index + 1} carregada com sucesso:`, url);
                             }}
                             onError={(e) => {
-                              console.error(`✗ Erro ao carregar imagem ${index + 1}:`, url);
+                              console.error(`✗ ERRO ao carregar imagem ${index + 1}:`, url);
                               e.currentTarget.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZGRkIi8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxNCIgZmlsbD0iIzk5OSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPkVycm8gYW8gY2FycmVnYXIgaW1hZ2VtPC90ZXh0Pjwvc3ZnPg==';
                             }}
                           />
@@ -321,7 +327,7 @@ const SpaceDetailsTabs: React.FC<SpaceDetailsTabsProps> = ({
                   </h4>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {videos.map((url, index) => {
-                      console.log(`🎬 Renderizando vídeo ${index + 1}:`, url);
+                      console.log(`🎬 RENDERIZANDO vídeo ${index + 1}:`, url);
                       return (
                         <div key={`video-${index}`} className="relative">
                           <video
@@ -330,11 +336,11 @@ const SpaceDetailsTabs: React.FC<SpaceDetailsTabsProps> = ({
                             className="w-full h-40 object-cover rounded-md border"
                             preload="metadata"
                             onLoadedData={() => {
-                              console.log(`✓ Vídeo ${index + 1} carregado com sucesso:`, url);
+                              console.log(`✓ VÍDEO ${index + 1} carregado com sucesso:`, url);
                             }}
                             onError={(e) => {
-                              console.error(`✗ Erro ao carregar vídeo ${index + 1}:`, url);
-                              console.error("Video error details:", e);
+                              console.error(`✗ ERRO ao carregar vídeo ${index + 1}:`, url);
+                              console.error("Detalhes do erro do vídeo:", e);
                             }}
                           >
                             <p className="text-gray-500 p-4">
@@ -355,7 +361,7 @@ const SpaceDetailsTabs: React.FC<SpaceDetailsTabsProps> = ({
                 </div>
               )}
 
-              {/* Informações resumidas */}
+              {/* Informações resumidas com debug */}
               <div className="mt-4 text-center border-t pt-4">
                 <h3 className="text-lg font-medium">{space.name}</h3>
                 <p className="text-sm text-gray-500 mt-2">
@@ -364,22 +370,28 @@ const SpaceDetailsTabs: React.FC<SpaceDetailsTabsProps> = ({
                   🎬 {videos.length} vídeo{videos.length !== 1 ? 's' : ''}
                 </p>
                 
-                {/* DEBUG: Botão para debug manual */}
+                {/* Botão de debug melhorado */}
                 <Button
                   variant="outline"
                   size="sm"
                   className="mt-2"
                   onClick={() => {
-                    console.log("🔍 DEBUG MANUAL - Estado atual:", {
+                    console.log("🔍 DEBUG MANUAL COMPLETO - Estado atual:", {
+                      space: space.name,
+                      spaceId: space.id,
                       photoUrls,
                       videos,
                       images,
                       sortedPhotoUrls,
-                      space: space.name
+                      detectionResults: photoUrls.map(url => ({
+                        url,
+                        isVideo: isVideo(url),
+                        fileName: url.split('/').pop()
+                      }))
                     });
                   }}
                 >
-                  🔍 Debug Manual
+                  🔍 Debug Completo
                 </Button>
               </div>
             </>

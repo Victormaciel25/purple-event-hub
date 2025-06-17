@@ -12,7 +12,7 @@ export const useSpacePhotos = (spaceId: string | null) => {
   const fetchPhotos = async (id: string) => {
     try {
       setLoading(true);
-      console.log("🔍 Buscando fotos/vídeos para espaço:", id);
+      console.log("🔍 INICIANDO busca de fotos/vídeos para espaço:", id);
 
       // Limpar estado anterior
       setPhotos([]);
@@ -31,20 +31,31 @@ export const useSpacePhotos = (spaceId: string | null) => {
         return;
       }
 
-      console.log("📸 Mídias encontradas:", photosData?.length || 0);
-      console.log("📋 Dados completos das mídias:", photosData);
+      console.log("📸 DADOS BRUTOS encontrados:", photosData?.length || 0);
+      console.log("📋 TODOS os dados das mídias:", photosData);
       
       if (photosData && photosData.length > 0) {
-        // Log detalhado de cada mídia
+        // Log detalhado de cada mídia antes da classificação
         photosData.forEach((photo, index) => {
           const isVideo = isVideoFile(photo.storage_path);
-          console.log(`📁 Mídia ${index + 1}:`, {
+          console.log(`📁 ANÁLISE Mídia ${index + 1}:`, {
             id: photo.id,
             storage_path: photo.storage_path,
             created_at: photo.created_at,
             isVideo: isVideo,
-            fileExtension: getFileExtension(photo.storage_path)
+            fileExtension: getFileExtension(photo.storage_path),
+            fileName: getFileName(photo.storage_path)
           });
+        });
+
+        // Contar vídeos e imagens ANTES da ordenação
+        const videoCount = photosData.filter(p => isVideoFile(p.storage_path)).length;
+        const imageCount = photosData.filter(p => !isVideoFile(p.storage_path)).length;
+        
+        console.log("📊 CONTAGEM ANTES DA ORDENAÇÃO:", {
+          total: photosData.length,
+          videos: videoCount,
+          images: imageCount
         });
 
         // Ordenar as mídias: imagens primeiro, vídeos por último
@@ -60,21 +71,22 @@ export const useSpacePhotos = (spaceId: string | null) => {
           return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
         });
         
-        console.log("🎯 Mídias ordenadas:", sortedPhotos.map(p => ({
+        console.log("🎯 MÍDIAS ORDENADAS:", sortedPhotos.map(p => ({
           id: p.id,
           path: p.storage_path,
+          fileName: getFileName(p.storage_path),
           isVideo: isVideoFile(p.storage_path)
         })));
         
         setPhotos(sortedPhotos);
         await createPhotoUrls(sortedPhotos);
       } else {
-        console.log("⚠️ Nenhuma foto/vídeo encontrado para o espaço");
+        console.log("⚠️ NENHUMA foto/vídeo encontrado para o espaço");
         setPhotos([]);
         setPhotoUrls([]);
       }
     } catch (error) {
-      console.error("💥 Erro ao buscar fotos:", error);
+      console.error("💥 ERRO GERAL ao buscar fotos:", error);
       toast.error("Erro ao carregar fotos");
       setPhotoUrls([]);
     } finally {
@@ -82,33 +94,42 @@ export const useSpacePhotos = (spaceId: string | null) => {
     }
   };
 
+  const getFileName = (storagePath: string) => {
+    const parts = storagePath.split('/');
+    return parts[parts.length - 1] || storagePath;
+  };
+
   const getFileExtension = (storagePath: string) => {
-    const parts = storagePath.split('.');
+    const fileName = getFileName(storagePath);
+    const parts = fileName.split('.');
     return parts.length > 1 ? `.${parts[parts.length - 1].toLowerCase()}` : '';
   };
 
   const isVideoFile = (storagePath: string) => {
-    const videoExtensions = ['.mp4', '.webm', '.mov', '.avi', '.mkv', '.m4v', '.3gp', '.flv', '.wmv'];
+    const videoExtensions = ['.mp4', '.webm', '.mov', '.avi', '.mkv', '.m4v', '.3gp', '.flv', '.wmv', '.ogg', '.ogv'];
+    const fileName = getFileName(storagePath).toLowerCase();
     const pathLower = storagePath.toLowerCase();
     
-    // Verificar extensões de vídeo
-    const hasVideoExtension = videoExtensions.some(ext => pathLower.includes(ext));
+    // Verificar extensões de vídeo no nome do arquivo
+    const hasVideoExtension = videoExtensions.some(ext => fileName.endsWith(ext));
     
-    // Verificar se contém palavras-chave de vídeo no nome
+    // Verificar se contém palavras-chave de vídeo no caminho completo
     const hasVideoKeyword = pathLower.includes('video') || 
                            pathLower.includes('movie') ||
                            pathLower.includes('/videos/') ||
                            pathLower.includes('_video_') ||
-                           pathLower.includes('-video-');
+                           pathLower.includes('-video-') ||
+                           fileName.includes('video');
     
     const result = hasVideoExtension || hasVideoKeyword;
     
-    console.log(`🎬 Verificando se é vídeo:`, {
-      path: storagePath,
+    console.log(`🎬 DETECÇÃO DE VÍDEO DETALHADA:`, {
+      storagePath: storagePath,
+      fileName: fileName,
       hasVideoExtension,
       hasVideoKeyword,
       isVideo: result,
-      extensions: videoExtensions.filter(ext => pathLower.includes(ext))
+      matchingExtensions: videoExtensions.filter(ext => fileName.endsWith(ext))
     });
     
     return result;
@@ -116,36 +137,42 @@ export const useSpacePhotos = (spaceId: string | null) => {
 
   const createPhotoUrls = async (photosData: SpacePhoto[]) => {
     try {
-      console.log("🔗 Criando URLs para", photosData.length, "fotos/vídeos");
+      console.log("🔗 CRIANDO URLs para", photosData.length, "fotos/vídeos");
       
       const urls = await Promise.all(
         photosData.map(async (photo, index) => {
           if (!photo.storage_path) {
-            console.error("❌ Caminho de armazenamento ausente para mídia:", photo.id);
+            console.error("❌ CAMINHO AUSENTE para mídia:", photo.id);
             return null;
           }
 
           const isVideo = isVideoFile(photo.storage_path);
-          console.log(`🔄 Processando mídia ${index + 1}:`, {
+          const fileName = getFileName(photo.storage_path);
+          
+          console.log(`🔄 PROCESSANDO mídia ${index + 1}:`, {
             id: photo.id,
             storage_path: photo.storage_path,
+            fileName: fileName,
             isVideo: isVideo
           });
 
           // Verificar se o storage_path já é uma URL completa
           if (photo.storage_path.startsWith('http')) {
-            console.log("✅ Storage path já é uma URL completa:", photo.storage_path);
+            console.log("✅ JÁ É URL COMPLETA:", photo.storage_path);
             return photo.storage_path;
           }
 
           try {
-            // Primeiro tentar URL pública (mais confiável com as novas políticas)
+            // Primeiro tentar URL pública
             const { data: publicUrlData } = supabase.storage
               .from('spaces')
               .getPublicUrl(photo.storage_path);
             
             if (publicUrlData?.publicUrl) {
-              console.log(`✅ URL pública criada para ${isVideo ? 'vídeo' : 'imagem'}:`, publicUrlData.publicUrl);
+              console.log(`✅ URL PÚBLICA criada para ${isVideo ? 'VÍDEO' : 'IMAGEM'}:`, {
+                fileName: fileName,
+                url: publicUrlData.publicUrl
+              });
               return publicUrlData.publicUrl;
             }
 
@@ -155,40 +182,40 @@ export const useSpacePhotos = (spaceId: string | null) => {
               .createSignedUrl(photo.storage_path, 3600);
 
             if (signedUrlError) {
-              console.error("❌ Erro ao criar URL assinada:", signedUrlError);
+              console.error("❌ ERRO URL ASSINADA:", signedUrlError);
             } else if (signedUrlData?.signedUrl) {
-              console.log(`✅ URL assinada criada como fallback para ${isVideo ? 'vídeo' : 'imagem'}:`, signedUrlData.signedUrl);
+              console.log(`✅ URL ASSINADA criada como fallback para ${isVideo ? 'VÍDEO' : 'IMAGEM'}:`, {
+                fileName: fileName,
+                url: signedUrlData.signedUrl
+              });
               return signedUrlData.signedUrl;
             }
           } catch (urlError) {
-            console.error("❌ Erro ao processar URL:", urlError);
+            console.error("❌ ERRO ao processar URL:", urlError);
           }
 
-          console.error(`❌ Não foi possível criar URL para ${isVideo ? 'vídeo' : 'imagem'}:`, photo.id);
+          console.error(`❌ FALHA TOTAL para ${isVideo ? 'VÍDEO' : 'IMAGEM'}:`, fileName);
           return null;
         })
       );
 
       const validUrls = urls.filter(url => url !== null) as string[];
       
-      // Log detalhado das URLs criadas
-      validUrls.forEach((url, index) => {
-        const photo = photosData[index];
-        const isVideo = photo ? isVideoFile(photo.storage_path) : false;
-        console.log(`🎯 URL ${index + 1} (${isVideo ? 'VÍDEO' : 'IMAGEM'}):`, url);
-      });
+      // Classificar URLs válidas
+      const validVideos = validUrls.filter(url => isVideoFile(url));
+      const validImages = validUrls.filter(url => !isVideoFile(url));
       
-      console.log("✨ RESUMO FINAL:");
+      console.log("✨ RESUMO FINAL COMPLETO:");
       console.log("- URLs válidas criadas:", validUrls.length, "de", photosData.length, "mídias");
-      console.log("- Todas as URLs válidas:", validUrls);
-      console.log("- Contadores por tipo:", {
-        videos: validUrls.filter(url => isVideoFile(url)).length,
-        images: validUrls.filter(url => !isVideoFile(url)).length
-      });
+      console.log("- Vídeos encontrados:", validVideos.length);
+      console.log("- Imagens encontradas:", validImages.length);
+      console.log("- TODAS as URLs válidas:", validUrls);
+      console.log("- URLs de VÍDEOS:", validVideos);
+      console.log("- URLs de IMAGENS:", validImages);
       
       setPhotoUrls(validUrls);
     } catch (error) {
-      console.error("💥 Erro ao criar URLs das mídias:", error);
+      console.error("💥 ERRO FATAL ao criar URLs das mídias:", error);
       setPhotoUrls([]);
     }
   };
@@ -216,7 +243,7 @@ export const useSpacePhotos = (spaceId: string | null) => {
     loading,
     refetch: () => {
       if (spaceId) {
-        console.log("🔄 Refetch manual das fotos para espaço:", spaceId);
+        console.log("🔄 REFETCH MANUAL das fotos para espaço:", spaceId);
         fetchPhotos(spaceId);
       }
     }
