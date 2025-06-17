@@ -17,14 +17,13 @@ import {
   Trash2,
   MoreVertical,
   Share,
-  Flag
+  Flag,
+  MapPin
 } from "lucide-react";
 import {
   Carousel,
   CarouselContent,
   CarouselItem,
-  CarouselPrevious,
-  CarouselNext,
 } from "@/components/ui/carousel";
 import {
   DropdownMenu,
@@ -33,6 +32,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
 import { useEventSpaceFavorites } from "../hooks/useEventSpaceFavorites";
 import { useSpacePhotos } from "../hooks/useSpacePhotos";
 import { supabase } from "@/integrations/supabase/client";
@@ -313,277 +314,289 @@ const EventSpaceDetails: React.FC = () => {
 
   if (loading || !space) {
     return (
-      <div className="container px-4 py-6 flex items-center justify-center h-[70vh]">
-        <Loader2 className="animate-spin text-iparty h-8 w-8" />
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="flex flex-col items-center space-y-4">
+          <Loader2 className="animate-spin text-gray-600 h-8 w-8" />
+          <p className="text-gray-600 text-sm">Carregando detalhes...</p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="h-screen w-full overflow-hidden">
-      <div className="h-full w-full overflow-y-auto scrollbar-hide">
-        <div className="container px-4 py-6 pb-20 mx-auto">
-          {/* back & actions dropdown at top */}
-          <div className="flex items-center justify-between mb-4">
-            <Button variant="ghost" size="sm" onClick={() => navigate(-1)}>
-              <ChevronLeft size={20} />
-            </Button>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="sm">
-                  <MoreVertical size={20} />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-48">
-                <DropdownMenuItem onClick={() => toggleFavorite(space.id)}>
-                  <Heart
-                    size={16}
-                    className={`mr-2 ${isFavorite(space.id) ? "fill-red-500 text-red-500" : "text-gray-500"}`}
-                  />
-                  {isFavorite(space.id) ? "Remover dos favoritos" : "Adicionar aos favoritos"}
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={handleShare}>
-                  <Share size={16} className="mr-2" />
-                  Compartilhar
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={handleReport}>
-                  <Flag size={16} className="mr-2" />
-                  Denunciar
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
+    <div className="min-h-screen bg-gray-50">
+      {/* Fixed Header */}
+      <div className="sticky top-0 z-50 bg-white/95 backdrop-blur-sm border-b border-gray-100">
+        <div className="flex items-center justify-between px-4 py-3">
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            onClick={() => navigate(-1)}
+            className="rounded-full hover:bg-gray-100"
+          >
+            <ChevronLeft size={20} />
+          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button 
+                variant="ghost" 
+                size="sm"
+                className="rounded-full hover:bg-gray-100"
+              >
+                <MoreVertical size={20} />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56 bg-white border border-gray-200 shadow-lg">
+              <DropdownMenuItem onClick={() => toggleFavorite(space.id)} className="hover:bg-gray-50">
+                <Heart
+                  size={16}
+                  className={`mr-3 ${isFavorite(space.id) ? "fill-red-500 text-red-500" : "text-gray-500"}`}
+                />
+                {isFavorite(space.id) ? "Remover dos favoritos" : "Adicionar aos favoritos"}
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={handleShare} className="hover:bg-gray-50">
+                <Share size={16} className="mr-3 text-gray-500" />
+                Compartilhar
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={handleReport} className="hover:bg-gray-50">
+                <Flag size={16} className="mr-3 text-gray-500" />
+                Denunciar
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      </div>
 
-          {/* image/video display - responsive carousel for all screen sizes */}
-          <div className="mb-6">
-            {photosLoading ? (
-              <div className="h-64 md:h-48 lg:h-56 bg-gray-200 rounded-lg flex items-center justify-center">
-                <Loader2 className="animate-spin h-8 w-8 text-gray-400" />
-                <span className="ml-2 text-gray-500">Carregando mídia...</span>
+      {/* Content */}
+      <div className="max-w-4xl mx-auto">
+        {/* Media Gallery */}
+        <div className="mb-8">
+          {photosLoading ? (
+            <div className="h-80 bg-gray-200 flex items-center justify-center">
+              <div className="flex items-center space-x-3 text-gray-500">
+                <Loader2 className="animate-spin h-6 w-6" />
+                <span className="text-sm">Carregando mídia...</span>
               </div>
-            ) : (
-              <>
-                {console.log("🎬 Renderizando mídia - URLs:", displayMedia)}
-                {console.log("🎬 Fotos originais:", photos)}
-                
-                {/* Mobile: Carousel */}
-                <div className="block md:hidden">
-                  <Carousel>
-                    <CarouselContent>
-                      {displayMedia.map((media, i) => {
-                        const photo = photos[i];
-                        const isVideoFile = isVideo(media, photo);
-                        console.log(`🎬 Item ${i}: ${media} - É vídeo? ${isVideoFile}`);
-                        
-                        return (
-                          <CarouselItem key={i}>
-                            <div className="relative rounded-lg overflow-hidden h-64">
-                              {isVideoFile ? (
-                                <video
-                                  src={media}
-                                  controls
-                                  className="w-full h-full object-cover"
-                                  preload="metadata"
-                                  onError={(e) => console.error("❌ Erro ao carregar vídeo:", e)}
-                                  onLoadStart={() => console.log("🎬 Iniciando carregamento do vídeo:", media)}
-                                >
-                                  Seu navegador não suporta vídeos.
-                                </video>
-                              ) : (
-                                <OptimizedImage
-                                  src={media}
-                                  alt={`${space.name} ${i + 1}`}
-                                  className="object-cover w-full h-full"
-                                />
-                              )}
-                              <div className="absolute bottom-2 right-2">
-                                <span className="bg-black/70 text-white px-2 py-1 rounded text-xs">
-                                  {i + 1}/{displayMedia.length}
-                                </span>
-                              </div>
-                            </div>
-                          </CarouselItem>
-                        );
-                      })}
-                    </CarouselContent>
-                  </Carousel>
-                </div>
-
-                {/* Tablet/Desktop: Horizontal Scrollable Row */}
-                <div className="hidden md:block">
-                  <Carousel>
-                    <CarouselContent className="-ml-2 md:-ml-4">
-                      {displayMedia.map((media, i) => {
-                        const photo = photos[i];
-                        const isVideoFile = isVideo(media, photo);
-                        console.log(`🎬 Desktop Item ${i}: ${media} - É vídeo? ${isVideoFile}`);
-                        
-                        return (
-                          <CarouselItem key={i} className="pl-2 md:pl-4 md:basis-1/3 lg:basis-1/4">
-                            <div className="relative rounded-lg overflow-hidden h-48 lg:h-56">
-                              {isVideoFile ? (
-                                <video
-                                  src={media}
-                                  controls
-                                  className="w-full h-full object-cover"
-                                  preload="metadata"
-                                  onError={(e) => console.error("❌ Erro ao carregar vídeo:", e)}
-                                  onLoadStart={() => console.log("🎬 Iniciando carregamento do vídeo:", media)}
-                                >
-                                  Seu navegador não suporta vídeos.
-                                </video>
-                              ) : (
-                                <OptimizedImage
-                                  src={media}
-                                  alt={`${space.name} ${i + 1}`}
-                                  className="object-cover w-full h-full"
-                                />
-                              )}
-                              <div className="absolute bottom-2 right-2">
-                                <span className="bg-black/70 text-white px-2 py-1 rounded text-xs">
-                                  {i + 1}
-                                </span>
-                              </div>
-                            </div>
-                          </CarouselItem>
-                        );
-                      })}
-                    </CarouselContent>
-                  </Carousel>
-                </div>
-              </>
-            )}
-          </div>
-
-          {/* title */}
-          <h1 className="text-2xl font-bold mb-6 truncate">{space.name}</h1>
-
-          {/* price / details */}
-          <div className="mb-6">
-            <div className="flex justify-between items-center mb-2">
-              <h2 className="text-2xl font-bold">{formatPrice(space.price)}</h2>
-              <Badge variant="secondary">
-                <Users className="mr-1" size={14} />
-                Até {space.capacity} pessoas
-              </Badge>
             </div>
-            <p className="text-muted-foreground">
-              {space.address}, {space.number} – {space.state}
-            </p>
-            <p className="text-muted-foreground">CEP: {space.zip_code}</p>
-          </div>
+          ) : (
+            <>
+              {/* Mobile: Full width carousel */}
+              <div className="block md:hidden">
+                <Carousel>
+                  <CarouselContent>
+                    {displayMedia.map((media, i) => {
+                      const photo = photos[i];
+                      const isVideoFile = isVideo(media, photo);
+                      
+                      return (
+                        <CarouselItem key={i}>
+                          <div className="relative h-80 overflow-hidden">
+                            {isVideoFile ? (
+                              <video
+                                src={media}
+                                controls
+                                className="w-full h-full object-cover"
+                                preload="metadata"
+                              >
+                                Seu navegador não suporta vídeos.
+                              </video>
+                            ) : (
+                              <OptimizedImage
+                                src={media}
+                                alt={`${space.name} ${i + 1}`}
+                                className="object-cover w-full h-full"
+                              />
+                            )}
+                            <div className="absolute bottom-4 right-4 bg-black/70 text-white px-3 py-1 rounded-full text-sm">
+                              {i + 1}/{displayMedia.length}
+                            </div>
+                          </div>
+                        </CarouselItem>
+                      );
+                    })}
+                  </CarouselContent>
+                </Carousel>
+              </div>
 
-          {/* about */}
-          <div className="mb-6">
-            <h3 className="text-lg font-semibold mb-2">Sobre o espaço</h3>
-            <p className="text-muted-foreground">{space.description}</p>
-          </div>
+              {/* Desktop: Grid layout */}
+              <div className="hidden md:grid md:grid-cols-2 lg:grid-cols-3 gap-4 p-6">
+                {displayMedia.map((media, i) => {
+                  const photo = photos[i];
+                  const isVideoFile = isVideo(media, photo);
+                  
+                  return (
+                    <div 
+                      key={i} 
+                      className={`relative overflow-hidden rounded-2xl ${i === 0 ? 'md:col-span-2 lg:col-span-2 lg:row-span-2' : ''}`}
+                    >
+                      <div className={`${i === 0 ? 'h-96' : 'h-48'}`}>
+                        {isVideoFile ? (
+                          <video
+                            src={media}
+                            controls
+                            className="w-full h-full object-cover"
+                            preload="metadata"
+                          >
+                            Seu navegador não suporta vídeos.
+                          </video>
+                        ) : (
+                          <OptimizedImage
+                            src={media}
+                            alt={`${space.name} ${i + 1}`}
+                            className="object-cover w-full h-full transition-transform duration-300 hover:scale-105"
+                          />
+                        )}
+                      </div>
+                      {displayMedia.length > 1 && (
+                        <div className="absolute bottom-3 right-3 bg-black/70 text-white px-2 py-1 rounded-lg text-xs">
+                          {i + 1}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </>
+          )}
+        </div>
 
-          {/* amenities */}
+        {/* Main Content */}
+        <div className="px-6 pb-24">
+          {/* Title and Price Section */}
           <div className="mb-8">
-            <h3 className="text-lg font-semibold mb-2">Comodidades</h3>
-            <div className="grid grid-cols-2 gap-4">
-              <div className={`flex items-center ${space.parking ? "" : "text-muted-foreground/50"}`}>
-                <ParkingMeter className="mr-2" size={18} />
-                <span>{space.parking ? "Estacionamento" : "Sem estacionamento"}</span>
+            <div className="flex items-start justify-between mb-4">
+              <div className="flex-1">
+                <h1 className="text-3xl font-bold text-gray-900 mb-2">{space.name}</h1>
+                <div className="flex items-center text-gray-600 mb-4">
+                  <MapPin size={16} className="mr-2" />
+                  <span className="text-sm">{space.address}, {space.number} • {space.state}</span>
+                </div>
               </div>
-              <div className={`flex items-center ${space.wifi ? "" : "text-muted-foreground/50"}`}>
-                <Wifi className="mr-2" size={18} />
-                <span>{space.wifi ? "Wi-Fi" : "Sem Wi-Fi"}</span>
-              </div>
-              <div className={`flex items-center ${space.sound_system ? "" : "text-muted-foreground/50"}`}>
-                <Speaker className="mr-2" size={18} />
-                <span>{space.sound_system ? "Sistema de som" : "Sem sistema de som"}</span>
-              </div>
-              <div className={`flex items-center ${space.air_conditioning ? "" : "text-muted-foreground/50"}`}>
-                <AirVent className="mr-2" size={18} />
-                <span>{space.air_conditioning ? "Ar condicionado" : "Sem ar condicionado"}</span>
-              </div>
-              <div className={`flex items-center ${space.kitchen ? "" : "text-muted-foreground/50"}`}>
-                <Utensils className="mr-2" size={18} />
-                <span>{space.kitchen ? "Cozinha" : "Sem cozinha"}</span>
-              </div>
-              <div className={`flex items-center ${space.pool ? "" : "text-muted-foreground/50"}`}>
-                <Waves className="mr-2" size={18} />
-                <span>{space.pool ? "Piscina" : "Sem piscina"}</span>
+              <div className="text-right">
+                <div className="text-3xl font-bold text-gray-900">{formatPrice(space.price)}</div>
+                <Badge variant="secondary" className="mt-2 bg-gray-100 text-gray-700">
+                  <Users className="mr-1" size={14} />
+                  Até {space.capacity} pessoas
+                </Badge>
               </div>
             </div>
           </div>
 
-          {/* contact buttons */}
+          {/* Description */}
+          <Card className="mb-8 border-0 shadow-sm">
+            <CardContent className="p-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-3">Sobre o espaço</h3>
+              <p className="text-gray-600 leading-relaxed">{space.description}</p>
+            </CardContent>
+          </Card>
+
+          {/* Amenities */}
+          <Card className="mb-8 border-0 shadow-sm">
+            <CardContent className="p-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">Comodidades</h3>
+              <div className="grid grid-cols-2 gap-4">
+                {[
+                  { icon: ParkingMeter, label: "Estacionamento", available: space.parking },
+                  { icon: Wifi, label: "Wi-Fi", available: space.wifi },
+                  { icon: Speaker, label: "Sistema de som", available: space.sound_system },
+                  { icon: AirVent, label: "Ar condicionado", available: space.air_conditioning },
+                  { icon: Utensils, label: "Cozinha", available: space.kitchen },
+                  { icon: Waves, label: "Piscina", available: space.pool }
+                ].map(({ icon: Icon, label, available }) => (
+                  <div 
+                    key={label}
+                    className={`flex items-center p-3 rounded-xl transition-colors ${
+                      available 
+                        ? "bg-green-50 text-green-700" 
+                        : "bg-gray-50 text-gray-400"
+                    }`}
+                  >
+                    <Icon className="mr-3" size={20} />
+                    <span className="font-medium">{label}</span>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Contact Buttons */}
           <div className="grid grid-cols-2 gap-4 mb-6">
-            <Button className="bg-green-600 hover:bg-green-700" size="lg" onClick={handleWhatsApp}>
-              <Phone className="mr-2" size={18} />
+            <Button 
+              className="h-14 bg-green-600 hover:bg-green-700 rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all" 
+              size="lg" 
+              onClick={handleWhatsApp}
+            >
+              <Phone className="mr-3" size={20} />
               WhatsApp
             </Button>
             <Button
-              className="bg-iparty hover:bg-iparty-dark"
+              className="h-14 bg-blue-600 hover:bg-blue-700 rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all"
               size="lg"
               onClick={startChat}
               disabled={currentUserId === spaceOwner?.id || processingChat}
             >
               {processingChat ? (
-                <Loader2 className="mr-2 animate-spin" size={18} />
+                <Loader2 className="mr-3 animate-spin" size={20} />
               ) : (
-                <MessageSquare className="mr-2" size={18} />
+                <MessageSquare className="mr-3" size={20} />
               )}
               Mensagem
             </Button>
           </div>
 
-          {/* delete button for admin */}
+          {/* Admin Delete Button */}
           {isAdmin && (
             <Button
               variant="destructive"
-              className="w-full mb-6"
+              className="w-full h-12 rounded-xl font-semibold"
               size="lg"
               onClick={() => setDeleteDialogOpen(true)}
             >
-              <Trash2 className="mr-2" size={18} />
+              <Trash2 className="mr-3" size={18} />
               Excluir Espaço
             </Button>
           )}
-
-          {/* delete confirmation */}
-          <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>Excluir Espaço</AlertDialogTitle>
-                <AlertDialogDescription>
-                  Tem certeza que deseja excluir este espaço? Esta ação não pode ser
-                  desfeita.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <Textarea
-                placeholder="Motivo da exclusão (obrigatório)"
-                value={deleteReason}
-                onChange={(e) => setDeleteReason(e.target.value)}
-                className="mt-4"
-                rows={3}
-              />
-              <AlertDialogFooter className="mt-4">
-                <AlertDialogCancel disabled={deletingSpace}>Cancelar</AlertDialogCancel>
-                <AlertDialogAction
-                  onClick={handleDeleteSpace}
-                  disabled={deletingSpace}
-                  className="bg-red-600 hover:bg-red-700"
-                >
-                  {deletingSpace ? "Excluindo..." : "Excluir"}
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
-
-          {/* Report Form */}
-          <ReportForm
-            isOpen={reportFormOpen}
-            onClose={() => setReportFormOpen(false)}
-            reportedItemName={space.name}
-            reportedItemUrl={window.location.href}
-            reportType="space"
-          />
         </div>
       </div>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir Espaço</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja excluir este espaço? Esta ação não pode ser
+              desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <Textarea
+            placeholder="Motivo da exclusão (obrigatório)"
+            value={deleteReason}
+            onChange={(e) => setDeleteReason(e.target.value)}
+            className="mt-4"
+            rows={3}
+          />
+          <AlertDialogFooter className="mt-4">
+            <AlertDialogCancel disabled={deletingSpace}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteSpace}
+              disabled={deletingSpace}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              {deletingSpace ? "Excluindo..." : "Excluir"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Report Form */}
+      <ReportForm
+        isOpen={reportFormOpen}
+        onClose={() => setReportFormOpen(false)}
+        reportedItemName={space.name}
+        reportedItemUrl={window.location.href}
+        reportType="space"
+      />
     </div>
   );
 };
