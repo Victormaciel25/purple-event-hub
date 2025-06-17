@@ -34,6 +34,9 @@ export const useSpacePhotos = (spaceId: string | null) => {
       console.log("📸 DADOS BRUTOS encontrados:", photosData?.length || 0);
       console.log("📋 TODOS os dados das mídias:", photosData);
       
+      // SEMPRE buscar arquivos diretamente do bucket para garantir que não percamos nada
+      const bucketFiles = await fetchFromBucket(id);
+      
       if (photosData && photosData.length > 0) {
         // Log detalhado de cada mídia ANTES de qualquer processamento
         photosData.forEach((photo, index) => {
@@ -41,14 +44,12 @@ export const useSpacePhotos = (spaceId: string | null) => {
             id: photo.id,
             storage_path: photo.storage_path,
             created_at: photo.created_at,
-            // Análise detalhada do storage_path
             pathAnalysis: {
               fullPath: photo.storage_path,
               isURL: photo.storage_path?.startsWith('http'),
               containsVideo: photo.storage_path?.toLowerCase().includes('video'),
               extension: photo.storage_path?.split('.').pop()?.toLowerCase(),
               fileName: photo.storage_path?.split('/').pop(),
-              // Verificar se contém extensões de vídeo conhecidas
               hasVideoExt: ['.mp4', '.webm', '.mov', '.avi'].some(ext => 
                 photo.storage_path?.toLowerCase().includes(ext)
               )
@@ -78,7 +79,6 @@ export const useSpacePhotos = (spaceId: string | null) => {
             }
           });
           
-          // Critérios mais específicos para detecção de vídeo
           const videoExtensions = ['mp4', 'webm', 'mov', 'avi', 'mkv', 'm4v'];
           const isVideo = videoExtensions.includes(extension) || 
                          path.includes('video') ||
@@ -88,12 +88,45 @@ export const useSpacePhotos = (spaceId: string | null) => {
           return isVideo;
         };
 
-        // Classificar mídias
-        const videos = photosData.filter(p => isVideoFile(p.storage_path));
-        const images = photosData.filter(p => !isVideoFile(p.storage_path));
+        // Classificar mídias da tabela
+        const videosFromTable = photosData.filter(p => isVideoFile(p.storage_path));
+        const imagesFromTable = photosData.filter(p => !isVideoFile(p.storage_path));
         
-        console.log("📊 CLASSIFICAÇÃO FINAL:", {
+        console.log("📊 CLASSIFICAÇÃO DA TABELA:", {
           total: photosData.length,
+          videos: videosFromTable.length,
+          images: imagesFromTable.length,
+          videoList: videosFromTable.map(v => ({ id: v.id, path: v.storage_path })),
+          imageList: imagesFromTable.map(i => ({ id: i.id, path: i.storage_path }))
+        });
+
+        // Combinar dados da tabela com dados do bucket
+        const allPhotos = [...photosData];
+        
+        // Adicionar arquivos do bucket que não estão na tabela
+        bucketFiles.forEach(bucketFile => {
+          const existsInTable = photosData.some(p => 
+            p.storage_path === bucketFile.storage_path || 
+            p.storage_path.includes(bucketFile.fileName)
+          );
+          
+          if (!existsInTable) {
+            console.log("🔥 ADICIONANDO arquivo do bucket que não está na tabela:", bucketFile);
+            allPhotos.push({
+              id: `bucket-${bucketFile.fileName}`,
+              space_id: id,
+              storage_path: bucketFile.storage_path,
+              created_at: new Date().toISOString()
+            });
+          }
+        });
+
+        // Reclassificar com todos os arquivos
+        const videos = allPhotos.filter(p => isVideoFile(p.storage_path));
+        const images = allPhotos.filter(p => !isVideoFile(p.storage_path));
+        
+        console.log("📊 CLASSIFICAÇÃO FINAL (TABELA + BUCKET):", {
+          total: allPhotos.length,
           videos: videos.length,
           images: images.length,
           videoList: videos.map(v => ({ id: v.id, path: v.storage_path })),
@@ -112,17 +145,25 @@ export const useSpacePhotos = (spaceId: string | null) => {
         setPhotos(sortedPhotos);
         await createPhotoUrls(sortedPhotos);
         
-        // 🚨 VERIFICAÇÃO ADICIONAL: Buscar diretamente no bucket se não encontrou vídeos
-        if (videos.length === 0) {
-          console.log("⚠️ NENHUM VÍDEO encontrado na tabela, verificando bucket diretamente...");
-          await checkBucketForVideos(id);
-        }
       } else {
         console.log("⚠️ NENHUMA foto/vídeo encontrado na tabela para o espaço");
         
-        // 🚨 VERIFICAÇÃO ADICIONAL: Buscar diretamente no bucket
-        console.log("🔍 Verificando bucket diretamente para espaço:", id);
-        await checkBucketForVideos(id);
+        // Se não há dados na tabela, usar apenas os arquivos do bucket
+        if (bucketFiles.length > 0) {
+          console.log("🔥 USANDO APENAS ARQUIVOS DO BUCKET:", bucketFiles);
+          
+          const bucketPhotos = bucketFiles.map(file => ({
+            id: `bucket-${file.fileName}`,
+            space_id: id,
+            storage_path: file.storage_path,
+            created_at: new Date().toISOString()
+          }));
+          
+          setPhotos(bucketPhotos);
+          await createPhotoUrls(bucketPhotos);
+          
+          toast.success(`${bucketFiles.length} arquivo(s) encontrado(s) diretamente no storage!`);
+        }
       }
     } catch (error) {
       console.error("💥 ERRO GERAL ao buscar fotos:", error);
@@ -133,53 +174,52 @@ export const useSpacePhotos = (spaceId: string | null) => {
     }
   };
 
-  // Nova função para verificar diretamente no bucket
-  const checkBucketForVideos = async (spaceId: string) => {
+  // Nova função para buscar arquivos diretamente do bucket
+  const fetchFromBucket = async (spaceId: string) => {
+    const foundFiles: Array<{fileName: string, storage_path: string}> = [];
+    
     try {
-      console.log("🔍 VERIFICAÇÃO DIRETA NO BUCKET para espaço:", spaceId);
+      console.log("🔍 BUSCANDO ARQUIVOS DIRETAMENTE NO BUCKET para espaço:", spaceId);
       
-      // Tentar diferentes padrões de pasta
-      const possiblePaths = [
-        'videos', // pasta geral de vídeos
-        `videos/${spaceId}`, // pasta específica do espaço
-        `spaces/${spaceId}`, // pasta do espaço
-        'spaces' // pasta geral
-      ];
+      // Buscar na pasta spaces (onde estão os arquivos reais)
+      const { data: files, error } = await supabase.storage
+        .from('spaces')
+        .list('spaces', { limit: 1000 });
       
-      for (const path of possiblePaths) {
-        console.log(`📂 VERIFICANDO caminho: ${path}`);
+      if (!error && files && files.length > 0) {
+        console.log(`📂 ARQUIVOS ENCONTRADOS na pasta 'spaces':`, files.length);
         
-        const { data: files, error } = await supabase.storage
-          .from('spaces')
-          .list(path, { limit: 100 });
+        // Filtrar arquivos de mídia (imagens e vídeos)
+        const mediaFiles = files.filter(file => {
+          const ext = file.name.split('.').pop()?.toLowerCase();
+          return ['jpg', 'jpeg', 'png', 'gif', 'webp', 'mp4', 'webm', 'mov', 'avi'].includes(ext || '');
+        });
         
-        if (!error && files && files.length > 0) {
-          const videoFiles = files.filter(file => {
-            const ext = file.name.split('.').pop()?.toLowerCase();
-            return ['mp4', 'webm', 'mov', 'avi'].includes(ext || '');
+        console.log(`🎬 ARQUIVOS DE MÍDIA encontrados:`, mediaFiles);
+        
+        mediaFiles.forEach(file => {
+          const fullPath = `spaces/${file.name}`;
+          const { data } = supabase.storage.from('spaces').getPublicUrl(fullPath);
+          
+          foundFiles.push({
+            fileName: file.name,
+            storage_path: data.publicUrl
           });
           
-          console.log(`🎬 VÍDEOS ENCONTRADOS no caminho ${path}:`, videoFiles);
-          
-          if (videoFiles.length > 0) {
-            // Criar URLs para os vídeos encontrados
-            const videoUrls = videoFiles.map(file => {
-              const fullPath = `${path}/${file.name}`;
-              const { data } = supabase.storage.from('spaces').getPublicUrl(fullPath);
-              return data.publicUrl;
-            });
-            
-            console.log("🔗 URLs DE VÍDEOS criadas diretamente do bucket:", videoUrls);
-            
-            // Adicionar às URLs existentes
-            setPhotoUrls(prev => [...prev, ...videoUrls]);
-            
-            toast.success(`${videoFiles.length} vídeo(s) encontrado(s) diretamente no storage!`);
-          }
-        }
+          console.log(`📁 ARQUIVO PROCESSADO:`, {
+            name: file.name,
+            fullPath,
+            publicUrl: data.publicUrl
+          });
+        });
       }
+      
+      console.log("🔗 TOTAL DE ARQUIVOS ENCONTRADOS NO BUCKET:", foundFiles.length);
+      return foundFiles;
+      
     } catch (error) {
-      console.error("❌ Erro ao verificar bucket diretamente:", error);
+      console.error("❌ Erro ao buscar arquivos no bucket:", error);
+      return [];
     }
   };
 
