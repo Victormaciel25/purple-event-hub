@@ -1,14 +1,15 @@
+
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { ChevronLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { 
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetDescription,
-} from "@/components/ui/sheet";
+  Drawer,
+  DrawerContent,
+  DrawerHeader,
+  DrawerTitle,
+  DrawerDescription,
+} from "@/components/ui/drawer";
 import { supabase } from "@/integrations/supabase/client";
 import { useUserRoles } from "@/hooks/useUserRoles";
 import { toast } from "sonner";
@@ -34,7 +35,7 @@ const VendorApproval = () => {
   const [vendors, setVendors] = useState<VendorWithProfileInfo[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedVendor, setSelectedVendor] = useState<VendorDetailsType | null>(null);
-  const [sheetOpen, setSheetOpen] = useState(false);
+  const [drawerOpen, setDrawerOpen] = useState(false);
   const [rejectionReason, setRejectionReason] = useState("");
   const [imageUrls, setImageUrls] = useState<string[]>([]);
   const [approving, setApproving] = useState(false);
@@ -144,7 +145,7 @@ const VendorApproval = () => {
       };
 
       setSelectedVendor(vendorWithProfile);
-      setSheetOpen(true);
+      setDrawerOpen(true);
       
       // Se o fornecedor tiver imagens, vamos processá-las para exibição
       if (vendorData.images && vendorData.images.length > 0) {
@@ -298,29 +299,31 @@ const VendorApproval = () => {
       />
 
       {selectedVendor && (
-        <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
-          <SheetContent className="sm:max-w-xl overflow-y-auto">
-            <SheetHeader>
-              <SheetTitle>{selectedVendor.name}</SheetTitle>
-              <SheetDescription>
+        <Drawer open={drawerOpen} onOpenChange={setDrawerOpen}>
+          <DrawerContent className="h-[90vh] max-w-4xl mx-auto">
+            <DrawerHeader className="text-center">
+              <DrawerTitle>{selectedVendor.name}</DrawerTitle>
+              <DrawerDescription>
                 Submetido por {selectedVendor.profiles?.first_name} {selectedVendor.profiles?.last_name} em {
                   new Date(selectedVendor.created_at).toLocaleDateString('pt-BR')
                 }
-              </SheetDescription>
-            </SheetHeader>
+              </DrawerDescription>
+            </DrawerHeader>
 
-            <VendorDetails
-              selectedVendor={selectedVendor}
-              imageUrls={imageUrls}
-              rejectionReason={rejectionReason}
-              setRejectionReason={setRejectionReason}
-              onApprove={approveVendor}
-              onReject={rejectVendor}
-              onClose={() => setSheetOpen(false)}
-              approving={approving}
-            />
-          </SheetContent>
-        </Sheet>
+            <div className="px-6 pb-6 overflow-y-auto">
+              <VendorDetails
+                selectedVendor={selectedVendor}
+                imageUrls={imageUrls}
+                rejectionReason={rejectionReason}
+                setRejectionReason={setRejectionReason}
+                onApprove={approveVendor}
+                onReject={rejectVendor}
+                onClose={() => setDrawerOpen(false)}
+                approving={approving}
+              />
+            </div>
+          </DrawerContent>
+        </Drawer>
       )}
     </div>
   );

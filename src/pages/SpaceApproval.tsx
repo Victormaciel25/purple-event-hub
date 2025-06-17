@@ -1,15 +1,14 @@
-
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ChevronLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { 
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetDescription,
-} from "@/components/ui/sheet";
+  Drawer,
+  DrawerContent,
+  DrawerHeader,
+  DrawerTitle,
+  DrawerDescription,
+} from "@/components/ui/drawer";
 import { Card } from "@/components/ui/card";
 import { useUserRoles } from "@/hooks/useUserRoles";
 import { useSpaceApproval } from "@/hooks/useSpaceApproval";
@@ -21,7 +20,7 @@ import type { SpaceWithProfile } from "@/types/approval";
 
 const SpaceApproval = () => {
   const [selectedSpace, setSelectedSpace] = useState<SpaceWithProfile | null>(null);
-  const [sheetOpen, setSheetOpen] = useState(false);
+  const [drawerOpen, setDrawerOpen] = useState(false);
   const { isAdmin, loading: roleLoading } = useUserRoles();
   const navigate = useNavigate();
   
@@ -41,13 +40,13 @@ const SpaceApproval = () => {
       
       // Primeiro limpar o estado anterior
       setSelectedSpace(null);
-      setSheetOpen(false);
+      setDrawerOpen(false);
       
       // Pequeno delay para garantir que o estado seja limpo antes de definir o novo
       setTimeout(() => {
         setSelectedSpace(space);
-        setSheetOpen(true);
-        console.log("📂 Modal aberto para espaço:", space.id);
+        setDrawerOpen(true);
+        console.log("📂 Drawer aberto para espaço:", space.id);
       }, 50);
     }
   };
@@ -55,13 +54,13 @@ const SpaceApproval = () => {
   const handleApprove = async () => {
     if (!selectedSpace) return;
     await approveSpace(selectedSpace.id);
-    setSheetOpen(false);
+    setDrawerOpen(false);
   };
 
   const handleReject = async (reason: string) => {
     if (!selectedSpace) return;
     await rejectSpace(selectedSpace.id, reason);
-    setSheetOpen(false);
+    setDrawerOpen(false);
   };
 
   // Log quando as fotos mudam
@@ -106,18 +105,18 @@ const SpaceApproval = () => {
       />
 
       {selectedSpace && (
-        <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
-          <SheetContent className="sm:max-w-xl overflow-y-auto">
-            <SheetHeader>
-              <SheetTitle>{selectedSpace.name}</SheetTitle>
-              <SheetDescription>
+        <Drawer open={drawerOpen} onOpenChange={setDrawerOpen}>
+          <DrawerContent className="h-[90vh] max-w-4xl mx-auto">
+            <DrawerHeader className="text-center">
+              <DrawerTitle>{selectedSpace.name}</DrawerTitle>
+              <DrawerDescription>
                 Submetido por {selectedSpace.profiles?.first_name} {selectedSpace.profiles?.last_name} em {
                   new Date(selectedSpace.created_at).toLocaleDateString('pt-BR')
                 }
-              </SheetDescription>
-            </SheetHeader>
+              </DrawerDescription>
+            </DrawerHeader>
 
-            <div className="mt-6">
+            <div className="px-6 pb-6 overflow-y-auto">
               <SpaceDetailsTabs
                 space={selectedSpace}
                 photoUrls={photoUrls}
@@ -144,8 +143,8 @@ const SpaceApproval = () => {
                 </Card>
               )}
             </div>
-          </SheetContent>
-        </Sheet>
+          </DrawerContent>
+        </Drawer>
       )}
     </div>
   );
