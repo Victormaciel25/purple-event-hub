@@ -19,9 +19,15 @@ const SpaceDetailsTabs: React.FC<SpaceDetailsTabsProps> = ({
   photosLoading,
   onRefreshPhotos
 }) => {
-  // Função melhorada para verificar se é vídeo (deve ser IDÊNTICA ao hook)
+  // Função de detecção de vídeo IDÊNTICA ao hook (muito importante!)
   const isVideo = (url: string) => {
-    const videoExtensions = ['.mp4', '.webm', '.mov', '.avi', '.mkv', '.m4v', '.3gp', '.flv', '.wmv', '.ogg', '.ogv'];
+    // Extensões de vídeo mais abrangentes
+    const videoExtensions = [
+      '.mp4', '.webm', '.mov', '.avi', '.mkv', '.m4v', 
+      '.3gp', '.flv', '.wmv', '.ogg', '.ogv', '.mpg', 
+      '.mpeg', '.m2v', '.3g2', '.asf', '.rm', '.swf',
+      '.f4v', '.f4p', '.f4a', '.f4b'
+    ];
     
     // Extrair nome do arquivo da URL
     const getFileName = (path: string) => {
@@ -29,29 +35,57 @@ const SpaceDetailsTabs: React.FC<SpaceDetailsTabsProps> = ({
       return parts[parts.length - 1] || path;
     };
     
+    const getFileExtension = (path: string) => {
+      const fileName = getFileName(path);
+      const parts = fileName.split('.');
+      return parts.length > 1 ? `.${parts[parts.length - 1].toLowerCase()}` : '';
+    };
+    
     const fileName = getFileName(url).toLowerCase();
     const urlLower = url.toLowerCase();
+    const extension = getFileExtension(url);
     
-    // Verificar extensões de vídeo no nome do arquivo
-    const hasVideoExtension = videoExtensions.some(ext => fileName.endsWith(ext));
+    console.log(`🔍 SpaceDetailsTabs - DETECÇÃO para: ${url}`, {
+      fileName,
+      urlLower,
+      extension,
+      originalUrl: url
+    });
     
-    // Verificar se contém palavras-chave de vídeo
-    const hasVideoKeyword = urlLower.includes('video') || 
-                           urlLower.includes('movie') ||
-                           urlLower.includes('/videos/') ||
-                           urlLower.includes('_video_') ||
-                           urlLower.includes('-video-') ||
-                           fileName.includes('video');
+    // 1. Verificar extensões de vídeo
+    const hasVideoExtension = videoExtensions.includes(extension);
+    console.log(`📹 SpaceDetailsTabs - Extensão de vídeo (${extension}):`, hasVideoExtension);
     
-    const result = hasVideoExtension || hasVideoKeyword;
+    // 2. Verificar palavras-chave no caminho
+    const videoKeywords = ['video', 'movie', 'film', 'clip', '/videos/', '_video_', '-video-', 'vid_', '_vid'];
+    const hasVideoKeyword = videoKeywords.some(keyword => urlLower.includes(keyword));
+    console.log(`🔤 SpaceDetailsTabs - Palavra-chave de vídeo:`, hasVideoKeyword, videoKeywords.filter(k => urlLower.includes(k)));
     
-    console.log(`🎬 SpaceDetailsTabs - DETECÇÃO DE VÍDEO:`, {
+    // 3. Verificar MIME type no nome (se houver)
+    const hasMimeIndicator = urlLower.includes('mp4') || 
+                            urlLower.includes('webm') || 
+                            urlLower.includes('mov') ||
+                            urlLower.includes('avi');
+    console.log(`🎭 SpaceDetailsTabs - Indicador MIME:`, hasMimeIndicator);
+    
+    // 4. Verificar padrões específicos no storage path
+    const hasStorageVideoPattern = urlLower.includes('video') || 
+                                  fileName.includes('video') ||
+                                  /video.*\.(mp4|webm|mov|avi)/i.test(urlLower);
+    console.log(`📁 SpaceDetailsTabs - Padrão de storage de vídeo:`, hasStorageVideoPattern);
+    
+    const result = hasVideoExtension || hasVideoKeyword || hasMimeIndicator || hasStorageVideoPattern;
+    
+    console.log(`🎬 SpaceDetailsTabs - RESULTADO FINAL:`, {
       url: url,
       fileName: fileName,
+      extension: extension,
       hasVideoExtension,
       hasVideoKeyword,
+      hasMimeIndicator,
+      hasStorageVideoPattern,
       isVideo: result,
-      matchingExtensions: videoExtensions.filter(ext => fileName.endsWith(ext))
+      detectedAs: result ? 'VÍDEO' : 'IMAGEM'
     });
     
     return result;

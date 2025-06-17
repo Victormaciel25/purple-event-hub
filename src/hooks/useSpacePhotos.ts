@@ -106,30 +106,59 @@ export const useSpacePhotos = (spaceId: string | null) => {
   };
 
   const isVideoFile = (storagePath: string) => {
-    const videoExtensions = ['.mp4', '.webm', '.mov', '.avi', '.mkv', '.m4v', '.3gp', '.flv', '.wmv', '.ogg', '.ogv'];
+    // Extensões de vídeo mais abrangentes
+    const videoExtensions = [
+      '.mp4', '.webm', '.mov', '.avi', '.mkv', '.m4v', 
+      '.3gp', '.flv', '.wmv', '.ogg', '.ogv', '.mpg', 
+      '.mpeg', '.m2v', '.3g2', '.asf', '.rm', '.swf',
+      '.f4v', '.f4p', '.f4a', '.f4b'
+    ];
+    
     const fileName = getFileName(storagePath).toLowerCase();
     const pathLower = storagePath.toLowerCase();
+    const extension = getFileExtension(storagePath);
     
-    // Verificar extensões de vídeo no nome do arquivo
-    const hasVideoExtension = videoExtensions.some(ext => fileName.endsWith(ext));
+    console.log(`🔍 DETECÇÃO DETALHADA para: ${storagePath}`, {
+      fileName,
+      pathLower,
+      extension,
+      originalPath: storagePath
+    });
     
-    // Verificar se contém palavras-chave de vídeo no caminho completo
-    const hasVideoKeyword = pathLower.includes('video') || 
-                           pathLower.includes('movie') ||
-                           pathLower.includes('/videos/') ||
-                           pathLower.includes('_video_') ||
-                           pathLower.includes('-video-') ||
-                           fileName.includes('video');
+    // 1. Verificar extensões de vídeo
+    const hasVideoExtension = videoExtensions.includes(extension);
+    console.log(`📹 Extensão de vídeo (${extension}):`, hasVideoExtension);
     
-    const result = hasVideoExtension || hasVideoKeyword;
+    // 2. Verificar palavras-chave no caminho
+    const videoKeywords = ['video', 'movie', 'film', 'clip', '/videos/', '_video_', '-video-', 'vid_', '_vid'];
+    const hasVideoKeyword = videoKeywords.some(keyword => pathLower.includes(keyword));
+    console.log(`🔤 Palavra-chave de vídeo:`, hasVideoKeyword, videoKeywords.filter(k => pathLower.includes(k)));
     
-    console.log(`🎬 DETECÇÃO DE VÍDEO DETALHADA:`, {
+    // 3. Verificar MIME type no nome (se houver)
+    const hasMimeIndicator = pathLower.includes('mp4') || 
+                            pathLower.includes('webm') || 
+                            pathLower.includes('mov') ||
+                            pathLower.includes('avi');
+    console.log(`🎭 Indicador MIME:`, hasMimeIndicator);
+    
+    // 4. Verificar padrões específicos no storage path
+    const hasStorageVideoPattern = pathLower.includes('video') || 
+                                  fileName.includes('video') ||
+                                  /video.*\.(mp4|webm|mov|avi)/i.test(pathLower);
+    console.log(`📁 Padrão de storage de vídeo:`, hasStorageVideoPattern);
+    
+    const result = hasVideoExtension || hasVideoKeyword || hasMimeIndicator || hasStorageVideoPattern;
+    
+    console.log(`🎬 RESULTADO FINAL DETECÇÃO:`, {
       storagePath: storagePath,
       fileName: fileName,
+      extension: extension,
       hasVideoExtension,
       hasVideoKeyword,
+      hasMimeIndicator,
+      hasStorageVideoPattern,
       isVideo: result,
-      matchingExtensions: videoExtensions.filter(ext => fileName.endsWith(ext))
+      detectedAs: result ? 'VÍDEO' : 'IMAGEM'
     });
     
     return result;
@@ -201,7 +230,7 @@ export const useSpacePhotos = (spaceId: string | null) => {
 
       const validUrls = urls.filter(url => url !== null) as string[];
       
-      // Classificar URLs válidas
+      // Classificar URLs válidas usando a mesma função de detecção
       const validVideos = validUrls.filter(url => isVideoFile(url));
       const validImages = validUrls.filter(url => !isVideoFile(url));
       
