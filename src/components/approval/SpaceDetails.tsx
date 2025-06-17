@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import {
   TabsContent,
@@ -88,31 +89,6 @@ const SpaceDetails: React.FC<SpaceDetailsProps> = ({
   const [deletingSpace, setDeletingSpace] = useState(false);
   const { isAdmin } = useUserRoles();
 
-  // Função para verificar se é vídeo
-  const isVideo = (url: string) => {
-    const videoExtensions = ['.mp4', '.webm', '.mov', '.avi', '.mkv', '.m4v'];
-    const urlLower = url.toLowerCase();
-    
-    return videoExtensions.some(ext => urlLower.includes(ext)) ||
-           urlLower.includes('video') ||
-           urlLower.includes('.mp4') ||
-           urlLower.includes('.webm') ||
-           urlLower.includes('.mov');
-  };
-
-  // Ordenar URLs: imagens primeiro, vídeos por último
-  const sortedPhotoUrls = [...photoUrls].sort((a, b) => {
-    const aIsVideo = isVideo(a);
-    const bIsVideo = isVideo(b);
-    
-    // Se a é vídeo e b não é, a vem depois
-    if (aIsVideo && !bIsVideo) return 1;
-    // Se b é vídeo e a não é, b vem depois
-    if (!aIsVideo && bIsVideo) return -1;
-    // Se ambos são do mesmo tipo, manter ordem original
-    return 0;
-  });
-
   const handleDeleteSpace = async () => {
     if (!deleteReason.trim()) {
       toast.error("Por favor, forneça um motivo para a exclusão");
@@ -154,15 +130,15 @@ const SpaceDetails: React.FC<SpaceDetailsProps> = ({
     }
   };
 
-  console.log("SpaceDetails received photoUrls:", sortedPhotoUrls);
-  console.log("Total photoUrls count:", sortedPhotoUrls?.length || 0);
+  console.log("SpaceDetails received photoUrls:", photoUrls);
+  console.log("Total photoUrls count:", photoUrls?.length || 0);
 
   return (
     <div className="mt-6">
       <Tabs defaultValue="details" className="w-full">
         <TabsList className="w-full">
           <TabsTrigger value="details" className="flex-1">Detalhes</TabsTrigger>
-          <TabsTrigger value="photos" className="flex-1">Fotos ({sortedPhotoUrls?.length || 0})</TabsTrigger>
+          <TabsTrigger value="photos" className="flex-1">Fotos ({photoUrls?.length || 0})</TabsTrigger>
           <TabsTrigger value="location" className="flex-1">Localização</TabsTrigger>
         </TabsList>
         
@@ -272,56 +248,37 @@ const SpaceDetails: React.FC<SpaceDetailsProps> = ({
         
         <TabsContent value="photos" className="mt-4">
           <Card className="p-4">
-            {!sortedPhotoUrls || sortedPhotoUrls.length === 0 ? (
+            {!photoUrls || photoUrls.length === 0 ? (
               <div className="text-center py-8">
                 <Image size={48} className="mx-auto text-gray-300 mb-2" />
-                <p className="text-gray-500">Nenhuma foto ou vídeo disponível</p>
+                <p className="text-gray-500">Nenhuma foto disponível</p>
                 <p className="text-xs text-gray-400 mt-1">
-                  Verifique se as fotos/vídeos foram enviados corretamente
+                  Verifique se as fotos foram enviadas corretamente
                 </p>
               </div>
             ) : (
               <>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {sortedPhotoUrls.map((url, index) => {
-                    const isVideoFile = isVideo(url);
-                    console.log(`Rendering media ${index + 1} with URL:`, url, "isVideo:", isVideoFile);
+                  {photoUrls.map((url, index) => {
+                    console.log(`Rendering photo ${index + 1} with URL:`, url);
                     return (
                       <div key={index} className="relative">
-                        {isVideoFile ? (
-                          <video
-                            src={url}
-                            controls
-                            className="w-full h-40 object-cover rounded-md border"
-                            preload="metadata"
-                            onLoad={() => {
-                              console.log(`✓ Vídeo ${index + 1} carregado com sucesso:`, url);
-                            }}
-                            onError={(e) => {
-                              console.error(`✗ Erro ao carregar vídeo ${index + 1}:`, url);
-                              console.error("Video error event:", e);
-                            }}
-                          >
-                            Seu navegador não suporta vídeos.
-                          </video>
-                        ) : (
-                          <img 
-                            src={url} 
-                            alt={`Espaço ${selectedSpace.name} ${index + 1}`}
-                            className="w-full h-40 object-cover rounded-md border"
-                            onLoad={() => {
-                              console.log(`✓ Foto ${index + 1} carregada com sucesso:`, url);
-                            }}
-                            onError={(e) => {
-                              console.error(`✗ Erro ao carregar foto ${index + 1}:`, url);
-                              console.error("Image error event:", e);
-                              // Fallback para uma imagem de placeholder
-                              e.currentTarget.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZGRkIi8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxNCIgZmlsbD0iIzk5OSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPkVycm8gYW8gY2FycmVnYXIgaW1hZ2VtPC90ZXh0Pjwvc3ZnPg==';
-                            }}
-                          />
-                        )}
+                        <img 
+                          src={url} 
+                          alt={`Espaço ${selectedSpace.name} ${index + 1}`}
+                          className="w-full h-40 object-cover rounded-md border"
+                          onLoad={() => {
+                            console.log(`✓ Photo ${index + 1} loaded successfully from:`, url);
+                          }}
+                          onError={(e) => {
+                            console.error(`✗ Error loading photo ${index + 1} from:`, url);
+                            console.error("Image error event:", e);
+                            // Fallback para uma imagem de placeholder
+                            e.currentTarget.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZGRkIi8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxNCIgZmlsbD0iIzk5OSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPkVycm8gYW8gY2FycmVnYXIgaW1hZ2VtPC90ZXh0Pjwvc3ZnPg==';
+                          }}
+                        />
                         <span className="absolute bottom-2 right-2 bg-black/50 text-white text-xs px-2 py-1 rounded">
-                          {index + 1}/{sortedPhotoUrls.length}
+                          {index + 1}/{photoUrls.length}
                         </span>
                       </div>
                     );
@@ -329,7 +286,7 @@ const SpaceDetails: React.FC<SpaceDetailsProps> = ({
                 </div>
                 <h3 className="text-lg font-medium mt-4 text-center">{selectedSpace.name}</h3>
                 <p className="text-sm text-gray-500 text-center mt-2">
-                  {sortedPhotoUrls.length} mídia{sortedPhotoUrls.length !== 1 ? 's' : ''} encontrada{sortedPhotoUrls.length !== 1 ? 's' : ''}
+                  {photoUrls.length} foto{photoUrls.length !== 1 ? 's' : ''} encontrada{photoUrls.length !== 1 ? 's' : ''}
                 </p>
               </>
             )}
