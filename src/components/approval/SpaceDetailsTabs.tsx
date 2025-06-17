@@ -1,9 +1,9 @@
-
 import React from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card } from "@/components/ui/card";
 import { Image, MapPin, Home, User, Phone, DollarSign, Check, X, Tag, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import DebugVideoUpload from "@/components/DebugVideoUpload";
 import type { SpaceWithProfile } from "@/types/approval";
 
 interface SpaceDetailsTabsProps {
@@ -19,79 +19,43 @@ const SpaceDetailsTabs: React.FC<SpaceDetailsTabsProps> = ({
   photosLoading,
   onRefreshPhotos
 }) => {
-  // Função de detecção de vídeo IDÊNTICA ao hook (muito importante!)
+  // Função de detecção de vídeo MELHORADA e IDÊNTICA ao hook
   const isVideo = (url: string) => {
-    // Extensões de vídeo mais abrangentes
-    const videoExtensions = [
-      '.mp4', '.webm', '.mov', '.avi', '.mkv', '.m4v', 
-      '.3gp', '.flv', '.wmv', '.ogg', '.ogv', '.mpg', 
-      '.mpeg', '.m2v', '.3g2', '.asf', '.rm', '.swf',
-      '.f4v', '.f4p', '.f4a', '.f4b'
-    ];
+    if (!url) return false;
     
-    // Extrair nome do arquivo da URL
-    const getFileName = (path: string) => {
-      const parts = path.split('/');
-      return parts[parts.length - 1] || path;
-    };
-    
-    const getFileExtension = (path: string) => {
-      const fileName = getFileName(path);
-      const parts = fileName.split('.');
-      return parts.length > 1 ? `.${parts[parts.length - 1].toLowerCase()}` : '';
-    };
-    
-    const fileName = getFileName(url).toLowerCase();
     const urlLower = url.toLowerCase();
-    const extension = getFileExtension(url);
+    const fileName = url.split('/').pop()?.toLowerCase() || '';
+    const extension = fileName.split('.').pop() || '';
     
-    console.log(`🔍 SpaceDetailsTabs - DETECÇÃO para: ${url}`, {
-      fileName,
+    console.log(`🔍 SpaceDetailsTabs - DETECÇÃO DE VÍDEO para: ${url}`, {
       urlLower,
+      fileName,
       extension,
       originalUrl: url
     });
     
-    // 1. Verificar extensões de vídeo
-    const hasVideoExtension = videoExtensions.includes(extension);
-    console.log(`📹 SpaceDetailsTabs - Extensão de vídeo (${extension}):`, hasVideoExtension);
+    // Critérios para detecção de vídeo
+    const videoExtensions = ['mp4', 'webm', 'mov', 'avi', 'mkv', 'm4v'];
+    const checks = {
+      hasVideoExtension: videoExtensions.includes(extension),
+      urlContainsVideo: urlLower.includes('video'),
+      fileNameContainsVideo: fileName.includes('video'),
+      hasSpecificVideoExt: videoExtensions.some(ext => urlLower.includes(`.${ext}`))
+    };
     
-    // 2. Verificar palavras-chave no caminho
-    const videoKeywords = ['video', 'movie', 'film', 'clip', '/videos/', '_video_', '-video-', 'vid_', '_vid'];
-    const hasVideoKeyword = videoKeywords.some(keyword => urlLower.includes(keyword));
-    console.log(`🔤 SpaceDetailsTabs - Palavra-chave de vídeo:`, hasVideoKeyword, videoKeywords.filter(k => urlLower.includes(k)));
+    console.log(`🔎 SpaceDetailsTabs - Checks de detecção:`, checks);
     
-    // 3. Verificar MIME type no nome (se houver)
-    const hasMimeIndicator = urlLower.includes('mp4') || 
-                            urlLower.includes('webm') || 
-                            urlLower.includes('mov') ||
-                            urlLower.includes('avi');
-    console.log(`🎭 SpaceDetailsTabs - Indicador MIME:`, hasMimeIndicator);
+    const result = checks.hasVideoExtension || 
+                  checks.urlContainsVideo || 
+                  checks.fileNameContainsVideo ||
+                  checks.hasSpecificVideoExt;
     
-    // 4. Verificar padrões específicos no storage path
-    const hasStorageVideoPattern = urlLower.includes('video') || 
-                                  fileName.includes('video') ||
-                                  /video.*\.(mp4|webm|mov|avi)/i.test(urlLower);
-    console.log(`📁 SpaceDetailsTabs - Padrão de storage de vídeo:`, hasStorageVideoPattern);
-    
-    const result = hasVideoExtension || hasVideoKeyword || hasMimeIndicator || hasStorageVideoPattern;
-    
-    console.log(`🎬 SpaceDetailsTabs - RESULTADO FINAL:`, {
-      url: url,
-      fileName: fileName,
-      extension: extension,
-      hasVideoExtension,
-      hasVideoKeyword,
-      hasMimeIndicator,
-      hasStorageVideoPattern,
-      isVideo: result,
-      detectedAs: result ? 'VÍDEO' : 'IMAGEM'
-    });
+    console.log(`🎬 SpaceDetailsTabs - RESULTADO FINAL: ${url} -> ${result ? 'VÍDEO' : 'IMAGEM'}`);
     
     return result;
   };
 
-  // Separar e contar mídias com logs detalhados
+  // Separar e contar mídias
   const videos = photoUrls.filter(url => isVideo(url));
   const images = photoUrls.filter(url => !isVideo(url));
   const totalMedia = photoUrls.length;
@@ -109,13 +73,6 @@ const SpaceDetailsTabs: React.FC<SpaceDetailsTabsProps> = ({
   // URLs já vêm ordenadas do hook (imagens primeiro, vídeos por último)
   const sortedPhotoUrls = [...images, ...videos];
 
-  console.log(`🎯 SpaceDetailsTabs - ORDEM FINAL:`, {
-    sortedUrls: sortedPhotoUrls,
-    totalFinal: sortedPhotoUrls.length,
-    orderedVideos: videos,
-    orderedImages: images
-  });
-
   return (
     <Tabs defaultValue="details" className="w-full">
       <TabsList className="w-full">
@@ -124,6 +81,7 @@ const SpaceDetailsTabs: React.FC<SpaceDetailsTabsProps> = ({
           Mídia ({totalMedia}) {videos.length > 0 && `- ${videos.length} vídeo${videos.length !== 1 ? 's' : ''}`}
         </TabsTrigger>
         <TabsTrigger value="location" className="flex-1">Localização</TabsTrigger>
+        <TabsTrigger value="debug" className="flex-1">🔧 Debug</TabsTrigger>
       </TabsList>
       
       <TabsContent value="details" className="mt-4 space-y-4">
@@ -313,13 +271,6 @@ const SpaceDetailsTabs: React.FC<SpaceDetailsTabsProps> = ({
             </div>
           ) : (
             <>
-              {console.log("🎬 RENDERIZAÇÃO - Iniciando renderização das mídias:", {
-                images: images.length,
-                videos: videos.length,
-                sortedUrls: sortedPhotoUrls.length,
-                spaceName: space.name
-              })}
-
               {/* Mostrar imagens primeiro */}
               {images.length > 0 && (
                 <div className="mb-6">
@@ -395,7 +346,7 @@ const SpaceDetailsTabs: React.FC<SpaceDetailsTabsProps> = ({
                 </div>
               )}
 
-              {/* Informações resumidas com debug */}
+              {/* Debug das URLs */}
               <div className="mt-4 text-center border-t pt-4">
                 <h3 className="text-lg font-medium">{space.name}</h3>
                 <p className="text-sm text-gray-500 mt-2">
@@ -404,28 +355,28 @@ const SpaceDetailsTabs: React.FC<SpaceDetailsTabsProps> = ({
                   🎬 {videos.length} vídeo{videos.length !== 1 ? 's' : ''}
                 </p>
                 
-                {/* Botão de debug melhorado */}
                 <Button
                   variant="outline"
                   size="sm"
                   className="mt-2"
                   onClick={() => {
-                    console.log("🔍 DEBUG MANUAL COMPLETO - Estado atual:", {
+                    console.log("🔍 DEBUG MANUAL COMPLETO - URLs e detecção:", {
                       space: space.name,
                       spaceId: space.id,
                       photoUrls,
-                      videos,
-                      images,
-                      sortedPhotoUrls,
                       detectionResults: photoUrls.map(url => ({
                         url,
                         isVideo: isVideo(url),
-                        fileName: url.split('/').pop()
-                      }))
+                        fileName: url.split('/').pop(),
+                        extension: url.split('.').pop()?.toLowerCase()
+                      })),
+                      videos,
+                      images,
+                      sortedPhotoUrls
                     });
                   }}
                 >
-                  🔍 Debug Completo
+                  🔍 Debug URLs
                 </Button>
               </div>
             </>
@@ -471,6 +422,34 @@ const SpaceDetailsTabs: React.FC<SpaceDetailsTabsProps> = ({
                 </p>
               </div>
             )}
+          </div>
+        </Card>
+      </TabsContent>
+
+      <TabsContent value="debug" className="mt-4">
+        <DebugVideoUpload spaceId={space.id} />
+        
+        <Card className="p-4 mt-4">
+          <h4 className="text-lg font-semibold mb-4">🔍 Informações de Debug</h4>
+          <div className="space-y-3 text-sm">
+            <div>
+              <strong>Space ID:</strong> {space.id}
+            </div>
+            <div>
+              <strong>Total de URLs:</strong> {photoUrls.length}
+            </div>
+            <div>
+              <strong>URLs Detectadas como Vídeos:</strong> {videos.length}
+            </div>
+            <div>
+              <strong>URLs Detectadas como Imagens:</strong> {images.length}
+            </div>
+            <div className="mt-4">
+              <strong>Todas as URLs:</strong>
+              <pre className="bg-gray-100 p-2 rounded text-xs mt-2 overflow-auto max-h-40">
+                {JSON.stringify(photoUrls, null, 2)}
+              </pre>
+            </div>
           </div>
         </Card>
       </TabsContent>

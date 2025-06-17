@@ -35,46 +35,77 @@ export const useSpacePhotos = (spaceId: string | null) => {
       console.log("📋 TODOS os dados das mídias:", photosData);
       
       if (photosData && photosData.length > 0) {
-        // Log detalhado de cada mídia antes da classificação
+        // Log detalhado de cada mídia ANTES de qualquer processamento
         photosData.forEach((photo, index) => {
-          const isVideo = isVideoFile(photo.storage_path);
-          console.log(`📁 ANÁLISE Mídia ${index + 1}:`, {
+          console.log(`📁 ANÁLISE COMPLETA Mídia ${index + 1}:`, {
             id: photo.id,
             storage_path: photo.storage_path,
             created_at: photo.created_at,
-            isVideo: isVideo,
-            fileExtension: getFileExtension(photo.storage_path),
-            fileName: getFileName(photo.storage_path)
+            // Análise detalhada do storage_path
+            pathAnalysis: {
+              fullPath: photo.storage_path,
+              isURL: photo.storage_path?.startsWith('http'),
+              containsVideo: photo.storage_path?.toLowerCase().includes('video'),
+              extension: photo.storage_path?.split('.').pop()?.toLowerCase(),
+              fileName: photo.storage_path?.split('/').pop(),
+              // Verificar se contém extensões de vídeo conhecidas
+              hasVideoExt: ['.mp4', '.webm', '.mov', '.avi'].some(ext => 
+                photo.storage_path?.toLowerCase().includes(ext)
+              )
+            }
           });
         });
 
-        // Contar vídeos e imagens ANTES da ordenação
-        const videoCount = photosData.filter(p => isVideoFile(p.storage_path)).length;
-        const imageCount = photosData.filter(p => !isVideoFile(p.storage_path)).length;
+        // Função de detecção de vídeo MELHORADA
+        const isVideoFile = (storagePath: string) => {
+          if (!storagePath) return false;
+          
+          const path = storagePath.toLowerCase();
+          const fileName = storagePath.split('/').pop()?.toLowerCase() || '';
+          const extension = fileName.split('.').pop() || '';
+          
+          console.log(`🎬 DETECÇÃO DE VÍDEO DETALHADA para: ${storagePath}`, {
+            path,
+            fileName,
+            extension,
+            checks: {
+              hasVideoExtension: ['.mp4', '.webm', '.mov', '.avi', '.mkv', '.m4v'].includes(`.${extension}`),
+              pathContainsVideo: path.includes('video'),
+              fileNameContainsVideo: fileName.includes('video'),
+              isMP4: extension === 'mp4' || path.includes('.mp4'),
+              isWebM: extension === 'webm' || path.includes('.webm'),
+              isMOV: extension === 'mov' || path.includes('.mov')
+            }
+          });
+          
+          // Critérios mais específicos para detecção de vídeo
+          const videoExtensions = ['mp4', 'webm', 'mov', 'avi', 'mkv', 'm4v'];
+          const isVideo = videoExtensions.includes(extension) || 
+                         path.includes('video') ||
+                         videoExtensions.some(ext => path.includes(`.${ext}`));
+          
+          console.log(`🎯 RESULTADO DETECÇÃO: ${storagePath} -> ${isVideo ? 'VÍDEO' : 'IMAGEM'}`);
+          return isVideo;
+        };
+
+        // Classificar mídias
+        const videos = photosData.filter(p => isVideoFile(p.storage_path));
+        const images = photosData.filter(p => !isVideoFile(p.storage_path));
         
-        console.log("📊 CONTAGEM ANTES DA ORDENAÇÃO:", {
+        console.log("📊 CLASSIFICAÇÃO FINAL:", {
           total: photosData.length,
-          videos: videoCount,
-          images: imageCount
+          videos: videos.length,
+          images: images.length,
+          videoList: videos.map(v => ({ id: v.id, path: v.storage_path })),
+          imageList: images.map(i => ({ id: i.id, path: i.storage_path }))
         });
 
-        // Ordenar as mídias: imagens primeiro, vídeos por último
-        const sortedPhotos = photosData.sort((a, b) => {
-          const aIsVideo = isVideoFile(a.storage_path);
-          const bIsVideo = isVideoFile(b.storage_path);
-          
-          // Se a é vídeo e b não é, a vem depois
-          if (aIsVideo && !bIsVideo) return 1;
-          // Se b é vídeo e a não é, b vem depois
-          if (!aIsVideo && bIsVideo) return -1;
-          // Se ambos são do mesmo tipo, manter ordem original por created_at
-          return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
-        });
+        // Ordenar: imagens primeiro, vídeos por último
+        const sortedPhotos = [...images, ...videos];
         
         console.log("🎯 MÍDIAS ORDENADAS:", sortedPhotos.map(p => ({
           id: p.id,
           path: p.storage_path,
-          fileName: getFileName(p.storage_path),
           isVideo: isVideoFile(p.storage_path)
         })));
         
@@ -94,76 +125,6 @@ export const useSpacePhotos = (spaceId: string | null) => {
     }
   };
 
-  const getFileName = (storagePath: string) => {
-    const parts = storagePath.split('/');
-    return parts[parts.length - 1] || storagePath;
-  };
-
-  const getFileExtension = (storagePath: string) => {
-    const fileName = getFileName(storagePath);
-    const parts = fileName.split('.');
-    return parts.length > 1 ? `.${parts[parts.length - 1].toLowerCase()}` : '';
-  };
-
-  const isVideoFile = (storagePath: string) => {
-    // Extensões de vídeo mais abrangentes
-    const videoExtensions = [
-      '.mp4', '.webm', '.mov', '.avi', '.mkv', '.m4v', 
-      '.3gp', '.flv', '.wmv', '.ogg', '.ogv', '.mpg', 
-      '.mpeg', '.m2v', '.3g2', '.asf', '.rm', '.swf',
-      '.f4v', '.f4p', '.f4a', '.f4b'
-    ];
-    
-    const fileName = getFileName(storagePath).toLowerCase();
-    const pathLower = storagePath.toLowerCase();
-    const extension = getFileExtension(storagePath);
-    
-    console.log(`🔍 DETECÇÃO DETALHADA para: ${storagePath}`, {
-      fileName,
-      pathLower,
-      extension,
-      originalPath: storagePath
-    });
-    
-    // 1. Verificar extensões de vídeo
-    const hasVideoExtension = videoExtensions.includes(extension);
-    console.log(`📹 Extensão de vídeo (${extension}):`, hasVideoExtension);
-    
-    // 2. Verificar palavras-chave no caminho
-    const videoKeywords = ['video', 'movie', 'film', 'clip', '/videos/', '_video_', '-video-', 'vid_', '_vid'];
-    const hasVideoKeyword = videoKeywords.some(keyword => pathLower.includes(keyword));
-    console.log(`🔤 Palavra-chave de vídeo:`, hasVideoKeyword, videoKeywords.filter(k => pathLower.includes(k)));
-    
-    // 3. Verificar MIME type no nome (se houver)
-    const hasMimeIndicator = pathLower.includes('mp4') || 
-                            pathLower.includes('webm') || 
-                            pathLower.includes('mov') ||
-                            pathLower.includes('avi');
-    console.log(`🎭 Indicador MIME:`, hasMimeIndicator);
-    
-    // 4. Verificar padrões específicos no storage path
-    const hasStorageVideoPattern = pathLower.includes('video') || 
-                                  fileName.includes('video') ||
-                                  /video.*\.(mp4|webm|mov|avi)/i.test(pathLower);
-    console.log(`📁 Padrão de storage de vídeo:`, hasStorageVideoPattern);
-    
-    const result = hasVideoExtension || hasVideoKeyword || hasMimeIndicator || hasStorageVideoPattern;
-    
-    console.log(`🎬 RESULTADO FINAL DETECÇÃO:`, {
-      storagePath: storagePath,
-      fileName: fileName,
-      extension: extension,
-      hasVideoExtension,
-      hasVideoKeyword,
-      hasMimeIndicator,
-      hasStorageVideoPattern,
-      isVideo: result,
-      detectedAs: result ? 'VÍDEO' : 'IMAGEM'
-    });
-    
-    return result;
-  };
-
   const createPhotoUrls = async (photosData: SpacePhoto[]) => {
     try {
       console.log("🔗 CRIANDO URLs para", photosData.length, "fotos/vídeos");
@@ -175,72 +136,45 @@ export const useSpacePhotos = (spaceId: string | null) => {
             return null;
           }
 
-          const isVideo = isVideoFile(photo.storage_path);
-          const fileName = getFileName(photo.storage_path);
-          
           console.log(`🔄 PROCESSANDO mídia ${index + 1}:`, {
             id: photo.id,
             storage_path: photo.storage_path,
-            fileName: fileName,
-            isVideo: isVideo
+            isFullURL: photo.storage_path.startsWith('http')
           });
 
-          // Verificar se o storage_path já é uma URL completa
+          // Se já é uma URL completa, usar diretamente
           if (photo.storage_path.startsWith('http')) {
             console.log("✅ JÁ É URL COMPLETA:", photo.storage_path);
             return photo.storage_path;
           }
 
+          // Tentar criar URL a partir do storage path
           try {
-            // Primeiro tentar URL pública
             const { data: publicUrlData } = supabase.storage
               .from('spaces')
               .getPublicUrl(photo.storage_path);
             
             if (publicUrlData?.publicUrl) {
-              console.log(`✅ URL PÚBLICA criada para ${isVideo ? 'VÍDEO' : 'IMAGEM'}:`, {
-                fileName: fileName,
+              console.log(`✅ URL PÚBLICA criada:`, {
+                originalPath: photo.storage_path,
                 url: publicUrlData.publicUrl
               });
               return publicUrlData.publicUrl;
             }
-
-            // Fallback para URL assinada se a pública não funcionar
-            const { data: signedUrlData, error: signedUrlError } = await supabase.storage
-              .from('spaces')
-              .createSignedUrl(photo.storage_path, 3600);
-
-            if (signedUrlError) {
-              console.error("❌ ERRO URL ASSINADA:", signedUrlError);
-            } else if (signedUrlData?.signedUrl) {
-              console.log(`✅ URL ASSINADA criada como fallback para ${isVideo ? 'VÍDEO' : 'IMAGEM'}:`, {
-                fileName: fileName,
-                url: signedUrlData.signedUrl
-              });
-              return signedUrlData.signedUrl;
-            }
           } catch (urlError) {
-            console.error("❌ ERRO ao processar URL:", urlError);
+            console.error("❌ ERRO ao criar URL:", urlError);
           }
 
-          console.error(`❌ FALHA TOTAL para ${isVideo ? 'VÍDEO' : 'IMAGEM'}:`, fileName);
+          console.error(`❌ FALHA TOTAL para mídia:`, photo.storage_path);
           return null;
         })
       );
 
       const validUrls = urls.filter(url => url !== null) as string[];
       
-      // Classificar URLs válidas usando a mesma função de detecção
-      const validVideos = validUrls.filter(url => isVideoFile(url));
-      const validImages = validUrls.filter(url => !isVideoFile(url));
-      
       console.log("✨ RESUMO FINAL COMPLETO:");
       console.log("- URLs válidas criadas:", validUrls.length, "de", photosData.length, "mídias");
-      console.log("- Vídeos encontrados:", validVideos.length);
-      console.log("- Imagens encontradas:", validImages.length);
       console.log("- TODAS as URLs válidas:", validUrls);
-      console.log("- URLs de VÍDEOS:", validVideos);
-      console.log("- URLs de IMAGENS:", validImages);
       
       setPhotoUrls(validUrls);
     } catch (error) {
@@ -253,7 +187,6 @@ export const useSpacePhotos = (spaceId: string | null) => {
   useEffect(() => {
     if (spaceId) {
       console.log("🔄 useSpacePhotos - spaceId mudou para:", spaceId);
-      // Delay pequeno para garantir que o modal esteja totalmente carregado
       const timer = setTimeout(() => {
         fetchPhotos(spaceId);
       }, 100);
