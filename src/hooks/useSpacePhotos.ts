@@ -12,7 +12,7 @@ export const useSpacePhotos = (spaceId: string | null) => {
   const fetchPhotos = async (id: string) => {
     try {
       setLoading(true);
-      console.log("🔍 Buscando fotos para espaço:", id);
+      console.log("🔍 Buscando fotos/vídeos para espaço:", id);
 
       // Limpar estado anterior
       setPhotos([]);
@@ -31,10 +31,22 @@ export const useSpacePhotos = (spaceId: string | null) => {
         return;
       }
 
-      console.log("📸 Fotos encontradas:", photosData?.length || 0);
-      console.log("📋 Dados das fotos:", photosData);
+      console.log("📸 Mídias encontradas:", photosData?.length || 0);
+      console.log("📋 Dados completos das mídias:", photosData);
       
       if (photosData && photosData.length > 0) {
+        // Log detalhado de cada mídia
+        photosData.forEach((photo, index) => {
+          const isVideo = isVideoFile(photo.storage_path);
+          console.log(`📁 Mídia ${index + 1}:`, {
+            id: photo.id,
+            storage_path: photo.storage_path,
+            created_at: photo.created_at,
+            isVideo: isVideo,
+            fileExtension: getFileExtension(photo.storage_path)
+          });
+        });
+
         // Ordenar as mídias: imagens primeiro, vídeos por último
         const sortedPhotos = photosData.sort((a, b) => {
           const aIsVideo = isVideoFile(a.storage_path);
@@ -48,10 +60,16 @@ export const useSpacePhotos = (spaceId: string | null) => {
           return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
         });
         
+        console.log("🎯 Mídias ordenadas:", sortedPhotos.map(p => ({
+          id: p.id,
+          path: p.storage_path,
+          isVideo: isVideoFile(p.storage_path)
+        })));
+        
         setPhotos(sortedPhotos);
         await createPhotoUrls(sortedPhotos);
       } else {
-        console.log("⚠️ Nenhuma foto encontrada para o espaço");
+        console.log("⚠️ Nenhuma foto/vídeo encontrado para o espaço");
         setPhotos([]);
         setPhotoUrls([]);
       }
@@ -64,10 +82,24 @@ export const useSpacePhotos = (spaceId: string | null) => {
     }
   };
 
+  const getFileExtension = (storagePath: string) => {
+    const parts = storagePath.split('.');
+    return parts.length > 1 ? `.${parts[parts.length - 1].toLowerCase()}` : '';
+  };
+
   const isVideoFile = (storagePath: string) => {
-    const videoExtensions = ['.mp4', '.webm', '.mov', '.avi', '.mkv', '.m4v'];
+    const videoExtensions = ['.mp4', '.webm', '.mov', '.avi', '.mkv', '.m4v', '.3gp', '.flv', '.wmv'];
     const pathLower = storagePath.toLowerCase();
-    return videoExtensions.some(ext => pathLower.includes(ext));
+    
+    // Verificar extensões de vídeo
+    const hasVideoExtension = videoExtensions.some(ext => pathLower.includes(ext));
+    
+    // Verificar se contém palavras-chave de vídeo no nome
+    const hasVideoKeyword = pathLower.includes('video') || pathLower.includes('movie');
+    
+    console.log(`🎬 Verificando se é vídeo - Path: ${storagePath}, HasExtension: ${hasVideoExtension}, HasKeyword: ${hasVideoKeyword}`);
+    
+    return hasVideoExtension || hasVideoKeyword;
   };
 
   const createPhotoUrls = async (photosData: SpacePhoto[]) => {
@@ -75,13 +107,18 @@ export const useSpacePhotos = (spaceId: string | null) => {
       console.log("🔗 Criando URLs para", photosData.length, "fotos/vídeos");
       
       const urls = await Promise.all(
-        photosData.map(async (photo) => {
+        photosData.map(async (photo, index) => {
           if (!photo.storage_path) {
-            console.error("❌ Caminho de armazenamento ausente para foto:", photo.id);
+            console.error("❌ Caminho de armazenamento ausente para mídia:", photo.id);
             return null;
           }
 
-          console.log("🔄 Processando mídia:", photo.id, "com storage_path:", photo.storage_path);
+          const isVideo = isVideoFile(photo.storage_path);
+          console.log(`🔄 Processando mídia ${index + 1}:`, {
+            id: photo.id,
+            storage_path: photo.storage_path,
+            isVideo: isVideo
+          });
 
           // Verificar se o storage_path já é uma URL completa
           if (photo.storage_path.startsWith('http')) {
@@ -96,7 +133,7 @@ export const useSpacePhotos = (spaceId: string | null) => {
               .getPublicUrl(photo.storage_path);
             
             if (publicUrlData?.publicUrl) {
-              console.log("✅ URL pública criada:", publicUrlData.publicUrl);
+              console.log(`✅ URL pública criada para ${isVideo ? 'vídeo' : 'imagem'}:`, publicUrlData.publicUrl);
               return publicUrlData.publicUrl;
             }
 
@@ -108,21 +145,29 @@ export const useSpacePhotos = (spaceId: string | null) => {
             if (signedUrlError) {
               console.error("❌ Erro ao criar URL assinada:", signedUrlError);
             } else if (signedUrlData?.signedUrl) {
-              console.log("✅ URL assinada criada como fallback:", signedUrlData.signedUrl);
+              console.log(`✅ URL assinada criada como fallback para ${isVideo ? 'vídeo' : 'imagem'}:`, signedUrlData.signedUrl);
               return signedUrlData.signedUrl;
             }
           } catch (urlError) {
             console.error("❌ Erro ao processar URL:", urlError);
           }
 
-          console.error("❌ Não foi possível criar URL para mídia:", photo.id);
+          console.error(`❌ Não foi possível criar URL para ${isVideo ? 'vídeo' : 'imagem'}:`, photo.id);
           return null;
         })
       );
 
       const validUrls = urls.filter(url => url !== null) as string[];
-      console.log("🎯 URLs válidas criadas:", validUrls.length, "de", photosData.length, "mídias");
-      console.log("🔗 URLs válidas:", validUrls);
+      
+      // Log detalhado das URLs criadas
+      validUrls.forEach((url, index) => {
+        const photo = photosData[index];
+        const isVideo = photo ? isVideoFile(photo.storage_path) : false;
+        console.log(`🎯 URL ${index + 1} (${isVideo ? 'VÍDEO' : 'IMAGEM'}):`, url);
+      });
+      
+      console.log("✨ RESUMO: URLs válidas criadas:", validUrls.length, "de", photosData.length, "mídias");
+      console.log("🔗 Todas as URLs válidas:", validUrls);
       setPhotoUrls(validUrls);
     } catch (error) {
       console.error("💥 Erro ao criar URLs das mídias:", error);

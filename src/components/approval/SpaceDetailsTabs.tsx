@@ -1,3 +1,4 @@
+
 import React from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card } from "@/components/ui/card";
@@ -18,27 +19,54 @@ const SpaceDetailsTabs: React.FC<SpaceDetailsTabsProps> = ({
   photosLoading,
   onRefreshPhotos
 }) => {
-  // Função para verificar se é vídeo
+  // Função melhorada para verificar se é vídeo
   const isVideo = (url: string) => {
-    const videoExtensions = ['.mp4', '.webm', '.mov', '.avi', '.mkv', '.m4v'];
+    const videoExtensions = ['.mp4', '.webm', '.mov', '.avi', '.mkv', '.m4v', '.3gp', '.flv', '.wmv'];
     const urlLower = url.toLowerCase();
     
-    return videoExtensions.some(ext => urlLower.includes(ext)) ||
-           urlLower.includes('video') ||
-           urlLower.includes('.mp4') ||
-           urlLower.includes('.webm') ||
-           urlLower.includes('.mov');
+    // Verificar extensões de vídeo
+    const hasVideoExtension = videoExtensions.some(ext => urlLower.includes(ext));
+    
+    // Verificar se contém palavras-chave de vídeo no nome ou path
+    const hasVideoKeyword = urlLower.includes('video') || 
+                           urlLower.includes('movie') ||
+                           urlLower.includes('/videos/') ||
+                           urlLower.includes('_video_') ||
+                           urlLower.includes('-video-');
+    
+    const result = hasVideoExtension || hasVideoKeyword;
+    
+    console.log(`🎬 SpaceDetailsTabs - Verificando se é vídeo:`, {
+      url: url,
+      hasVideoExtension,
+      hasVideoKeyword,
+      isVideo: result
+    });
+    
+    return result;
   };
 
+  // Separar e contar mídias
+  const videos = photoUrls.filter(url => isVideo(url));
+  const images = photoUrls.filter(url => !isVideo(url));
+  const totalMedia = photoUrls.length;
+  
+  console.log(`📊 SpaceDetailsTabs - Estatísticas de mídia:`, {
+    totalUrls: photoUrls.length,
+    images: images.length,
+    videos: videos.length,
+    allUrls: photoUrls
+  });
+
   // URLs já vêm ordenadas do hook (imagens primeiro, vídeos por último)
-  const sortedPhotoUrls = photoUrls;
+  const sortedPhotoUrls = [...images, ...videos];
 
   return (
     <Tabs defaultValue="details" className="w-full">
       <TabsList className="w-full">
         <TabsTrigger value="details" className="flex-1">Detalhes</TabsTrigger>
         <TabsTrigger value="photos" className="flex-1">
-          Fotos ({sortedPhotoUrls?.length || 0})
+          Mídia ({totalMedia}) {videos.length > 0 && `- ${videos.length} vídeo${videos.length !== 1 ? 's' : ''}`}
         </TabsTrigger>
         <TabsTrigger value="location" className="flex-1">Localização</TabsTrigger>
       </TabsList>
@@ -180,7 +208,14 @@ const SpaceDetailsTabs: React.FC<SpaceDetailsTabsProps> = ({
       <TabsContent value="photos" className="mt-4">
         <Card className="p-4">
           <div className="flex justify-between items-center mb-4">
-            <h3 className="text-lg font-medium">Fotos e Vídeos do Espaço</h3>
+            <h3 className="text-lg font-medium">
+              Fotos e Vídeos do Espaço 
+              {totalMedia > 0 && (
+                <span className="text-sm text-gray-500 ml-2">
+                  ({images.length} imagem{images.length !== 1 ? 's' : ''}, {videos.length} vídeo{videos.length !== 1 ? 's' : ''})
+                </span>
+              )}
+            </h3>
             {onRefreshPhotos && (
               <Button
                 variant="outline"
@@ -209,51 +244,81 @@ const SpaceDetailsTabs: React.FC<SpaceDetailsTabsProps> = ({
             </div>
           ) : (
             <>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {sortedPhotoUrls.map((url, index) => {
-                  const isVideoFile = isVideo(url);
-                  return (
-                    <div key={index} className="relative">
-                      {isVideoFile ? (
-                        <video
-                          src={url}
-                          controls
-                          className="w-full h-40 object-cover rounded-md border"
-                          preload="metadata"
-                          onLoad={() => {
-                            console.log(`✓ Vídeo ${index + 1} carregado com sucesso:`, url);
-                          }}
-                          onError={(e) => {
-                            console.error(`✗ Erro ao carregar vídeo ${index + 1}:`, url);
-                          }}
-                        >
-                          Seu navegador não suporta vídeos.
-                        </video>
-                      ) : (
+              {/* Mostrar imagens primeiro */}
+              {images.length > 0 && (
+                <div className="mb-6">
+                  <h4 className="text-md font-medium mb-3 text-gray-700">
+                    Imagens ({images.length})
+                  </h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {images.map((url, index) => (
+                      <div key={`image-${index}`} className="relative">
                         <img 
                           src={url} 
                           alt={`${space.name} ${index + 1}`}
                           className="w-full h-40 object-cover rounded-md border"
                           onLoad={() => {
-                            console.log(`✓ Foto ${index + 1} carregada com sucesso:`, url);
+                            console.log(`✓ Imagem ${index + 1} carregada:`, url);
                           }}
                           onError={(e) => {
-                            console.error(`✗ Erro ao carregar foto ${index + 1}:`, url);
+                            console.error(`✗ Erro ao carregar imagem ${index + 1}:`, url);
                             e.currentTarget.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZGRkIi8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxNCIgZmlsbD0iIzk5OSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPkVycm8gYW8gY2FycmVnYXIgaW1hZ2VtPC90ZXh0Pjwvc3ZnPg==';
                           }}
                         />
-                      )}
-                      <span className="absolute bottom-2 right-2 bg-black/50 text-white text-xs px-2 py-1 rounded">
-                        {index + 1}/{sortedPhotoUrls.length}
-                      </span>
-                    </div>
-                  );
-                })}
-              </div>
-              <div className="mt-4 text-center">
+                        <span className="absolute bottom-2 right-2 bg-black/50 text-white text-xs px-2 py-1 rounded">
+                          {index + 1}/{images.length}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Mostrar vídeos por último */}
+              {videos.length > 0 && (
+                <div className="mb-4">
+                  <h4 className="text-md font-medium mb-3 text-gray-700">
+                    Vídeos ({videos.length})
+                  </h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {videos.map((url, index) => (
+                      <div key={`video-${index}`} className="relative">
+                        <video
+                          src={url}
+                          controls
+                          className="w-full h-40 object-cover rounded-md border"
+                          preload="metadata"
+                          onLoadedData={() => {
+                            console.log(`✓ Vídeo ${index + 1} carregado com sucesso:`, url);
+                          }}
+                          onError={(e) => {
+                            console.error(`✗ Erro ao carregar vídeo ${index + 1}:`, url);
+                            console.error("Video error details:", e);
+                          }}
+                        >
+                          <p className="text-gray-500 p-4">
+                            Seu navegador não suporta reprodução de vídeo.
+                            <br />
+                            <a href={url} target="_blank" rel="noopener noreferrer" className="text-blue-500 underline">
+                              Clique aqui para assistir
+                            </a>
+                          </p>
+                        </video>
+                        <span className="absolute bottom-2 right-2 bg-black/50 text-white text-xs px-2 py-1 rounded">
+                          🎬 {index + 1}/{videos.length}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <div className="mt-4 text-center border-t pt-4">
                 <h3 className="text-lg font-medium">{space.name}</h3>
                 <p className="text-sm text-gray-500 mt-2">
-                  {sortedPhotoUrls.length} mídia{sortedPhotoUrls.length !== 1 ? 's' : ''} encontrada{sortedPhotoUrls.length !== 1 ? 's' : ''}
+                  {totalMedia} mídia{totalMedia !== 1 ? 's' : ''} • 
+                  {images.length} imagem{images.length !== 1 ? 's' : ''} • 
+                  {videos.length} vídeo{videos.length !== 1 ? 's' : ''}
                 </p>
               </div>
             </>
