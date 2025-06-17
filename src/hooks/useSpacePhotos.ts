@@ -111,10 +111,18 @@ export const useSpacePhotos = (spaceId: string | null) => {
         
         setPhotos(sortedPhotos);
         await createPhotoUrls(sortedPhotos);
+        
+        // 🚨 VERIFICAÇÃO ADICIONAL: Buscar diretamente no bucket se não encontrou vídeos
+        if (videos.length === 0) {
+          console.log("⚠️ NENHUM VÍDEO encontrado na tabela, verificando bucket diretamente...");
+          await checkBucketForVideos(id);
+        }
       } else {
-        console.log("⚠️ NENHUMA foto/vídeo encontrado para o espaço");
-        setPhotos([]);
-        setPhotoUrls([]);
+        console.log("⚠️ NENHUMA foto/vídeo encontrado na tabela para o espaço");
+        
+        // 🚨 VERIFICAÇÃO ADICIONAL: Buscar diretamente no bucket
+        console.log("🔍 Verificando bucket diretamente para espaço:", id);
+        await checkBucketForVideos(id);
       }
     } catch (error) {
       console.error("💥 ERRO GERAL ao buscar fotos:", error);
@@ -122,6 +130,56 @@ export const useSpacePhotos = (spaceId: string | null) => {
       setPhotoUrls([]);
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Nova função para verificar diretamente no bucket
+  const checkBucketForVideos = async (spaceId: string) => {
+    try {
+      console.log("🔍 VERIFICAÇÃO DIRETA NO BUCKET para espaço:", spaceId);
+      
+      // Tentar diferentes padrões de pasta
+      const possiblePaths = [
+        'videos', // pasta geral de vídeos
+        `videos/${spaceId}`, // pasta específica do espaço
+        `spaces/${spaceId}`, // pasta do espaço
+        'spaces' // pasta geral
+      ];
+      
+      for (const path of possiblePaths) {
+        console.log(`📂 VERIFICANDO caminho: ${path}`);
+        
+        const { data: files, error } = await supabase.storage
+          .from('spaces')
+          .list(path, { limit: 100 });
+        
+        if (!error && files && files.length > 0) {
+          const videoFiles = files.filter(file => {
+            const ext = file.name.split('.').pop()?.toLowerCase();
+            return ['mp4', 'webm', 'mov', 'avi'].includes(ext || '');
+          });
+          
+          console.log(`🎬 VÍDEOS ENCONTRADOS no caminho ${path}:`, videoFiles);
+          
+          if (videoFiles.length > 0) {
+            // Criar URLs para os vídeos encontrados
+            const videoUrls = videoFiles.map(file => {
+              const fullPath = `${path}/${file.name}`;
+              const { data } = supabase.storage.from('spaces').getPublicUrl(fullPath);
+              return data.publicUrl;
+            });
+            
+            console.log("🔗 URLs DE VÍDEOS criadas diretamente do bucket:", videoUrls);
+            
+            // Adicionar às URLs existentes
+            setPhotoUrls(prev => [...prev, ...videoUrls]);
+            
+            toast.success(`${videoFiles.length} vídeo(s) encontrado(s) diretamente no storage!`);
+          }
+        }
+      }
+    } catch (error) {
+      console.error("❌ Erro ao verificar bucket diretamente:", error);
     }
   };
 
