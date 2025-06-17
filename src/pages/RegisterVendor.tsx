@@ -25,6 +25,7 @@ import {
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import SingleImageUpload from "@/components/SingleImageUpload";
+import VideoUpload from "@/components/VideoUpload";
 import AddressAutoComplete from "@/components/AddressAutoComplete";
 import LocationMap from "@/components/LocationMap";
 import { Calendar } from "@/components/ui/calendar";
@@ -77,7 +78,9 @@ type FormValues = z.infer<typeof formSchema>;
 const RegisterVendor = () => {
   const navigate = useNavigate();
   const [imageUrls, setImageUrls] = useState<string[]>([]);
+  const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [videoUploading, setVideoUploading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [selectedDays, setSelectedDays] = useState<string[]>([]);
   const [mapLocation, setMapLocation] = useState<{ lat: number; lng: number } | null>(null);
@@ -99,6 +102,10 @@ const RegisterVendor = () => {
 
   const handleImageChange = (urls: string[]) => {
     setImageUrls(urls);
+  };
+
+  const handleVideoChange = (url: string | null) => {
+    setVideoUrl(url);
   };
 
   const handleLocationSelected = (selectedLocation: { lat: number; lng: number; locationName: string }) => {
@@ -187,6 +194,7 @@ const RegisterVendor = () => {
         address: values.address,
         working_hours: values.workingHours,
         images: imageUrls,
+        video_url: videoUrl,
         user_id: userId,
         status: 'pending',
         available_days: selectedDays,
@@ -204,6 +212,7 @@ const RegisterVendor = () => {
           address: values.address,
           working_hours: values.workingHours,
           images: imageUrls,
+          video_url: videoUrl,
           user_id: userId,
           status: 'pending',
           available_days: selectedDays,
@@ -255,6 +264,20 @@ const RegisterVendor = () => {
             maxImages={5}
           />
         </div>
+      </div>
+
+      <div className="mb-6">
+        <p className="text-muted-foreground text-sm mb-2">Vídeo promocional (opcional)</p>
+        <VideoUpload
+          onVideoChange={handleVideoChange}
+          uploadPath="vendors/videos"
+          maxSize={50}
+          maxDuration={10}
+          initialVideo={videoUrl}
+          isUploading={videoUploading}
+          setIsUploading={setVideoUploading}
+          className="w-full"
+        />
       </div>
 
       <Form {...form}>
@@ -439,7 +462,7 @@ const RegisterVendor = () => {
           <Button 
             type="submit" 
             className="w-full bg-iparty hover:bg-iparty/90" 
-            disabled={submitting || uploading}
+            disabled={submitting || uploading || videoUploading}
           >
             {submitting ? "Cadastrando..." : "Cadastrar Fornecedor"}
           </Button>

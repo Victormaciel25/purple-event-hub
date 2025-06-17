@@ -85,6 +85,31 @@ const VendorDetails: React.FC<VendorDetailsProps> = ({
   const availableDays = selectedVendor.available_days && selectedVendor.available_days.length > 0
     ? selectedVendor.available_days.map(day => dayTranslations[day] || day)
     : [];
+
+  // Função para verificar se é vídeo
+  const isVideo = (url: string) => {
+    const videoExtensions = ['.mp4', '.webm', '.mov', '.avi', '.mkv', '.m4v'];
+    const urlLower = url.toLowerCase();
+    
+    return videoExtensions.some(ext => urlLower.includes(ext)) ||
+           urlLower.includes('video') ||
+           urlLower.includes('.mp4') ||
+           urlLower.includes('.webm') ||
+           urlLower.includes('.mov');
+  };
+
+  // Ordenar URLs: imagens primeiro, vídeos por último
+  const sortedImageUrls = [...imageUrls].sort((a, b) => {
+    const aIsVideo = isVideo(a);
+    const bIsVideo = isVideo(b);
+    
+    // Se a é vídeo e b não é, a vem depois
+    if (aIsVideo && !bIsVideo) return 1;
+    // Se b é vídeo e a não é, b vem depois
+    if (!aIsVideo && bIsVideo) return -1;
+    // Se ambos são do mesmo tipo, manter ordem original
+    return 0;
+  });
     
   const handleDelete = async () => {
     if (deleteReason.trim() === "") {
@@ -182,23 +207,37 @@ const VendorDetails: React.FC<VendorDetailsProps> = ({
         )}
       </div>
 
-      {/* Seção de imagens */}
+      {/* Seção de imagens/vídeos */}
       <div>
-        <h3 className="text-lg font-medium mb-2">Imagens</h3>
-        {imageUrls.length > 0 ? (
+        <h3 className="text-lg font-medium mb-2">Imagens e Vídeos</h3>
+        {sortedImageUrls.length > 0 ? (
           <div className="grid grid-cols-2 gap-2">
-            {imageUrls.map((url, index) => (
-              <div key={index} className="aspect-video">
-                <img 
-                  src={url} 
-                  alt={`Imagem ${index + 1} do fornecedor`}
-                  className="w-full h-full object-cover rounded-md"
-                />
-              </div>
-            ))}
+            {sortedImageUrls.map((url, index) => {
+              const isVideoFile = isVideo(url);
+              return (
+                <div key={index} className="aspect-video">
+                  {isVideoFile ? (
+                    <video 
+                      src={url} 
+                      controls
+                      className="w-full h-full object-cover rounded-md"
+                      preload="metadata"
+                    >
+                      Seu navegador não suporta vídeos.
+                    </video>
+                  ) : (
+                    <img 
+                      src={url} 
+                      alt={`Imagem ${index + 1} do fornecedor`}
+                      className="w-full h-full object-cover rounded-md"
+                    />
+                  )}
+                </div>
+              );
+            })}
           </div>
         ) : (
-          <p className="text-muted-foreground">Nenhuma imagem disponível</p>
+          <p className="text-muted-foreground">Nenhuma imagem ou vídeo disponível</p>
         )}
       </div>
 

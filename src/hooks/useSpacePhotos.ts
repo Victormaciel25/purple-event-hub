@@ -12,53 +12,47 @@ export const useSpacePhotos = (spaceId: string | null) => {
   const fetchPhotos = async (id: string) => {
     try {
       setLoading(true);
-      console.log("🔍 Buscando fotos para espaço (admin):", id);
+      console.log("🔍 Buscando fotos para espaço:", id);
 
       // Limpar estado anterior
       setPhotos([]);
       setPhotoUrls([]);
 
-      // Usar função administrativa para buscar fotos
+      // Buscar fotos diretamente da tabela space_photos
       const { data: photosData, error } = await supabase
-        .rpc('admin_get_space_photos', { space_id_param: id });
+        .from('space_photos')
+        .select('*')
+        .eq('space_id', id)
+        .order('created_at', { ascending: true });
 
       if (error) {
-        console.error("❌ Erro ao buscar fotos via função admin:", error);
-        
-        // Fallback para busca direta se a função admin falhar
-        console.log("🔄 Tentando busca direta...");
-        const { data: fallbackData, error: fallbackError } = await supabase
-          .from('space_photos')
-          .select('*')
-          .eq('space_id', id)
-          .order('created_at', { ascending: true });
-
-        if (fallbackError) {
-          console.error("❌ Erro na busca direta também:", fallbackError);
-          toast.error("Erro ao buscar fotos");
-          return;
-        }
-
-        console.log("✅ Busca direta funcionou, encontradas:", fallbackData?.length || 0, "fotos");
-        setPhotos(fallbackData || []);
-        
-        if (fallbackData && fallbackData.length > 0) {
-          await createPhotoUrls(fallbackData);
-        } else {
-          setPhotoUrls([]);
-        }
+        console.error("❌ Erro ao buscar fotos:", error);
+        toast.error("Erro ao buscar fotos");
         return;
       }
 
-      console.log("📸 Fotos encontradas via admin:", photosData?.length || 0);
+      console.log("📸 Fotos encontradas:", photosData?.length || 0);
       console.log("📋 Dados das fotos:", photosData);
       
-      setPhotos(photosData || []);
-      
       if (photosData && photosData.length > 0) {
-        await createPhotoUrls(photosData);
+        // Ordenar as mídias: imagens primeiro, vídeos por último
+        const sortedPhotos = photosData.sort((a, b) => {
+          const aIsVideo = isVideoFile(a.storage_path);
+          const bIsVideo = isVideoFile(b.storage_path);
+          
+          // Se a é vídeo e b não é, a vem depois
+          if (aIsVideo && !bIsVideo) return 1;
+          // Se b é vídeo e a não é, b vem depois
+          if (!aIsVideo && bIsVideo) return -1;
+          // Se ambos são do mesmo tipo, manter ordem original
+          return 0;
+        });
+        
+        setPhotos(sortedPhotos);
+        await createPhotoUrls(sortedPhotos);
       } else {
         console.log("⚠️ Nenhuma foto encontrada para o espaço");
+        setPhotos([]);
         setPhotoUrls([]);
       }
     } catch (error) {
@@ -70,38 +64,67 @@ export const useSpacePhotos = (spaceId: string | null) => {
     }
   };
 
+  const isVideoFile = (storagePath: string) => {
+    const videoExtensions = ['.mp4', '.webm', '.mov', '.avi', '.mkv', '.m4v'];
+    const pathLower = storagePath.toLowerCase();
+    return videoExtensions.some(ext => pathLower.includes(ext));
+  };
+
   const createPhotoUrls = async (photosData: SpacePhoto[]) => {
     try {
-      console.log("🔗 Criando URLs para", photosData.length, "fotos");
+      console.log("🔗 Criando URLs para", photosData.length, "fotos/vídeos");
       
-      const urls = photosData.map((photo) => {
-        if (!photo.storage_path) {
-          console.error("❌ Caminho de armazenamento ausente para foto:", photo.id);
+      const urls = await Promise.all(
+        photosData.map(async (photo) => {
+          if (!photo.storage_path) {
+            console.error("❌ Caminho de armazenamento ausente para foto:", photo.id);
+            return null;
+          }
+
+          console.log("🔄 Processando mídia:", photo.id, "com storage_path:", photo.storage_path);
+
+          // Verificar se o storage_path já é uma URL completa
+          if (photo.storage_path.startsWith('http')) {
+            console.log("✅ Storage path já é uma URL completa:", photo.storage_path);
+            return photo.storage_path;
+          }
+
+          try {
+            // Criar URL assinada com validade de 1 hora
+            const { data: signedUrlData, error: signedUrlError } = await supabase.storage
+              .from('spaces')
+              .createSignedUrl(photo.storage_path, 3600);
+
+            if (signedUrlError) {
+              console.error("❌ Erro ao criar URL assinada:", signedUrlError);
+              // Tentar URL pública como fallback
+              const { data: publicUrlData } = supabase.storage
+                .from('spaces')
+                .getPublicUrl(photo.storage_path);
+              
+              if (publicUrlData?.publicUrl) {
+                console.log("✅ URL pública criada como fallback:", publicUrlData.publicUrl);
+                return publicUrlData.publicUrl;
+              }
+            } else if (signedUrlData?.signedUrl) {
+              console.log("✅ URL assinada criada:", signedUrlData.signedUrl);
+              return signedUrlData.signedUrl;
+            }
+          } catch (urlError) {
+            console.error("❌ Erro ao processar URL:", urlError);
+          }
+
+          console.error("❌ Não foi possível criar URL para mídia:", photo.id);
           return null;
-        }
-
-        console.log("🔄 Processando foto:", photo.id, "com storage_path:", photo.storage_path);
-
-        // Usar URL pública diretamente já que agora o bucket é público
-        const { data: publicUrlData } = supabase.storage
-          .from('spaces')
-          .getPublicUrl(photo.storage_path);
-
-        if (publicUrlData?.publicUrl) {
-          console.log("✅ URL pública criada para foto:", photo.id, "->", publicUrlData.publicUrl);
-          return publicUrlData.publicUrl;
-        }
-
-        console.error("❌ Não foi possível criar URL pública para foto:", photo.id);
-        return null;
-      });
+        })
+      );
 
       const validUrls = urls.filter(url => url !== null) as string[];
-      console.log("🎯 URLs válidas criadas:", validUrls.length, "de", photosData.length, "fotos");
+      console.log("🎯 URLs válidas criadas:", validUrls.length, "de", photosData.length, "mídias");
       console.log("🔗 URLs válidas:", validUrls);
       setPhotoUrls(validUrls);
     } catch (error) {
-      console.error("💥 Erro ao criar URLs das fotos:", error);
+      console.error("💥 Erro ao criar URLs das mídias:", error);
       setPhotoUrls([]);
     }
   };
