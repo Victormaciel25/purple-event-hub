@@ -233,7 +233,7 @@ const VendorApproval = () => {
       
       // Close the details panel
       setTimeout(() => {
-        setSheetOpen(false);
+        setDrawerOpen(false);
         // Refresh vendor list to get the latest data
         fetchVendors();
       }, 1500);
@@ -265,7 +265,7 @@ const VendorApproval = () => {
       if (error) throw error;
       
       toast.success("Fornecedor rejeitado");
-      setSheetOpen(false);
+      setDrawerOpen(false);
       setRejectionReason("");
       fetchVendors();
     } catch (error) {
