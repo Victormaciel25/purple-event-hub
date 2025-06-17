@@ -30,18 +30,8 @@ const SpaceDetailsTabs: React.FC<SpaceDetailsTabsProps> = ({
            urlLower.includes('.mov');
   };
 
-  // Ordenar URLs: imagens primeiro, vídeos por último
-  const sortedPhotoUrls = [...photoUrls].sort((a, b) => {
-    const aIsVideo = isVideo(a);
-    const bIsVideo = isVideo(b);
-    
-    // Se a é vídeo e b não é, a vem depois
-    if (aIsVideo && !bIsVideo) return 1;
-    // Se b é vídeo e a não é, b vem depois
-    if (!aIsVideo && bIsVideo) return -1;
-    // Se ambos são do mesmo tipo, manter ordem original
-    return 0;
-  });
+  // URLs já vêm ordenadas do hook (imagens primeiro, vídeos por último)
+  const sortedPhotoUrls = photoUrls;
 
   return (
     <Tabs defaultValue="details" className="w-full">

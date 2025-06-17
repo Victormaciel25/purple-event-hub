@@ -44,8 +44,8 @@ export const useSpacePhotos = (spaceId: string | null) => {
           if (aIsVideo && !bIsVideo) return 1;
           // Se b é vídeo e a não é, b vem depois
           if (!aIsVideo && bIsVideo) return -1;
-          // Se ambos são do mesmo tipo, manter ordem original
-          return 0;
+          // Se ambos são do mesmo tipo, manter ordem original por created_at
+          return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
         });
         
         setPhotos(sortedPhotos);
@@ -90,24 +90,25 @@ export const useSpacePhotos = (spaceId: string | null) => {
           }
 
           try {
-            // Criar URL assinada com validade de 1 hora
+            // Primeiro tentar URL pública (mais confiável com as novas políticas)
+            const { data: publicUrlData } = supabase.storage
+              .from('spaces')
+              .getPublicUrl(photo.storage_path);
+            
+            if (publicUrlData?.publicUrl) {
+              console.log("✅ URL pública criada:", publicUrlData.publicUrl);
+              return publicUrlData.publicUrl;
+            }
+
+            // Fallback para URL assinada se a pública não funcionar
             const { data: signedUrlData, error: signedUrlError } = await supabase.storage
               .from('spaces')
               .createSignedUrl(photo.storage_path, 3600);
 
             if (signedUrlError) {
               console.error("❌ Erro ao criar URL assinada:", signedUrlError);
-              // Tentar URL pública como fallback
-              const { data: publicUrlData } = supabase.storage
-                .from('spaces')
-                .getPublicUrl(photo.storage_path);
-              
-              if (publicUrlData?.publicUrl) {
-                console.log("✅ URL pública criada como fallback:", publicUrlData.publicUrl);
-                return publicUrlData.publicUrl;
-              }
             } else if (signedUrlData?.signedUrl) {
-              console.log("✅ URL assinada criada:", signedUrlData.signedUrl);
+              console.log("✅ URL assinada criada como fallback:", signedUrlData.signedUrl);
               return signedUrlData.signedUrl;
             }
           } catch (urlError) {
