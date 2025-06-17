@@ -95,11 +95,23 @@ export const useSpacePhotos = (spaceId: string | null) => {
     const hasVideoExtension = videoExtensions.some(ext => pathLower.includes(ext));
     
     // Verificar se contém palavras-chave de vídeo no nome
-    const hasVideoKeyword = pathLower.includes('video') || pathLower.includes('movie');
+    const hasVideoKeyword = pathLower.includes('video') || 
+                           pathLower.includes('movie') ||
+                           pathLower.includes('/videos/') ||
+                           pathLower.includes('_video_') ||
+                           pathLower.includes('-video-');
     
-    console.log(`🎬 Verificando se é vídeo - Path: ${storagePath}, HasExtension: ${hasVideoExtension}, HasKeyword: ${hasVideoKeyword}`);
+    const result = hasVideoExtension || hasVideoKeyword;
     
-    return hasVideoExtension || hasVideoKeyword;
+    console.log(`🎬 Verificando se é vídeo:`, {
+      path: storagePath,
+      hasVideoExtension,
+      hasVideoKeyword,
+      isVideo: result,
+      extensions: videoExtensions.filter(ext => pathLower.includes(ext))
+    });
+    
+    return result;
   };
 
   const createPhotoUrls = async (photosData: SpacePhoto[]) => {
@@ -166,8 +178,14 @@ export const useSpacePhotos = (spaceId: string | null) => {
         console.log(`🎯 URL ${index + 1} (${isVideo ? 'VÍDEO' : 'IMAGEM'}):`, url);
       });
       
-      console.log("✨ RESUMO: URLs válidas criadas:", validUrls.length, "de", photosData.length, "mídias");
-      console.log("🔗 Todas as URLs válidas:", validUrls);
+      console.log("✨ RESUMO FINAL:");
+      console.log("- URLs válidas criadas:", validUrls.length, "de", photosData.length, "mídias");
+      console.log("- Todas as URLs válidas:", validUrls);
+      console.log("- Contadores por tipo:", {
+        videos: validUrls.filter(url => isVideoFile(url)).length,
+        images: validUrls.filter(url => !isVideoFile(url)).length
+      });
+      
       setPhotoUrls(validUrls);
     } catch (error) {
       console.error("💥 Erro ao criar URLs das mídias:", error);

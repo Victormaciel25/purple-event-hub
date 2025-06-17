@@ -40,7 +40,8 @@ const SpaceDetailsTabs: React.FC<SpaceDetailsTabsProps> = ({
       url: url,
       hasVideoExtension,
       hasVideoKeyword,
-      isVideo: result
+      isVideo: result,
+      matchingExtensions: videoExtensions.filter(ext => urlLower.includes(ext))
     });
     
     return result;
@@ -51,15 +52,28 @@ const SpaceDetailsTabs: React.FC<SpaceDetailsTabsProps> = ({
   const images = photoUrls.filter(url => !isVideo(url));
   const totalMedia = photoUrls.length;
   
-  console.log(`📊 SpaceDetailsTabs - Estatísticas de mídia:`, {
+  console.log(`📊 SpaceDetailsTabs - Estatísticas de mídia DETALHADAS:`, {
     totalUrls: photoUrls.length,
     images: images.length,
     videos: videos.length,
-    allUrls: photoUrls
+    allUrls: photoUrls,
+    detalhesVideos: videos.map(url => ({
+      url,
+      isVideo: isVideo(url)
+    })),
+    detalhesImagens: images.map(url => ({
+      url,
+      isVideo: isVideo(url)
+    }))
   });
 
   // URLs já vêm ordenadas do hook (imagens primeiro, vídeos por último)
   const sortedPhotoUrls = [...images, ...videos];
+
+  console.log(`🎯 SpaceDetailsTabs - URLs finais ordenadas:`, {
+    sortedUrls: sortedPhotoUrls,
+    totalFinal: sortedPhotoUrls.length
+  });
 
   return (
     <Tabs defaultValue="details" className="w-full">
@@ -220,7 +234,10 @@ const SpaceDetailsTabs: React.FC<SpaceDetailsTabsProps> = ({
               <Button
                 variant="outline"
                 size="sm"
-                onClick={onRefreshPhotos}
+                onClick={() => {
+                  console.log("🔄 Botão recarregar clicado");
+                  onRefreshPhotos();
+                }}
                 disabled={photosLoading}
               >
                 <RefreshCw size={16} className={`mr-2 ${photosLoading ? 'animate-spin' : ''}`} />
@@ -241,35 +258,57 @@ const SpaceDetailsTabs: React.FC<SpaceDetailsTabsProps> = ({
               <p className="text-xs text-gray-400 mt-1">
                 Verifique se as fotos/vídeos foram enviados corretamente
               </p>
+              {onRefreshPhotos && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={onRefreshPhotos}
+                  className="mt-3"
+                >
+                  <RefreshCw size={16} className="mr-2" />
+                  Tentar Recarregar
+                </Button>
+              )}
             </div>
           ) : (
             <>
+              {/* DEBUG: Log antes de renderizar */}
+              {console.log("🎬 RENDERIZAÇÃO - Prestes a renderizar mídias:", {
+                images: images.length,
+                videos: videos.length,
+                sortedUrls: sortedPhotoUrls.length,
+                todosOsUrls: sortedPhotoUrls
+              })}
+
               {/* Mostrar imagens primeiro */}
               {images.length > 0 && (
                 <div className="mb-6">
                   <h4 className="text-md font-medium mb-3 text-gray-700">
-                    Imagens ({images.length})
+                    📸 Imagens ({images.length})
                   </h4>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {images.map((url, index) => (
-                      <div key={`image-${index}`} className="relative">
-                        <img 
-                          src={url} 
-                          alt={`${space.name} ${index + 1}`}
-                          className="w-full h-40 object-cover rounded-md border"
-                          onLoad={() => {
-                            console.log(`✓ Imagem ${index + 1} carregada:`, url);
-                          }}
-                          onError={(e) => {
-                            console.error(`✗ Erro ao carregar imagem ${index + 1}:`, url);
-                            e.currentTarget.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZGRkIi8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxNCIgZmlsbD0iIzk5OSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPkVycm8gYW8gY2FycmVnYXIgaW1hZ2VtPC90ZXh0Pjwvc3ZnPg==';
-                          }}
-                        />
-                        <span className="absolute bottom-2 right-2 bg-black/50 text-white text-xs px-2 py-1 rounded">
-                          {index + 1}/{images.length}
-                        </span>
-                      </div>
-                    ))}
+                    {images.map((url, index) => {
+                      console.log(`🖼️ Renderizando imagem ${index + 1}:`, url);
+                      return (
+                        <div key={`image-${index}`} className="relative">
+                          <img 
+                            src={url} 
+                            alt={`${space.name} ${index + 1}`}
+                            className="w-full h-40 object-cover rounded-md border"
+                            onLoad={() => {
+                              console.log(`✓ Imagem ${index + 1} carregada:`, url);
+                            }}
+                            onError={(e) => {
+                              console.error(`✗ Erro ao carregar imagem ${index + 1}:`, url);
+                              e.currentTarget.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZGRkIi8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxNCIgZmlsbD0iIzk5OSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPkVycm8gYW8gY2FycmVnYXIgaW1hZ2VtPC90ZXh0Pjwvc3ZnPg==';
+                            }}
+                          />
+                          <span className="absolute bottom-2 right-2 bg-black/50 text-white text-xs px-2 py-1 rounded">
+                            📸 {index + 1}/{images.length}
+                          </span>
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
               )}
@@ -278,48 +317,70 @@ const SpaceDetailsTabs: React.FC<SpaceDetailsTabsProps> = ({
               {videos.length > 0 && (
                 <div className="mb-4">
                   <h4 className="text-md font-medium mb-3 text-gray-700">
-                    Vídeos ({videos.length})
+                    🎬 Vídeos ({videos.length})
                   </h4>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {videos.map((url, index) => (
-                      <div key={`video-${index}`} className="relative">
-                        <video
-                          src={url}
-                          controls
-                          className="w-full h-40 object-cover rounded-md border"
-                          preload="metadata"
-                          onLoadedData={() => {
-                            console.log(`✓ Vídeo ${index + 1} carregado com sucesso:`, url);
-                          }}
-                          onError={(e) => {
-                            console.error(`✗ Erro ao carregar vídeo ${index + 1}:`, url);
-                            console.error("Video error details:", e);
-                          }}
-                        >
-                          <p className="text-gray-500 p-4">
-                            Seu navegador não suporta reprodução de vídeo.
-                            <br />
-                            <a href={url} target="_blank" rel="noopener noreferrer" className="text-blue-500 underline">
-                              Clique aqui para assistir
-                            </a>
-                          </p>
-                        </video>
-                        <span className="absolute bottom-2 right-2 bg-black/50 text-white text-xs px-2 py-1 rounded">
-                          🎬 {index + 1}/{videos.length}
-                        </span>
-                      </div>
-                    ))}
+                    {videos.map((url, index) => {
+                      console.log(`🎬 Renderizando vídeo ${index + 1}:`, url);
+                      return (
+                        <div key={`video-${index}`} className="relative">
+                          <video
+                            src={url}
+                            controls
+                            className="w-full h-40 object-cover rounded-md border"
+                            preload="metadata"
+                            onLoadedData={() => {
+                              console.log(`✓ Vídeo ${index + 1} carregado com sucesso:`, url);
+                            }}
+                            onError={(e) => {
+                              console.error(`✗ Erro ao carregar vídeo ${index + 1}:`, url);
+                              console.error("Video error details:", e);
+                            }}
+                          >
+                            <p className="text-gray-500 p-4">
+                              Seu navegador não suporta reprodução de vídeo.
+                              <br />
+                              <a href={url} target="_blank" rel="noopener noreferrer" className="text-blue-500 underline">
+                                Clique aqui para assistir
+                              </a>
+                            </p>
+                          </video>
+                          <span className="absolute bottom-2 right-2 bg-black/50 text-white text-xs px-2 py-1 rounded">
+                            🎬 {index + 1}/{videos.length}
+                          </span>
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
               )}
 
+              {/* Informações resumidas */}
               <div className="mt-4 text-center border-t pt-4">
                 <h3 className="text-lg font-medium">{space.name}</h3>
                 <p className="text-sm text-gray-500 mt-2">
-                  {totalMedia} mídia{totalMedia !== 1 ? 's' : ''} • 
-                  {images.length} imagem{images.length !== 1 ? 's' : ''} • 
-                  {videos.length} vídeo{videos.length !== 1 ? 's' : ''}
+                  📊 {totalMedia} mídia{totalMedia !== 1 ? 's' : ''} • 
+                  📸 {images.length} imagem{images.length !== 1 ? 's' : ''} • 
+                  🎬 {videos.length} vídeo{videos.length !== 1 ? 's' : ''}
                 </p>
+                
+                {/* DEBUG: Botão para debug manual */}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="mt-2"
+                  onClick={() => {
+                    console.log("🔍 DEBUG MANUAL - Estado atual:", {
+                      photoUrls,
+                      videos,
+                      images,
+                      sortedPhotoUrls,
+                      space: space.name
+                    });
+                  }}
+                >
+                  🔍 Debug Manual
+                </Button>
               </div>
             </>
           )}
