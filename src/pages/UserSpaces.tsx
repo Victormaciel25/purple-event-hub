@@ -277,7 +277,7 @@ const UserSpaces: React.FC = () => {
   const filteredSpaces = spaces.filter(s => activeTab === "all" ? true : s.status === activeTab);
 
   return (
-    <div className="container px-4 py-6 max-w-4xl mx-auto">
+    <div className="container px-4 py-6 max-w-4xl mx-auto pb-20">
       {/* header */}
       <div className="flex items-center mb-6">
         <Button
@@ -363,15 +363,16 @@ const UserSpaces: React.FC = () => {
               </CardHeader>
             </Card>
           ) : filteredSpaces.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {filteredSpaces.map((space) => (
-                <UserSpaceCard
-                  key={space.id}
-                  space={space}
-                  onEdit={handleEdit}
-                  onDelete={handleDelete}
-                  loading={loading}
-                />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-20">
+              {filteredSpaces.map((space, index) => (
+                <div key={space.id} className={index === filteredSpaces.length - 1 ? "mb-8" : ""}>
+                  <UserSpaceCard
+                    space={space}
+                    onEdit={handleEdit}
+                    onDelete={handleDelete}
+                    loading={loading}
+                  />
+                </div>
               ))}
             </div>
           ) : (
