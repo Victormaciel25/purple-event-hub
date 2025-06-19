@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -10,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { useSpacePhotos } from "@/hooks/useSpacePhotos";
+import { useUserSpacePhotos } from "@/hooks/useUserSpacePhotos";
 import OptimizedImage from "@/components/OptimizedImage";
 
 type UserSpace = {
@@ -34,7 +33,7 @@ const UserSpaceCard: React.FC<{ space: UserSpace; onEdit: (id: string) => void; 
   onDelete, 
   loading 
 }) => {
-  const { photoUrls } = useSpacePhotos(space.id);
+  const { photoUrls } = useUserSpacePhotos(space.id);
   
   console.log("🖼️ USER_SPACES: Card para espaço", space.name, "URLs:", photoUrls);
   
