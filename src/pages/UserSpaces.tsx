@@ -277,7 +277,7 @@ const UserSpaces: React.FC = () => {
   const filteredSpaces = spaces.filter(s => activeTab === "all" ? true : s.status === activeTab);
 
   return (
-    <div className="container px-4 py-6 max-w-4xl mx-auto pb-1">
+    <div className="container px-4 py-6 max-w-4xl mx-auto pb-0">
       {/* header */}
       <div className="flex items-center mb-6">
         <Button
