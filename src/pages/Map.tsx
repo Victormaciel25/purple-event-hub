@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from "react";
 import { Loader2 } from "lucide-react";
 import { Wrapper } from "@googlemaps/react-wrapper";
@@ -73,6 +74,8 @@ const Map: React.FC = () => {
   const fetchSpaces = async () => {
     setLoading(true);
     try {
+      console.log("🔍 Buscando espaços aprovados...");
+      
       const { data: spacesData, error } = await supabase
         .from("spaces")
         .select("id, name, address, number, state, latitude, longitude, zip_code, space_photos(storage_path)")
@@ -80,17 +83,54 @@ const Map: React.FC = () => {
         .not("latitude", "is", null)
         .not("longitude", "is", null);
 
-      if (error) throw error;
+      if (error) {
+        console.error("❌ Erro ao buscar espaços:", error);
+        throw error;
+      }
+
+      console.log("📋 Espaços encontrados:", spacesData?.length || 0);
 
       const spacesWithImages = await Promise.all(
         (spacesData || []).map(async (space) => {
           let imageUrl: string | undefined;
+          
+          console.log(`🖼️ Processando imagens para espaço "${space.name}":`, {
+            id: space.id,
+            photos: space.space_photos?.length || 0
+          });
+          
           if (space.space_photos?.length) {
-            const { data: urlData } = await supabase
-              .storage.from("spaces")
-              .createSignedUrl(space.space_photos[0].storage_path, 3600);
-            if (urlData) imageUrl = urlData.signedUrl;
+            const firstPhoto = space.space_photos[0];
+            console.log("📸 Primeira foto encontrada:", {
+              storage_path: firstPhoto.storage_path,
+              isFullURL: firstPhoto.storage_path?.startsWith('http')
+            });
+            
+            try {
+              // Se já é uma URL completa, usar diretamente
+              if (firstPhoto.storage_path?.startsWith('http')) {
+                imageUrl = firstPhoto.storage_path;
+                console.log("✅ Usando URL completa:", imageUrl);
+              } else {
+                // Criar URL pública a partir do storage path
+                const { data: urlData } = supabase.storage
+                  .from("spaces")
+                  .getPublicUrl(firstPhoto.storage_path);
+                
+                if (urlData?.publicUrl) {
+                  imageUrl = urlData.publicUrl;
+                  console.log("✅ URL pública criada:", imageUrl);
+                } else {
+                  console.warn("⚠️ Falha ao criar URL pública para:", firstPhoto.storage_path);
+                }
+              }
+            } catch (imageError) {
+              console.error("❌ Erro ao processar imagem:", imageError);
+            }
+          } else {
+            console.log("⚠️ Nenhuma foto encontrada para o espaço:", space.name);
           }
+          
           return {
             id: space.id,
             name: space.name,
@@ -105,10 +145,16 @@ const Map: React.FC = () => {
         })
       );
 
+      console.log("✨ Espaços processados com imagens:", spacesWithImages.map(s => ({
+        name: s.name,
+        hasImage: !!s.imageUrl,
+        imageUrl: s.imageUrl
+      })));
+
       setSpaces(spacesWithImages);
       setFilteredSpaces(spacesWithImages);
     } catch (error) {
-      console.error("Erro ao buscar espaços:", error);
+      console.error("💥 Erro ao buscar espaços:", error);
       toast.error("Erro ao carregar espaços");
     } finally {
       setLoading(false);
