@@ -78,7 +78,7 @@ export const useSpacePhotos = (spaceId: string | null) => {
             return photo.storage_path;
           }
 
-          // Criar URL a partir do storage path
+          // Criar URL pública a partir do storage path
           try {
             const { data: publicUrlData } = supabase.storage
               .from('spaces')
@@ -92,7 +92,7 @@ export const useSpacePhotos = (spaceId: string | null) => {
               return publicUrlData.publicUrl;
             }
           } catch (urlError) {
-            console.error("❌ Erro ao criar URL:", urlError);
+            console.error("❌ Erro ao criar URL pública:", urlError);
           }
 
           console.error(`❌ Falha para foto:`, photo.storage_path);
