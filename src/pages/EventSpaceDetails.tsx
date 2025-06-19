@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -80,7 +81,7 @@ const EventSpaceDetails: React.FC = () => {
   const { isFavorite, toggleFavorite } = useEventSpaceFavorites();
   const { isAdmin } = useUserRoles();
   
-  // Use o hook useSpacePhotos para buscar as fotos
+  // Usar o hook useSpacePhotos para buscar as fotos
   const { photos, photoUrls, loading: photosLoading } = useSpacePhotos(id || null);
 
   const [space, setSpace] = useState<SpaceDetails | null>(null);
@@ -219,7 +220,6 @@ const EventSpaceDetails: React.FC = () => {
         url: url,
       }).catch(console.error);
     } else {
-      // Create a more complete share text with the link
       const shareText = `${text}\n\nLocalização: ${space.address}, ${space.number} - ${space.state}\n\nAcesse: ${url}`;
       
       navigator.clipboard.writeText(shareText).then(() => {
@@ -234,7 +234,6 @@ const EventSpaceDetails: React.FC = () => {
     setReportFormOpen(true);
   };
 
-  // Fix the handleDeleteSpace function to avoid void truthiness checks
   const handleDeleteSpace = async () => {
     if (!deleteReason.trim()) {
       toast.error("Por favor, forneça um motivo para a exclusão");
@@ -244,7 +243,7 @@ const EventSpaceDetails: React.FC = () => {
     try {
       setDeletingSpace(true);
 
-      // Create a notification for the space owner
+      // Criar notificação para o proprietário do espaço
       if (space && space.user_id) {
         const { error: notificationError } = await supabase
           .from("space_deletion_notifications")
@@ -260,7 +259,7 @@ const EventSpaceDetails: React.FC = () => {
         }
       }
 
-      // Delete the space using the existing function
+      // Excluir o espaço usando a função existente
       if (space) {
         const { error } = await supabase.functions.invoke("delete_space_with_photos", {
           body: { space_id: space.id }
@@ -280,34 +279,8 @@ const EventSpaceDetails: React.FC = () => {
     }
   };
 
-  // Função melhorada para verificar se é vídeo
-  const isVideo = (url: string, photo?: any) => {
-    // Primeiro, verificar pela extensão do arquivo na URL
-    const videoExtensions = ['.mp4', '.webm', '.mov', '.avi', '.mkv', '.m4v'];
-    const urlLower = url.toLowerCase();
-    
-    if (videoExtensions.some(ext => urlLower.includes(ext))) {
-      return true;
-    }
-    
-    // Verificar pelo storage_path se disponível
-    if (photo && photo.storage_path) {
-      const pathLower = photo.storage_path.toLowerCase();
-      if (videoExtensions.some(ext => pathLower.includes(ext))) {
-        return true;
-      }
-    }
-    
-    // Verificar por indicadores de vídeo na URL
-    if (urlLower.includes('video') || urlLower.includes('.mp4') || urlLower.includes('.webm') || urlLower.includes('.mov')) {
-      return true;
-    }
-    
-    return false;
-  };
-
-  // Determinar quais imagens/vídeos exibir
-  const displayMedia = photoUrls && photoUrls.length > 0 
+  // Determinar quais imagens exibir
+  const displayImages = photoUrls && photoUrls.length > 0 
     ? photoUrls 
     : ["https://source.unsplash.com/random/600x400?event"];
 
@@ -354,57 +327,35 @@ const EventSpaceDetails: React.FC = () => {
             </DropdownMenu>
           </div>
 
-          {/* image/video display - responsive carousel for all screen sizes */}
+          {/* image display - responsive carousel for all screen sizes */}
           <div className="mb-6">
             {photosLoading ? (
               <div className="h-64 md:h-48 lg:h-56 bg-gray-200 rounded-lg flex items-center justify-center">
                 <Loader2 className="animate-spin h-8 w-8 text-gray-400" />
-                <span className="ml-2 text-gray-500">Carregando mídia...</span>
+                <span className="ml-2 text-gray-500">Carregando fotos...</span>
               </div>
             ) : (
               <>
-                {console.log("🎬 Renderizando mídia - URLs:", displayMedia)}
-                {console.log("🎬 Fotos originais:", photos)}
-                
                 {/* Mobile: Carousel */}
                 <div className="block md:hidden">
                   <Carousel>
                     <CarouselContent>
-                      {displayMedia.map((media, i) => {
-                        const photo = photos[i];
-                        const isVideoFile = isVideo(media, photo);
-                        console.log(`🎬 Item ${i}: ${media} - É vídeo? ${isVideoFile}`);
-                        
-                        return (
-                          <CarouselItem key={i}>
-                            <div className="relative rounded-lg overflow-hidden h-64">
-                              {isVideoFile ? (
-                                <video
-                                  src={media}
-                                  controls
-                                  className="w-full h-full object-cover"
-                                  preload="metadata"
-                                  onError={(e) => console.error("❌ Erro ao carregar vídeo:", e)}
-                                  onLoadStart={() => console.log("🎬 Iniciando carregamento do vídeo:", media)}
-                                >
-                                  Seu navegador não suporta vídeos.
-                                </video>
-                              ) : (
-                                <OptimizedImage
-                                  src={media}
-                                  alt={`${space.name} ${i + 1}`}
-                                  className="object-cover w-full h-full"
-                                />
-                              )}
-                              <div className="absolute bottom-2 right-2">
-                                <span className="bg-black/70 text-white px-2 py-1 rounded text-xs">
-                                  {i + 1}/{displayMedia.length}
-                                </span>
-                              </div>
+                      {displayImages.map((image, i) => (
+                        <CarouselItem key={i}>
+                          <div className="relative rounded-lg overflow-hidden h-64">
+                            <OptimizedImage
+                              src={image}
+                              alt={`${space.name} ${i + 1}`}
+                              className="object-cover w-full h-full"
+                            />
+                            <div className="absolute bottom-2 right-2">
+                              <span className="bg-black/70 text-white px-2 py-1 rounded text-xs">
+                                {i + 1}/{displayImages.length}
+                              </span>
                             </div>
-                          </CarouselItem>
-                        );
-                      })}
+                          </div>
+                        </CarouselItem>
+                      ))}
                     </CarouselContent>
                   </Carousel>
                 </div>
@@ -413,41 +364,22 @@ const EventSpaceDetails: React.FC = () => {
                 <div className="hidden md:block">
                   <Carousel>
                     <CarouselContent className="-ml-2 md:-ml-4">
-                      {displayMedia.map((media, i) => {
-                        const photo = photos[i];
-                        const isVideoFile = isVideo(media, photo);
-                        console.log(`🎬 Desktop Item ${i}: ${media} - É vídeo? ${isVideoFile}`);
-                        
-                        return (
-                          <CarouselItem key={i} className="pl-2 md:pl-4 md:basis-1/3 lg:basis-1/4">
-                            <div className="relative rounded-lg overflow-hidden h-48 lg:h-56">
-                              {isVideoFile ? (
-                                <video
-                                  src={media}
-                                  controls
-                                  className="w-full h-full object-cover"
-                                  preload="metadata"
-                                  onError={(e) => console.error("❌ Erro ao carregar vídeo:", e)}
-                                  onLoadStart={() => console.log("🎬 Iniciando carregamento do vídeo:", media)}
-                                >
-                                  Seu navegador não suporta vídeos.
-                                </video>
-                              ) : (
-                                <OptimizedImage
-                                  src={media}
-                                  alt={`${space.name} ${i + 1}`}
-                                  className="object-cover w-full h-full"
-                                />
-                              )}
-                              <div className="absolute bottom-2 right-2">
-                                <span className="bg-black/70 text-white px-2 py-1 rounded text-xs">
-                                  {i + 1}
-                                </span>
-                              </div>
+                      {displayImages.map((image, i) => (
+                        <CarouselItem key={i} className="pl-2 md:pl-4 md:basis-1/3 lg:basis-1/4">
+                          <div className="relative rounded-lg overflow-hidden h-48 lg:h-56">
+                            <OptimizedImage
+                              src={image}
+                              alt={`${space.name} ${i + 1}`}
+                              className="object-cover w-full h-full"
+                            />
+                            <div className="absolute bottom-2 right-2">
+                              <span className="bg-black/70 text-white px-2 py-1 rounded text-xs">
+                                {i + 1}
+                              </span>
                             </div>
-                          </CarouselItem>
-                        );
-                      })}
+                          </div>
+                        </CarouselItem>
+                      ))}
                     </CarouselContent>
                   </Carousel>
                 </div>

@@ -2,7 +2,13 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import type { SpacePhoto } from "@/types/approval";
+
+export interface SpacePhoto {
+  id: string;
+  space_id: string;
+  storage_path: string;
+  created_at: string;
+}
 
 export const useSpacePhotos = (spaceId: string | null) => {
   const [photos, setPhotos] = useState<SpacePhoto[]>([]);
@@ -12,13 +18,13 @@ export const useSpacePhotos = (spaceId: string | null) => {
   const fetchPhotos = async (id: string) => {
     try {
       setLoading(true);
-      console.log("🔍 INICIANDO busca de fotos/vídeos para espaço:", id);
+      console.log("🔍 Buscando fotos para espaço:", id);
 
       // Limpar estado anterior
       setPhotos([]);
       setPhotoUrls([]);
 
-      // Buscar fotos diretamente da tabela space_photos
+      // Buscar fotos da tabela space_photos
       const { data: photosData, error } = await supabase
         .from('space_photos')
         .select('*')
@@ -31,101 +37,17 @@ export const useSpacePhotos = (spaceId: string | null) => {
         return;
       }
 
-      console.log("📸 DADOS BRUTOS encontrados:", photosData?.length || 0);
-      console.log("📋 TODOS os dados das mídias:", photosData);
+      console.log("📸 Fotos encontradas:", photosData?.length || 0);
       
       if (photosData && photosData.length > 0) {
-        // Log detalhado de cada mídia ANTES de qualquer processamento
-        photosData.forEach((photo, index) => {
-          console.log(`📁 ANÁLISE COMPLETA Mídia ${index + 1}:`, {
-            id: photo.id,
-            storage_path: photo.storage_path,
-            created_at: photo.created_at,
-            // Análise detalhada do storage_path
-            pathAnalysis: {
-              fullPath: photo.storage_path,
-              isURL: photo.storage_path?.startsWith('http'),
-              containsVideo: photo.storage_path?.toLowerCase().includes('video'),
-              extension: photo.storage_path?.split('.').pop()?.toLowerCase(),
-              fileName: photo.storage_path?.split('/').pop(),
-              // Verificar se contém extensões de vídeo conhecidas
-              hasVideoExt: ['.mp4', '.webm', '.mov', '.avi'].some(ext => 
-                photo.storage_path?.toLowerCase().includes(ext)
-              )
-            }
-          });
-        });
-
-        // Função de detecção de vídeo MELHORADA
-        const isVideoFile = (storagePath: string) => {
-          if (!storagePath) return false;
-          
-          const path = storagePath.toLowerCase();
-          const fileName = storagePath.split('/').pop()?.toLowerCase() || '';
-          const extension = fileName.split('.').pop() || '';
-          
-          console.log(`🎬 DETECÇÃO DE VÍDEO DETALHADA para: ${storagePath}`, {
-            path,
-            fileName,
-            extension,
-            checks: {
-              hasVideoExtension: ['.mp4', '.webm', '.mov', '.avi', '.mkv', '.m4v'].includes(`.${extension}`),
-              pathContainsVideo: path.includes('video'),
-              fileNameContainsVideo: fileName.includes('video'),
-              isMP4: extension === 'mp4' || path.includes('.mp4'),
-              isWebM: extension === 'webm' || path.includes('.webm'),
-              isMOV: extension === 'mov' || path.includes('.mov')
-            }
-          });
-          
-          // Critérios mais específicos para detecção de vídeo
-          const videoExtensions = ['mp4', 'webm', 'mov', 'avi', 'mkv', 'm4v'];
-          const isVideo = videoExtensions.includes(extension) || 
-                         path.includes('video') ||
-                         videoExtensions.some(ext => path.includes(`.${ext}`));
-          
-          console.log(`🎯 RESULTADO DETECÇÃO: ${storagePath} -> ${isVideo ? 'VÍDEO' : 'IMAGEM'}`);
-          return isVideo;
-        };
-
-        // Classificar mídias
-        const videos = photosData.filter(p => isVideoFile(p.storage_path));
-        const images = photosData.filter(p => !isVideoFile(p.storage_path));
-        
-        console.log("📊 CLASSIFICAÇÃO FINAL:", {
-          total: photosData.length,
-          videos: videos.length,
-          images: images.length,
-          videoList: videos.map(v => ({ id: v.id, path: v.storage_path })),
-          imageList: images.map(i => ({ id: i.id, path: i.storage_path }))
-        });
-
-        // Ordenar: imagens primeiro, vídeos por último
-        const sortedPhotos = [...images, ...videos];
-        
-        console.log("🎯 MÍDIAS ORDENADAS:", sortedPhotos.map(p => ({
-          id: p.id,
-          path: p.storage_path,
-          isVideo: isVideoFile(p.storage_path)
-        })));
-        
-        setPhotos(sortedPhotos);
-        await createPhotoUrls(sortedPhotos);
-        
-        // 🚨 VERIFICAÇÃO ADICIONAL: Buscar diretamente no bucket se não encontrou vídeos
-        if (videos.length === 0) {
-          console.log("⚠️ NENHUM VÍDEO encontrado na tabela, verificando bucket diretamente...");
-          await checkBucketForVideos(id);
-        }
+        setPhotos(photosData);
+        await createPhotoUrls(photosData);
       } else {
-        console.log("⚠️ NENHUMA foto/vídeo encontrado na tabela para o espaço");
-        
-        // 🚨 VERIFICAÇÃO ADICIONAL: Buscar diretamente no bucket
-        console.log("🔍 Verificando bucket diretamente para espaço:", id);
-        await checkBucketForVideos(id);
+        console.log("⚠️ Nenhuma foto encontrada para o espaço");
+        setPhotoUrls([]);
       }
     } catch (error) {
-      console.error("💥 ERRO GERAL ao buscar fotos:", error);
+      console.error("💥 Erro ao buscar fotos:", error);
       toast.error("Erro ao carregar fotos");
       setPhotoUrls([]);
     } finally {
@@ -133,68 +55,18 @@ export const useSpacePhotos = (spaceId: string | null) => {
     }
   };
 
-  // Nova função para verificar diretamente no bucket
-  const checkBucketForVideos = async (spaceId: string) => {
-    try {
-      console.log("🔍 VERIFICAÇÃO DIRETA NO BUCKET para espaço:", spaceId);
-      
-      // Tentar diferentes padrões de pasta
-      const possiblePaths = [
-        'videos', // pasta geral de vídeos
-        `videos/${spaceId}`, // pasta específica do espaço
-        `spaces/${spaceId}`, // pasta do espaço
-        'spaces' // pasta geral
-      ];
-      
-      for (const path of possiblePaths) {
-        console.log(`📂 VERIFICANDO caminho: ${path}`);
-        
-        const { data: files, error } = await supabase.storage
-          .from('spaces')
-          .list(path, { limit: 100 });
-        
-        if (!error && files && files.length > 0) {
-          const videoFiles = files.filter(file => {
-            const ext = file.name.split('.').pop()?.toLowerCase();
-            return ['mp4', 'webm', 'mov', 'avi'].includes(ext || '');
-          });
-          
-          console.log(`🎬 VÍDEOS ENCONTRADOS no caminho ${path}:`, videoFiles);
-          
-          if (videoFiles.length > 0) {
-            // Criar URLs para os vídeos encontrados
-            const videoUrls = videoFiles.map(file => {
-              const fullPath = `${path}/${file.name}`;
-              const { data } = supabase.storage.from('spaces').getPublicUrl(fullPath);
-              return data.publicUrl;
-            });
-            
-            console.log("🔗 URLs DE VÍDEOS criadas diretamente do bucket:", videoUrls);
-            
-            // Adicionar às URLs existentes
-            setPhotoUrls(prev => [...prev, ...videoUrls]);
-            
-            toast.success(`${videoFiles.length} vídeo(s) encontrado(s) diretamente no storage!`);
-          }
-        }
-      }
-    } catch (error) {
-      console.error("❌ Erro ao verificar bucket diretamente:", error);
-    }
-  };
-
   const createPhotoUrls = async (photosData: SpacePhoto[]) => {
     try {
-      console.log("🔗 CRIANDO URLs para", photosData.length, "fotos/vídeos");
+      console.log("🔗 Criando URLs para", photosData.length, "fotos");
       
       const urls = await Promise.all(
         photosData.map(async (photo, index) => {
           if (!photo.storage_path) {
-            console.error("❌ CAMINHO AUSENTE para mídia:", photo.id);
+            console.error("❌ Caminho ausente para foto:", photo.id);
             return null;
           }
 
-          console.log(`🔄 PROCESSANDO mídia ${index + 1}:`, {
+          console.log(`🔄 Processando foto ${index + 1}:`, {
             id: photo.id,
             storage_path: photo.storage_path,
             isFullURL: photo.storage_path.startsWith('http')
@@ -202,46 +74,43 @@ export const useSpacePhotos = (spaceId: string | null) => {
 
           // Se já é uma URL completa, usar diretamente
           if (photo.storage_path.startsWith('http')) {
-            console.log("✅ JÁ É URL COMPLETA:", photo.storage_path);
+            console.log("✅ Já é URL completa:", photo.storage_path);
             return photo.storage_path;
           }
 
-          // Tentar criar URL a partir do storage path
+          // Criar URL a partir do storage path
           try {
             const { data: publicUrlData } = supabase.storage
               .from('spaces')
               .getPublicUrl(photo.storage_path);
             
             if (publicUrlData?.publicUrl) {
-              console.log(`✅ URL PÚBLICA criada:`, {
+              console.log(`✅ URL pública criada:`, {
                 originalPath: photo.storage_path,
                 url: publicUrlData.publicUrl
               });
               return publicUrlData.publicUrl;
             }
           } catch (urlError) {
-            console.error("❌ ERRO ao criar URL:", urlError);
+            console.error("❌ Erro ao criar URL:", urlError);
           }
 
-          console.error(`❌ FALHA TOTAL para mídia:`, photo.storage_path);
+          console.error(`❌ Falha para foto:`, photo.storage_path);
           return null;
         })
       );
 
       const validUrls = urls.filter(url => url !== null) as string[];
       
-      console.log("✨ RESUMO FINAL COMPLETO:");
-      console.log("- URLs válidas criadas:", validUrls.length, "de", photosData.length, "mídias");
-      console.log("- TODAS as URLs válidas:", validUrls);
+      console.log("✨ URLs válidas criadas:", validUrls.length, "de", photosData.length, "fotos");
       
       setPhotoUrls(validUrls);
     } catch (error) {
-      console.error("💥 ERRO FATAL ao criar URLs das mídias:", error);
+      console.error("💥 Erro ao criar URLs das fotos:", error);
       setPhotoUrls([]);
     }
   };
 
-  // Force refresh quando spaceId muda
   useEffect(() => {
     if (spaceId) {
       console.log("🔄 useSpacePhotos - spaceId mudou para:", spaceId);
@@ -263,7 +132,7 @@ export const useSpacePhotos = (spaceId: string | null) => {
     loading,
     refetch: () => {
       if (spaceId) {
-        console.log("🔄 REFETCH MANUAL das fotos para espaço:", spaceId);
+        console.log("🔄 Refetch manual das fotos para espaço:", spaceId);
         fetchPhotos(spaceId);
       }
     }

@@ -3,7 +3,6 @@ import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Upload, X, Image } from "lucide-react";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
 
 interface ImageUploadProps {
   onImagesChange: (files: File[]) => void;
@@ -31,15 +30,22 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
       toast.error(`Você pode fazer upload de no máximo ${maxImages} imagens`);
       return;
     }
+
+    // Validar se são apenas imagens
+    const validFiles = files.filter(file => file.type.startsWith('image/'));
+    if (validFiles.length !== files.length) {
+      toast.error("Apenas arquivos de imagem são permitidos");
+      return;
+    }
     
-    const newSelectedFiles = [...selectedFiles, ...files];
+    const newSelectedFiles = [...selectedFiles, ...validFiles];
     setSelectedFiles(newSelectedFiles);
     
-    // Create object URLs for previews
-    const newPreviews = files.map(file => URL.createObjectURL(file));
+    // Criar URLs de objeto para pré-visualização
+    const newPreviews = validFiles.map(file => URL.createObjectURL(file));
     setPreviews([...previews, ...newPreviews]);
     
-    // Notify parent component
+    // Notificar componente pai
     onImagesChange(newSelectedFiles);
   };
 
@@ -47,7 +53,7 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
     const newFiles = [...selectedFiles];
     const newPreviews = [...previews];
     
-    // Revoke the object URL to avoid memory leaks
+    // Revogar a URL do objeto para evitar vazamentos de memória
     URL.revokeObjectURL(newPreviews[index]);
     
     newFiles.splice(index, 1);
@@ -56,7 +62,7 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
     setSelectedFiles(newFiles);
     setPreviews(newPreviews);
     
-    // Notify parent component
+    // Notificar componente pai
     onImagesChange(newFiles);
   };
 

@@ -1,9 +1,9 @@
+
 import React from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card } from "@/components/ui/card";
 import { Image, MapPin, Home, User, Phone, DollarSign, Check, X, Tag, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import DebugVideoUpload from "@/components/DebugVideoUpload";
 import type { SpaceWithProfile } from "@/types/approval";
 
 interface SpaceDetailsTabsProps {
@@ -19,69 +19,16 @@ const SpaceDetailsTabs: React.FC<SpaceDetailsTabsProps> = ({
   photosLoading,
   onRefreshPhotos
 }) => {
-  // Função de detecção de vídeo MELHORADA e IDÊNTICA ao hook
-  const isVideo = (url: string) => {
-    if (!url) return false;
-    
-    const urlLower = url.toLowerCase();
-    const fileName = url.split('/').pop()?.toLowerCase() || '';
-    const extension = fileName.split('.').pop() || '';
-    
-    console.log(`🔍 SpaceDetailsTabs - DETECÇÃO DE VÍDEO para: ${url}`, {
-      urlLower,
-      fileName,
-      extension,
-      originalUrl: url
-    });
-    
-    // Critérios para detecção de vídeo
-    const videoExtensions = ['mp4', 'webm', 'mov', 'avi', 'mkv', 'm4v'];
-    const checks = {
-      hasVideoExtension: videoExtensions.includes(extension),
-      urlContainsVideo: urlLower.includes('video'),
-      fileNameContainsVideo: fileName.includes('video'),
-      hasSpecificVideoExt: videoExtensions.some(ext => urlLower.includes(`.${ext}`))
-    };
-    
-    console.log(`🔎 SpaceDetailsTabs - Checks de detecção:`, checks);
-    
-    const result = checks.hasVideoExtension || 
-                  checks.urlContainsVideo || 
-                  checks.fileNameContainsVideo ||
-                  checks.hasSpecificVideoExt;
-    
-    console.log(`🎬 SpaceDetailsTabs - RESULTADO FINAL: ${url} -> ${result ? 'VÍDEO' : 'IMAGEM'}`);
-    
-    return result;
-  };
-
-  // Separar e contar mídias
-  const videos = photoUrls.filter(url => isVideo(url));
-  const images = photoUrls.filter(url => !isVideo(url));
-  const totalMedia = photoUrls.length;
-  
-  console.log(`📊 SpaceDetailsTabs - ESTATÍSTICAS FINAIS:`, {
-    totalUrls: photoUrls.length,
-    images: images.length,
-    videos: videos.length,
-    spaceName: space.name,
-    allUrls: photoUrls,
-    videoUrls: videos,
-    imageUrls: images
-  });
-
-  // URLs já vêm ordenadas do hook (imagens primeiro, vídeos por último)
-  const sortedPhotoUrls = [...images, ...videos];
+  const totalPhotos = photoUrls.length;
 
   return (
     <Tabs defaultValue="details" className="w-full">
       <TabsList className="w-full">
         <TabsTrigger value="details" className="flex-1">Detalhes</TabsTrigger>
         <TabsTrigger value="photos" className="flex-1">
-          Mídia ({totalMedia}) {videos.length > 0 && `- ${videos.length} vídeo${videos.length !== 1 ? 's' : ''}`}
+          Fotos ({totalPhotos})
         </TabsTrigger>
         <TabsTrigger value="location" className="flex-1">Localização</TabsTrigger>
-        <TabsTrigger value="debug" className="flex-1">🔧 Debug</TabsTrigger>
       </TabsList>
       
       <TabsContent value="details" className="mt-4 space-y-4">
@@ -222,10 +169,10 @@ const SpaceDetailsTabs: React.FC<SpaceDetailsTabsProps> = ({
         <Card className="p-4">
           <div className="flex justify-between items-center mb-4">
             <h3 className="text-lg font-medium">
-              Fotos e Vídeos do Espaço 
-              {totalMedia > 0 && (
+              Fotos do Espaço 
+              {totalPhotos > 0 && (
                 <span className="text-sm text-gray-500 ml-2">
-                  ({images.length} imagem{images.length !== 1 ? 's' : ''}, {videos.length} vídeo{videos.length !== 1 ? 's' : ''})
+                  ({totalPhotos} foto{totalPhotos !== 1 ? 's' : ''})
                 </span>
               )}
             </h3>
@@ -234,7 +181,7 @@ const SpaceDetailsTabs: React.FC<SpaceDetailsTabsProps> = ({
                 variant="outline"
                 size="sm"
                 onClick={() => {
-                  console.log("🔄 BOTÃO RECARREGAR clicado");
+                  console.log("🔄 Botão recarregar clicado");
                   onRefreshPhotos();
                 }}
                 disabled={photosLoading}
@@ -248,14 +195,14 @@ const SpaceDetailsTabs: React.FC<SpaceDetailsTabsProps> = ({
           {photosLoading ? (
             <div className="text-center py-8">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto mb-2"></div>
-              <p className="text-gray-500">Carregando fotos e vídeos...</p>
+              <p className="text-gray-500">Carregando fotos...</p>
             </div>
-          ) : !sortedPhotoUrls || sortedPhotoUrls.length === 0 ? (
+          ) : !photoUrls || photoUrls.length === 0 ? (
             <div className="text-center py-8">
               <Image size={48} className="mx-auto text-gray-300 mb-2" />
-              <p className="text-gray-500">Nenhuma foto ou vídeo disponível</p>
+              <p className="text-gray-500">Nenhuma foto disponível</p>
               <p className="text-xs text-gray-400 mt-1">
-                Verifique se as fotos/vídeos foram enviados corretamente
+                Verifique se as fotos foram enviadas corretamente
               </p>
               {onRefreshPhotos && (
                 <Button
@@ -271,113 +218,33 @@ const SpaceDetailsTabs: React.FC<SpaceDetailsTabsProps> = ({
             </div>
           ) : (
             <>
-              {/* Mostrar imagens primeiro */}
-              {images.length > 0 && (
-                <div className="mb-6">
-                  <h4 className="text-md font-medium mb-3 text-gray-700">
-                    📸 Imagens ({images.length})
-                  </h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {images.map((url, index) => {
-                      console.log(`🖼️ RENDERIZANDO imagem ${index + 1}:`, url);
-                      return (
-                        <div key={`image-${index}`} className="relative">
-                          <img 
-                            src={url} 
-                            alt={`${space.name} ${index + 1}`}
-                            className="w-full h-40 object-cover rounded-md border"
-                            onLoad={() => {
-                              console.log(`✓ IMAGEM ${index + 1} carregada com sucesso:`, url);
-                            }}
-                            onError={(e) => {
-                              console.error(`✗ ERRO ao carregar imagem ${index + 1}:`, url);
-                              e.currentTarget.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZGRkIi8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxNCIgZmlsbD0iIzk5OSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPkVycm8gYW8gY2FycmVnYXIgaW1hZ2VtPC90ZXh0Pjwvc3ZnPg==';
-                            }}
-                          />
-                          <span className="absolute bottom-2 right-2 bg-black/50 text-white text-xs px-2 py-1 rounded">
-                            📸 {index + 1}/{images.length}
-                          </span>
-                        </div>
-                      );
-                    })}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {photoUrls.map((url, index) => (
+                  <div key={`photo-${index}`} className="relative">
+                    <img 
+                      src={url} 
+                      alt={`${space.name} ${index + 1}`}
+                      className="w-full h-40 object-cover rounded-md border"
+                      onLoad={() => {
+                        console.log(`✓ Foto ${index + 1} carregada com sucesso:`, url);
+                      }}
+                      onError={(e) => {
+                        console.error(`✗ Erro ao carregar foto ${index + 1}:`, url);
+                        e.currentTarget.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZGRkIi8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxNCIgZmlsbD0iIzk5OSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPkVycm8gYW8gY2FycmVnYXIgaW1hZ2VtPC90ZXh0Pjwvc3ZnPg==';
+                      }}
+                    />
+                    <span className="absolute bottom-2 right-2 bg-black/50 text-white text-xs px-2 py-1 rounded">
+                      📸 {index + 1}/{photoUrls.length}
+                    </span>
                   </div>
-                </div>
-              )}
+                ))}
+              </div>
 
-              {/* Mostrar vídeos por último */}
-              {videos.length > 0 && (
-                <div className="mb-4">
-                  <h4 className="text-md font-medium mb-3 text-gray-700">
-                    🎬 Vídeos ({videos.length})
-                  </h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {videos.map((url, index) => {
-                      console.log(`🎬 RENDERIZANDO vídeo ${index + 1}:`, url);
-                      return (
-                        <div key={`video-${index}`} className="relative">
-                          <video
-                            src={url}
-                            controls
-                            className="w-full h-40 object-cover rounded-md border"
-                            preload="metadata"
-                            onLoadedData={() => {
-                              console.log(`✓ VÍDEO ${index + 1} carregado com sucesso:`, url);
-                            }}
-                            onError={(e) => {
-                              console.error(`✗ ERRO ao carregar vídeo ${index + 1}:`, url);
-                              console.error("Detalhes do erro do vídeo:", e);
-                            }}
-                          >
-                            <p className="text-gray-500 p-4">
-                              Seu navegador não suporta reprodução de vídeo.
-                              <br />
-                              <a href={url} target="_blank" rel="noopener noreferrer" className="text-blue-500 underline">
-                                Clique aqui para assistir
-                              </a>
-                            </p>
-                          </video>
-                          <span className="absolute bottom-2 right-2 bg-black/50 text-white text-xs px-2 py-1 rounded">
-                            🎬 {index + 1}/{videos.length}
-                          </span>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-
-              {/* Debug das URLs */}
               <div className="mt-4 text-center border-t pt-4">
                 <h3 className="text-lg font-medium">{space.name}</h3>
                 <p className="text-sm text-gray-500 mt-2">
-                  📊 {totalMedia} mídia{totalMedia !== 1 ? 's' : ''} • 
-                  📸 {images.length} imagem{images.length !== 1 ? 's' : ''} • 
-                  🎬 {videos.length} vídeo{videos.length !== 1 ? 's' : ''}
+                  📸 {totalPhotos} foto{totalPhotos !== 1 ? 's' : ''}
                 </p>
-                
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="mt-2"
-                  onClick={() => {
-                    console.log("🔍 DEBUG MANUAL COMPLETO - URLs e detecção:", {
-                      space: space.name,
-                      spaceId: space.id,
-                      photoUrls,
-                      detectionResults: photoUrls.map(url => ({
-                        url,
-                        isVideo: isVideo(url),
-                        fileName: url.split('/').pop(),
-                        extension: url.split('.').pop()?.toLowerCase()
-                      })),
-                      videos,
-                      images,
-                      sortedPhotoUrls
-                    });
-                  }}
-                >
-                  🔍 Debug URLs
-                </Button>
               </div>
             </>
           )}
@@ -422,34 +289,6 @@ const SpaceDetailsTabs: React.FC<SpaceDetailsTabsProps> = ({
                 </p>
               </div>
             )}
-          </div>
-        </Card>
-      </TabsContent>
-
-      <TabsContent value="debug" className="mt-4">
-        <DebugVideoUpload spaceId={space.id} />
-        
-        <Card className="p-4 mt-4">
-          <h4 className="text-lg font-semibold mb-4">🔍 Informações de Debug</h4>
-          <div className="space-y-3 text-sm">
-            <div>
-              <strong>Space ID:</strong> {space.id}
-            </div>
-            <div>
-              <strong>Total de URLs:</strong> {photoUrls.length}
-            </div>
-            <div>
-              <strong>URLs Detectadas como Vídeos:</strong> {videos.length}
-            </div>
-            <div>
-              <strong>URLs Detectadas como Imagens:</strong> {images.length}
-            </div>
-            <div className="mt-4">
-              <strong>Todas as URLs:</strong>
-              <pre className="bg-gray-100 p-2 rounded text-xs mt-2 overflow-auto max-h-40">
-                {JSON.stringify(photoUrls, null, 2)}
-              </pre>
-            </div>
           </div>
         </Card>
       </TabsContent>
