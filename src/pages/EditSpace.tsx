@@ -77,6 +77,8 @@ const EditSpace: React.FC = () => {
         return;
       }
       
+      console.log("🔍 EDIT_SPACE: Buscando detalhes do espaço:", spaceId);
+      
       // Buscar dados do espaço
       const { data: spaceData, error: spaceError } = await supabase
         .from("spaces")
@@ -92,6 +94,8 @@ const EditSpace: React.FC = () => {
         navigate("/user-spaces");
         return;
       }
+      
+      console.log("✅ EDIT_SPACE: Dados do espaço encontrados:", spaceData.name);
       
       // Preencher o formulário com os dados do espaço
       setFormData({
@@ -113,30 +117,72 @@ const EditSpace: React.FC = () => {
         categories: spaceData.categories || []
       });
       
-      // Buscar fotos do espaço
+      // Buscar fotos do espaço usando o mesmo padrão da página UserSpaces
+      console.log("🔍 EDIT_SPACE: Buscando fotos do espaço:", spaceId);
+      
       const { data: photoData, error: photoError } = await supabase
         .from("space_photos")
         .select("id, storage_path")
-        .eq("space_id", spaceId);
+        .eq("space_id", spaceId)
+        .order("created_at", { ascending: true });
       
-      if (photoError) throw photoError;
+      if (photoError) {
+        console.error("❌ EDIT_SPACE: Erro ao buscar fotos:", photoError);
+        throw photoError;
+      }
       
-      // Obter URLs assinadas para as fotos existentes
+      console.log("📸 EDIT_SPACE: Fotos encontradas:", photoData?.length || 0);
+      console.log("📋 EDIT_SPACE: Dados das fotos:", photoData);
+      
+      // Processar as fotos usando URLs públicas (mesmo método da UserSpaces)
       const photoUrls = await Promise.all((photoData || []).map(async (photo) => {
-        const { data: urlData } = await supabase.storage
-          .from('spaces')
-          .createSignedUrl(photo.storage_path, 3600);
+        if (!photo.storage_path) {
+          console.error("❌ EDIT_SPACE: Caminho ausente para foto:", photo.id);
+          return null;
+        }
+
+        // Se já é uma URL completa, usar diretamente
+        if (photo.storage_path.startsWith('http')) {
+          console.log("✅ EDIT_SPACE: Já é URL completa:", photo.storage_path);
+          return {
+            id: photo.id,
+            url: photo.storage_path
+          };
+        }
+
+        // Criar URL pública a partir do storage path
+        try {
+          const { data: publicUrlData } = supabase.storage
+            .from('spaces')
+            .getPublicUrl(photo.storage_path);
           
-        return {
-          id: photo.id,
-          url: urlData?.signedUrl || "",
-          path: photo.storage_path
-        };
+          console.log("🌐 EDIT_SPACE: URL pública criada:", {
+            originalPath: photo.storage_path,
+            url: publicUrlData.publicUrl
+          });
+          
+          if (publicUrlData?.publicUrl) {
+            return {
+              id: photo.id,
+              url: publicUrlData.publicUrl
+            };
+          }
+        } catch (urlError) {
+          console.error("❌ EDIT_SPACE: Erro ao criar URL pública:", urlError);
+        }
+
+        console.error(`❌ EDIT_SPACE: Falha para foto:`, photo.storage_path);
+        return null;
       }));
       
-      setExistingPhotos(photoUrls);
+      const validPhotoUrls = photoUrls.filter(photo => photo !== null) as { id: string; url: string }[];
+      
+      console.log("✨ EDIT_SPACE: URLs válidas criadas:", validPhotoUrls.length, "de", (photoData || []).length, "fotos");
+      console.log("📋 EDIT_SPACE: URLs finais:", validPhotoUrls);
+      
+      setExistingPhotos(validPhotoUrls);
     } catch (error) {
-      console.error("Erro ao carregar detalhes do espaço:", error);
+      console.error("💥 EDIT_SPACE: Erro ao carregar detalhes do espaço:", error);
       toast.error("Erro ao carregar detalhes do espaço");
       navigate("/user-spaces");
     } finally {
@@ -170,6 +216,7 @@ const EditSpace: React.FC = () => {
   };
   
   const handleExistingPhotoDelete = (photoId: string) => {
+    console.log("🗑️ EDIT_SPACE: Marcando foto para exclusão:", photoId);
     // Marcar foto para exclusão
     setPhotosToDelete(prev => [...prev, photoId]);
     // Remover da lista de exibição
@@ -561,6 +608,11 @@ const EditSpace: React.FC = () => {
                         src={photo.url} 
                         alt="Foto do espaço" 
                         className="w-full h-full object-cover"
+                        onError={(e) => {
+                          console.error("❌ EDIT_SPACE: Erro ao carregar imagem:", photo.url);
+                          // Fallback para imagem padrão se houver erro
+                          (e.target as HTMLImageElement).src = "https://images.unsplash.com/photo-1566681855366-282a74153321?q=80&w=600&auto=format&fit=crop";
+                        }}
                       />
                       <Button 
                         variant="destructive"
