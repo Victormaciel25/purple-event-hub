@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { z } from "zod";
@@ -23,7 +22,6 @@ import { supabase } from "@/integrations/supabase/client";
 import SingleImageUpload from "@/components/SingleImageUpload";
 import AddressAutoComplete from "@/components/AddressAutoComplete";
 import LocationMap from "@/components/LocationMap";
-import VideoUpload from "@/components/VideoUpload";
 
 const categories = [
   "casamentos",
@@ -59,8 +57,6 @@ const RegisterSpace = () => {
   const [mapLocation, setMapLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [mapCenter, setMapCenter] = useState<{ lat: number; lng: number } | null>(null);
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
-  const [videoUrl, setVideoUrl] = useState<string | null>(null);
-  const [videoUploading, setVideoUploading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
   const form = useForm<FormValues>({
@@ -141,17 +137,12 @@ const RegisterSpace = () => {
     }
   };
 
-  const handleVideoChange = (url: string | null) => {
-    setVideoUrl(url);
-  };
-
   const onSubmit = async (values: FormValues) => {
     console.log("🚀 SUBMIT DEBUG: Iniciando submissão do formulário...");
     console.log("📋 SUBMIT DEBUG: Valores do formulário:", values);
     console.log("🖼️ SUBMIT DEBUG: URLs das imagens:", imageUrls);
     console.log("📍 SUBMIT DEBUG: Localização do mapa:", mapLocation);
     console.log("🏷️ SUBMIT DEBUG: Categorias selecionadas:", selectedCategories);
-    console.log("🎥 SUBMIT DEBUG: URL do vídeo:", videoUrl);
 
     if (imageUrls.length === 0) {
       console.log("❌ SUBMIT DEBUG: Nenhuma imagem foi enviada");
@@ -289,20 +280,6 @@ const RegisterSpace = () => {
             maxImages={10}
           />
         </div>
-      </div>
-
-      <div className="mb-6">
-        <p className="text-muted-foreground text-sm mb-2">Vídeo promocional (opcional)</p>
-        <VideoUpload
-          onVideoChange={handleVideoChange}
-          uploadPath="spaces/videos"
-          maxSize={50}
-          maxDuration={10}
-          initialVideo={videoUrl}
-          isUploading={videoUploading}
-          setIsUploading={setVideoUploading}
-          className="w-full"
-        />
       </div>
 
       <Form {...form}>
@@ -630,7 +607,7 @@ const RegisterSpace = () => {
           <Button 
             type="submit" 
             className="w-full bg-iparty hover:bg-iparty/90" 
-            disabled={submitting || uploading || videoUploading}
+            disabled={submitting || uploading}
           >
             {submitting ? "Cadastrando..." : "Cadastrar Espaço"}
           </Button>
