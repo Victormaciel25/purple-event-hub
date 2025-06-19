@@ -318,12 +318,6 @@ const VendorDetails = () => {
                 </CarouselContent>
               </Carousel>
             </div>
-
-            <div className="flex justify-center mt-2">
-              <p className="text-xs text-muted-foreground">
-                {displayImages.length} {displayImages.length === 1 ? 'imagem' : 'imagens'}
-              </p>
-            </div>
           </div>
 
           <div className="mb-6">
