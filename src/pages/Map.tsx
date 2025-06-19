@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from "react";
 import { Loader2 } from "lucide-react";
 import { Wrapper } from "@googlemaps/react-wrapper";
@@ -74,7 +73,7 @@ const Map: React.FC = () => {
   const fetchSpaces = async () => {
     setLoading(true);
     try {
-      console.log("🔍 Buscando espaços aprovados...");
+      console.log("🔍 MAP: Buscando espaços aprovados...");
       
       const { data: spacesData, error } = await supabase
         .from("spaces")
@@ -84,24 +83,25 @@ const Map: React.FC = () => {
         .not("longitude", "is", null);
 
       if (error) {
-        console.error("❌ Erro ao buscar espaços:", error);
+        console.error("❌ MAP: Erro ao buscar espaços:", error);
         throw error;
       }
 
-      console.log("📋 Espaços encontrados:", spacesData?.length || 0);
+      console.log("📋 MAP: Espaços encontrados:", spacesData?.length || 0);
 
       const spacesWithImages = await Promise.all(
         (spacesData || []).map(async (space) => {
           let imageUrl: string | undefined;
           
-          console.log(`🖼️ Processando imagens para espaço "${space.name}":`, {
+          console.log(`🖼️ MAP: Processando imagens para espaço "${space.name}":`, {
             id: space.id,
-            photos: space.space_photos?.length || 0
+            photos: space.space_photos?.length || 0,
+            firstPhoto: space.space_photos?.[0]
           });
           
           if (space.space_photos?.length) {
             const firstPhoto = space.space_photos[0];
-            console.log("📸 Primeira foto encontrada:", {
+            console.log("📸 MAP: Primeira foto encontrada:", {
               storage_path: firstPhoto.storage_path,
               isFullURL: firstPhoto.storage_path?.startsWith('http')
             });
@@ -110,7 +110,7 @@ const Map: React.FC = () => {
               // Se já é uma URL completa, usar diretamente
               if (firstPhoto.storage_path?.startsWith('http')) {
                 imageUrl = firstPhoto.storage_path;
-                console.log("✅ Usando URL completa:", imageUrl);
+                console.log("✅ MAP: Usando URL completa:", imageUrl);
               } else {
                 // Criar URL pública a partir do storage path
                 const { data: urlData } = supabase.storage
@@ -119,16 +119,28 @@ const Map: React.FC = () => {
                 
                 if (urlData?.publicUrl) {
                   imageUrl = urlData.publicUrl;
-                  console.log("✅ URL pública criada:", imageUrl);
+                  console.log("✅ MAP: URL pública criada:", imageUrl);
+                  
+                  // Testar acessibilidade
+                  try {
+                    const response = await fetch(imageUrl, { method: 'HEAD' });
+                    console.log("🔍 MAP: Teste de acesso:", {
+                      url: imageUrl,
+                      status: response.status,
+                      ok: response.ok
+                    });
+                  } catch (fetchError) {
+                    console.warn("⚠️ MAP: URL pode não estar acessível:", fetchError);
+                  }
                 } else {
-                  console.warn("⚠️ Falha ao criar URL pública para:", firstPhoto.storage_path);
+                  console.warn("⚠️ MAP: Falha ao criar URL pública para:", firstPhoto.storage_path);
                 }
               }
             } catch (imageError) {
-              console.error("❌ Erro ao processar imagem:", imageError);
+              console.error("❌ MAP: Erro ao processar imagem:", imageError);
             }
           } else {
-            console.log("⚠️ Nenhuma foto encontrada para o espaço:", space.name);
+            console.log("⚠️ MAP: Nenhuma foto encontrada para o espaço:", space.name);
           }
           
           return {
@@ -145,7 +157,7 @@ const Map: React.FC = () => {
         })
       );
 
-      console.log("✨ Espaços processados com imagens:", spacesWithImages.map(s => ({
+      console.log("✨ MAP: Espaços processados com imagens:", spacesWithImages.map(s => ({
         name: s.name,
         hasImage: !!s.imageUrl,
         imageUrl: s.imageUrl
@@ -154,7 +166,7 @@ const Map: React.FC = () => {
       setSpaces(spacesWithImages);
       setFilteredSpaces(spacesWithImages);
     } catch (error) {
-      console.error("💥 Erro ao buscar espaços:", error);
+      console.error("💥 MAP: Erro ao buscar espaços:", error);
       toast.error("Erro ao carregar espaços");
     } finally {
       setLoading(false);
