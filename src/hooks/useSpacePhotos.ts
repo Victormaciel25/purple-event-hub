@@ -38,6 +38,7 @@ export const useSpacePhotos = (spaceId: string | null) => {
       }
 
       console.log("📸 Fotos encontradas:", photosData?.length || 0);
+      console.log("📋 Dados das fotos:", photosData);
       
       if (photosData && photosData.length > 0) {
         setPhotos(photosData);
@@ -84,12 +85,32 @@ export const useSpacePhotos = (spaceId: string | null) => {
               .from('spaces')
               .getPublicUrl(photo.storage_path);
             
+            console.log("🌐 Tentativa de URL pública:", {
+              input: photo.storage_path,
+              output: publicUrlData
+            });
+            
             if (publicUrlData?.publicUrl) {
               console.log(`✅ URL pública criada:`, {
                 originalPath: photo.storage_path,
                 url: publicUrlData.publicUrl
               });
+              
+              // Testar se a URL é acessível
+              try {
+                const response = await fetch(publicUrlData.publicUrl, { method: 'HEAD' });
+                console.log(`🔍 Teste de acessibilidade da URL:`, {
+                  url: publicUrlData.publicUrl,
+                  status: response.status,
+                  ok: response.ok
+                });
+              } catch (fetchError) {
+                console.warn("⚠️ URL pode não estar acessível:", fetchError);
+              }
+              
               return publicUrlData.publicUrl;
+            } else {
+              console.error("❌ publicUrl está vazio ou nulo");
             }
           } catch (urlError) {
             console.error("❌ Erro ao criar URL pública:", urlError);
@@ -103,6 +124,7 @@ export const useSpacePhotos = (spaceId: string | null) => {
       const validUrls = urls.filter(url => url !== null) as string[];
       
       console.log("✨ URLs válidas criadas:", validUrls.length, "de", photosData.length, "fotos");
+      console.log("📋 URLs finais:", validUrls);
       
       setPhotoUrls(validUrls);
     } catch (error) {
