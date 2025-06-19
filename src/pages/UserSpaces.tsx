@@ -10,6 +10,8 @@ import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { toast } from "sonner";
+import { useSpacePhotos } from "@/hooks/useSpacePhotos";
+import OptimizedImage from "@/components/OptimizedImage";
 
 type UserSpace = {
   id: string;
@@ -24,6 +26,142 @@ type UserSpace = {
     expires_at: string;
     plan_id: string;
   } | null;
+};
+
+const UserSpaceCard: React.FC<{ space: UserSpace; onEdit: (id: string) => void; onDelete: (id: string) => void; loading: boolean }> = ({ 
+  space, 
+  onEdit, 
+  onDelete, 
+  loading 
+}) => {
+  const { photoUrls } = useSpacePhotos(space.id);
+  
+  console.log("🖼️ USER_SPACES: Card para espaço", space.name, "URLs:", photoUrls);
+  
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('pt-BR');
+  };
+  
+  const formatPrice = (value: string) => {
+    const numValue = parseFloat(value);
+    return numValue.toLocaleString('pt-BR', {
+      style: 'currency',
+      currency: 'BRL',
+    });
+  };
+  
+  const getStatusBadge = (status: 'pending' | 'approved' | 'rejected') => {
+    switch (status) {
+      case 'pending':
+        return <Badge variant="outline" className="bg-yellow-100 text-yellow-800 hover:bg-yellow-100">Pendente</Badge>;
+      case 'approved':
+        return <Badge variant="outline" className="bg-green-100 text-green-800 hover:bg-green-100">Aprovado</Badge>;
+      case 'rejected':
+        return <Badge variant="outline" className="bg-red-100 text-red-800 hover:bg-red-100">Rejeitado</Badge>;
+    }
+  };
+
+  const getPromotionTimeLeft = (expiresAt: string) => {
+    const now = new Date();
+    const expires = new Date(expiresAt);
+    const diffInHours = Math.floor((expires.getTime() - now.getTime()) / (1000 * 60 * 60));
+    
+    if (diffInHours < 24) {
+      return `${diffInHours}h restantes`;
+    } else {
+      const diffInDays = Math.floor(diffInHours / 24);
+      return `${diffInDays} dias restantes`;
+    }
+  };
+
+  return (
+    <Card className="border shadow-sm">
+      {/* Imagem do espaço */}
+      <div className="relative h-48 overflow-hidden rounded-t-lg">
+        <OptimizedImage
+          src={photoUrls[0] || ""}
+          alt={space.name}
+          className="w-full h-full"
+          fallbackSrc="https://images.unsplash.com/photo-1566681855366-282a74153321?q=80&w=600&auto=format&fit=crop"
+        />
+      </div>
+      
+      <CardContent className="p-4">
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <h3 className="font-medium text-lg">{space.name}</h3>
+            <div className="flex gap-2">
+              {getStatusBadge(space.status)}
+              {space.promotion && (
+                <Badge className="bg-yellow-500 text-white">
+                  Em Destaque
+                </Badge>
+              )}
+            </div>
+          </div>
+          
+          {space.promotion && (
+            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+              <div className="flex items-center gap-2 text-yellow-800">
+                <Clock size={16} />
+                <span className="text-sm font-medium">
+                  Promoção ativa: {getPromotionTimeLeft(space.promotion.expires_at)}
+                </span>
+              </div>
+            </div>
+          )}
+          
+          <div className="grid grid-cols-2 gap-2 text-sm">
+            <div>
+              <p className="text-muted-foreground">Endereço:</p>
+              <p className="truncate" title={`${space.address}, ${space.state}`}>
+                {space.address}, {space.state}
+              </p>
+            </div>
+            
+            <div>
+              <p className="text-muted-foreground">Preço:</p>
+              <p className="font-medium">{formatPrice(space.price)}</p>
+            </div>
+            
+            <div>
+              <p className="text-muted-foreground">Cadastrado em:</p>
+              <p>{formatDate(space.created_at)}</p>
+            </div>
+            
+            {space.status === 'rejected' && space.rejection_reason && (
+              <div className="col-span-2">
+                <p className="text-muted-foreground">Motivo da rejeição:</p>
+                <p className="text-red-600">{space.rejection_reason}</p>
+              </div>
+            )}
+          </div>
+        </div>
+      </CardContent>
+      
+      <CardFooter className="p-4 pt-0 flex justify-end gap-2">
+        <Button 
+          variant="outline" 
+          size="sm" 
+          onClick={() => onEdit(space.id)}
+          className="flex items-center"
+        >
+          <Edit size={16} className="mr-1" />
+          Editar
+        </Button>
+        <Button 
+          variant="destructive" 
+          size="sm"
+          onClick={() => onDelete(space.id)}
+          className="flex items-center"
+          disabled={loading}
+        >
+          <Trash2 size={16} className="mr-1" />
+          Excluir
+        </Button>
+      </CardFooter>
+    </Card>
+  );
 };
 
 const UserSpaces: React.FC = () => {
@@ -51,6 +189,8 @@ const UserSpaces: React.FC = () => {
       
       const userId = sessionData.session.user.id;
       
+      console.log("🔍 USER_SPACES: Buscando espaços do usuário:", userId);
+      
       const { data, error } = await supabase
         .from("spaces")
         .select(`
@@ -69,6 +209,8 @@ const UserSpaces: React.FC = () => {
       
       if (error) throw error;
       
+      console.log("📋 USER_SPACES: Espaços encontrados:", data?.length || 0);
+      
       // Process spaces with promotion data
       const processedSpaces = (data || []).map(space => ({
         ...space,
@@ -79,7 +221,7 @@ const UserSpaces: React.FC = () => {
       
       setSpaces(processedSpaces);
     } catch (error) {
-      console.error("Erro ao carregar espaços:", error);
+      console.error("❌ USER_SPACES: Erro ao carregar espaços:", error);
       setDeleteError("Erro ao carregar seus espaços");
     } finally {
       setLoading(false);
@@ -127,42 +269,6 @@ const UserSpaces: React.FC = () => {
       setDeleteError(error.message || "Erro ao excluir espaço");
     } finally {
       setLoading(false);
-    }
-  };
-  
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('pt-BR');
-  };
-  
-  const formatPrice = (value: string) => {
-    const numValue = parseFloat(value);
-    return numValue.toLocaleString('pt-BR', {
-      style: 'currency',
-      currency: 'BRL',
-    });
-  };
-  
-  const getStatusBadge = (status: 'pending' | 'approved' | 'rejected') => {
-    switch (status) {
-      case 'pending':
-        return <Badge variant="outline" className="bg-yellow-100 text-yellow-800 hover:bg-yellow-100">Pendente</Badge>;
-      case 'approved':
-        return <Badge variant="outline" className="bg-green-100 text-green-800 hover:bg-green-100">Aprovado</Badge>;
-      case 'rejected':
-        return <Badge variant="outline" className="bg-red-100 text-red-800 hover:bg-red-100">Rejeitado</Badge>;
-    }
-  };
-
-  const getPromotionTimeLeft = (expiresAt: string) => {
-    const now = new Date();
-    const expires = new Date(expiresAt);
-    const diffInHours = Math.floor((expires.getTime() - now.getTime()) / (1000 * 60 * 60));
-    
-    if (diffInHours < 24) {
-      return `${diffInHours}h restantes`;
-    } else {
-      const diffInDays = Math.floor(diffInHours / 24);
-      return `${diffInDays} dias restantes`;
     }
   };
 
@@ -229,7 +335,6 @@ const UserSpaces: React.FC = () => {
         onValueChange={setActiveTab}
         className="w-full"
       >
-        {/* duas colunas por linha */}
         <TabsList className="w-full grid grid-cols-2 gap-2 mb-10">
           <TabsTrigger value="all" className="rounded-md w-full h-full">
             Todos ({spaces.length})
@@ -261,82 +366,13 @@ const UserSpaces: React.FC = () => {
           ) : filteredSpaces.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {filteredSpaces.map((space) => (
-                <Card key={space.id} className="border shadow-sm">
-                  <CardContent className="p-4">
-                    <div className="space-y-3">
-                      <div className="flex items-center justify-between">
-                        <h3 className="font-medium text-lg">{space.name}</h3>
-                        <div className="flex gap-2">
-                          {getStatusBadge(space.status)}
-                          {space.promotion && (
-                            <Badge className="bg-yellow-500 text-white">
-                              Em Destaque
-                            </Badge>
-                          )}
-                        </div>
-                      </div>
-                      
-                      {space.promotion && (
-                        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
-                          <div className="flex items-center gap-2 text-yellow-800">
-                            <Clock size={16} />
-                            <span className="text-sm font-medium">
-                              Promoção ativa: {getPromotionTimeLeft(space.promotion.expires_at)}
-                            </span>
-                          </div>
-                        </div>
-                      )}
-                      
-                      <div className="grid grid-cols-2 gap-2 text-sm">
-                        <div>
-                          <p className="text-muted-foreground">Endereço:</p>
-                          <p className="truncate" title={`${space.address}, ${space.state}`}>
-                            {space.address}, {space.state}
-                          </p>
-                        </div>
-                        
-                        <div>
-                          <p className="text-muted-foreground">Preço:</p>
-                          <p className="font-medium">{formatPrice(space.price)}</p>
-                        </div>
-                        
-                        <div>
-                          <p className="text-muted-foreground">Cadastrado em:</p>
-                          <p>{formatDate(space.created_at)}</p>
-                        </div>
-                        
-                        {space.status === 'rejected' && space.rejection_reason && (
-                          <div className="col-span-2">
-                            <p className="text-muted-foreground">Motivo da rejeição:</p>
-                            <p className="text-red-600">{space.rejection_reason}</p>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </CardContent>
-                  
-                  <CardFooter className="p-4 pt-0 flex justify-end gap-2">
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      onClick={() => handleEdit(space.id)}
-                      className="flex items-center"
-                    >
-                      <Edit size={16} className="mr-1" />
-                      Editar
-                    </Button>
-                    <Button 
-                      variant="destructive" 
-                      size="sm"
-                      onClick={() => handleDelete(space.id)}
-                      className="flex items-center"
-                      disabled={loading}
-                    >
-                      <Trash2 size={16} className="mr-1" />
-                      Excluir
-                    </Button>
-                  </CardFooter>
-                </Card>
+                <UserSpaceCard
+                  key={space.id}
+                  space={space}
+                  onEdit={handleEdit}
+                  onDelete={handleDelete}
+                  loading={loading}
+                />
               ))}
             </div>
           ) : (
