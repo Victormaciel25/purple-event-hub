@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from "react";
 import { Loader2 } from "lucide-react";
 import { Wrapper } from "@googlemaps/react-wrapper";
@@ -38,6 +39,7 @@ const Map: React.FC = () => {
   const [mapCenter, setMapCenter] = useState<{ lat: number; lng: number } | null>(null);
   const [searchError, setSearchError] = useState<string | null>(null);
   const [currentUser, setCurrentUser] = useState<string | null>(null);
+  const [forceCurrentLocation, setForceCurrentLocation] = useState(false);
 
   const mapRef = useRef<google.maps.Map | null>(null);
   const navigate = useNavigate();
@@ -51,8 +53,11 @@ const Map: React.FC = () => {
 
   // Função para salvar a posição atual do mapa
   const saveMapPosition = (position: { lat: number; lng: number }) => {
-    localStorage.setItem(LAST_MAP_POSITION_KEY, JSON.stringify(position));
-    console.log('🗺️ MAP: Posição salva:', position);
+    // Só salvar se não estivermos forçando localização atual
+    if (!forceCurrentLocation) {
+      localStorage.setItem(LAST_MAP_POSITION_KEY, JSON.stringify(position));
+      console.log('🗺️ MAP: Posição salva:', position);
+    }
   };
 
   // Função para obter a última posição salva do mapa
@@ -101,38 +106,35 @@ const Map: React.FC = () => {
           hasSession: !!session,
           userId,
           storedUserId,
-          isDifferentUser: userId && storedUserId && userId !== storedUserId
+          forceCurrentLocation
         });
 
         // Se há um usuário logado
         if (userId) {
           setCurrentUser(userId);
           
-          // Verificar se é um usuário diferente do anterior
-          if (storedUserId && userId !== storedUserId) {
-            console.log('👤 MAP: Usuário diferente detectado - limpando posição anterior');
-            clearMapData();
-            localStorage.setItem(CURRENT_USER_KEY, userId);
-            
-            // Para usuário diferente, obter localização atual
+          // Se estivermos forçando localização atual (após logout), sempre obter localização atual
+          if (forceCurrentLocation) {
+            console.log('🗺️ MAP: Forçando localização atual após logout');
             try {
               const currentLocation = await getCurrentLocation();
               setMapCenter(currentLocation);
+              // Resetar o flag e salvar a nova posição
+              setForceCurrentLocation(false);
+              localStorage.setItem(CURRENT_USER_KEY, userId);
               saveMapPosition(currentLocation);
             } catch (error) {
               console.warn("❌ MAP: Erro ao obter localização atual:", error);
               setSearchError("Não foi possível obter sua localização");
+              setForceCurrentLocation(false);
             }
           } else {
-            // Mesmo usuário ou primeiro login - tentar usar posição salva
-            localStorage.setItem(CURRENT_USER_KEY, userId);
-            const lastPosition = getLastMapPosition();
-            
-            if (lastPosition) {
-              console.log('🗺️ MAP: Usando última posição salva:', lastPosition);
-              setMapCenter(lastPosition);
-            } else {
-              console.log('🗺️ MAP: Nenhuma posição salva - obtendo localização atual');
+            // Lógica normal - verificar se é usuário diferente
+            if (storedUserId && userId !== storedUserId) {
+              console.log('👤 MAP: Usuário diferente detectado - limpando posição anterior');
+              clearMapData();
+              localStorage.setItem(CURRENT_USER_KEY, userId);
+              
               try {
                 const currentLocation = await getCurrentLocation();
                 setMapCenter(currentLocation);
@@ -141,24 +143,58 @@ const Map: React.FC = () => {
                 console.warn("❌ MAP: Erro ao obter localização atual:", error);
                 setSearchError("Não foi possível obter sua localização");
               }
+            } else {
+              // Mesmo usuário - usar posição salva ou localização atual
+              localStorage.setItem(CURRENT_USER_KEY, userId);
+              const lastPosition = getLastMapPosition();
+              
+              if (lastPosition) {
+                console.log('🗺️ MAP: Usando última posição salva:', lastPosition);
+                setMapCenter(lastPosition);
+              } else {
+                console.log('🗺️ MAP: Nenhuma posição salva - obtendo localização atual');
+                try {
+                  const currentLocation = await getCurrentLocation();
+                  setMapCenter(currentLocation);
+                  saveMapPosition(currentLocation);
+                } catch (error) {
+                  console.warn("❌ MAP: Erro ao obter localização atual:", error);
+                  setSearchError("Não foi possível obter sua localização");
+                }
+              }
             }
           }
         } else {
-          // Sem usuário logado - usar posição salva ou localização atual
+          // Sem usuário logado
           console.log('🔓 MAP: Sem usuário logado');
-          const lastPosition = getLastMapPosition();
           
-          if (lastPosition) {
-            console.log('🗺️ MAP: Usando posição salva (usuário deslogado):', lastPosition);
-            setMapCenter(lastPosition);
-          } else {
-            console.log('🗺️ MAP: Obtendo localização atual (usuário deslogado)');
+          // Se estivermos forçando localização atual, obter localização atual
+          if (forceCurrentLocation) {
+            console.log('🗺️ MAP: Forçando localização atual (sem usuário)');
             try {
               const currentLocation = await getCurrentLocation();
               setMapCenter(currentLocation);
+              setForceCurrentLocation(false);
             } catch (error) {
               console.warn("❌ MAP: Erro ao obter localização:", error);
               setSearchError("Não foi possível obter sua localização");
+              setForceCurrentLocation(false);
+            }
+          } else {
+            const lastPosition = getLastMapPosition();
+            
+            if (lastPosition) {
+              console.log('🗺️ MAP: Usando posição salva (usuário deslogado):', lastPosition);
+              setMapCenter(lastPosition);
+            } else {
+              console.log('🗺️ MAP: Obtendo localização atual (usuário deslogado)');
+              try {
+                const currentLocation = await getCurrentLocation();
+                setMapCenter(currentLocation);
+              } catch (error) {
+                console.warn("❌ MAP: Erro ao obter localização:", error);
+                setSearchError("Não foi possível obter sua localização");
+              }
             }
           }
         }
@@ -171,7 +207,7 @@ const Map: React.FC = () => {
     };
 
     initializeMap();
-  }, []);
+  }, [forceCurrentLocation]);
 
   // Listener para mudanças de autenticação
   useEffect(() => {
@@ -180,17 +216,13 @@ const Map: React.FC = () => {
         console.log('🔐 MAP: Auth event:', event, 'User ID:', session?.user?.id);
         
         if (event === 'SIGNED_OUT') {
-          console.log('🔐 MAP: Usuário saiu - limpando dados do mapa');
+          console.log('🔐 MAP: Usuário saiu - limpando dados e forçando localização atual');
           clearMapData();
           setCurrentUser(null);
           
-          // Após logout, obter localização atual para próximo uso
-          try {
-            const currentLocation = await getCurrentLocation();
-            setMapCenter(currentLocation);
-          } catch (error) {
-            console.warn("❌ MAP: Erro ao obter localização após logout:", error);
-          }
+          // Definir flag para forçar localização atual na próxima inicialização
+          setForceCurrentLocation(true);
+          
         } else if (event === 'SIGNED_IN' && session?.user) {
           const newUserId = session.user.id;
           const storedUserId = localStorage.getItem(CURRENT_USER_KEY);
@@ -203,30 +235,11 @@ const Map: React.FC = () => {
           
           setCurrentUser(newUserId);
           
-          // Se é um usuário diferente
+          // Se é um usuário diferente, limpar dados
           if (storedUserId && storedUserId !== newUserId) {
             console.log('🔐 MAP: Novo usuário detectado - limpando posição anterior');
             clearMapData();
-            localStorage.setItem(CURRENT_USER_KEY, newUserId);
-            
-            // Para novo usuário, obter localização atual
-            try {
-              const currentLocation = await getCurrentLocation();
-              setMapCenter(currentLocation);
-              saveMapPosition(currentLocation);
-            } catch (error) {
-              console.warn("❌ MAP: Erro ao obter localização atual:", error);
-              setSearchError("Não foi possível obter sua localização");
-            }
-          } else {
-            // Mesmo usuário fazendo login novamente - manter posição se existir
-            localStorage.setItem(CURRENT_USER_KEY, newUserId);
-            const lastPosition = getLastMapPosition();
-            
-            if (lastPosition) {
-              console.log('🗺️ MAP: Mantendo posição salva para mesmo usuário:', lastPosition);
-              setMapCenter(lastPosition);
-            }
+            setForceCurrentLocation(true);
           }
         }
       }
@@ -385,7 +398,7 @@ const Map: React.FC = () => {
 
   // Função para salvar posição quando o usuário move o mapa manualmente
   const handleMapDrag = () => {
-    if (mapRef.current) {
+    if (mapRef.current && !forceCurrentLocation) {
       const center = mapRef.current.getCenter();
       if (center) {
         const newPosition = { lat: center.lat(), lng: center.lng() };
