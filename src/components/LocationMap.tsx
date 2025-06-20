@@ -1,7 +1,8 @@
+
 import React, { useEffect, useRef, useState } from "react";
 import { Loader2, X } from "lucide-react";
 import { GoogleMap, useJsApiLoader, Marker, OverlayView } from "@react-google-maps/api";
-import { GOOGLE_MAPS_API_KEY } from "@/config/app-config";
+import { getGoogleMapsApiKey } from "@/config/app-config";
 import OptimizedImage from "./OptimizedImage";
 
 interface Space {
@@ -65,6 +66,9 @@ const LocationMap = ({
   const [selectedSpace, setSelectedSpace] = useState<Space | null>(null);
   const [currentZoom, setCurrentZoom] = useState<number>(12);
   const [showPins, setShowPins] = useState<boolean>(true);
+  const [apiKey, setApiKey] = useState<string>('');
+  const [apiKeyLoading, setApiKeyLoading] = useState<boolean>(true);
+  const [apiKeyError, setApiKeyError] = useState<string | null>(null);
   const mapRef = useRef<google.maps.Map | null>(null);
   
   // Track the moved spaces to prevent duplicate movements
@@ -72,10 +76,28 @@ const LocationMap = ({
   // Track the offset positions for each space
   const [offsetPositions, setOffsetPositions] = useState<Record<string, {lat: number, lng: number}>>({});
   
+  // Load Google Maps API key on component mount
+  useEffect(() => {
+    const loadApiKey = async () => {
+      try {
+        const key = await getGoogleMapsApiKey();
+        setApiKey(key);
+        setApiKeyError(null);
+      } catch (error) {
+        console.error('Failed to load Google Maps API key:', error);
+        setApiKeyError('Failed to load map configuration');
+      } finally {
+        setApiKeyLoading(false);
+      }
+    };
+
+    loadApiKey();
+  }, []);
+  
   // Add the useJsApiLoader hook to load the Google Maps API
   const { isLoaded, loadError } = useJsApiLoader({
     id: 'google-map-script',
-    googleMapsApiKey: GOOGLE_MAPS_API_KEY,
+    googleMapsApiKey: apiKey,
     libraries
   });
 
@@ -176,13 +198,25 @@ const LocationMap = ({
     }
   };
 
+  if (apiKeyLoading) {
+    return (
+      <div className="absolute inset-0 flex items-center justify-center bg-gray-100 rounded-xl animate-pulse">
+        <div className="text-gray-600 font-medium">Carregando configuração do mapa...</div>
+      </div>
+    );
+  }
+
+  if (apiKeyError) {
+    return <div className="text-center text-red-500 p-4 bg-red-50 rounded-lg shadow">{apiKeyError}</div>;
+  }
+
   if (loadError) {
     return <div className="text-center text-red-500 p-4 bg-red-50 rounded-lg shadow">Erro ao carregar o mapa</div>;
   }
 
   return (
     <div className="relative w-full h-full rounded-xl overflow-hidden shadow-md">
-      {!isLoaded ? (
+      {!isLoaded || !apiKey ? (
         <div className="absolute inset-0 flex items-center justify-center bg-gray-100 rounded-xl animate-pulse">
           <div className="text-gray-600 font-medium">Carregando mapa...</div>
         </div>

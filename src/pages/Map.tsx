@@ -8,7 +8,7 @@ import { toast } from "sonner";
 import LocationMap from "@/components/LocationMap";
 import AddressAutoComplete from "@/components/AddressAutoComplete";
 import { supabase } from "@/integrations/supabase/client";
-import { GOOGLE_MAPS_API_KEY } from "@/config/app-config";
+import { getGoogleMapsApiKey } from "@/config/app-config";
 
 type Space = {
   id: string;
@@ -38,9 +38,28 @@ const Map: React.FC = () => {
   const [filteredSpaces, setFilteredSpaces] = useState<Space[]>([]);
   const [mapCenter, setMapCenter] = useState<{ lat: number; lng: number } | null>(null);
   const [searchError, setSearchError] = useState<string | null>(null);
+  const [apiKey, setApiKey] = useState<string>('');
+  const [apiKeyLoading, setApiKeyLoading] = useState<boolean>(true);
 
   const mapRef = useRef<google.maps.Map | null>(null);
   const navigate = useNavigate();
+
+  // Load Google Maps API key
+  useEffect(() => {
+    const loadApiKey = async () => {
+      try {
+        const key = await getGoogleMapsApiKey();
+        setApiKey(key);
+      } catch (error) {
+        console.error('Failed to load Google Maps API key:', error);
+        setSearchError('Erro ao carregar configuração do mapa');
+      } finally {
+        setApiKeyLoading(false);
+      }
+    };
+
+    loadApiKey();
+  }, []);
 
   // Função para obter localização atual do usuário
   const getCurrentLocation = (): Promise<{ lat: number; lng: number }> => {
@@ -153,8 +172,10 @@ const Map: React.FC = () => {
       }
     };
 
-    initializeMap();
-  }, []);
+    if (!apiKeyLoading) {
+      initializeMap();
+    }
+  }, [apiKeyLoading]);
 
   // Sempre que mapCenter muda, centraliza o mapa
   useEffect(() => {
@@ -313,8 +334,27 @@ const Map: React.FC = () => {
     navigate(`/event-space/${spaceId}`);
   };
 
+  if (apiKeyLoading) {
+    return (
+      <div className="container px-4 py-6 max-w-4xl mx-auto h-full flex items-center justify-center">
+        <Loader2 className="animate-spin h-8 w-8 text-iparty" />
+        <span className="ml-2">Carregando configuração do mapa...</span>
+      </div>
+    );
+  }
+
+  if (!apiKey) {
+    return (
+      <div className="container px-4 py-6 max-w-4xl mx-auto h-full">
+        <div className="mb-2 p-4 bg-red-100 text-red-700 rounded-md">
+          Erro ao carregar configuração do mapa. Tente recarregar a página.
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <Wrapper apiKey={GOOGLE_MAPS_API_KEY} libraries={["places"]}>
+    <Wrapper apiKey={apiKey} libraries={["places"]}>
       <div className="container px-4 py-6 max-w-4xl mx-auto h-full">
         <div className="mb-6">
           <AddressAutoComplete

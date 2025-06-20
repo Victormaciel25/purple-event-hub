@@ -1,3 +1,4 @@
+
 /**
  * Application-wide configuration constants
  * 
@@ -35,12 +36,27 @@ export const EDGE_FUNCTIONS = {
   GET_CHAT_BY_USERS_AND_SPACE: `${SUPABASE_CONFIG.URL}/functions/v1/get_chat_by_users_and_space`,
   GET_MERCADO_PAGO_PUBLIC_KEY: `${SUPABASE_CONFIG.URL}/functions/v1/get-mercado-pago-public-key`,
   GEOCODE_ADDRESS: `${SUPABASE_CONFIG.URL}/functions/v1/geocode-address`,
-  PLACES_AUTOCOMPLETE: `${SUPABASE_CONFIG.URL}/functions/v1/geocode-address`, // Reutilizamos a mesma função
-  PLACE_DETAILS: `${SUPABASE_CONFIG.URL}/functions/v1/geocode-address`, // Reutilizamos a mesma função
+  PLACES_AUTOCOMPLETE: `${SUPABASE_CONFIG.URL}/functions/v1/geocode-address`,
+  PLACE_DETAILS: `${SUPABASE_CONFIG.URL}/functions/v1/geocode-address`,
+  GET_GOOGLE_MAPS_KEY: `${SUPABASE_CONFIG.URL}/functions/v1/get-google-maps-key`,
 };
 
-// Google Maps API Key
-export const GOOGLE_MAPS_API_KEY = "AIzaSyA5P5mbDieTYIeczsRTS1TSxR005fDnScc";
+// Google Maps API Key - now retrieved from edge function
+export const getGoogleMapsApiKey = async (): Promise<string> => {
+  try {
+    const response = await fetch(EDGE_FUNCTIONS.GET_GOOGLE_MAPS_KEY);
+    const data = await response.json();
+    
+    if (!data.success) {
+      throw new Error(data.error || 'Failed to get Google Maps API key');
+    }
+    
+    return data.apiKey;
+  } catch (error) {
+    console.error('Error fetching Google Maps API key:', error);
+    throw new Error('Unable to load Google Maps API key');
+  }
+};
 
 // Storage buckets
 export const STORAGE = {
