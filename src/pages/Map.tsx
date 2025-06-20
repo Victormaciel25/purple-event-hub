@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from "react";
 import { Loader2 } from "lucide-react";
 import { Wrapper } from "@googlemaps/react-wrapper";
@@ -27,6 +28,8 @@ type GeocodingResult = {
   locationName: string;
 };
 
+const LAST_MAP_POSITION_KEY = 'last_map_position';
+
 const Map: React.FC = () => {
   const [spaces, setSpaces] = useState<Space[]>([]);
   const [loading, setLoading] = useState(true);
@@ -38,23 +41,53 @@ const Map: React.FC = () => {
   const mapRef = useRef<google.maps.Map | null>(null);
   const navigate = useNavigate();
 
+  // Função para salvar a posição atual do mapa
+  const saveMapPosition = (position: { lat: number; lng: number }) => {
+    sessionStorage.setItem(LAST_MAP_POSITION_KEY, JSON.stringify(position));
+  };
+
+  // Função para obter a última posição salva do mapa
+  const getLastMapPosition = (): { lat: number; lng: number } | null => {
+    try {
+      const saved = sessionStorage.getItem(LAST_MAP_POSITION_KEY);
+      return saved ? JSON.parse(saved) : null;
+    } catch {
+      return null;
+    }
+  };
+
   // 1) Pega localização atual do usuário no mount
   useEffect(() => {
-    if (!navigator.geolocation) {
-      setSearchError("Geolocalização não suportada neste navegador");
-      setLoading(false);
-      return;
-    }
-    navigator.geolocation.getCurrentPosition(
-      ({ coords }) => {
-        const userLoc = { lat: coords.latitude, lng: coords.longitude };
-        setMapCenter(userLoc);
-      },
-      (err) => {
-        console.warn("Erro ao obter localização:", err);
-        setSearchError("Não foi possível obter sua localização");
+    const initializeMap = async () => {
+      // Primeiro, tenta recuperar a última posição salva
+      const lastPosition = getLastMapPosition();
+      if (lastPosition) {
+        console.log('🗺️ MAP: Usando última posição salva:', lastPosition);
+        setMapCenter(lastPosition);
+        return;
       }
-    );
+
+      // Se não há posição salva, usa a localização atual
+      if (!navigator.geolocation) {
+        setSearchError("Geolocalização não suportada neste navegador");
+        setLoading(false);
+        return;
+      }
+
+      navigator.geolocation.getCurrentPosition(
+        ({ coords }) => {
+          const userLoc = { lat: coords.latitude, lng: coords.longitude };
+          console.log('📍 MAP: Localização atual obtida:', userLoc);
+          setMapCenter(userLoc);
+        },
+        (err) => {
+          console.warn("Erro ao obter localização:", err);
+          setSearchError("Não foi possível obter sua localização");
+        }
+      );
+    };
+
+    initializeMap();
   }, []);
 
   // 2) Sempre que mapCenter muda, centraliza o mapa
@@ -191,9 +224,18 @@ const Map: React.FC = () => {
 
   // Chamado pelo AddressAutoComplete
   const handleLocationSelected = (loc: GeocodingResult) => {
-    setMapCenter({ lat: loc.lat, lng: loc.lng });
+    const newPosition = { lat: loc.lat, lng: loc.lng };
+    setMapCenter(newPosition);
+    saveMapPosition(newPosition);
     setSearchError(null);
     toast.success("Localização encontrada!");
+  };
+
+  // Função para lidar com mudanças na posição do mapa
+  const handleMapPositionChange = (lat: number, lng: number) => {
+    const newPosition = { lat, lng };
+    setMapCenter(newPosition);
+    saveMapPosition(newPosition);
   };
 
   const handleSpaceClick = (spaceId: string) => {
@@ -232,6 +274,14 @@ const Map: React.FC = () => {
                   mapInstance.panTo(mapCenter);
                   mapInstance.setZoom(14);
                 }
+                
+                // Adicionar listener para mudanças na posição do mapa
+                mapInstance.addListener('center_changed', () => {
+                  const center = mapInstance.getCenter();
+                  if (center) {
+                    handleMapPositionChange(center.lat(), center.lng());
+                  }
+                });
               }}
               isLoading={false}
               keepPinsVisible={false}
