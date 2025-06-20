@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -36,7 +35,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
 import { useEventSpaceFavorites } from "../hooks/useEventSpaceFavorites";
-import { useSpacePhotos } from "../hooks/useSpacePhotos";
+import { useUserSpacePhotos } from "../hooks/useUserSpacePhotos";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Textarea } from "@/components/ui/textarea";
@@ -82,8 +81,8 @@ const EventSpaceDetails: React.FC = () => {
   const { isFavorite, toggleFavorite } = useEventSpaceFavorites();
   const { isAdmin } = useUserRoles();
   
-  // Usar o hook useSpacePhotos para buscar as fotos
-  const { photos, photoUrls, loading: photosLoading } = useSpacePhotos(id || null);
+  // Usar o hook useUserSpacePhotos para buscar as fotos (funciona para todos os usuários)
+  const { photos, photoUrls, loading: photosLoading } = useUserSpacePhotos(id || null);
 
   const [space, setSpace] = useState<SpaceDetails | null>(null);
   const [loading, setLoading] = useState(true);
@@ -107,12 +106,21 @@ const EventSpaceDetails: React.FC = () => {
   const fetchSpaceDetails = async (spaceId: string) => {
     try {
       setLoading(true);
+      console.log("🔍 SPACE_DETAILS: Buscando detalhes do espaço:", spaceId);
+      
       const { data: sd, error: se } = await supabase
         .from("spaces")
         .select("*")
         .eq("id", spaceId)
         .single();
-      if (se || !sd) throw se || new Error("Not found");
+      
+      if (se || !sd) {
+        console.error("❌ SPACE_DETAILS: Erro ao buscar espaço:", se);
+        throw se || new Error("Not found");
+      }
+      
+      console.log("✅ SPACE_DETAILS: Espaço encontrado:", sd.name);
+      
       if (sd.user_id) {
         const { data: pd } = await supabase
           .from("profiles")
@@ -130,7 +138,7 @@ const EventSpaceDetails: React.FC = () => {
       
       setSpace(sd);
     } catch (err) {
-      console.error(err);
+      console.error("❌ SPACE_DETAILS: Erro ao carregar detalhes:", err);
       toast.error("Erro ao carregar detalhes");
       navigate("/explore");
     } finally {
@@ -281,9 +289,15 @@ const EventSpaceDetails: React.FC = () => {
   };
 
   // Determinar quais imagens exibir
+  console.log("🖼️ SPACE_DETAILS: Estado das fotos:", {
+    photosLoading,
+    photoUrlsLength: photoUrls?.length || 0,
+    photoUrls: photoUrls?.slice(0, 2) // Log apenas as primeiras 2 URLs para debug
+  });
+
   const displayImages = photoUrls && photoUrls.length > 0 
     ? photoUrls 
-    : ["https://source.unsplash.com/random/600x400?event"];
+    : ["https://images.unsplash.com/photo-1566681855366-282a74153321?q=80&w=600&auto=format&fit=crop"];
 
   if (loading || !space) {
     return (
