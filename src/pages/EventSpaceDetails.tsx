@@ -18,7 +18,8 @@ import {
   Trash2,
   MoreVertical,
   Share,
-  Flag
+  Flag,
+  MapPin
 } from "lucide-react";
 import {
   Carousel,
@@ -410,6 +411,43 @@ const EventSpaceDetails: React.FC = () => {
             <h3 className="text-lg font-semibold mb-2">Sobre o espaço</h3>
             <p className="text-muted-foreground">{space.description}</p>
           </div>
+
+          {/* location map section */}
+          {space.latitude && space.longitude ? (
+            <div className="mb-6">
+              <h3 className="text-lg font-semibold mb-2 flex items-center">
+                <MapPin className="mr-2" size={20} />
+                Localização
+              </h3>
+              <div className="h-[200px] bg-gray-100 rounded-lg overflow-hidden border">
+                <iframe
+                  width="100%"
+                  height="100%"
+                  frameBorder="0"
+                  src={`https://www.google.com/maps/embed/v1/place?key=AIzaSyDmquKmV6OtKkJCG2eEe4NIPE8MzcrkUyw&q=${space.latitude},${space.longitude}&zoom=15`}
+                  allowFullScreen
+                  title={`Localização de ${space.name}`}
+                ></iframe>
+              </div>
+              <p className="text-xs text-gray-500 mt-2">
+                📍 {space.address}, {space.number} - {space.state}
+              </p>
+            </div>
+          ) : (
+            <div className="mb-6">
+              <h3 className="text-lg font-semibold mb-2 flex items-center">
+                <MapPin className="mr-2" size={20} />
+                Localização
+              </h3>
+              <div className="h-[120px] bg-gray-50 rounded-lg border border-dashed border-gray-300 flex flex-col items-center justify-center">
+                <MapPin size={32} className="text-gray-300 mb-2" />
+                <p className="text-gray-500 text-sm">Localização não definida no mapa</p>
+                <p className="text-xs text-gray-400 mt-1">
+                  📍 {space.address}, {space.number} - {space.state}
+                </p>
+              </div>
+            </div>
+          )}
 
           {/* amenities */}
           <div className="mb-8">
