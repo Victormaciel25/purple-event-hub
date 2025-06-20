@@ -80,11 +80,13 @@ const LocationMap = ({
   useEffect(() => {
     const loadApiKey = async () => {
       try {
+        console.log('🔑 LOCATIONMAP: Loading Google Maps API key...');
         const key = await getGoogleMapsApiKey();
+        console.log('✅ LOCATIONMAP: API key loaded successfully');
         setApiKey(key);
         setApiKeyError(null);
       } catch (error) {
-        console.error('Failed to load Google Maps API key:', error);
+        console.error('❌ LOCATIONMAP: Failed to load Google Maps API key:', error);
         setApiKeyError('Failed to load map configuration');
       } finally {
         setApiKeyLoading(false);
@@ -94,7 +96,7 @@ const LocationMap = ({
     loadApiKey();
   }, []);
   
-  // Add the useJsApiLoader hook to load the Google Maps API
+  // Only call useJsApiLoader when we have an API key
   const { isLoaded, loadError } = useJsApiLoader({
     id: 'google-map-script',
     googleMapsApiKey: apiKey,
@@ -198,6 +200,7 @@ const LocationMap = ({
     }
   };
 
+  // Show loading while API key is being fetched
   if (apiKeyLoading) {
     return (
       <div className="absolute inset-0 flex items-center justify-center bg-gray-100 rounded-xl animate-pulse">
@@ -206,143 +209,148 @@ const LocationMap = ({
     );
   }
 
+  // Show error if API key failed to load
   if (apiKeyError) {
     return <div className="text-center text-red-500 p-4 bg-red-50 rounded-lg shadow">{apiKeyError}</div>;
   }
 
+  // Show error if Google Maps failed to load
   if (loadError) {
     return <div className="text-center text-red-500 p-4 bg-red-50 rounded-lg shadow">Erro ao carregar o mapa</div>;
   }
 
+  // Don't render the map until we have both API key and Google Maps is loaded
+  if (!apiKey || !isLoaded) {
+    return (
+      <div className="absolute inset-0 flex items-center justify-center bg-gray-100 rounded-xl animate-pulse">
+        <div className="text-gray-600 font-medium">Carregando mapa...</div>
+      </div>
+    );
+  }
+
   return (
     <div className="relative w-full h-full rounded-xl overflow-hidden shadow-md">
-      {!isLoaded || !apiKey ? (
-        <div className="absolute inset-0 flex items-center justify-center bg-gray-100 rounded-xl animate-pulse">
-          <div className="text-gray-600 font-medium">Carregando mapa...</div>
-        </div>
-      ) : (
-        <GoogleMap
-          mapContainerStyle={mapContainerStyle}
-          center={position || defaultCenter}
-          zoom={15}
-          onClick={handleMapClick}
-          options={{
-            fullscreenControl: false,
-            streetViewControl: false,
-            mapTypeControl: false,
-            zoomControl: true,
-            styles: hidePOIsStyle,
-            gestureHandling: 'greedy'
-          }}
-          onLoad={handleMapLoad}
-        >
-          {/* Espaços */}
-          {showPins && spaces.map(space => (
-            <Marker
-              key={space.id}
-              position={{ lat: space.latitude, lng: space.longitude }}
-              onClick={() => handleMarkerClick(space)}
-              animation={google.maps.Animation.DROP}
-              icon={{
-                url: `data:image/svg+xml;utf8,${encodeURIComponent(
-                  '<svg xmlns="http://www.w3.org/2000/svg" width="40" height="46" viewBox="0 0 24 24" fill="#9b87f5" stroke="#6e61b8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"></path><circle cx="12" cy="10" r="3" fill="white"></circle></svg>'
-                )}`,
-                scaledSize: new google.maps.Size(40, 46),
-                anchor: new google.maps.Point(20, 46),
+      <GoogleMap
+        mapContainerStyle={mapContainerStyle}
+        center={position || defaultCenter}
+        zoom={15}
+        onClick={handleMapClick}
+        options={{
+          fullscreenControl: false,
+          streetViewControl: false,
+          mapTypeControl: false,
+          zoomControl: true,
+          styles: hidePOIsStyle,
+          gestureHandling: 'greedy'
+        }}
+        onLoad={handleMapLoad}
+      >
+        {/* Espaços */}
+        {showPins && spaces.map(space => (
+          <Marker
+            key={space.id}
+            position={{ lat: space.latitude, lng: space.longitude }}
+            onClick={() => handleMarkerClick(space)}
+            animation={google.maps.Animation.DROP}
+            icon={{
+              url: `data:image/svg+xml;utf8,${encodeURIComponent(
+                '<svg xmlns="http://www.w3.org/2000/svg" width="40" height="46" viewBox="0 0 24 24" fill="#9b87f5" stroke="#6e61b8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"></path><circle cx="12" cy="10" r="3" fill="white"></circle></svg>'
+              )}`,
+              scaledSize: new google.maps.Size(40, 46),
+              anchor: new google.maps.Point(20, 46),
+            }}
+          />
+        ))}
+
+        {selectedSpace && (
+          <OverlayView
+            position={{ lat: selectedSpace.latitude, lng: selectedSpace.longitude }}
+            mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}
+          >
+            <div 
+              className="cursor-pointer overflow-hidden rounded-2xl shadow-2xl bg-white transition-all duration-300 hover:shadow-3xl border border-gray-100 backdrop-blur-sm"
+              onClick={handleSpaceClick}
+              style={{ 
+                width: 300, 
+                transform: 'translate(-50%, -100%) translateY(-15px)',
+                boxShadow: '0 20px 60px -12px rgba(0, 0, 0, 0.25), 0 8px 25px -8px rgba(0, 0, 0, 0.1)'
               }}
-            />
-          ))}
-
-          {selectedSpace && (
-            <OverlayView
-              position={{ lat: selectedSpace.latitude, lng: selectedSpace.longitude }}
-              mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}
             >
-              <div 
-                className="cursor-pointer overflow-hidden rounded-2xl shadow-2xl bg-white transition-all duration-300 hover:shadow-3xl border border-gray-100 backdrop-blur-sm"
-                onClick={handleSpaceClick}
-                style={{ 
-                  width: 300, 
-                  transform: 'translate(-50%, -100%) translateY(-15px)',
-                  boxShadow: '0 20px 60px -12px rgba(0, 0, 0, 0.25), 0 8px 25px -8px rgba(0, 0, 0, 0.1)'
-                }}
-              >
-                <div className="flex justify-between items-center px-5 py-4 border-b border-gray-50 bg-gradient-to-r from-white to-gray-50/50">
-                  <h3 className="font-bold text-lg text-gray-900 truncate pr-3 leading-tight">
-                    {selectedSpace.name}
-                  </h3>
-                  <button 
-                    onClick={(e) => { 
-                      e.stopPropagation(); 
-                      handleInfoWindowClose(); 
-                    }} 
-                    className="text-gray-400 hover:text-gray-700 transition-all duration-200 p-2 rounded-full hover:bg-gray-100 flex-shrink-0 group"
-                    aria-label="Fechar"
-                  >
-                    <X size={20} className="group-hover:rotate-90 transition-transform duration-200" />
-                  </button>
+              <div className="flex justify-between items-center px-5 py-4 border-b border-gray-50 bg-gradient-to-r from-white to-gray-50/50">
+                <h3 className="font-bold text-lg text-gray-900 truncate pr-3 leading-tight">
+                  {selectedSpace.name}
+                </h3>
+                <button 
+                  onClick={(e) => { 
+                    e.stopPropagation(); 
+                    handleInfoWindowClose(); 
+                  }} 
+                  className="text-gray-400 hover:text-gray-700 transition-all duration-200 p-2 rounded-full hover:bg-gray-100 flex-shrink-0 group"
+                  aria-label="Fechar"
+                >
+                  <X size={20} className="group-hover:rotate-90 transition-transform duration-200" />
+                </button>
+              </div>
+
+              {selectedSpace.imageUrl && (
+                <div className="h-48 overflow-hidden bg-gradient-to-br from-gray-50 to-gray-100 relative">
+                  <OptimizedImage 
+                    src={selectedSpace.imageUrl} 
+                    alt={selectedSpace.name} 
+                    className="w-full h-full transform hover:scale-105 transition-transform duration-500"
+                    loadingClassName="animate-pulse bg-gradient-to-br from-gray-200 to-gray-300 h-full w-full"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/10 to-transparent pointer-events-none" />
                 </div>
+              )}
 
-                {selectedSpace.imageUrl && (
-                  <div className="h-48 overflow-hidden bg-gradient-to-br from-gray-50 to-gray-100 relative">
-                    <OptimizedImage 
-                      src={selectedSpace.imageUrl} 
-                      alt={selectedSpace.name} 
-                      className="w-full h-full transform hover:scale-105 transition-transform duration-500"
-                      loadingClassName="animate-pulse bg-gradient-to-br from-gray-200 to-gray-300 h-full w-full"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/10 to-transparent pointer-events-none" />
-                  </div>
-                )}
-
-                <div className="p-5 bg-gradient-to-b from-white to-gray-50/30">
-                  <div className="space-y-3">
-                    <p className="text-sm text-gray-600 line-clamp-2 leading-relaxed">
-                      {selectedSpace.address}, {selectedSpace.number} - {selectedSpace.state}
+              <div className="p-5 bg-gradient-to-b from-white to-gray-50/30">
+                <div className="space-y-3">
+                  <p className="text-sm text-gray-600 line-clamp-2 leading-relaxed">
+                    {selectedSpace.address}, {selectedSpace.number} - {selectedSpace.state}
+                  </p>
+                  {selectedSpace.zipCode && (
+                    <p className="text-sm text-gray-500 font-medium">
+                      CEP: {selectedSpace.zipCode}
                     </p>
-                    {selectedSpace.zipCode && (
-                      <p className="text-sm text-gray-500 font-medium">
-                        CEP: {selectedSpace.zipCode}
-                      </p>
-                    )}
-                  </div>
-                  
-                  <div className="mt-4 flex justify-end">
-                    <div className="group flex items-center gap-2 bg-gradient-to-r from-iparty/10 to-iparty/5 text-iparty px-4 py-2.5 rounded-xl font-semibold text-sm hover:from-iparty/20 hover:to-iparty/10 transition-all duration-300 shadow-sm hover:shadow-md border border-iparty/20">
-                      <span>Ver detalhes</span>
-                      <span className="group-hover:translate-x-1 transition-transform duration-200">→</span>
-                    </div>
+                  )}
+                </div>
+                
+                <div className="mt-4 flex justify-end">
+                  <div className="group flex items-center gap-2 bg-gradient-to-r from-iparty/10 to-iparty/5 text-iparty px-4 py-2.5 rounded-xl font-semibold text-sm hover:from-iparty/20 hover:to-iparty/10 transition-all duration-300 shadow-sm hover:shadow-md border border-iparty/20">
+                    <span>Ver detalhes</span>
+                    <span className="group-hover:translate-x-1 transition-transform duration-200">→</span>
                   </div>
                 </div>
               </div>
-            </OverlayView>
-          )}
+            </div>
+          </OverlayView>
+        )}
 
-          {/* Marcador da posição manual */}
-          {position && !viewOnly && (
-            <Marker
-              position={position}
-              draggable={!viewOnly}
-              onDragEnd={(e) => {
-                const lat = e.latLng?.lat();
-                const lng = e.latLng?.lng();
-                if (lat && lng) {
-                  setPosition({ lat, lng });
-                  onLocationSelected?.(lat, lng);
-                }
-              }}
-              icon={{
-                path: google.maps.SymbolPath.CIRCLE,
-                scale: 8,
-                fillColor: "#FF4136",
-                fillOpacity: 1,
-                strokeWeight: 2,
-                strokeColor: "#FFFFFF",
-              }}
-            />
-          )}
-        </GoogleMap>
-      )}
+        {/* Marcador da posição manual */}
+        {position && !viewOnly && (
+          <Marker
+            position={position}
+            draggable={!viewOnly}
+            onDragEnd={(e) => {
+              const lat = e.latLng?.lat();
+              const lng = e.latLng?.lng();
+              if (lat && lng) {
+                setPosition({ lat, lng });
+                onLocationSelected?.(lat, lng);
+              }
+            }}
+            icon={{
+              path: google.maps.SymbolPath.CIRCLE,
+              scale: 8,
+              fillColor: "#FF4136",
+              fillOpacity: 1,
+              strokeWeight: 2,
+              strokeColor: "#FFFFFF",
+            }}
+          />
+        )}
+      </GoogleMap>
 
       {isLoading && (
         <div className="absolute inset-0 bg-white/90 backdrop-blur-sm flex flex-col items-center justify-center gap-2">
