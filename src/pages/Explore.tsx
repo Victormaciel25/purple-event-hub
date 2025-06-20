@@ -2,7 +2,7 @@
 import React, { useState } from "react";
 import PromotedSpaceCard from "@/components/PromotedSpaceCard";
 import { Input } from "@/components/ui/input";
-import { Search, Circle, Heart, Briefcase, Cake, GraduationCap, MapPin } from "lucide-react";
+import { Search, Circle, Heart, Briefcase, Cake, GraduationCap } from "lucide-react";
 import { toast } from "sonner";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { SPACE_CATEGORIES } from "@/config/app-config";
@@ -131,13 +131,6 @@ const Explore = () => {
           onChange={(e) => setSearchTerm(e.target.value)}
         />
       </div>
-
-      {userLocation && (
-        <div className="mb-4 flex items-center text-sm text-muted-foreground bg-blue-50 p-3 rounded-lg">
-          <MapPin size={16} className="mr-2 text-blue-600" />
-          <span>Espaços ordenados por proximidade da sua localização</span>
-        </div>
-      )}
 
       <div className="mb-4">
         <div className="overflow-x-auto scrollbar-hide">

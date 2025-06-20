@@ -36,6 +36,16 @@ const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: numbe
   return R * c;
 };
 
+// Função para embaralhar array
+const shuffleArray = <T>(array: T[]): T[] => {
+  const shuffled = [...array];
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+  return shuffled;
+};
+
 export const usePromotedSpaces = () => {
   const [spaces, setSpaces] = useState<PromotedSpace[]>([]);
   const [loading, setLoading] = useState(true);
@@ -194,26 +204,41 @@ export const usePromotedSpaces = () => {
         })
       );
 
-      // Ordenar espaços: primeiro por promoção, depois por proximidade
-      const sortedSpaces = processedSpaces.sort((a, b) => {
-        // Primeiro critério: espaços promovidos vêm primeiro
-        if (a.isPromoted && !b.isPromoted) return -1;
-        if (!a.isPromoted && b.isPromoted) return 1;
-        
-        // Segundo critério: ordenar por proximidade
-        if (a.distanceKm === undefined && b.distanceKm === undefined) return 0;
-        if (a.distanceKm === undefined) return 1;
-        if (b.distanceKm === undefined) return -1;
-        return a.distanceKm - b.distanceKm;
-      });
-
-      console.log("Espaços processados e ordenados por proximidade:", sortedSpaces.length);
+      // Ordenar espaços
+      let sortedSpaces: PromotedSpace[];
+      
       if (location) {
+        // Se temos localização, ordenar por promoção e proximidade
+        sortedSpaces = processedSpaces.sort((a, b) => {
+          // Primeiro critério: espaços promovidos vêm primeiro
+          if (a.isPromoted && !b.isPromoted) return -1;
+          if (!a.isPromoted && b.isPromoted) return 1;
+          
+          // Segundo critério: ordenar por proximidade
+          if (a.distanceKm === undefined && b.distanceKm === undefined) return 0;
+          if (a.distanceKm === undefined) return 1;
+          if (b.distanceKm === undefined) return -1;
+          return a.distanceKm - b.distanceKm;
+        });
+
+        console.log("Espaços processados e ordenados por proximidade:", sortedSpaces.length);
         console.log("Espaços próximos (primeiros 3):", sortedSpaces.slice(0, 3).map(s => ({ 
           name: s.name, 
           distance: s.distanceKm ? `${s.distanceKm.toFixed(1)}km` : 'N/A',
           isPromoted: s.isPromoted 
         })));
+      } else {
+        // Se não temos localização, ordenar espaços promovidos primeiro, depois aleatório
+        const promotedSpaces = processedSpaces.filter(space => space.isPromoted);
+        const regularSpaces = processedSpaces.filter(space => !space.isPromoted);
+        
+        sortedSpaces = [
+          ...promotedSpaces, // Espaços promovidos primeiro
+          ...shuffleArray(regularSpaces) // Espaços regulares em ordem aleatória
+        ];
+
+        console.log("Espaços processados em ordem aleatória (sem localização):", sortedSpaces.length);
+        console.log("Espaços promovidos:", promotedSpaces.length);
       }
 
       setSpaces(sortedSpaces);
