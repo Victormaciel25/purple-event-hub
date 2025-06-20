@@ -50,6 +50,8 @@ export const getGoogleMapsApiKey = async (): Promise<string> => {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
+        'Authorization': `Bearer ${SUPABASE_CONFIG.PUBLIC_KEY}`,
+        'apikey': SUPABASE_CONFIG.PUBLIC_KEY,
       },
     });
     
