@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from "react";
 import { Loader2 } from "lucide-react";
 import { Wrapper } from "@googlemaps/react-wrapper";
@@ -29,7 +28,8 @@ type GeocodingResult = {
 };
 
 const LAST_MAP_POSITION_KEY = 'last_map_position';
-const APP_SESSION_KEY = 'app_session_active';
+const APP_SESSION_TIMESTAMP_KEY = 'app_session_timestamp';
+const SESSION_TIMEOUT = 30 * 60 * 1000; // 30 minutos em milliseconds
 
 const Map: React.FC = () => {
   const [spaces, setSpaces] = useState<Space[]>([]);
@@ -42,14 +42,18 @@ const Map: React.FC = () => {
   const mapRef = useRef<google.maps.Map | null>(null);
   const navigate = useNavigate();
 
-  // Função para marcar que a sessão está ativa
-  const markSessionActive = () => {
-    sessionStorage.setItem(APP_SESSION_KEY, 'true');
+  // Função para verificar se é uma nova sessão (baseada em tempo)
+  const isNewSession = (): boolean => {
+    const lastTimestamp = localStorage.getItem(APP_SESSION_TIMESTAMP_KEY);
+    if (!lastTimestamp) return true;
+    
+    const timeDiff = Date.now() - parseInt(lastTimestamp);
+    return timeDiff > SESSION_TIMEOUT;
   };
 
-  // Função para verificar se é uma sessão contínua
-  const isSessionActive = (): boolean => {
-    return sessionStorage.getItem(APP_SESSION_KEY) === 'true';
+  // Função para marcar timestamp da sessão atual
+  const updateSessionTimestamp = () => {
+    localStorage.setItem(APP_SESSION_TIMESTAMP_KEY, Date.now().toString());
   };
 
   // Função para salvar a posição atual do mapa
@@ -67,24 +71,24 @@ const Map: React.FC = () => {
     }
   };
 
-  // Inicialização do mapa com prioridade para posição salva apenas em sessão ativa
+  // Inicialização do mapa
   useEffect(() => {
     const initializeMap = async () => {
-      // Marcar sessão como ativa
-      markSessionActive();
+      // Atualizar timestamp da sessão
+      updateSessionTimestamp();
 
-      // Só usa posição salva se for uma sessão contínua
-      if (isSessionActive()) {
+      // Se não é uma nova sessão, tenta usar a última posição salva
+      if (!isNewSession()) {
         const lastPosition = getLastMapPosition();
         if (lastPosition) {
-          console.log('🗺️ MAP: Sessão ativa - usando última posição salva:', lastPosition);
+          console.log('🗺️ MAP: Sessão contínua - usando última posição salva:', lastPosition);
           setMapCenter(lastPosition);
           setLoading(false);
           return;
         }
       }
 
-      // Sempre obter localização atual para nova sessão ou se não há posição salva
+      // Nova sessão ou sem posição salva - obter localização atual
       console.log('🗺️ MAP: Nova sessão - obtendo localização atual...');
       
       if (!navigator.geolocation) {
