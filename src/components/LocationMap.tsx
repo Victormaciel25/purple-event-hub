@@ -96,11 +96,13 @@ const LocationMap = ({
     loadApiKey();
   }, []);
   
-  // Only call useJsApiLoader when we have an API key
+  // Only call useJsApiLoader when we have an API key - this prevents the dual initialization error
   const { isLoaded, loadError } = useJsApiLoader({
     id: 'google-map-script',
-    googleMapsApiKey: apiKey,
-    libraries
+    googleMapsApiKey: apiKey || 'dummy-key', // Use dummy key to prevent empty string
+    libraries,
+    // Only actually load when we have a real API key
+    preventGoogleFontsLoading: !apiKey,
   });
 
   // Changed the condition to hide pins when zoom is less than threshold
