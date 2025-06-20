@@ -1,5 +1,4 @@
 
-
 import React, { useState, useEffect, useRef } from "react";
 import { Loader2 } from "lucide-react";
 import { Wrapper } from "@googlemaps/react-wrapper";
@@ -30,7 +29,7 @@ type GeocodingResult = {
 };
 
 const LAST_MAP_POSITION_KEY = 'last_map_position';
-const LAST_USER_ID_KEY = 'last_user_id';
+const CURRENT_USER_KEY = 'current_map_user';
 
 const Map: React.FC = () => {
   const [spaces, setSpaces] = useState<Space[]>([]);
@@ -39,31 +38,16 @@ const Map: React.FC = () => {
   const [filteredSpaces, setFilteredSpaces] = useState<Space[]>([]);
   const [mapCenter, setMapCenter] = useState<{ lat: number; lng: number } | null>(null);
   const [searchError, setSearchError] = useState<string | null>(null);
+  const [currentUser, setCurrentUser] = useState<string | null>(null);
 
   const mapRef = useRef<google.maps.Map | null>(null);
   const navigate = useNavigate();
 
-  // Função para verificar se é uma nova sessão (baseada no usuário)
-  const isNewSession = async (): Promise<boolean> => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return true;
-    
-    const lastUserId = localStorage.getItem(LAST_USER_ID_KEY);
-    return lastUserId !== user.id;
-  };
-
-  // Função para marcar a sessão atual
-  const updateSessionUser = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (user) {
-      localStorage.setItem(LAST_USER_ID_KEY, user.id);
-    }
-  };
-
-  // Função para limpar dados da sessão anterior
-  const clearPreviousSession = () => {
+  // Função para limpar dados do mapa
+  const clearMapData = () => {
     localStorage.removeItem(LAST_MAP_POSITION_KEY);
-    console.log('🗺️ MAP: Dados da sessão anterior limpos');
+    localStorage.removeItem(CURRENT_USER_KEY);
+    console.log('🗺️ MAP: Dados do mapa limpos');
   };
 
   // Função para salvar a posição atual do mapa
@@ -81,75 +65,110 @@ const Map: React.FC = () => {
     }
   };
 
-  // Inicialização do mapa
+  // Função para obter localização atual do usuário
+  const getCurrentLocation = (): Promise<{ lat: number; lng: number }> => {
+    return new Promise((resolve, reject) => {
+      if (!navigator.geolocation) {
+        reject(new Error("Geolocalização não suportada"));
+        return;
+      }
+
+      navigator.geolocation.getCurrentPosition(
+        ({ coords }) => {
+          const userLoc = { lat: coords.latitude, lng: coords.longitude };
+          console.log('📍 MAP: Localização atual obtida:', userLoc);
+          resolve(userLoc);
+        },
+        (err) => {
+          console.warn("❌ MAP: Erro ao obter localização:", err);
+          reject(err);
+        }
+      );
+    });
+  };
+
+  // Listener para mudanças de autenticação
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        console.log('🔐 MAP: Auth event:', event, 'User ID:', session?.user?.id);
+        
+        if (event === 'SIGNED_OUT') {
+          console.log('🔐 MAP: Usuário saiu - limpando dados do mapa');
+          clearMapData();
+          setCurrentUser(null);
+          setMapCenter(null);
+        } else if (event === 'SIGNED_IN' && session?.user) {
+          const newUserId = session.user.id;
+          const storedUserId = localStorage.getItem(CURRENT_USER_KEY);
+          
+          console.log('🔐 MAP: Usuário logou:', {
+            newUserId,
+            storedUserId,
+            isDifferentUser: storedUserId !== newUserId
+          });
+          
+          // Se é um usuário diferente ou primeiro login
+          if (storedUserId !== newUserId) {
+            console.log('🔐 MAP: Novo usuário detectado - limpando posição anterior');
+            clearMapData();
+            localStorage.setItem(CURRENT_USER_KEY, newUserId);
+            setCurrentUser(newUserId);
+            
+            // Forçar obter localização atual
+            try {
+              const currentLocation = await getCurrentLocation();
+              setMapCenter(currentLocation);
+              saveMapPosition(currentLocation);
+            } catch (error) {
+              console.warn("❌ MAP: Erro ao obter localização atual:", error);
+              setSearchError("Não foi possível obter sua localização");
+            }
+          } else {
+            // Mesmo usuário - pode usar posição salva ou localização atual
+            setCurrentUser(newUserId);
+            const lastPosition = getLastMapPosition();
+            
+            if (lastPosition) {
+              console.log('🗺️ MAP: Usando última posição salva:', lastPosition);
+              setMapCenter(lastPosition);
+            } else {
+              console.log('🗺️ MAP: Nenhuma posição salva - obtendo localização atual');
+              try {
+                const currentLocation = await getCurrentLocation();
+                setMapCenter(currentLocation);
+                saveMapPosition(currentLocation);
+              } catch (error) {
+                console.warn("❌ MAP: Erro ao obter localização atual:", error);
+                setSearchError("Não foi possível obter sua localização");
+              }
+            }
+          }
+        }
+        
+        setLoading(false);
+      }
+    );
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  // Inicialização do mapa (para casos onde não há auth)
   useEffect(() => {
     const initializeMap = async () => {
-      // Verificar se é uma nova sessão (novo usuário)
-      const isNew = await isNewSession();
+      const { data: { session } } = await supabase.auth.getSession();
       
-      if (isNew) {
-        console.log('🗺️ MAP: Nova sessão detectada - limpando dados anteriores');
-        clearPreviousSession();
-        await updateSessionUser();
-        
-        // Forçar obtenção da localização atual para nova sessão
-        console.log('🗺️ MAP: Nova sessão - obtendo localização atual do usuário...');
-        
-        if (!navigator.geolocation) {
-          console.warn('🗺️ MAP: Geolocalização não suportada');
-          setSearchError("Geolocalização não suportada neste navegador");
+      if (!session) {
+        console.log('🗺️ MAP: Sem sessão - obtendo localização atual');
+        try {
+          const currentLocation = await getCurrentLocation();
+          setMapCenter(currentLocation);
           setLoading(false);
-          return;
-        }
-
-        navigator.geolocation.getCurrentPosition(
-          ({ coords }) => {
-            const userLoc = { lat: coords.latitude, lng: coords.longitude };
-            console.log('📍 MAP: Localização atual obtida para nova sessão:', userLoc);
-            setMapCenter(userLoc);
-            saveMapPosition(userLoc); // Salva a posição inicial
-            setLoading(false);
-          },
-          (err) => {
-            console.warn("❌ MAP: Erro ao obter localização:", err);
-            setSearchError("Não foi possível obter sua localização");
-            setLoading(false);
-          }
-        );
-      } else {
-        // Sessão contínua - tenta usar a última posição salva
-        const lastPosition = getLastMapPosition();
-        if (lastPosition) {
-          console.log('🗺️ MAP: Sessão contínua - usando última posição salva:', lastPosition);
-          setMapCenter(lastPosition);
+        } catch (error) {
+          console.warn("❌ MAP: Erro ao obter localização:", error);
+          setSearchError("Não foi possível obter sua localização");
           setLoading(false);
-          return;
         }
-
-        // Sessão contínua mas sem posição salva - obter localização atual
-        console.log('🗺️ MAP: Sessão contínua sem posição salva - obtendo localização atual...');
-        
-        if (!navigator.geolocation) {
-          console.warn('🗺️ MAP: Geolocalização não suportada');
-          setSearchError("Geolocalização não suportada neste navegador");
-          setLoading(false);
-          return;
-        }
-
-        navigator.geolocation.getCurrentPosition(
-          ({ coords }) => {
-            const userLoc = { lat: coords.latitude, lng: coords.longitude };
-            console.log('📍 MAP: Localização atual obtida:', userLoc);
-            setMapCenter(userLoc);
-            saveMapPosition(userLoc); // Salva a posição inicial
-            setLoading(false);
-          },
-          (err) => {
-            console.warn("❌ MAP: Erro ao obter localização:", err);
-            setSearchError("Não foi possível obter sua localização");
-            setLoading(false);
-          }
-        );
       }
     };
 
@@ -271,11 +290,6 @@ const Map: React.FC = () => {
       setLoading(false);
     }
   };
-
-  // Carrega espaços do Supabase
-  useEffect(() => {
-    fetchSpaces();
-  }, []);
 
   // Filtra os espaços quando searchValue muda
   useEffect(() => {
