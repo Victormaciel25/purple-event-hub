@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from "react";
 import { Loader2 } from "lucide-react";
 import { Wrapper } from "@googlemaps/react-wrapper";
@@ -55,7 +56,7 @@ const Map: React.FC = () => {
     }
   };
 
-  // 1) Pega localização atual do usuário no mount
+  // Inicialização do mapa com prioridade para posição salva
   useEffect(() => {
     const initializeMap = async () => {
       // Primeiro, tenta recuperar a última posição salva
@@ -63,11 +64,15 @@ const Map: React.FC = () => {
       if (lastPosition) {
         console.log('🗺️ MAP: Usando última posição salva:', lastPosition);
         setMapCenter(lastPosition);
+        setLoading(false);
         return;
       }
 
       // Se não há posição salva, usa a localização atual
+      console.log('🗺️ MAP: Nenhuma posição salva encontrada, obtendo localização atual...');
+      
       if (!navigator.geolocation) {
+        console.warn('🗺️ MAP: Geolocalização não suportada');
         setSearchError("Geolocalização não suportada neste navegador");
         setLoading(false);
         return;
@@ -78,10 +83,13 @@ const Map: React.FC = () => {
           const userLoc = { lat: coords.latitude, lng: coords.longitude };
           console.log('📍 MAP: Localização atual obtida:', userLoc);
           setMapCenter(userLoc);
+          saveMapPosition(userLoc); // Salva a posição inicial
+          setLoading(false);
         },
         (err) => {
-          console.warn("Erro ao obter localização:", err);
+          console.warn("❌ MAP: Erro ao obter localização:", err);
           setSearchError("Não foi possível obter sua localização");
+          setLoading(false);
         }
       );
     };
@@ -89,7 +97,7 @@ const Map: React.FC = () => {
     initializeMap();
   }, []);
 
-  // 2) Sempre que mapCenter muda, centraliza o mapa
+  // Sempre que mapCenter muda, centraliza o mapa
   useEffect(() => {
     if (mapRef.current && mapCenter) {
       mapRef.current.panTo(mapCenter);
@@ -230,11 +238,22 @@ const Map: React.FC = () => {
     toast.success("Localização encontrada!");
   };
 
-  // Função para lidar com mudanças na posição do mapa
+  // Função para lidar com mudanças manuais na posição do mapa
   const handleMapPositionChange = (lat: number, lng: number) => {
     const newPosition = { lat, lng };
     setMapCenter(newPosition);
     saveMapPosition(newPosition);
+  };
+
+  // Função para salvar posição quando o usuário move o mapa manualmente
+  const handleMapDrag = () => {
+    if (mapRef.current) {
+      const center = mapRef.current.getCenter();
+      if (center) {
+        const newPosition = { lat: center.lat(), lng: center.lng() };
+        saveMapPosition(newPosition);
+      }
+    }
   };
 
   const handleSpaceClick = (spaceId: string) => {
@@ -273,6 +292,10 @@ const Map: React.FC = () => {
                   mapInstance.panTo(mapCenter);
                   mapInstance.setZoom(14);
                 }
+                
+                // Adicionar listener para quando o usuário parar de arrastar o mapa
+                mapInstance.addListener('dragend', handleMapDrag);
+                mapInstance.addListener('zoom_changed', handleMapDrag);
               }}
               isLoading={false}
               keepPinsVisible={false}
