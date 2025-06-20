@@ -1,4 +1,3 @@
-
 /**
  * Application-wide configuration constants
  * 
@@ -36,53 +35,12 @@ export const EDGE_FUNCTIONS = {
   GET_CHAT_BY_USERS_AND_SPACE: `${SUPABASE_CONFIG.URL}/functions/v1/get_chat_by_users_and_space`,
   GET_MERCADO_PAGO_PUBLIC_KEY: `${SUPABASE_CONFIG.URL}/functions/v1/get-mercado-pago-public-key`,
   GEOCODE_ADDRESS: `${SUPABASE_CONFIG.URL}/functions/v1/geocode-address`,
-  PLACES_AUTOCOMPLETE: `${SUPABASE_CONFIG.URL}/functions/v1/geocode-address`,
-  PLACE_DETAILS: `${SUPABASE_CONFIG.URL}/functions/v1/geocode-address`,
-  GET_GOOGLE_MAPS_KEY: `${SUPABASE_CONFIG.URL}/functions/v1/get-google-maps-key`,
+  PLACES_AUTOCOMPLETE: `${SUPABASE_CONFIG.URL}/functions/v1/geocode-address`, // Reutilizamos a mesma função
+  PLACE_DETAILS: `${SUPABASE_CONFIG.URL}/functions/v1/geocode-address`, // Reutilizamos a mesma função
 };
 
-// Google Maps API Key - now retrieved from edge function
-export const getGoogleMapsApiKey = async (): Promise<string> => {
-  try {
-    console.log('🔑 Buscando chave da API do Google Maps...');
-    
-    const response = await fetch(EDGE_FUNCTIONS.GET_GOOGLE_MAPS_KEY, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${SUPABASE_CONFIG.PUBLIC_KEY}`,
-        'apikey': SUPABASE_CONFIG.PUBLIC_KEY,
-      },
-    });
-    
-    console.log('📡 Resposta da API:', {
-      status: response.status,
-      ok: response.ok,
-      statusText: response.statusText
-    });
-    
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-    
-    const data = await response.json();
-    console.log('📦 Dados recebidos:', { success: data.success, hasApiKey: !!data.apiKey });
-    
-    if (!data.success) {
-      throw new Error(data.error || 'Falha ao obter chave da API do Google Maps');
-    }
-    
-    if (!data.apiKey) {
-      throw new Error('Chave da API não foi retornada');
-    }
-    
-    console.log('✅ Chave da API do Google Maps obtida com sucesso');
-    return data.apiKey;
-  } catch (error) {
-    console.error('❌ Erro ao buscar chave da API do Google Maps:', error);
-    throw new Error(`Não foi possível carregar a configuração do mapa: ${error.message}`);
-  }
-};
+// Google Maps API Key
+export const GOOGLE_MAPS_API_KEY = "AIzaSyA5P5mbDieTYIeczsRTS1TSxR005fDnScc";
 
 // Storage buckets
 export const STORAGE = {
