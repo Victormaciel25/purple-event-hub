@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect, useRef } from "react";
 import { Loader2 } from "lucide-react";
 import { Wrapper } from "@googlemaps/react-wrapper";
@@ -61,18 +62,19 @@ const Map: React.FC = () => {
 
   // Função para limpar dados da sessão anterior
   const clearPreviousSession = () => {
-    sessionStorage.removeItem(LAST_MAP_POSITION_KEY);
+    localStorage.removeItem(LAST_MAP_POSITION_KEY);
+    console.log('🗺️ MAP: Dados da sessão anterior limpos');
   };
 
   // Função para salvar a posição atual do mapa
   const saveMapPosition = (position: { lat: number; lng: number }) => {
-    sessionStorage.setItem(LAST_MAP_POSITION_KEY, JSON.stringify(position));
+    localStorage.setItem(LAST_MAP_POSITION_KEY, JSON.stringify(position));
   };
 
   // Função para obter a última posição salva do mapa
   const getLastMapPosition = (): { lat: number; lng: number } | null => {
     try {
-      const saved = sessionStorage.getItem(LAST_MAP_POSITION_KEY);
+      const saved = localStorage.getItem(LAST_MAP_POSITION_KEY);
       return saved ? JSON.parse(saved) : null;
     } catch {
       return null;
@@ -89,6 +91,31 @@ const Map: React.FC = () => {
         console.log('🗺️ MAP: Nova sessão detectada - limpando dados anteriores');
         clearPreviousSession();
         await updateSessionUser();
+        
+        // Forçar obtenção da localização atual para nova sessão
+        console.log('🗺️ MAP: Nova sessão - obtendo localização atual do usuário...');
+        
+        if (!navigator.geolocation) {
+          console.warn('🗺️ MAP: Geolocalização não suportada');
+          setSearchError("Geolocalização não suportada neste navegador");
+          setLoading(false);
+          return;
+        }
+
+        navigator.geolocation.getCurrentPosition(
+          ({ coords }) => {
+            const userLoc = { lat: coords.latitude, lng: coords.longitude };
+            console.log('📍 MAP: Localização atual obtida para nova sessão:', userLoc);
+            setMapCenter(userLoc);
+            saveMapPosition(userLoc); // Salva a posição inicial
+            setLoading(false);
+          },
+          (err) => {
+            console.warn("❌ MAP: Erro ao obter localização:", err);
+            setSearchError("Não foi possível obter sua localização");
+            setLoading(false);
+          }
+        );
       } else {
         // Sessão contínua - tenta usar a última posição salva
         const lastPosition = getLastMapPosition();
@@ -98,32 +125,32 @@ const Map: React.FC = () => {
           setLoading(false);
           return;
         }
-      }
 
-      // Nova sessão ou sem posição salva - obter localização atual
-      console.log('🗺️ MAP: Obtendo localização atual do usuário...');
-      
-      if (!navigator.geolocation) {
-        console.warn('🗺️ MAP: Geolocalização não suportada');
-        setSearchError("Geolocalização não suportada neste navegador");
-        setLoading(false);
-        return;
-      }
-
-      navigator.geolocation.getCurrentPosition(
-        ({ coords }) => {
-          const userLoc = { lat: coords.latitude, lng: coords.longitude };
-          console.log('📍 MAP: Localização atual obtida:', userLoc);
-          setMapCenter(userLoc);
-          saveMapPosition(userLoc); // Salva a posição inicial
+        // Sessão contínua mas sem posição salva - obter localização atual
+        console.log('🗺️ MAP: Sessão contínua sem posição salva - obtendo localização atual...');
+        
+        if (!navigator.geolocation) {
+          console.warn('🗺️ MAP: Geolocalização não suportada');
+          setSearchError("Geolocalização não suportada neste navegador");
           setLoading(false);
-        },
-        (err) => {
-          console.warn("❌ MAP: Erro ao obter localização:", err);
-          setSearchError("Não foi possível obter sua localização");
-          setLoading(false);
+          return;
         }
-      );
+
+        navigator.geolocation.getCurrentPosition(
+          ({ coords }) => {
+            const userLoc = { lat: coords.latitude, lng: coords.longitude };
+            console.log('📍 MAP: Localização atual obtida:', userLoc);
+            setMapCenter(userLoc);
+            saveMapPosition(userLoc); // Salva a posição inicial
+            setLoading(false);
+          },
+          (err) => {
+            console.warn("❌ MAP: Erro ao obter localização:", err);
+            setSearchError("Não foi possível obter sua localização");
+            setLoading(false);
+          }
+        );
+      }
     };
 
     initializeMap();
