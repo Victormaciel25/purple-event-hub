@@ -36,6 +36,11 @@ const SignOutButton: React.FC<SignOutButtonProps> = ({ onSignOut, loading }) => 
     try {
       onSignOut(); // Set loading state in parent
       
+      // Clear map data BEFORE signing out
+      localStorage.removeItem('last_map_position');
+      localStorage.removeItem('current_map_user');
+      console.log('🗺️ SIGNOUT: Dados do mapa limpos antes do logout');
+      
       // First check if we have a session
       const { data: sessionData } = await supabase.auth.getSession();
       
