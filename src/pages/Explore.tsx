@@ -1,14 +1,15 @@
+
 import React, { useState } from "react";
 import PromotedSpaceCard from "@/components/PromotedSpaceCard";
 import { Input } from "@/components/ui/input";
-import { Search, Circle, Heart, Briefcase, Cake, GraduationCap } from "lucide-react";
+import { Search, Circle, Heart, Briefcase, Cake, GraduationCap, MapPin } from "lucide-react";
 import { toast } from "sonner";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { SPACE_CATEGORIES } from "@/config/app-config";
 import { usePromotedSpaces } from "@/hooks/usePromotedSpaces";
 
 const Explore = () => {
-  const { spaces, loading, error } = usePromotedSpaces();
+  const { spaces, loading, error, userLocation } = usePromotedSpaces();
   const [searchTerm, setSearchTerm] = useState("");
   const [activeCategory, setActiveCategory] = useState(SPACE_CATEGORIES.ALL);
   
@@ -26,7 +27,8 @@ const Explore = () => {
     console.log('All spaces:', spaces.map(s => ({ 
       name: s.name, 
       categories: s.categories, 
-      isPromoted: s.isPromoted 
+      isPromoted: s.isPromoted,
+      distanceKm: s.distanceKm
     })));
     
     let filtered = spaces.filter(space => {
@@ -80,29 +82,14 @@ const Explore = () => {
     });
 
     console.log('\n=== FILTER RESULTS ===');
-    console.log('Filtered spaces before sorting:', filtered.map(s => ({ 
+    console.log('Filtered spaces before final sort:', filtered.map(s => ({ 
       name: s.name, 
-      isPromoted: s.isPromoted 
-    })));
-
-    // Sort filtered spaces: promoted first, then normal spaces
-    // This ensures promoted spaces are first within the selected category
-    const sorted = filtered.sort((a, b) => {
-      // If both are promoted or both are not promoted, maintain original order
-      if (a.isPromoted === b.isPromoted) {
-        return 0;
-      }
-      // Promoted spaces come first
-      return a.isPromoted ? -1 : 1;
-    });
-    
-    console.log('Final sorted spaces:', sorted.map(s => ({ 
-      name: s.name, 
-      isPromoted: s.isPromoted 
+      isPromoted: s.isPromoted,
+      distanceKm: s.distanceKm
     })));
     console.log('=== END FILTERING DEBUG ===\n');
     
-    return sorted;
+    return filtered;
   }, [spaces, activeCategory, searchTerm]);
 
   const categories = [
@@ -144,6 +131,13 @@ const Explore = () => {
           onChange={(e) => setSearchTerm(e.target.value)}
         />
       </div>
+
+      {userLocation && (
+        <div className="mb-4 flex items-center text-sm text-muted-foreground bg-blue-50 p-3 rounded-lg">
+          <MapPin size={16} className="mr-2 text-blue-600" />
+          <span>Espaços ordenados por proximidade da sua localização</span>
+        </div>
+      )}
 
       <div className="mb-4">
         <div className="overflow-x-auto scrollbar-hide">
@@ -197,17 +191,23 @@ const Explore = () => {
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pb-20">
           {filteredSpaces.map((space) => (
-            <PromotedSpaceCard 
-              key={space.id} 
-              id={space.id}
-              name={space.name}
-              address={`${space.address}, ${space.number} - ${space.state}`}
-              price={parseFloat(space.price)}
-              image={space.photo_url || ""}
-              isPromoted={space.isPromoted}
-              promotionExpiresAt={space.promotionExpiresAt}
-              showTimer={false}
-            />
+            <div key={space.id} className="relative">
+              <PromotedSpaceCard 
+                id={space.id}
+                name={space.name}
+                address={`${space.address}, ${space.number} - ${space.state}`}
+                price={parseFloat(space.price)}
+                image={space.photo_url || ""}
+                isPromoted={space.isPromoted}
+                promotionExpiresAt={space.promotionExpiresAt}
+                showTimer={false}
+              />
+              {space.distanceKm && (
+                <div className="absolute top-2 left-2 bg-black/70 text-white px-2 py-1 rounded-md text-xs font-medium">
+                  {space.distanceKm.toFixed(1)} km
+                </div>
+              )}
+            </div>
           ))}
         </div>
       )}
