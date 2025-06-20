@@ -29,6 +29,7 @@ type GeocodingResult = {
 };
 
 const LAST_MAP_POSITION_KEY = 'last_map_position';
+const APP_SESSION_KEY = 'app_session_active';
 
 const Map: React.FC = () => {
   const [spaces, setSpaces] = useState<Space[]>([]);
@@ -40,6 +41,16 @@ const Map: React.FC = () => {
 
   const mapRef = useRef<google.maps.Map | null>(null);
   const navigate = useNavigate();
+
+  // Função para marcar que a sessão está ativa
+  const markSessionActive = () => {
+    sessionStorage.setItem(APP_SESSION_KEY, 'true');
+  };
+
+  // Função para verificar se é uma sessão contínua
+  const isSessionActive = (): boolean => {
+    return sessionStorage.getItem(APP_SESSION_KEY) === 'true';
+  };
 
   // Função para salvar a posição atual do mapa
   const saveMapPosition = (position: { lat: number; lng: number }) => {
@@ -56,20 +67,25 @@ const Map: React.FC = () => {
     }
   };
 
-  // Inicialização do mapa com prioridade para posição salva
+  // Inicialização do mapa com prioridade para posição salva apenas em sessão ativa
   useEffect(() => {
     const initializeMap = async () => {
-      // Primeiro, tenta recuperar a última posição salva
-      const lastPosition = getLastMapPosition();
-      if (lastPosition) {
-        console.log('🗺️ MAP: Usando última posição salva:', lastPosition);
-        setMapCenter(lastPosition);
-        setLoading(false);
-        return;
+      // Marcar sessão como ativa
+      markSessionActive();
+
+      // Só usa posição salva se for uma sessão contínua
+      if (isSessionActive()) {
+        const lastPosition = getLastMapPosition();
+        if (lastPosition) {
+          console.log('🗺️ MAP: Sessão ativa - usando última posição salva:', lastPosition);
+          setMapCenter(lastPosition);
+          setLoading(false);
+          return;
+        }
       }
 
-      // Se não há posição salva, usa a localização atual
-      console.log('🗺️ MAP: Nenhuma posição salva encontrada, obtendo localização atual...');
+      // Sempre obter localização atual para nova sessão ou se não há posição salva
+      console.log('🗺️ MAP: Nova sessão - obtendo localização atual...');
       
       if (!navigator.geolocation) {
         console.warn('🗺️ MAP: Geolocalização não suportada');
@@ -212,6 +228,11 @@ const Map: React.FC = () => {
       setLoading(false);
     }
   };
+
+  // Carrega espaços do Supabase
+  useEffect(() => {
+    fetchSpaces();
+  }, []);
 
   // Filtra os espaços quando searchValue muda
   useEffect(() => {
