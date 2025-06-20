@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from "react";
 import { Loader2 } from "lucide-react";
 import { Wrapper } from "@googlemaps/react-wrapper";
@@ -28,8 +29,7 @@ type GeocodingResult = {
 };
 
 const LAST_MAP_POSITION_KEY = 'last_map_position';
-const APP_SESSION_TIMESTAMP_KEY = 'app_session_timestamp';
-const SESSION_TIMEOUT = 30 * 60 * 1000; // 30 minutos em milliseconds
+const LAST_USER_ID_KEY = 'last_user_id';
 
 const Map: React.FC = () => {
   const [spaces, setSpaces] = useState<Space[]>([]);
@@ -42,18 +42,26 @@ const Map: React.FC = () => {
   const mapRef = useRef<google.maps.Map | null>(null);
   const navigate = useNavigate();
 
-  // Função para verificar se é uma nova sessão (baseada em tempo)
-  const isNewSession = (): boolean => {
-    const lastTimestamp = localStorage.getItem(APP_SESSION_TIMESTAMP_KEY);
-    if (!lastTimestamp) return true;
+  // Função para verificar se é uma nova sessão (baseada no usuário)
+  const isNewSession = async (): Promise<boolean> => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return true;
     
-    const timeDiff = Date.now() - parseInt(lastTimestamp);
-    return timeDiff > SESSION_TIMEOUT;
+    const lastUserId = localStorage.getItem(LAST_USER_ID_KEY);
+    return lastUserId !== user.id;
   };
 
-  // Função para marcar timestamp da sessão atual
-  const updateSessionTimestamp = () => {
-    localStorage.setItem(APP_SESSION_TIMESTAMP_KEY, Date.now().toString());
+  // Função para marcar a sessão atual
+  const updateSessionUser = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      localStorage.setItem(LAST_USER_ID_KEY, user.id);
+    }
+  };
+
+  // Função para limpar dados da sessão anterior
+  const clearPreviousSession = () => {
+    sessionStorage.removeItem(LAST_MAP_POSITION_KEY);
   };
 
   // Função para salvar a posição atual do mapa
@@ -74,11 +82,15 @@ const Map: React.FC = () => {
   // Inicialização do mapa
   useEffect(() => {
     const initializeMap = async () => {
-      // Atualizar timestamp da sessão
-      updateSessionTimestamp();
-
-      // Se não é uma nova sessão, tenta usar a última posição salva
-      if (!isNewSession()) {
+      // Verificar se é uma nova sessão (novo usuário)
+      const isNew = await isNewSession();
+      
+      if (isNew) {
+        console.log('🗺️ MAP: Nova sessão detectada - limpando dados anteriores');
+        clearPreviousSession();
+        await updateSessionUser();
+      } else {
+        // Sessão contínua - tenta usar a última posição salva
         const lastPosition = getLastMapPosition();
         if (lastPosition) {
           console.log('🗺️ MAP: Sessão contínua - usando última posição salva:', lastPosition);
@@ -89,7 +101,7 @@ const Map: React.FC = () => {
       }
 
       // Nova sessão ou sem posição salva - obter localização atual
-      console.log('🗺️ MAP: Nova sessão - obtendo localização atual...');
+      console.log('🗺️ MAP: Obtendo localização atual do usuário...');
       
       if (!navigator.geolocation) {
         console.warn('🗺️ MAP: Geolocalização não suportada');
