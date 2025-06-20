@@ -31,7 +31,7 @@ const categories = [
 ];
 
 const formSchema = z.object({
-  name: z.string().min(3, { message: "O nome deve ter pelo menos 3 caracteres" }),
+  name: z.string().min(3, { message: "O nome deve ter pelo menos 3 caracteres" }).max(25, { message: "O nome deve ter no máximo 25 caracteres" }),
   address: z.string().min(5, { message: "Insira um endereço válido" }),
   number: z.string().min(1, { message: "Insira um número válido" }),
   state: z.string().min(2, { message: "Insira um estado válido" }),
@@ -291,7 +291,11 @@ const RegisterSpace = () => {
               <FormItem>
                 <FormLabel>Nome do Espaço</FormLabel>
                 <FormControl>
-                  <Input placeholder="Ex: Espaço de Eventos ABC" {...field} />
+                  <Input 
+                    placeholder="Ex: Espaço de Eventos ABC" 
+                    maxLength={25}
+                    {...field} 
+                  />
                 </FormControl>
                 <FormMessage />
               </FormItem>

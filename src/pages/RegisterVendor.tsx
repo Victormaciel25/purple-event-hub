@@ -62,7 +62,7 @@ const categoryOptions = [
 ];
 
 const formSchema = z.object({
-  name: z.string().min(3, { message: "O nome deve ter pelo menos 3 caracteres" }),
+  name: z.string().min(3, { message: "O nome deve ter pelo menos 3 caracteres" }).max(25, { message: "O nome deve ter no máximo 25 caracteres" }),
   category: z.string().min(1, { message: "Selecione uma categoria" }),
   contactNumber: z.string().min(8, { message: "Insira um número de telefone válido" }),
   description: z.string().min(10, { message: "A descrição deve ter pelo menos 10 caracteres" }),
@@ -266,7 +266,11 @@ const RegisterVendor = () => {
               <FormItem>
                 <FormLabel>Nome do Fornecedor</FormLabel>
                 <FormControl>
-                  <Input placeholder="Ex: Buffet Delicias" {...field} />
+                  <Input 
+                    placeholder="Ex: Buffet Delicias" 
+                    maxLength={25}
+                    {...field} 
+                  />
                 </FormControl>
                 <FormMessage />
               </FormItem>
