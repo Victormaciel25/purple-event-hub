@@ -1,14 +1,12 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import { Loader2 } from "lucide-react";
-import { Wrapper } from "@googlemaps/react-wrapper";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 
 import LocationMap from "@/components/LocationMap";
 import AddressAutoComplete from "@/components/AddressAutoComplete";
 import { supabase } from "@/integrations/supabase/client";
-import { getGoogleMapsApiKey } from "@/config/app-config";
 
 type Space = {
   id: string;
@@ -38,28 +36,9 @@ const Map: React.FC = () => {
   const [filteredSpaces, setFilteredSpaces] = useState<Space[]>([]);
   const [mapCenter, setMapCenter] = useState<{ lat: number; lng: number } | null>(null);
   const [searchError, setSearchError] = useState<string | null>(null);
-  const [apiKey, setApiKey] = useState<string>('');
-  const [apiKeyLoading, setApiKeyLoading] = useState<boolean>(true);
 
   const mapRef = useRef<google.maps.Map | null>(null);
   const navigate = useNavigate();
-
-  // Load Google Maps API key
-  useEffect(() => {
-    const loadApiKey = async () => {
-      try {
-        const key = await getGoogleMapsApiKey();
-        setApiKey(key);
-      } catch (error) {
-        console.error('Failed to load Google Maps API key:', error);
-        setSearchError('Erro ao carregar configuração do mapa');
-      } finally {
-        setApiKeyLoading(false);
-      }
-    };
-
-    loadApiKey();
-  }, []);
 
   // Função para obter localização atual do usuário
   const getCurrentLocation = (): Promise<{ lat: number; lng: number }> => {
@@ -172,10 +151,8 @@ const Map: React.FC = () => {
       }
     };
 
-    if (!apiKeyLoading) {
-      initializeMap();
-    }
-  }, [apiKeyLoading]);
+    initializeMap();
+  }, []);
 
   // Sempre que mapCenter muda, centraliza o mapa
   useEffect(() => {
@@ -334,70 +311,49 @@ const Map: React.FC = () => {
     navigate(`/event-space/${spaceId}`);
   };
 
-  if (apiKeyLoading) {
-    return (
-      <div className="container px-4 py-6 max-w-4xl mx-auto h-full flex items-center justify-center">
-        <Loader2 className="animate-spin h-8 w-8 text-iparty" />
-        <span className="ml-2">Carregando configuração do mapa...</span>
-      </div>
-    );
-  }
-
-  if (!apiKey) {
-    return (
-      <div className="container px-4 py-6 max-w-4xl mx-auto h-full">
-        <div className="mb-2 p-4 bg-red-100 text-red-700 rounded-md">
-          Erro ao carregar configuração do mapa. Tente recarregar a página.
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <Wrapper apiKey={apiKey} libraries={["places"]}>
-      <div className="container px-4 py-6 max-w-4xl mx-auto h-full">
-        <div className="mb-6">
-          <AddressAutoComplete
-            onLocationSelected={handleLocationSelected}
-            initialValue={searchValue}
-            placeholder="Buscar por endereço, cidade ou CEP..."
-          />
-        </div>
-
-        {searchError && (
-          <div className="mb-2 p-2 bg-red-100 text-red-700 rounded-md text-sm">
-            {searchError}
-          </div>
-        )}
-
-        <div className="bg-gray-200 rounded-xl h-[calc(100vh-200px)] flex items-center justify-center">
-          {loading ? (
-            <Loader2 className="animate-spin h-8 w-8 text-iparty" />
-          ) : (
-            <LocationMap
-              viewOnly
-              spaces={filteredSpaces}
-              onSpaceClick={handleSpaceClick}
-              initialLocation={mapCenter || undefined}
-              onMapLoad={(mapInstance) => {
-                mapRef.current = mapInstance;
-                if (mapCenter) {
-                  mapInstance.panTo(mapCenter);
-                  mapInstance.setZoom(14);
-                }
-                
-                // Adicionar listener para quando o usuário parar de arrastar o mapa
-                mapInstance.addListener('dragend', handleMapDrag);
-                mapInstance.addListener('zoom_changed', handleMapDrag);
-              }}
-              isLoading={false}
-              keepPinsVisible={false}
-              onLocationSelected={() => {}}
-            />
-          )}
-        </div>
+    <div className="container px-4 py-6 max-w-4xl mx-auto h-full">
+      <div className="mb-6">
+        <AddressAutoComplete
+          onLocationSelected={handleLocationSelected}
+          initialValue={searchValue}
+          placeholder="Buscar por endereço, cidade ou CEP..."
+        />
       </div>
-    </Wrapper>
+
+      {searchError && (
+        <div className="mb-2 p-2 bg-red-100 text-red-700 rounded-md text-sm">
+          {searchError}
+        </div>
+      )}
+
+      <div className="bg-gray-200 rounded-xl h-[calc(100vh-200px)] flex items-center justify-center">
+        {loading ? (
+          <Loader2 className="animate-spin h-8 w-8 text-iparty" />
+        ) : (
+          <LocationMap
+            viewOnly
+            spaces={filteredSpaces}
+            onSpaceClick={handleSpaceClick}
+            initialLocation={mapCenter || undefined}
+            onMapLoad={(mapInstance) => {
+              mapRef.current = mapInstance;
+              if (mapCenter) {
+                mapInstance.panTo(mapCenter);
+                mapInstance.setZoom(14);
+              }
+              
+              // Adicionar listener para quando o usuário parar de arrastar o mapa
+              mapInstance.addListener('dragend', handleMapDrag);
+              mapInstance.addListener('zoom_changed', handleMapDrag);
+            }}
+            isLoading={false}
+            keepPinsVisible={false}
+            onLocationSelected={() => {}}
+          />
+        )}
+      </div>
+    </div>
   );
 };
 
