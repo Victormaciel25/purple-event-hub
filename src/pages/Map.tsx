@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from "react";
 import { Loader2 } from "lucide-react";
 import { Wrapper } from "@googlemaps/react-wrapper";
@@ -274,14 +273,6 @@ const Map: React.FC = () => {
                   mapInstance.panTo(mapCenter);
                   mapInstance.setZoom(14);
                 }
-                
-                // Adicionar listener para mudanças na posição do mapa
-                mapInstance.addListener('center_changed', () => {
-                  const center = mapInstance.getCenter();
-                  if (center) {
-                    handleMapPositionChange(center.lat(), center.lng());
-                  }
-                });
               }}
               isLoading={false}
               keepPinsVisible={false}
