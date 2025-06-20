@@ -44,17 +44,41 @@ export const EDGE_FUNCTIONS = {
 // Google Maps API Key - now retrieved from edge function
 export const getGoogleMapsApiKey = async (): Promise<string> => {
   try {
-    const response = await fetch(EDGE_FUNCTIONS.GET_GOOGLE_MAPS_KEY);
-    const data = await response.json();
+    console.log('🔑 Buscando chave da API do Google Maps...');
     
-    if (!data.success) {
-      throw new Error(data.error || 'Failed to get Google Maps API key');
+    const response = await fetch(EDGE_FUNCTIONS.GET_GOOGLE_MAPS_KEY, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+    
+    console.log('📡 Resposta da API:', {
+      status: response.status,
+      ok: response.ok,
+      statusText: response.statusText
+    });
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
     }
     
+    const data = await response.json();
+    console.log('📦 Dados recebidos:', { success: data.success, hasApiKey: !!data.apiKey });
+    
+    if (!data.success) {
+      throw new Error(data.error || 'Falha ao obter chave da API do Google Maps');
+    }
+    
+    if (!data.apiKey) {
+      throw new Error('Chave da API não foi retornada');
+    }
+    
+    console.log('✅ Chave da API do Google Maps obtida com sucesso');
     return data.apiKey;
   } catch (error) {
-    console.error('Error fetching Google Maps API key:', error);
-    throw new Error('Unable to load Google Maps API key');
+    console.error('❌ Erro ao buscar chave da API do Google Maps:', error);
+    throw new Error(`Não foi possível carregar a configuração do mapa: ${error.message}`);
   }
 };
 

@@ -7,26 +7,36 @@ const corsHeaders = {
 }
 
 serve(async (req) => {
+  console.log(`📥 Recebida requisição: ${req.method} ${req.url}`);
+  
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
+    console.log('✅ Respondendo a requisição OPTIONS (CORS)');
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
+    console.log('🔍 Buscando GOOGLE_MAPS_API_KEY nas variáveis de ambiente...');
     const googleMapsApiKey = Deno.env.get('GOOGLE_MAPS_API_KEY');
     
     if (!googleMapsApiKey) {
-      console.error('GOOGLE_MAPS_API_KEY not found in environment variables');
-      throw new Error('Google Maps API key not configured');
+      console.error('❌ GOOGLE_MAPS_API_KEY não encontrada nas variáveis de ambiente');
+      console.log('📝 Variáveis disponíveis:', Object.keys(Deno.env.toObject()));
+      throw new Error('Chave da API do Google Maps não foi configurada');
     }
 
-    console.log('Google Maps API key retrieved successfully');
+    console.log('✅ Chave da API do Google Maps encontrada com sucesso');
+    console.log(`🔑 Tamanho da chave: ${googleMapsApiKey.length} caracteres`);
+
+    const response = {
+      success: true,
+      apiKey: googleMapsApiKey
+    };
+
+    console.log('📤 Enviando resposta de sucesso');
 
     return new Response(
-      JSON.stringify({ 
-        success: true, 
-        apiKey: googleMapsApiKey 
-      }),
+      JSON.stringify(response),
       {
         headers: { 
           ...corsHeaders, 
@@ -37,13 +47,17 @@ serve(async (req) => {
     );
 
   } catch (error) {
-    console.error('Error retrieving Google Maps API key:', error);
+    console.error('💥 Erro na edge function:', error);
+    
+    const errorResponse = {
+      success: false,
+      error: error.message || 'Falha ao obter chave da API'
+    };
+
+    console.log('📤 Enviando resposta de erro:', errorResponse);
     
     return new Response(
-      JSON.stringify({ 
-        success: false, 
-        error: error.message || 'Failed to retrieve API key' 
-      }),
+      JSON.stringify(errorResponse),
       {
         headers: { 
           ...corsHeaders, 
