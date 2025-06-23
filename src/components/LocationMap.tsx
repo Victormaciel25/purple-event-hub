@@ -1,3 +1,4 @@
+
 import React, { useEffect, useRef, useState } from "react";
 import { Loader2, X } from "lucide-react";
 import { GoogleMap, useJsApiLoader, Marker, OverlayView } from "@react-google-maps/api";
@@ -65,6 +66,8 @@ const LocationMap = ({
   const [selectedSpace, setSelectedSpace] = useState<Space | null>(null);
   const [currentZoom, setCurrentZoom] = useState<number>(12);
   const [showPins, setShowPins] = useState<boolean>(true);
+  const [showContainer, setShowContainer] = useState<boolean>(false);
+  const [isAnimating, setIsAnimating] = useState<boolean>(false);
   const mapRef = useRef<google.maps.Map | null>(null);
   
   // Track the moved spaces to prevent duplicate movements
@@ -125,11 +128,18 @@ const LocationMap = ({
 
   const handleMarkerClick = (space: Space) => {
     setSelectedSpace(space);
+    setShowContainer(false);
+    setIsAnimating(true);
     
     if (mapRef.current) {
       // If we already have an offset position for this space, use it
       if (offsetPositions[space.id]) {
         mapRef.current.panTo(offsetPositions[space.id]);
+        // Show container after pan animation
+        setTimeout(() => {
+          setShowContainer(true);
+          setIsAnimating(false);
+        }, 500);
       } else {
         // First center on the marker
         const position = { lat: space.latitude, lng: space.longitude };
@@ -159,6 +169,12 @@ const LocationMap = ({
                 ...prev,
                 [space.id]: true
               }));
+              
+              // Show container after pan animation completes
+              setTimeout(() => {
+                setShowContainer(true);
+                setIsAnimating(false);
+              }, 500);
             }
           }
         }, 50);
@@ -168,6 +184,8 @@ const LocationMap = ({
 
   const handleInfoWindowClose = () => {
     setSelectedSpace(null);
+    setShowContainer(false);
+    setIsAnimating(false);
   };
 
   const handleSpaceClick = () => {
@@ -219,7 +237,7 @@ const LocationMap = ({
             />
           ))}
 
-          {selectedSpace && (
+          {selectedSpace && showContainer && !isAnimating && (
             <OverlayView
               position={{ lat: selectedSpace.latitude, lng: selectedSpace.longitude }}
               mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}
