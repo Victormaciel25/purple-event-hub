@@ -33,6 +33,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { Trash2 } from "lucide-react";
 import { SUPABASE_CONFIG } from "@/config/app-config";
+import ImageViewer from "@/components/ImageViewer";
 
 interface Vendor {
   id: string;
@@ -71,6 +72,10 @@ const VendorDetails = () => {
   const [deleting, setDeleting] = useState(false);
   // State for report form
   const [reportFormOpen, setReportFormOpen] = useState(false);
+
+  // State for image viewer
+  const [imageViewerOpen, setImageViewerOpen] = useState(false);
+  const [selectedImageIndex, setSelectedImageIndex] = useState(0);
 
   useEffect(() => {
     const fetchVendorDetails = async () => {
@@ -227,6 +232,11 @@ const VendorDetails = () => {
     toast.success(isFav ? "Removido dos favoritos" : "Adicionado aos favoritos");
   };
 
+  const handleImageClick = (index: number) => {
+    setSelectedImageIndex(index);
+    setImageViewerOpen(true);
+  };
+
   if (loading) {
     return (
       <div className="container px-4 py-6 max-w-4xl mx-auto flex items-center justify-center h-[80vh]">
@@ -294,16 +304,18 @@ const VendorDetails = () => {
                 <CarouselContent>
                   {displayImages.map((image, index) => (
                     <CarouselItem key={index} className="w-full h-64">
-                      <OptimizedImage
-                        src={image}
-                        alt={`${vendor.name} - Imagem ${index + 1}`}
-                        className="w-full h-full object-cover rounded-lg"
-                        loadingClassName="animate-pulse bg-gray-200"
-                      />
-                      <div className="absolute bottom-2 right-2">
-                        <span className="bg-black/70 text-white px-2 py-1 rounded text-xs">
-                          {index + 1}/{displayImages.length}
-                        </span>
+                      <div className="relative rounded-lg overflow-hidden h-full cursor-pointer" onClick={() => handleImageClick(index)}>
+                        <OptimizedImage
+                          src={image}
+                          alt={`${vendor.name} - Imagem ${index + 1}`}
+                          className="w-full h-full object-cover hover:scale-105 transition-transform duration-200"
+                          loadingClassName="animate-pulse bg-gray-200"
+                        />
+                        <div className="absolute bottom-2 right-2">
+                          <span className="bg-black/70 text-white px-2 py-1 rounded text-xs">
+                            {index + 1}/{displayImages.length}
+                          </span>
+                        </div>
                       </div>
                     </CarouselItem>
                   ))}
@@ -317,11 +329,11 @@ const VendorDetails = () => {
                 <CarouselContent className="-ml-2 md:-ml-4">
                   {displayImages.map((image, index) => (
                     <CarouselItem key={index} className="pl-2 md:pl-4 md:basis-1/3 lg:basis-1/4">
-                      <div className="relative rounded-lg overflow-hidden h-48 lg:h-56">
+                      <div className="relative rounded-lg overflow-hidden h-48 lg:h-56 cursor-pointer" onClick={() => handleImageClick(index)}>
                         <OptimizedImage
                           src={image}
                           alt={`${vendor.name} - Imagem ${index + 1}`}
-                          className="object-cover w-full h-full"
+                          className="object-cover w-full h-full hover:scale-105 transition-transform duration-200"
                         />
                         <div className="absolute bottom-2 right-2">
                           <span className="bg-black/70 text-white px-2 py-1 rounded text-xs">
@@ -449,6 +461,14 @@ const VendorDetails = () => {
             reportedItemName={vendor.name}
             reportedItemUrl={window.location.href}
             reportType="vendor"
+          />
+
+          {/* Image Viewer */}
+          <ImageViewer
+            images={displayImages}
+            isOpen={imageViewerOpen}
+            onClose={() => setImageViewerOpen(false)}
+            initialIndex={selectedImageIndex}
           />
 
           <div className="h-20"></div> {/* Space for bottom nav */}
