@@ -38,7 +38,16 @@ const FavoriteVendors = () => {
   return (
     <div className="space-y-4">
       {favoriteVendors.map((vendor) => (
-        <VendorCard key={vendor.id} vendor={vendor} />
+        <VendorCard 
+          key={vendor.id}
+          id={vendor.id}
+          name={vendor.name}
+          category={vendor.category}
+          rating={0}
+          contactNumber={vendor.contact_number}
+          image={vendor.images?.[0] || "/placeholder.svg"}
+          address={vendor.address}
+        />
       ))}
     </div>
   );
