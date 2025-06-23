@@ -898,9 +898,22 @@ const Messages = () => {
   }, [fetchChats]);
   
   // Filter chats by search query and exclude deleted chats
-  const filteredChats = chats.filter(chat => 
-    !chat.deleted && chat.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  // Enhanced search that includes both space names and user names
+  const filteredChats = chats.filter(chat => {
+    if (chat.deleted) return false;
+    
+    const searchLower = searchQuery.toLowerCase();
+    const chatNameMatch = chat.name.toLowerCase().includes(searchLower);
+    
+    // Find the other user ID for this chat by looking up the original chat data
+    // We need to map each chat to its corresponding user name
+    const chatIndex = chats.findIndex(c => c.id === chat.id);
+    const userNames = Object.values(chatUserNames);
+    const otherUserName = userNames[chatIndex] || '';
+    const userNameMatch = otherUserName.toLowerCase().includes(searchLower);
+    
+    return chatNameMatch || userNameMatch;
+  });
   
   return (
     <div className="container px-4 pb-16 max-w-4xl mx-auto">
@@ -926,26 +939,10 @@ const Messages = () => {
             {loading ? (
               <LoadingState />
             ) : filteredChats.length > 0 ? (
-              filteredChats.map((chat) => {
-                // Get the other user ID for this chat
-                const otherUserId = userId ? (
-                  // We need to find the chat data to determine the other user
-                  chats.find(c => c.id === chat.id) ? 
-                    (chats.find(c => c.id === chat.id)?.space_id ? 
-                      // For space chats, we need to look up from the original chat data
-                      Object.keys(chatUserNames).find(id => chatUserNames[id]) :
-                      Object.keys(chatUserNames)[0]
-                    ) : 
-                    Object.keys(chatUserNames)[0]
-                ) : null;
-
-                // Find the corresponding original chat data to get user IDs
-                const originalChatData = chats.find(c => c.id === chat.id);
-                let chatOtherUserId = null;
-                
-                // We'll get this from the processChatsData function context
-                // For now, get the first available user name as fallback
-                const otherUserName = Object.values(chatUserNames)[filteredChats.indexOf(chat)] || null;
+              filteredChats.map((chat, index) => {
+                // Get the corresponding user name for this chat
+                const userNames = Object.values(chatUserNames);
+                const otherUserName = userNames[index] || null;
 
                 return (
                   <ChatItem 
