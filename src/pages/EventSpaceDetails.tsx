@@ -41,6 +41,7 @@ import { toast } from "sonner";
 import { Textarea } from "@/components/ui/textarea";
 import { useUserRoles } from "@/hooks/useUserRoles";
 import OptimizedImage from "@/components/OptimizedImage";
+import ImageViewer from "@/components/ImageViewer";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -94,6 +95,10 @@ const EventSpaceDetails: React.FC = () => {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleteReason, setDeleteReason] = useState("");
   const [deletingSpace, setDeletingSpace] = useState(false);
+
+  // State for image viewer
+  const [imageViewerOpen, setImageViewerOpen] = useState(false);
+  const [selectedImageIndex, setSelectedImageIndex] = useState(0);
 
   useEffect(() => {
     (async () => {
@@ -307,6 +312,11 @@ const EventSpaceDetails: React.FC = () => {
     );
   }
 
+  const handleImageClick = (index: number) => {
+    setSelectedImageIndex(index);
+    setImageViewerOpen(true);
+  };
+
   return (
     <div className="h-screen w-full overflow-hidden">
       <div className="h-full w-full overflow-y-auto scrollbar-hide">
@@ -357,11 +367,11 @@ const EventSpaceDetails: React.FC = () => {
                     <CarouselContent>
                       {displayImages.map((image, i) => (
                         <CarouselItem key={i}>
-                          <div className="relative rounded-lg overflow-hidden h-64">
+                          <div className="relative rounded-lg overflow-hidden h-64 cursor-pointer" onClick={() => handleImageClick(i)}>
                             <OptimizedImage
                               src={image}
                               alt={`${space.name} ${i + 1}`}
-                              className="object-cover w-full h-full"
+                              className="object-cover w-full h-full hover:scale-105 transition-transform duration-200"
                             />
                             <div className="absolute bottom-2 right-2">
                               <span className="bg-black/70 text-white px-2 py-1 rounded text-xs">
@@ -381,11 +391,11 @@ const EventSpaceDetails: React.FC = () => {
                     <CarouselContent className="-ml-2 md:-ml-4">
                       {displayImages.map((image, i) => (
                         <CarouselItem key={i} className="pl-2 md:pl-4 md:basis-1/3 lg:basis-1/4">
-                          <div className="relative rounded-lg overflow-hidden h-48 lg:h-56">
+                          <div className="relative rounded-lg overflow-hidden h-48 lg:h-56 cursor-pointer" onClick={() => handleImageClick(i)}>
                             <OptimizedImage
                               src={image}
                               alt={`${space.name} ${i + 1}`}
-                              className="object-cover w-full h-full"
+                              className="object-cover w-full h-full hover:scale-105 transition-transform duration-200"
                             />
                             <div className="absolute bottom-2 right-2">
                               <span className="bg-black/70 text-white px-2 py-1 rounded text-xs">
@@ -565,6 +575,14 @@ const EventSpaceDetails: React.FC = () => {
             reportedItemName={space.name}
             reportedItemUrl={window.location.href}
             reportType="space"
+          />
+
+          {/* Image Viewer */}
+          <ImageViewer
+            images={displayImages}
+            isOpen={imageViewerOpen}
+            onClose={() => setImageViewerOpen(false)}
+            initialIndex={selectedImageIndex}
           />
         </div>
       </div>
