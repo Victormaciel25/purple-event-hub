@@ -263,33 +263,27 @@ const VendorDetails = () => {
             <Button variant="ghost" size="sm" onClick={() => navigate(-1)}>
               <ChevronLeft size={20} />
             </Button>
-            <div className="flex items-center gap-2">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleFavoriteToggle}
-                className="text-red-500 hover:text-red-600"
-              >
-                <Heart size={20} fill={isVendorFavorited ? "currentColor" : "none"} />
-              </Button>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="sm">
-                    <MoreVertical size={20} />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-48">
-                  <DropdownMenuItem onClick={handleShare}>
-                    <Share size={16} className="mr-2" />
-                    Compartilhar
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={handleReport}>
-                    <Flag size={16} className="mr-2" />
-                    Denunciar
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="sm">
+                  <MoreVertical size={20} />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-48">
+                <DropdownMenuItem onClick={handleFavoriteToggle}>
+                  <Heart size={16} className="mr-2" fill={isVendorFavorited ? "currentColor" : "none"} />
+                  {isVendorFavorited ? "Remover dos favoritos" : "Adicionar aos favoritos"}
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleShare}>
+                  <Share size={16} className="mr-2" />
+                  Compartilhar
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleReport}>
+                  <Flag size={16} className="mr-2" />
+                  Denunciar
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
 
           {/* image display - responsive carousel for all screen sizes */}

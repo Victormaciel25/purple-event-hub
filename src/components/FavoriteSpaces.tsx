@@ -2,17 +2,10 @@
 import React from "react";
 import { useEventSpaceFavorites } from "../hooks/useEventSpaceFavorites";
 import EventSpaceCard from "./EventSpaceCard";
-import { Loader2, RefreshCw } from "lucide-react";
-import { Button } from "./ui/button";
-import { toast } from "sonner";
+import { Loader2 } from "lucide-react";
 
 const FavoriteSpaces: React.FC = () => {
-  const { favoriteSpaces, loading, favorites, error, refreshFavorites } = useEventSpaceFavorites();
-  
-  const handleRefresh = () => {
-    refreshFavorites();
-    toast.info("Atualizando favoritos...");
-  };
+  const { favoriteSpaces, loading, favorites, error } = useEventSpaceFavorites();
   
   if (loading) {
     return (
@@ -26,16 +19,9 @@ const FavoriteSpaces: React.FC = () => {
   // Verificamos se há erro ao carregar os espaços
   if (error) {
     return (
-      <div className="text-center py-8 space-y-4">
-        <p className="text-red-500">{error}</p>
-        <Button 
-          variant="outline" 
-          onClick={handleRefresh}
-          className="flex items-center gap-2"
-        >
-          <RefreshCw size={16} />
-          <span>Tentar novamente</span>
-        </Button>
+      <div className="text-center py-8">
+        <p className="text-muted-foreground">Você ainda não tem espaços favoritos</p>
+        <p className="text-muted-foreground mt-2">Explore e adicione aos seus favoritos para vê-los aqui</p>
       </div>
     );
   }
@@ -44,8 +30,8 @@ const FavoriteSpaces: React.FC = () => {
   if (favorites.length === 0) {
     return (
       <div className="text-center py-8">
-        <p className="text-muted-foreground">Você ainda não adicionou nenhum espaço aos favoritos.</p>
-        <p className="text-muted-foreground mt-2">Explore espaços e clique no coração para adicioná-los aqui.</p>
+        <p className="text-muted-foreground">Você ainda não tem espaços favoritos</p>
+        <p className="text-muted-foreground mt-2">Explore e adicione aos seus favoritos para vê-los aqui</p>
       </div>
     );
   }
@@ -54,16 +40,9 @@ const FavoriteSpaces: React.FC = () => {
   // (há IDs de favoritos mas não conseguimos carregar os dados)
   if (favorites.length > 0 && favoriteSpaces.length === 0) {
     return (
-      <div className="text-center py-8 space-y-4">
-        <p className="text-muted-foreground">Não foi possível carregar seus espaços favoritos. Verifique sua conexão ou tente novamente mais tarde.</p>
-        <Button 
-          variant="outline" 
-          onClick={handleRefresh} 
-          className="flex items-center gap-2"
-        >
-          <RefreshCw size={16} />
-          <span>Tentar novamente</span>
-        </Button>
+      <div className="text-center py-8">
+        <p className="text-muted-foreground">Você ainda não tem espaços favoritos</p>
+        <p className="text-muted-foreground mt-2">Explore e adicione aos seus favoritos para vê-los aqui</p>
       </div>
     );
   }
