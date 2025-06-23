@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from "react";
 import { Loader2 } from "lucide-react";
 import { Wrapper } from "@googlemaps/react-wrapper";
@@ -7,7 +8,7 @@ import { toast } from "sonner";
 import LocationMap from "@/components/LocationMap";
 import AddressAutoComplete from "@/components/AddressAutoComplete";
 import { supabase } from "@/integrations/supabase/client";
-import { useGoogleMapsKey } from "@/hooks/useGoogleMapsKey";
+import { GOOGLE_MAPS_API_KEY } from "@/config/app-config";
 
 type Space = {
   id: string;
@@ -31,7 +32,6 @@ const LAST_MAP_POSITION_KEY = 'last_map_position';
 const CURRENT_USER_KEY = 'current_map_user';
 
 const Map: React.FC = () => {
-  const { apiKey, loading: keyLoading, error: keyError } = useGoogleMapsKey();
   const [spaces, setSpaces] = useState<Space[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchValue, setSearchValue] = useState("");
@@ -313,29 +313,8 @@ const Map: React.FC = () => {
     navigate(`/event-space/${spaceId}`);
   };
 
-  if (keyError) {
-    return (
-      <div className="container px-4 py-6 max-w-4xl mx-auto h-full">
-        <div className="text-center text-red-500 p-4 bg-red-50 rounded-lg shadow">
-          Erro ao carregar a chave do Google Maps: {keyError}
-        </div>
-      </div>
-    );
-  }
-
-  if (keyLoading || !apiKey) {
-    return (
-      <div className="container px-4 py-6 max-w-4xl mx-auto h-full">
-        <div className="flex items-center justify-center h-64">
-          <Loader2 className="animate-spin h-8 w-8 text-iparty" />
-          <span className="ml-2">Carregando configurações do mapa...</span>
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <Wrapper apiKey={apiKey} libraries={["places"]}>
+    <Wrapper apiKey={GOOGLE_MAPS_API_KEY} libraries={["places"]}>
       <div className="container px-4 py-6 max-w-4xl mx-auto h-full">
         <div className="mb-6">
           <AddressAutoComplete

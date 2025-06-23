@@ -1,4 +1,3 @@
-
 /**
  * Application-wide configuration constants
  * 
@@ -38,8 +37,10 @@ export const EDGE_FUNCTIONS = {
   GEOCODE_ADDRESS: `${SUPABASE_CONFIG.URL}/functions/v1/geocode-address`,
   PLACES_AUTOCOMPLETE: `${SUPABASE_CONFIG.URL}/functions/v1/geocode-address`, // Reutilizamos a mesma função
   PLACE_DETAILS: `${SUPABASE_CONFIG.URL}/functions/v1/geocode-address`, // Reutilizamos a mesma função
-  GET_GOOGLE_MAPS_KEY: `${SUPABASE_CONFIG.URL}/functions/v1/get-google-maps-key`,
 };
+
+// Google Maps API Key
+export const GOOGLE_MAPS_API_KEY = "AIzaSyA5P5mbDieTYIeczsRTS1TSxR005fDnScc";
 
 // Storage buckets
 export const STORAGE = {
