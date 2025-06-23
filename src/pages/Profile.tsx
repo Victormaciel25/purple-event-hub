@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Heart, HelpCircle, Plus, Home, Shield, CheckSquare, Users, Briefcase, Clipboard, FileText, CreditCard } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useUserRoles } from "@/hooks/useUserRoles";
-import FavoriteSpaces from "../components/FavoriteSpaces";
+import FavoriteTabs from "../components/FavoriteTabs";
 import EditProfileDialog from "@/components/EditProfileDialog";
 import ProfileHeader from "@/components/profile/ProfileHeader";
 import MenuCard from "@/components/profile/MenuCard";
@@ -389,7 +389,7 @@ const Profile = () => {
               Voltar
             </button>
           </div>
-          <FavoriteSpaces />
+          <FavoriteTabs />
         </>
       ) : showRegistration ? (
         <RegistrationOptions onBack={() => setShowRegistration(false)} />

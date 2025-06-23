@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { Phone, MapPin, Calendar, Clock, ChevronLeft, MoreVertical, Share, Flag } from "lucide-react";
+import { Phone, MapPin, Calendar, Clock, ChevronLeft, MoreVertical, Share, Flag, Heart } from "lucide-react";
 import OptimizedImage from "@/components/OptimizedImage";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -19,6 +19,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useUserRoles } from "@/hooks/useUserRoles";
+import { useVendorFavorites } from "@/hooks/useVendorFavorites";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -62,6 +63,7 @@ const VendorDetails = () => {
   const [vendor, setVendor] = useState<Vendor | null>(null);
   const [loading, setLoading] = useState(true);
   const { isAdmin, isSuperAdmin } = useUserRoles();
+  const { isFavorite, toggleFavorite } = useVendorFavorites();
   
   // State for vendor deletion
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -217,6 +219,14 @@ const VendorDetails = () => {
     }
   };
 
+  const handleFavoriteToggle = () => {
+    if (!vendor) return;
+    toggleFavorite(vendor.id);
+    
+    const isFav = isFavorite(vendor.id);
+    toast.success(isFav ? "Removido dos favoritos" : "Adicionado aos favoritos");
+  };
+
   if (loading) {
     return (
       <div className="container px-4 py-6 max-w-4xl mx-auto flex items-center justify-center h-[80vh]">
@@ -243,6 +253,8 @@ const VendorDetails = () => {
     ? vendor.available_days.map(day => dayTranslations[day] || day)
     : [];
 
+  const isVendorFavorited = isFavorite(vendor.id);
+
   return (
     <div className="h-screen w-full overflow-hidden">
       <div className="h-full w-full overflow-y-auto scrollbar-hide">
@@ -251,23 +263,33 @@ const VendorDetails = () => {
             <Button variant="ghost" size="sm" onClick={() => navigate(-1)}>
               <ChevronLeft size={20} />
             </Button>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="sm">
-                  <MoreVertical size={20} />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-48">
-                <DropdownMenuItem onClick={handleShare}>
-                  <Share size={16} className="mr-2" />
-                  Compartilhar
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={handleReport}>
-                  <Flag size={16} className="mr-2" />
-                  Denunciar
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleFavoriteToggle}
+                className="text-red-500 hover:text-red-600"
+              >
+                <Heart size={20} fill={isVendorFavorited ? "currentColor" : "none"} />
+              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="sm">
+                    <MoreVertical size={20} />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-48">
+                  <DropdownMenuItem onClick={handleShare}>
+                    <Share size={16} className="mr-2" />
+                    Compartilhar
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={handleReport}>
+                    <Flag size={16} className="mr-2" />
+                    Denunciar
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
           </div>
 
           {/* image display - responsive carousel for all screen sizes */}
