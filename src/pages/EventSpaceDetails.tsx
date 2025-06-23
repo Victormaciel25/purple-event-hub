@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -508,7 +509,7 @@ const EventSpaceDetails: React.FC = () => {
           <div className="grid grid-cols-2 gap-4 mb-6">
             <Button className="bg-green-600 hover:bg-green-700" size="lg" onClick={handleWhatsApp}>
               <Phone className="mr-2" size={18} />
-              WhatsApp
+              Contato
             </Button>
             <Button
               className="bg-iparty hover:bg-iparty-dark"
