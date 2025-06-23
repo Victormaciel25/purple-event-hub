@@ -139,7 +139,7 @@ const LocationMap = ({
         setTimeout(() => {
           setShowContainer(true);
           setIsAnimating(false);
-        }, 500);
+        }, 750);
       } else {
         // First center on the marker
         const position = { lat: space.latitude, lng: space.longitude };
@@ -174,7 +174,7 @@ const LocationMap = ({
               setTimeout(() => {
                 setShowContainer(true);
                 setIsAnimating(false);
-              }, 500);
+              }, 750);
             }
           }
         }, 50);
