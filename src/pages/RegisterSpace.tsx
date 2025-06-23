@@ -34,7 +34,7 @@ const formSchema = z.object({
   name: z.string().min(3, { message: "O nome deve ter pelo menos 3 caracteres" }).max(25, { message: "O nome deve ter no máximo 25 caracteres" }),
   address: z.string().min(5, { message: "Insira um endereço válido" }),
   number: z.string().min(1, { message: "Insira um número válido" }),
-  state: z.string().min(2, { message: "Insira um estado válido" }),
+  state: z.string().length(2, { message: "Insira a sigla do estado (ex: RJ)" }).regex(/^[A-Z]{2}$/, { message: "Insira uma sigla válida em maiúsculas (ex: RJ)" }),
   zipCode: z.string().min(8, { message: "Insira um CEP válido" }),
   description: z.string().min(10, { message: "A descrição deve ter pelo menos 10 caracteres" }),
   price: z.string().min(1, { message: "Insira um preço válido" }),
@@ -342,7 +342,15 @@ const RegisterSpace = () => {
               <FormItem>
                 <FormLabel>Estado</FormLabel>
                 <FormControl>
-                  <Input placeholder="Ex: São Paulo" {...field} />
+                  <Input 
+                    placeholder="Ex: RJ" 
+                    maxLength={2}
+                    {...field} 
+                    onChange={(e) => {
+                      const value = e.target.value.toUpperCase();
+                      field.onChange(value);
+                    }}
+                  />
                 </FormControl>
                 <FormMessage />
               </FormItem>
