@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -5,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Loader2, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { AspectRatio } from "@/components/ui/aspect-ratio";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -211,27 +213,37 @@ const VendorDetails: React.FC<VendorDetailsProps> = ({
       <div>
         <h3 className="text-lg font-medium mb-2">Imagens e Vídeos</h3>
         {sortedImageUrls.length > 0 ? (
-          <div className="grid grid-cols-2 gap-2">
+          <div className="space-y-6">
             {sortedImageUrls.map((url, index) => {
               const isVideoFile = isVideo(url);
               return (
-                <div key={index} className="aspect-video">
-                  {isVideoFile ? (
-                    <video 
-                      src={url} 
-                      controls
-                      className="w-full h-full object-cover rounded-md"
-                      preload="metadata"
-                    >
-                      Seu navegador não suporta vídeos.
-                    </video>
-                  ) : (
-                    <img 
-                      src={url} 
-                      alt={`Imagem ${index + 1} do fornecedor`}
-                      className="w-full h-full object-cover rounded-md"
-                    />
-                  )}
+                <div key={index} className="relative bg-gray-50 rounded-lg overflow-hidden">
+                  <AspectRatio ratio={16 / 9} className="bg-muted">
+                    {isVideoFile ? (
+                      <video 
+                        src={url} 
+                        controls
+                        className="w-full h-full object-contain"
+                        preload="metadata"
+                      >
+                        Seu navegador não suporta vídeos.
+                      </video>
+                    ) : (
+                      <img 
+                        src={url} 
+                        alt={`Imagem ${index + 1} do fornecedor`}
+                        className="w-full h-full object-contain"
+                      />
+                    )}
+                  </AspectRatio>
+                  <div className="absolute bottom-2 right-2 bg-black/75 text-white text-xs px-2 py-1 rounded">
+                    {isVideoFile ? '🎥' : '📸'} {index + 1}/{sortedImageUrls.length}
+                  </div>
+                  <div className="p-3 bg-white border-t">
+                    <p className="text-sm text-gray-600">
+                      {isVideoFile ? 'Vídeo' : 'Imagem'} {index + 1} de {sortedImageUrls.length}
+                    </p>
+                  </div>
                 </div>
               );
             })}
