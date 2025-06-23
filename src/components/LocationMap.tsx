@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Loader2, X } from "lucide-react";
 import { GoogleMap, useJsApiLoader, Marker, OverlayView } from "@react-google-maps/api";
-import { GOOGLE_MAPS_API_KEY } from "@/config/app-config";
+import { useGoogleMapsKey } from "@/hooks/useGoogleMapsKey";
 import OptimizedImage from "./OptimizedImage";
 
 interface Space {
@@ -61,6 +61,7 @@ const LocationMap = ({
   onMapLoad,
   keepPinsVisible = false
 }: LocationMapProps) => {
+  const { apiKey, loading: keyLoading, error: keyError } = useGoogleMapsKey();
   const [position, setPosition] = useState<{ lat: number, lng: number } | null>(initialLocation || null);
   const [selectedSpace, setSelectedSpace] = useState<Space | null>(null);
   const [currentZoom, setCurrentZoom] = useState<number>(12);
@@ -75,7 +76,7 @@ const LocationMap = ({
   // Add the useJsApiLoader hook to load the Google Maps API
   const { isLoaded, loadError } = useJsApiLoader({
     id: 'google-map-script',
-    googleMapsApiKey: GOOGLE_MAPS_API_KEY,
+    googleMapsApiKey: apiKey || '',
     libraries
   });
 
@@ -176,13 +177,17 @@ const LocationMap = ({
     }
   };
 
+  if (keyError) {
+    return <div className="text-center text-red-500 p-4 bg-red-50 rounded-lg shadow">Erro ao carregar a chave do Google Maps: {keyError}</div>;
+  }
+
   if (loadError) {
     return <div className="text-center text-red-500 p-4 bg-red-50 rounded-lg shadow">Erro ao carregar o mapa</div>;
   }
 
   return (
     <div className="relative w-full h-full rounded-xl overflow-hidden shadow-md">
-      {!isLoaded ? (
+      {(!isLoaded || keyLoading) ? (
         <div className="absolute inset-0 flex items-center justify-center bg-gray-100 rounded-xl animate-pulse">
           <div className="text-gray-600 font-medium">Carregando mapa...</div>
         </div>
