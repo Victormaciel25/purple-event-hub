@@ -132,25 +132,73 @@ const LocationMap = ({
     setIsAnimating(true);
     
     if (mapRef.current) {
+      const currentCenter = mapRef.current.getCenter();
+      const targetPosition = { lat: space.latitude, lng: space.longitude };
+      
+      // Check if we're already very close to the target position (within ~10 meters)
+      const isAlreadyAtPosition = currentCenter && 
+        Math.abs(currentCenter.lat() - targetPosition.lat) < 0.0001 && 
+        Math.abs(currentCenter.lng() - targetPosition.lng) < 0.0001;
+
       // If we already have an offset position for this space, use it
       if (offsetPositions[space.id]) {
-        mapRef.current.panTo(offsetPositions[space.id]);
-        // Show container after pan animation
-        setTimeout(() => {
+        const targetOffsetPosition = offsetPositions[space.id];
+        const isAlreadyAtOffsetPosition = currentCenter &&
+          Math.abs(currentCenter.lat() - targetOffsetPosition.lat) < 0.0001 &&
+          Math.abs(currentCenter.lng() - targetOffsetPosition.lng) < 0.0001;
+
+        if (isAlreadyAtOffsetPosition) {
+          // Already at offset position, show container immediately
           setShowContainer(true);
           setIsAnimating(false);
-        }, 750);
+        } else {
+          // Move to offset position
+          mapRef.current.panTo(targetOffsetPosition);
+          // Show container after pan animation
+          setTimeout(() => {
+            setShowContainer(true);
+            setIsAnimating(false);
+          }, 750);
+        }
+      } else if (isAlreadyAtPosition) {
+        // Already at marker position, calculate offset and show immediately
+        const projection = mapRef.current.getProjection();
+        if (projection) {
+          const point = projection.fromLatLngToPoint(new google.maps.LatLng(targetPosition.lat, targetPosition.lng));
+          point.y -= 220 / Math.pow(2, mapRef.current.getZoom() || 0);
+          const newLatLng = projection.fromPointToLatLng(point);
+          
+          // Store the offset position for future use
+          setOffsetPositions(prev => ({
+            ...prev,
+            [space.id]: {lat: newLatLng.lat(), lng: newLatLng.lng()}
+          }));
+          
+          // Move to the offset position
+          mapRef.current.panTo(newLatLng);
+          
+          // Mark this space as having been moved
+          setMovedSpaces(prev => ({
+            ...prev,
+            [space.id]: true
+          }));
+          
+          // Show container after a shorter delay since we're already close
+          setTimeout(() => {
+            setShowContainer(true);
+            setIsAnimating(false);
+          }, 200);
+        }
       } else {
         // First center on the marker
-        const position = { lat: space.latitude, lng: space.longitude };
-        mapRef.current.panTo(position);
+        mapRef.current.panTo(targetPosition);
         
         // Then calculate and apply the offset position with additional 40px
         setTimeout(() => {
           if (mapRef.current) {
             const projection = mapRef.current.getProjection();
             if (projection) {
-              const point = projection.fromLatLngToPoint(new google.maps.LatLng(position.lat, position.lng));
+              const point = projection.fromLatLngToPoint(new google.maps.LatLng(targetPosition.lat, targetPosition.lng));
               // Increased offset from 130px to 170px (130 + 40)
               point.y -= 220 / Math.pow(2, mapRef.current.getZoom() || 0);
               const newLatLng = projection.fromPointToLatLng(point);
