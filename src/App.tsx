@@ -1,3 +1,4 @@
+
 import React from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -33,6 +34,7 @@ import Promote from "./pages/Promote";
 import PromoteSpace from "./pages/PromoteSpace";
 import PromoteVendor from "./pages/PromoteVendor";
 import SubscriptionsManagement from "./pages/SubscriptionsManagement";
+import DeleteAccount from "./pages/DeleteAccount";
 import Index from "./pages/Index";
 import VendorPendingApproval from "./components/VendorPendingApproval";
 import { useSpaceDeletionNotifications } from "./hooks/useSpaceDeletionNotifications";
@@ -141,6 +143,7 @@ const App: React.FC = () => {
               <Route path="/map" element={<Map />} />
               <Route path="/messages" element={<Messages />} />
               <Route path="/profile" element={<Profile />} />
+              <Route path="/delete-account" element={<DeleteAccount />} />
               <Route path="/spaces/:id" element={<EventSpaceDetails />} />
               <Route path="/event-space/:id" element={<EventSpaceDetails />} />
               <Route path="/register-space" element={<RegisterSpace />} />

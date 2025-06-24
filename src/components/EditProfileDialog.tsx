@@ -1,5 +1,5 @@
-
 import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Dialog,
   DialogContent,
@@ -53,6 +53,7 @@ const EditProfileDialog = ({
   const [uploadLoading, setUploadLoading] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const { toast: toastUI } = useToast();
+  const navigate = useNavigate();
 
   useEffect(() => {
     if (open && userId) {
@@ -241,6 +242,11 @@ const EditProfileDialog = ({
     onDeletePhoto();
   };
 
+  const handleDeleteAccount = () => {
+    onOpenChange(false);
+    navigate("/delete-account");
+  };
+
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
@@ -348,19 +354,31 @@ const EditProfileDialog = ({
                 />
               </div>
               
-              <DialogFooter className="pt-4">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => onOpenChange(false)}
-                  disabled={loading || uploadLoading}
-                >
-                  Cancelar
-                </Button>
+              <DialogFooter className="pt-4 flex-col sm:flex-row gap-2">
+                <div className="flex gap-2 w-full sm:w-auto">
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    onClick={handleDeleteAccount}
+                    disabled={loading || uploadLoading}
+                    className="flex-1 sm:flex-none"
+                  >
+                    Excluir conta
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => onOpenChange(false)}
+                    disabled={loading || uploadLoading}
+                    className="flex-1 sm:flex-none"
+                  >
+                    Cancelar
+                  </Button>
+                </div>
                 <Button 
                   type="submit" 
                   disabled={loading || uploadLoading}
-                  className="bg-iparty hover:bg-iparty-dark"
+                  className="bg-iparty hover:bg-iparty-dark w-full sm:w-auto"
                 >
                   {(loading || uploadLoading) ? (
                     <>
