@@ -9,7 +9,7 @@ const Layout = () => {
   const location = useLocation();
   
   // Routes where we don't want to show the bottom navigation
-  const noNavRoutes = ["/login", "/register", "/forgot-password", "/reset-password"];
+  const noNavRoutes = ["/login", "/register", "/forgot-password", "/reset-password", "/delete-account"];
   const shouldShowNav = !noNavRoutes.includes(location.pathname);
 
   return (
