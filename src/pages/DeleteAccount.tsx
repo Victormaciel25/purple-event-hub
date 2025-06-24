@@ -113,38 +113,6 @@ const DeleteAccount = () => {
         </CardContent>
       </Card>
 
-      <Card className="mb-6">
-        <CardHeader>
-          <CardTitle>Antes de excluir sua conta</CardTitle>
-          <CardDescription>
-            Considere as seguintes opções:
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
-              <h4 className="font-medium text-blue-900 mb-2">Baixar seus dados</h4>
-              <p className="text-sm text-blue-800 mb-3">
-                Você pode solicitar uma cópia dos seus dados antes de excluir a conta.
-              </p>
-              <Button variant="outline" size="sm" className="border-blue-300 text-blue-700">
-                Solicitar dados
-              </Button>
-            </div>
-            
-            <div className="p-4 bg-yellow-50 rounded-lg border border-yellow-200">
-              <h4 className="font-medium text-yellow-900 mb-2">Desativar temporariamente</h4>
-              <p className="text-sm text-yellow-800 mb-3">
-                Se você só precisa de uma pausa, pode desativar sua conta temporariamente.
-              </p>
-              <Button variant="outline" size="sm" className="border-yellow-300 text-yellow-700">
-                Desativar conta
-              </Button>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
       <Card>
         <CardHeader>
           <CardTitle className="text-red-600 flex items-center gap-2">
