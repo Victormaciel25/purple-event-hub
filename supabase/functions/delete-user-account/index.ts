@@ -31,38 +31,21 @@ Deno.serve(async (req) => {
     const userId = user.id
     console.log(`Starting account deletion for user: ${userId}`)
 
-    // Start a transaction to delete all user data
-    // Delete user's spaces and related data
-    const { error: spacesError } = await supabase
-      .from('spaces')
-      .delete()
-      .eq('user_id', userId)
+    // Delete in correct order to respect foreign key constraints
     
-    if (spacesError) {
-      console.error('Error deleting spaces:', spacesError)
+    // 1. Delete space photos first (they reference spaces)
+    const { error: spacePhotosError } = await supabase
+      .from('space_photos')
+      .delete()
+      .in('space_id', 
+        supabase.from('spaces').select('id').eq('user_id', userId)
+      )
+    
+    if (spacePhotosError) {
+      console.error('Error deleting space photos:', spacePhotosError)
     }
 
-    // Delete user's vendors
-    const { error: vendorsError } = await supabase
-      .from('vendors')
-      .delete()
-      .eq('user_id', userId)
-    
-    if (vendorsError) {
-      console.error('Error deleting vendors:', vendorsError)
-    }
-
-    // Delete user's chats and messages
-    const { error: chatsError } = await supabase
-      .from('chats')
-      .delete()
-      .or(`user_id.eq.${userId},owner_id.eq.${userId}`)
-    
-    if (chatsError) {
-      console.error('Error deleting chats:', chatsError)
-    }
-
-    // Delete user's messages
+    // 2. Delete user's messages
     const { error: messagesError } = await supabase
       .from('messages')
       .delete()
@@ -72,7 +55,17 @@ Deno.serve(async (req) => {
       console.error('Error deleting messages:', messagesError)
     }
 
-    // Delete user's promotions
+    // 3. Delete user's chats
+    const { error: chatsError } = await supabase
+      .from('chats')
+      .delete()
+      .or(`user_id.eq.${userId},owner_id.eq.${userId}`)
+    
+    if (chatsError) {
+      console.error('Error deleting chats:', chatsError)
+    }
+
+    // 4. Delete user's space promotions
     const { error: spacePromotionsError } = await supabase
       .from('space_promotions')
       .delete()
@@ -82,6 +75,7 @@ Deno.serve(async (req) => {
       console.error('Error deleting space promotions:', spacePromotionsError)
     }
 
+    // 5. Delete user's vendor promotions
     const { error: vendorPromotionsError } = await supabase
       .from('vendor_promotions')
       .delete()
@@ -91,7 +85,7 @@ Deno.serve(async (req) => {
       console.error('Error deleting vendor promotions:', vendorPromotionsError)
     }
 
-    // Delete user's subscriptions
+    // 6. Delete user's subscriptions
     const { error: subscriptionsError } = await supabase
       .from('space_subscriptions')
       .delete()
@@ -101,7 +95,27 @@ Deno.serve(async (req) => {
       console.error('Error deleting subscriptions:', subscriptionsError)
     }
 
-    // Delete user's roles
+    // 7. Delete user's spaces (now that photos are deleted)
+    const { error: spacesError } = await supabase
+      .from('spaces')
+      .delete()
+      .eq('user_id', userId)
+    
+    if (spacesError) {
+      console.error('Error deleting spaces:', spacesError)
+    }
+
+    // 8. Delete user's vendors
+    const { error: vendorsError } = await supabase
+      .from('vendors')
+      .delete()
+      .eq('user_id', userId)
+    
+    if (vendorsError) {
+      console.error('Error deleting vendors:', vendorsError)
+    }
+
+    // 9. Delete user's roles
     const { error: rolesError } = await supabase
       .from('user_roles')
       .delete()
@@ -111,7 +125,7 @@ Deno.serve(async (req) => {
       console.error('Error deleting user roles:', rolesError)
     }
 
-    // Delete user's notifications
+    // 10. Delete user's notifications
     const { error: spaceNotificationsError } = await supabase
       .from('space_deletion_notifications')
       .delete()
@@ -130,7 +144,7 @@ Deno.serve(async (req) => {
       console.error('Error deleting vendor notifications:', vendorNotificationsError)
     }
 
-    // Delete user's profile
+    // 11. Delete user's profile
     const { error: profileError } = await supabase
       .from('profiles')
       .delete()
@@ -140,7 +154,7 @@ Deno.serve(async (req) => {
       console.error('Error deleting profile:', profileError)
     }
 
-    // Finally, delete the user from auth
+    // 12. Finally, delete the user from auth
     const { error: deleteUserError } = await supabase.auth.admin.deleteUser(userId)
     
     if (deleteUserError) {
