@@ -358,10 +358,10 @@ const EditProfileDialog = ({
                 <div className="flex gap-2 w-full sm:w-auto">
                   <Button
                     type="button"
-                    variant="destructive"
+                    variant="ghost"
                     onClick={handleDeleteAccount}
                     disabled={loading || uploadLoading}
-                    className="flex-1 sm:flex-none"
+                    className="flex-1 sm:flex-none text-gray-500 hover:text-gray-700 text-sm"
                   >
                     Excluir conta
                   </Button>
