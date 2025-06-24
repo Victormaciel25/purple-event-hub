@@ -172,7 +172,30 @@ const Login = () => {
           }
         });
 
-        if (error) throw error;
+        if (error) {
+          console.log("Signup error:", error.message);
+          
+          // Handle specific signup errors
+          let errorMessage = "Erro ao criar conta";
+          
+          if (error.message.includes("email rate limit exceeded") || error.message.includes("Email rate limit exceeded")) {
+            errorMessage = "Limite de emails atingido. Aguarde alguns minutos antes de tentar novamente ou entre em contato com o suporte.";
+          } else if (error.message.includes("User already registered")) {
+            errorMessage = "Este email já está cadastrado. Tente fazer login ou use outro email.";
+          } else if (error.message.includes("Signup is disabled")) {
+            errorMessage = "Cadastro temporariamente desabilitado. Tente novamente mais tarde.";
+          } else {
+            errorMessage = error.message;
+          }
+
+          toast({
+            title: "Erro no cadastro",
+            description: errorMessage,
+            variant: "destructive",
+          });
+          setLoading(false);
+          return;
+        }
 
         // Create profile only after successful signup
         if (data.user) {
@@ -234,9 +257,17 @@ const Login = () => {
       }
     } catch (error: any) {
       console.log("Catch error:", error.message);
+      
+      let errorMessage = "Erro inesperado";
+      if (error.message.includes("email rate limit exceeded") || error.message.includes("Email rate limit exceeded")) {
+        errorMessage = "Limite de emails atingido. Aguarde alguns minutos antes de tentar novamente.";
+      } else {
+        errorMessage = error.message;
+      }
+      
       toast({
         title: "Erro",
-        description: error.message,
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {
