@@ -18,7 +18,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
-import { ArrowLeft, AlertTriangle, Trash2 } from "lucide-react";
+import { ArrowLeft, AlertTriangle, Trash2, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
 const DeleteAccount = () => {
@@ -35,21 +35,45 @@ const DeleteAccount = () => {
     setLoading(true);
     
     try {
-      // Note: In a real implementation, you would need to call a backend function
-      // to properly delete all user data before deleting the auth user
-      // For now, we'll just sign out the user and show a message
+      // Get current session to get the access token
+      const { data: sessionData } = await supabase.auth.getSession();
       
-      const { error } = await supabase.auth.signOut();
-      
+      if (!sessionData.session) {
+        toast.error("Sessão não encontrada. Faça login novamente.");
+        navigate("/login");
+        return;
+      }
+
+      console.log("Iniciando exclusão da conta...");
+
+      // Call the edge function to delete the user account
+      const { data, error } = await supabase.functions.invoke('delete-user-account', {
+        headers: {
+          Authorization: `Bearer ${sessionData.session.access_token}`,
+        },
+      });
+
       if (error) {
-        throw error;
+        console.error("Erro na função de exclusão:", error);
+        throw new Error(error.message || "Erro ao excluir conta");
+      }
+
+      console.log("Resposta da função:", data);
+
+      if (data?.success) {
+        toast.success("Conta excluída com sucesso");
+        // Clear any local storage
+        localStorage.clear();
+        sessionStorage.clear();
+        // Navigate to home
+        navigate("/", { replace: true });
+      } else {
+        throw new Error(data?.error || "Erro desconhecido ao excluir conta");
       }
       
-      toast.success("Conta excluída com sucesso");
-      navigate("/", { replace: true });
     } catch (error: any) {
       console.error("Error deleting account:", error);
-      toast.error("Erro ao excluir conta. Tente novamente.");
+      toast.error(error.message || "Erro ao excluir conta. Tente novamente.");
     } finally {
       setLoading(false);
     }
@@ -109,6 +133,10 @@ const DeleteAccount = () => {
               <div className="w-2 h-2 bg-red-500 rounded-full" />
               Histórico de atividades
             </li>
+            <li className="flex items-center gap-2">
+              <div className="w-2 h-2 bg-red-500 rounded-full" />
+              Promoções e assinaturas
+            </li>
           </ul>
         </CardContent>
       </Card>
@@ -135,6 +163,7 @@ const DeleteAccount = () => {
                 onChange={(e) => setConfirmText(e.target.value)}
                 placeholder="EXCLUIR"
                 className="mt-2"
+                disabled={loading}
               />
             </div>
             
@@ -143,6 +172,7 @@ const DeleteAccount = () => {
                 variant="outline"
                 onClick={() => navigate(-1)}
                 className="flex-1"
+                disabled={loading}
               >
                 Cancelar
               </Button>
@@ -154,7 +184,14 @@ const DeleteAccount = () => {
                     disabled={confirmText !== "EXCLUIR" || loading}
                     className="flex-1"
                   >
-                    {loading ? "Excluindo..." : "Excluir Conta"}
+                    {loading ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Excluindo...
+                      </>
+                    ) : (
+                      "Excluir Conta"
+                    )}
                   </Button>
                 </AlertDialogTrigger>
                 <AlertDialogContent>
@@ -166,12 +203,20 @@ const DeleteAccount = () => {
                     </AlertDialogDescription>
                   </AlertDialogHeader>
                   <AlertDialogFooter>
-                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                    <AlertDialogCancel disabled={loading}>Cancelar</AlertDialogCancel>
                     <AlertDialogAction
                       onClick={handleDeleteAccount}
                       className="bg-red-500 hover:bg-red-600"
+                      disabled={loading}
                     >
-                      Sim, excluir conta
+                      {loading ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Excluindo...
+                        </>
+                      ) : (
+                        "Sim, excluir conta"
+                      )}
                     </AlertDialogAction>
                   </AlertDialogFooter>
                 </AlertDialogContent>
