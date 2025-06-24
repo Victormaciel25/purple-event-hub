@@ -1,0 +1,12 @@
+{
+  "expo": {
+    "extra": {
+      "eas": {
+        "projectId": "46ad41c3-ad77-473e-afcd-86f3f5fc6fef"
+      }
+    },
+    "android": {
+      "package": "ipartybrasi.vm"
+    }
+  }
+}
