@@ -1,12 +1,11 @@
-
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import { useEffect, useState } from "react";
 import { supabase } from "./integrations/supabase/client";
+
 import Layout from "./components/Layout";
 import Login from "./pages/Login";
 import ForgotPassword from "./pages/ForgotPassword";
@@ -37,56 +36,48 @@ import SubscriptionsManagement from "./pages/SubscriptionsManagement";
 import DeleteAccount from "./pages/DeleteAccount";
 import Index from "./pages/Index";
 import VendorPendingApproval from "./components/VendorPendingApproval";
+
 import { useSpaceDeletionNotifications } from "./hooks/useSpaceDeletionNotifications";
 import { useVendorDeletionNotifications } from "./hooks/useVendorDeletionNotifications";
 
-// Create a QueryClient instance outside of the component
-const queryClient = new QueryClient();
+import "./index.css";
 
-// Add a global CSS variable for the iparty color
-import './index.css';
-// Ensure we have the iparty color variable in :root in index.css
+const queryClient = new QueryClient();
 
 const App: React.FC = () => {
   const [session, setSession] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [isPasswordRecovery, setIsPasswordRecovery] = useState(false);
-  
-  // Use space and vendor deletion notifications
+  const [isPasswordRecovery, setIsPasswordRecovery] = useState<boolean>(false);
+
   useSpaceDeletionNotifications();
   useVendorDeletionNotifications();
 
   useEffect(() => {
-    // Verificar se há parâmetros de URL que indicam recuperação de senha PRIMEIRO
     const urlParams = new URLSearchParams(window.location.search);
-    const type = urlParams.get('type');
-    const accessToken = urlParams.get('access_token');
-    const refreshToken = urlParams.get('refresh_token');
-    
+    const type = urlParams.get("type");
+    const accessToken = urlParams.get("access_token");
+    const refreshToken = urlParams.get("refresh_token");
+
     console.log("App - URL params:", { type, hasAccessToken: !!accessToken, hasRefreshToken: !!refreshToken });
-    
-    if (type === 'recovery' && accessToken && refreshToken) {
+
+    if (type === "recovery" && accessToken && refreshToken) {
       console.log("App - Password recovery detected from URL");
       setIsPasswordRecovery(true);
     }
 
-    // Set up auth state listener
-    const { data: authListener } = supabase.auth.onAuthStateChange(
-      (event, newSession) => {
-        console.log("Auth state changed:", event, newSession);
-        
-        if (event === 'PASSWORD_RECOVERY') {
-          console.log("Password recovery event detected");
-          setIsPasswordRecovery(true);
-        } else if (event === 'SIGNED_OUT') {
-          setIsPasswordRecovery(false);
-        }
-        
-        setSession(newSession);
-      }
-    );
+    const { data: authListener } = supabase.auth.onAuthStateChange((event, newSession) => {
+      console.log("Auth state changed:", event, newSession);
 
-    // Then check for existing session
+      if (event === "PASSWORD_RECOVERY") {
+        console.log("Password recovery event detected");
+        setIsPasswordRecovery(true);
+      } else if (event === "SIGNED_OUT") {
+        setIsPasswordRecovery(false);
+      }
+
+      setSession(newSession);
+    });
+
     const checkSession = async () => {
       try {
         const { data } = await supabase.auth.getSession();
@@ -112,54 +103,43 @@ const App: React.FC = () => {
     return <Layout />;
   };
 
-  if (loading) {
+  const shouldHold = isPasswordRecovery && !session;
+
+  if (loading || shouldHold) {
     return <div>Carregando...</div>;
   }
 
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
-        {/* Configure toasters with position="top-right" to hide them */}
         <Toaster />
         <Sonner position="top-right" closeButton={false} className="opacity-0 invisible" />
         <BrowserRouter>
           <Routes>
-            {/* Root route redirects to the index component */}
             <Route path="/" element={<Index />} />
-            
-            {/* Login Route - block access if it's a password recovery */}
-            <Route 
-              path="/login" 
+
+            <Route
+              path="/login"
               element={
-                isPasswordRecovery ? 
-                  <Navigate to="/reset-password" replace /> : 
-                  (session ? <Navigate to="/explore" replace /> : <Login />)
-              } 
+                isPasswordRecovery
+                  ? <Navigate to="/reset-password" replace />
+                  : (session ? <Navigate to="/explore" replace /> : <Login />)
+              }
             />
-            
-            {/* Forgot Password Route */}
-            <Route 
-              path="/forgot-password" 
+
+            <Route
+              path="/forgot-password"
               element={
-                isPasswordRecovery ? 
-                  <Navigate to="/reset-password" replace /> : 
-                  (session ? <Navigate to="/explore" replace /> : <ForgotPassword />)
-              } 
+                isPasswordRecovery
+                  ? <Navigate to="/reset-password" replace />
+                  : (session ? <Navigate to="/explore" replace /> : <ForgotPassword />)
+              }
             />
-            
-            {/* Reset Password Route - Always accessible */}
-            <Route 
-              path="/reset-password" 
-              element={<ResetPassword />} 
-            />
-            
-            {/* Privacy Policy Route - accessible without authentication */}
+
+            <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/privacy-policy" element={<PrivacyPolicy />} />
-            
-            {/* Help Support Route - accessible without authentication */}
             <Route path="/help-support" element={<HelpSupport />} />
-            
-            {/* App Routes with Layout */}
+
             <Route element={
               <RequireAuth>
                 <AuthenticatedLayout />
@@ -189,8 +169,7 @@ const App: React.FC = () => {
               <Route path="/promote-space" element={<PromoteSpace />} />
               <Route path="/promote-vendor" element={<PromoteVendor />} />
             </Route>
-            
-            {/* Catch-all route */}
+
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
