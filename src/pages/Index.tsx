@@ -11,14 +11,15 @@ const Index = () => {
   useEffect(() => {
     const checkSession = async () => {
       try {
-        // Verificar se há parâmetros de URL que indicam recuperação de senha
+        // Verificar se há parâmetros de URL que indicam recuperação de senha PRIMEIRO
         const urlParams = new URLSearchParams(window.location.search);
         const type = urlParams.get('type');
         const accessToken = urlParams.get('access_token');
+        const refreshToken = urlParams.get('refresh_token');
         
-        console.log("Index - URL params:", { type, hasAccessToken: !!accessToken });
+        console.log("Index - URL params:", { type, hasAccessToken: !!accessToken, hasRefreshToken: !!refreshToken });
         
-        if (type === 'recovery' && accessToken) {
+        if (type === 'recovery' && accessToken && refreshToken) {
           console.log("Index - Password recovery detected, redirecting to reset-password");
           setIsPasswordRecovery(true);
           setLoading(false);

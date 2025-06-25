@@ -57,14 +57,26 @@ const App: React.FC = () => {
   useVendorDeletionNotifications();
 
   useEffect(() => {
-    // Set up auth state listener first
+    // Verificar se há parâmetros de URL que indicam recuperação de senha PRIMEIRO
+    const urlParams = new URLSearchParams(window.location.search);
+    const type = urlParams.get('type');
+    const accessToken = urlParams.get('access_token');
+    const refreshToken = urlParams.get('refresh_token');
+    
+    console.log("App - URL params:", { type, hasAccessToken: !!accessToken, hasRefreshToken: !!refreshToken });
+    
+    if (type === 'recovery' && accessToken && refreshToken) {
+      console.log("App - Password recovery detected from URL");
+      setIsPasswordRecovery(true);
+    }
+
+    // Set up auth state listener
     const { data: authListener } = supabase.auth.onAuthStateChange(
       (event, newSession) => {
         console.log("Auth state changed:", event, newSession);
         
-        // Detectar se é uma sessão de recuperação de senha
         if (event === 'PASSWORD_RECOVERY') {
-          console.log("Password recovery detected");
+          console.log("Password recovery event detected");
           setIsPasswordRecovery(true);
         } else if (event === 'SIGNED_OUT') {
           setIsPasswordRecovery(false);
@@ -79,20 +91,6 @@ const App: React.FC = () => {
       try {
         const { data } = await supabase.auth.getSession();
         console.log("Current session:", data.session);
-        
-        // Verificar se há parâmetros de URL que indicam recuperação de senha
-        const urlParams = new URLSearchParams(window.location.search);
-        const accessToken = urlParams.get('access_token');
-        const refreshToken = urlParams.get('refresh_token');
-        const type = urlParams.get('type');
-        
-        console.log("URL params:", { accessToken: !!accessToken, refreshToken: !!refreshToken, type });
-        
-        if (type === 'recovery' && accessToken && refreshToken) {
-          console.log("Recovery session detected from URL");
-          setIsPasswordRecovery(true);
-        }
-        
         setSession(data.session);
       } finally {
         setLoading(false);
@@ -129,19 +127,27 @@ const App: React.FC = () => {
             {/* Root route redirects to the index component */}
             <Route path="/" element={<Index />} />
             
-            {/* Login Route */}
+            {/* Login Route - block access if it's a password recovery */}
             <Route 
               path="/login" 
-              element={session && !isPasswordRecovery ? <Navigate to="/explore" replace /> : <Login />} 
+              element={
+                isPasswordRecovery ? 
+                  <Navigate to="/reset-password" replace /> : 
+                  (session ? <Navigate to="/explore" replace /> : <Login />)
+              } 
             />
             
             {/* Forgot Password Route */}
             <Route 
               path="/forgot-password" 
-              element={session && !isPasswordRecovery ? <Navigate to="/explore" replace /> : <ForgotPassword />} 
+              element={
+                isPasswordRecovery ? 
+                  <Navigate to="/reset-password" replace /> : 
+                  (session ? <Navigate to="/explore" replace /> : <ForgotPassword />)
+              } 
             />
             
-            {/* Reset Password Route - Sempre acessível para sessões de recuperação */}
+            {/* Reset Password Route - Always accessible */}
             <Route 
               path="/reset-password" 
               element={<ResetPassword />} 
