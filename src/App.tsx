@@ -5,7 +5,6 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { supabase } from "./integrations/supabase/client";
-
 import Layout from "./components/Layout";
 import Login from "./pages/Login";
 import ForgotPassword from "./pages/ForgotPassword";
@@ -36,7 +35,6 @@ import SubscriptionsManagement from "./pages/SubscriptionsManagement";
 import DeleteAccount from "./pages/DeleteAccount";
 import Index from "./pages/Index";
 import VendorPendingApproval from "./components/VendorPendingApproval";
-
 import { useSpaceDeletionNotifications } from "./hooks/useSpaceDeletionNotifications";
 import { useVendorDeletionNotifications } from "./hooks/useVendorDeletionNotifications";
 
@@ -47,7 +45,7 @@ const queryClient = new QueryClient();
 const App: React.FC = () => {
   const [session, setSession] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [isPasswordRecovery, setIsPasswordRecovery] = useState<boolean>(false);
+  const [isPasswordRecovery, setIsPasswordRecovery] = useState(false);
 
   useSpaceDeletionNotifications();
   useVendorDeletionNotifications();
@@ -58,30 +56,51 @@ const App: React.FC = () => {
     const accessToken = urlParams.get("access_token");
     const refreshToken = urlParams.get("refresh_token");
 
-    console.log("App - URL params:", { type, hasAccessToken: !!accessToken, hasRefreshToken: !!refreshToken });
+    console.log("App - URL params:", { type, accessToken, refreshToken });
 
+    // Se for uma sessão de recuperação de senha, forçamos a sessão
     if (type === "recovery" && accessToken && refreshToken) {
-      console.log("App - Password recovery detected from URL");
-      setIsPasswordRecovery(true);
+      console.log("App - Password recovery detected from URL. Forcing session...");
+
+      supabase.auth
+        .setSession({
+          access_token: accessToken,
+          refresh_token: refreshToken,
+        })
+        .then(({ data, error }) => {
+          if (error) {
+            console.error("Erro ao definir sessão de recuperação:", error);
+          } else {
+            console.log("Sessão de recuperação definida com sucesso:", data);
+            setSession(data.session);
+            setIsPasswordRecovery(true);
+          }
+          setLoading(false);
+        });
+
+      return; // evita execução duplicada
     }
 
-    const { data: authListener } = supabase.auth.onAuthStateChange((event, newSession) => {
-      console.log("Auth state changed:", event, newSession);
+    // Listener para mudanças no estado de autenticação
+    const { data: authListener } = supabase.auth.onAuthStateChange(
+      (event, newSession) => {
+        console.log("Auth state changed:", event, newSession);
 
-      if (event === "PASSWORD_RECOVERY") {
-        console.log("Password recovery event detected");
-        setIsPasswordRecovery(true);
-      } else if (event === "SIGNED_OUT") {
-        setIsPasswordRecovery(false);
+        if (event === "PASSWORD_RECOVERY") {
+          setIsPasswordRecovery(true);
+        } else if (event === "SIGNED_OUT") {
+          setIsPasswordRecovery(false);
+        }
+
+        setSession(newSession);
       }
+    );
 
-      setSession(newSession);
-    });
-
+    // Verifica sessão existente (caso não seja recovery)
     const checkSession = async () => {
       try {
         const { data } = await supabase.auth.getSession();
-        console.log("Current session:", data.session);
+        console.log("Sessão atual:", data.session);
         setSession(data.session);
       } finally {
         setLoading(false);
@@ -103,9 +122,7 @@ const App: React.FC = () => {
     return <Layout />;
   };
 
-  const shouldHold = isPasswordRecovery && !session;
-
-  if (loading || shouldHold) {
+  if (loading) {
     return <div>Carregando...</div>;
   }
 
@@ -140,11 +157,13 @@ const App: React.FC = () => {
             <Route path="/privacy-policy" element={<PrivacyPolicy />} />
             <Route path="/help-support" element={<HelpSupport />} />
 
-            <Route element={
-              <RequireAuth>
-                <AuthenticatedLayout />
-              </RequireAuth>
-            }>
+            <Route
+              element={
+                <RequireAuth>
+                  <AuthenticatedLayout />
+                </RequireAuth>
+              }
+            >
               <Route path="/explore" element={<Explore />} />
               <Route path="/vendors" element={<Vendors />} />
               <Route path="/vendor/:id" element={<VendorDetails />} />
