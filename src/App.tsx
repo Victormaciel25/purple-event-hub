@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -135,20 +136,20 @@ const App: React.FC = () => {
           <Routes>
             <Route path="/" element={<Index />} />
 
-            <Route
-              path="/login"
+            <Route 
+              path="/login" 
               element={
-                isPasswordRecovery
-                  ? <Navigate to="/reset-password" replace />
+                isPasswordRecovery 
+                  ? <Navigate to="/reset-password" replace /> 
                   : (session ? <Navigate to="/explore" replace /> : <Login />)
               }
             />
 
-            <Route
-              path="/forgot-password"
+            <Route 
+              path="/forgot-password" 
               element={
-                isPasswordRecovery
-                  ? <Navigate to="/reset-password" replace />
+                isPasswordRecovery 
+                  ? <Navigate to="/reset-password" replace /> 
                   : (session ? <Navigate to="/explore" replace /> : <ForgotPassword />)
               }
             />
