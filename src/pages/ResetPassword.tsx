@@ -4,34 +4,17 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ArrowLeft, Check, AlertCircle, Lock } from "lucide-react";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
-
-/**
- * Função utilitária simples que pega uma `string` de hash tipo
- * "#access_token=XXX&refresh_token=YYY&type=recovery" e converte num objeto.
- */
-function parseHashParams(hash: string): Record<string, string> {
-  const trimmed = hash.startsWith("#") ? hash.substring(1) : hash;
-  return trimmed
-    .split("&")
-    .map(segment => segment.split("="))
-    .reduce((obj: Record<string, string>, [key, val]) => {
-      if (key && val !== undefined) {
-        obj[key] = decodeURIComponent(val);
-      }
-      return obj;
-    }, {});
-}
 
 const ResetPassword: React.FC = () => {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [passwordErrors, setPasswordErrors] = useState<string[]>([]);
-  const [tokensValid, setTokensValid] = useState<boolean | null>(null);
-  const location = useLocation();
+  const [isValidSession, setIsValidSession] = useState<boolean | null>(null);
+  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -67,30 +50,62 @@ const ResetPassword: React.FC = () => {
     }
   };
 
-  // No carregamento inicial deste componente, vamos ler `location.hash`
-  // e verificar se existem `access_token`, `refresh_token` e `type=recovery`.
   useEffect(() => {
-    const hashParams = parseHashParams(location.hash);
-    const accessToken = hashParams["access_token"];
-    const refreshToken = hashParams["refresh_token"];
-    const type = hashParams["type"];
+    // Verificar se há parâmetros de recuperação na URL
+    const checkRecoverySession = async () => {
+      try {
+        // Primeiro, vamos verificar se existe uma sessão ativa
+        const { data: sessionData } = await supabase.auth.getSession();
+        
+        console.log("Current session:", sessionData);
+        
+        // Se há uma sessão ativa, verificar se é uma sessão de recuperação
+        if (sessionData.session) {
+          // Verificar se a sessão atual é de recuperação olhando os metadados
+          const user = sessionData.session.user;
+          if (user && user.recovery_sent_at) {
+            console.log("Valid recovery session found");
+            setIsValidSession(true);
+            return;
+          }
+        }
 
-    console.log("HashParams extraídos:", { accessToken, refreshToken, type });
+        // Se chegou aqui, não há sessão de recuperação válida
+        console.log("No valid recovery session found");
+        setIsValidSession(false);
 
-    // Se faltar qualquer coisa, tokens inválidos
-    if (!accessToken || !refreshToken || type !== "recovery") {
-      setTokensValid(false);
-    } else {
-      setTokensValid(true);
-    }
-  }, [location.hash]);
+      } catch (error) {
+        console.error("Error checking recovery session:", error);
+        setIsValidSession(false);
+      }
+    };
+
+    checkRecoverySession();
+
+    // Configurar listener para mudanças de auth
+    const { data: authListener } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        console.log("Auth event:", event, session);
+        
+        if (event === 'PASSWORD_RECOVERY') {
+          setIsValidSession(true);
+        } else if (event === 'SIGNED_OUT') {
+          setIsValidSession(false);
+        }
+      }
+    );
+
+    return () => {
+      authListener.subscription.unsubscribe();
+    };
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
     try {
-      // 1) validações de senha
+      // Validações de senha
       const passwordValidationErrors = validatePassword(password);
       if (passwordValidationErrors.length > 0) {
         toast({
@@ -101,6 +116,7 @@ const ResetPassword: React.FC = () => {
         setLoading(false);
         return;
       }
+      
       if (password !== confirmPassword) {
         toast({
           title: "Erro",
@@ -111,38 +127,33 @@ const ResetPassword: React.FC = () => {
         return;
       }
 
-      // 2) Extrair os tokens novamente do hash
-      const hashParams = parseHashParams(location.hash);
-      const accessToken = hashParams["access_token"];
-      const refreshToken = hashParams["refresh_token"];
-      if (!accessToken || !refreshToken) {
-        throw new Error("Tokens de autenticação não encontrados");
-      }
-
-      console.log("Chamando supabase.auth.setSession() com tokens do hash...");
-      const { error: sessionError } = await supabase.auth.setSession({
-        access_token: accessToken,
-        refresh_token: refreshToken,
+      console.log("Attempting to update password...");
+      
+      // Atualizar a senha
+      const { error: updateError } = await supabase.auth.updateUser({ 
+        password: password 
       });
-      if (sessionError) throw sessionError;
-
-      console.log("Sessão do Supabase definida com sucesso, atualizando a senha...");
-      const { error: updateError } = await supabase.auth.updateUser({ password });
-      if (updateError) throw updateError;
+      
+      if (updateError) {
+        console.error("Password update error:", updateError);
+        throw updateError;
+      }
 
       toast({
         title: "Senha redefinida",
         description: "Sua senha foi redefinida com sucesso!",
       });
 
-      // 3) Deslogar e levar para /login
-      await supabase.auth.signOut();
-      navigate("/login");
+      // Aguardar um pouco e depois redirecionar
+      setTimeout(() => {
+        navigate("/login");
+      }, 2000);
+
     } catch (error: any) {
       console.error("Error resetting password:", error);
       toast({
         title: "Erro",
-        description: error.message,
+        description: error.message || "Erro ao redefinir senha",
         variant: "destructive",
       });
     } finally {
@@ -150,8 +161,8 @@ const ResetPassword: React.FC = () => {
     }
   };
 
-  // 1) Enquanto não terminamos de checar se existe sessão de recovery, mostramos "verificando"
-  if (tokensValid === null) {
+  // Estado de carregamento
+  if (isValidSession === null) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-background p-4">
         <div className="text-center">
@@ -170,8 +181,8 @@ const ResetPassword: React.FC = () => {
     );
   }
 
-  // 2) Se não existe sessão de recovery válida, mostramos erro
-  if (tokensValid === false) {
+  // Link inválido ou expirado
+  if (isValidSession === false) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-background p-4">
         <div className="w-full max-w-md space-y-4 animate-fade-in">
@@ -219,7 +230,7 @@ const ResetPassword: React.FC = () => {
     );
   }
 
-  // 3) Se existe sessão válida de recovery, mostramos o formulário para o usuário digitar a nova senha
+  // Formulário de redefinição de senha
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-background p-4">
       <div className="w-full max-w-md space-y-4 animate-fade-in">

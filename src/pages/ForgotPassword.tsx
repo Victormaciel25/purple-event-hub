@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -6,7 +7,6 @@ import { ArrowLeft, Mail } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
-import { getCurrentDomain } from "@/config/app-config";
 
 const ForgotPassword: React.FC = () => {
   const [email, setEmail] = useState<string>("");
@@ -15,42 +15,23 @@ const ForgotPassword: React.FC = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  /**
-   * Quando o formulário é submetido:
-   * 1) Descobrimos qual é o domínio atual (localhost ou produção).
-   * 2) Anexamos "/reset-password" a esse domínio para compor o redirect_to.
-   * 3) Chamamos `supabase.auth.resetPasswordForEmail(...)` passando esse redirectTo.
-   *
-   * No painel do Supabase em Authentication → Settings → Configuração de URL → URLs de redirecionamento:
-   *   • https://www.ipartybrasil.com/reset-password
-   *   • http://localhost:8080/reset-password   (para testes locais)
-   *
-   * Dessa forma, o Supabase vai gerar um link como:
-   * https://<seu-projeto>.supabase.co/auth/v1/verify?
-   *    token=XXXXXXXX
-   *    &type=recovery
-   *    &redirect_to=https://www.ipartybrasil.com/reset-password
-   *
-   * E, ao clicar, o Supabase cuida de criar a sessão de recuperação e redireciona para /reset-password.
-   */
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
     try {
-      // Obtemos domínio (ex.: http://localhost:8080 ou https://www.ipartybrasil.com)
-      const domain = getCurrentDomain();
-      const redirectTo = `${domain}/reset-password`;
-      console.log("[ForgotPassword] redirectTo =", redirectTo);
+      console.log("[ForgotPassword] Sending reset email to:", email);
 
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo,
+        redirectTo: `${window.location.origin}/reset-password`,
       });
 
       if (error) {
+        console.error("[ForgotPassword] Error:", error);
         throw error;
       }
 
+      console.log("[ForgotPassword] Reset email sent successfully");
       setEmailSent(true);
     } catch (err: any) {
       console.error("[ForgotPassword] Erro ao enviar e-mail:", err);
