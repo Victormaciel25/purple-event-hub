@@ -173,10 +173,14 @@ const ResetPassword: React.FC = () => {
       
       toast({
         title: "Senha redefinida",
-        description: "Sua senha foi redefinida com sucesso!",
+        description: "Sua senha foi redefinida com sucesso! Faça login com sua nova senha.",
       });
 
-      // Aguardar um pouco e depois redirecionar
+      // Fazer logout da sessão de recuperação e redirecionar para login
+      console.log("Signing out recovery session...");
+      await supabase.auth.signOut();
+      
+      // Aguardar um pouco e depois redirecionar para login
       setTimeout(() => {
         navigate("/login");
       }, 2000);
