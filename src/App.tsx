@@ -1,4 +1,5 @@
 
+
 import React, { useEffect, useState } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -52,63 +53,34 @@ const App: React.FC = () => {
   useVendorDeletionNotifications();
 
   useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const type = urlParams.get("type");
-    const accessToken = urlParams.get("access_token");
-    const refreshToken = urlParams.get("refresh_token");
+    const url = new URL(window.location.href);
+    const type = url.searchParams.get("type");
+    const accessToken = url.searchParams.get("access_token");
+    const refreshToken = url.searchParams.get("refresh_token");
 
-    console.log("App - URL params:", { type, accessToken, refreshToken });
+    const isRecovery = type === "recovery" && accessToken && refreshToken;
 
-    // Se for uma sessão de recuperação de senha, forçamos a sessão
-    if (type === "recovery" && accessToken && refreshToken) {
-      console.log("App - Password recovery detected from URL. Forcing session...");
-
-      supabase.auth
-        .setSession({
-          access_token: accessToken,
-          refresh_token: refreshToken,
-        })
-        .then(({ data, error }) => {
-          if (error) {
-            console.error("Erro ao definir sessão de recuperação:", error);
-          } else {
-            console.log("Sessão de recuperação definida com sucesso:", data);
-            setSession(data.session);
-            setIsPasswordRecovery(true);
-          }
-          setLoading(false);
-        });
-
-      return; // evita execução duplicada
+    if (isRecovery) {
+      // Forçar login da sessão de recuperação
+      supabase.auth.setSession({
+        access_token: accessToken,
+        refresh_token: refreshToken,
+      }).then(() => {
+        console.log("Sessão de recuperação iniciada.");
+        setIsPasswordRecovery(true);
+      });
     }
 
-    // Listener para mudanças no estado de autenticação
-    const { data: authListener } = supabase.auth.onAuthStateChange(
-      (event, newSession) => {
-        console.log("Auth state changed:", event, newSession);
+    // Listener de auth padrão
+    const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+    });
 
-        if (event === "PASSWORD_RECOVERY") {
-          setIsPasswordRecovery(true);
-        } else if (event === "SIGNED_OUT") {
-          setIsPasswordRecovery(false);
-        }
-
-        setSession(newSession);
-      }
-    );
-
-    // Verifica sessão existente (caso não seja recovery)
-    const checkSession = async () => {
-      try {
-        const { data } = await supabase.auth.getSession();
-        console.log("Sessão atual:", data.session);
-        setSession(data.session);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    checkSession();
+    // Verifica sessão atual
+    supabase.auth.getSession().then(({ data }) => {
+      setSession(data.session);
+      setLoading(false);
+    });
 
     return () => {
       authListener.subscription.unsubscribe();
@@ -199,3 +171,4 @@ const App: React.FC = () => {
 };
 
 export default App;
+
