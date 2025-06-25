@@ -50,6 +50,7 @@ import './index.css';
 const App: React.FC = () => {
   const [session, setSession] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [isPasswordRecovery, setIsPasswordRecovery] = useState(false);
   
   // Use space and vendor deletion notifications
   useSpaceDeletionNotifications();
@@ -58,8 +59,17 @@ const App: React.FC = () => {
   useEffect(() => {
     // Set up auth state listener first
     const { data: authListener } = supabase.auth.onAuthStateChange(
-      (_event, newSession) => {
-        console.log("Auth state changed:", _event);
+      (event, newSession) => {
+        console.log("Auth state changed:", event, newSession);
+        
+        // Detectar se é uma sessão de recuperação de senha
+        if (event === 'PASSWORD_RECOVERY') {
+          console.log("Password recovery detected");
+          setIsPasswordRecovery(true);
+        } else if (event === 'SIGNED_OUT') {
+          setIsPasswordRecovery(false);
+        }
+        
         setSession(newSession);
       }
     );
@@ -68,6 +78,21 @@ const App: React.FC = () => {
     const checkSession = async () => {
       try {
         const { data } = await supabase.auth.getSession();
+        console.log("Current session:", data.session);
+        
+        // Verificar se há parâmetros de URL que indicam recuperação de senha
+        const urlParams = new URLSearchParams(window.location.search);
+        const accessToken = urlParams.get('access_token');
+        const refreshToken = urlParams.get('refresh_token');
+        const type = urlParams.get('type');
+        
+        console.log("URL params:", { accessToken: !!accessToken, refreshToken: !!refreshToken, type });
+        
+        if (type === 'recovery' && accessToken && refreshToken) {
+          console.log("Recovery session detected from URL");
+          setIsPasswordRecovery(true);
+        }
+        
         setSession(data.session);
       } finally {
         setLoading(false);
@@ -107,16 +132,16 @@ const App: React.FC = () => {
             {/* Login Route */}
             <Route 
               path="/login" 
-              element={session ? <Navigate to="/explore" replace /> : <Login />} 
+              element={session && !isPasswordRecovery ? <Navigate to="/explore" replace /> : <Login />} 
             />
             
             {/* Forgot Password Route */}
             <Route 
               path="/forgot-password" 
-              element={session ? <Navigate to="/explore" replace /> : <ForgotPassword />} 
+              element={session && !isPasswordRecovery ? <Navigate to="/explore" replace /> : <ForgotPassword />} 
             />
             
-            {/* Reset Password Route - SEMPRE acessível, mesmo com sessão ativa */}
+            {/* Reset Password Route - Sempre acessível para sessões de recuperação */}
             <Route 
               path="/reset-password" 
               element={<ResetPassword />} 

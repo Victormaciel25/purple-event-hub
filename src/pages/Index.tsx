@@ -6,10 +6,25 @@ import { supabase } from "@/integrations/supabase/client";
 const Index = () => {
   const [session, setSession] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [isPasswordRecovery, setIsPasswordRecovery] = useState(false);
 
   useEffect(() => {
     const checkSession = async () => {
       try {
+        // Verificar se há parâmetros de URL que indicam recuperação de senha
+        const urlParams = new URLSearchParams(window.location.search);
+        const type = urlParams.get('type');
+        const accessToken = urlParams.get('access_token');
+        
+        console.log("Index - URL params:", { type, hasAccessToken: !!accessToken });
+        
+        if (type === 'recovery' && accessToken) {
+          console.log("Index - Password recovery detected, redirecting to reset-password");
+          setIsPasswordRecovery(true);
+          setLoading(false);
+          return;
+        }
+        
         const { data } = await supabase.auth.getSession();
         setSession(data.session);
       } finally {
@@ -22,6 +37,11 @@ const Index = () => {
 
   if (loading) {
     return <div className="min-h-screen flex items-center justify-center">Carregando...</div>;
+  }
+
+  // Se é recuperação de senha, redirecionar para reset-password
+  if (isPasswordRecovery) {
+    return <Navigate to="/reset-password" replace />;
   }
 
   // If user is authenticated, redirect to explore, otherwise to login

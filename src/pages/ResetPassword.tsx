@@ -51,29 +51,58 @@ const ResetPassword: React.FC = () => {
   };
 
   useEffect(() => {
-    // Verificar se há parâmetros de recuperação na URL
     const checkRecoverySession = async () => {
       try {
-        // Primeiro, vamos verificar se existe uma sessão ativa
-        const { data: sessionData } = await supabase.auth.getSession();
+        console.log("Checking recovery session...");
         
-        console.log("Current session:", sessionData);
+        // Primeiro, verificar se há parâmetros de URL de recuperação
+        const urlParams = new URLSearchParams(window.location.search);
+        const accessToken = urlParams.get('access_token');
+        const refreshToken = urlParams.get('refresh_token');
+        const type = urlParams.get('type');
         
-        // Se há uma sessão ativa, verificar se é uma sessão de recuperação
-        if (sessionData.session) {
-          // Verificar se a sessão atual é de recuperação olhando os metadados
-          const user = sessionData.session.user;
-          if (user && user.recovery_sent_at) {
-            console.log("Valid recovery session found");
+        console.log("URL parameters:", { 
+          hasAccessToken: !!accessToken, 
+          hasRefreshToken: !!refreshToken, 
+          type 
+        });
+        
+        if (type === 'recovery' && accessToken && refreshToken) {
+          console.log("Valid recovery parameters found in URL");
+          
+          // Estabelecer a sessão usando os tokens da URL
+          const { data, error } = await supabase.auth.setSession({
+            access_token: accessToken,
+            refresh_token: refreshToken
+          });
+          
+          if (error) {
+            console.error("Error setting session:", error);
+            setIsValidSession(false);
+            return;
+          }
+          
+          if (data.session) {
+            console.log("Recovery session established successfully");
             setIsValidSession(true);
+            // Limpar a URL dos parâmetros de recuperação
+            window.history.replaceState({}, document.title, window.location.pathname);
             return;
           }
         }
-
-        // Se chegou aqui, não há sessão de recuperação válida
-        console.log("No valid recovery session found");
-        setIsValidSession(false);
-
+        
+        // Se não há parâmetros de URL, verificar sessão atual
+        const { data: sessionData } = await supabase.auth.getSession();
+        console.log("Current session data:", sessionData);
+        
+        if (sessionData.session?.user) {
+          console.log("Valid session found");
+          setIsValidSession(true);
+        } else {
+          console.log("No valid session found");
+          setIsValidSession(false);
+        }
+        
       } catch (error) {
         console.error("Error checking recovery session:", error);
         setIsValidSession(false);
@@ -85,9 +114,10 @@ const ResetPassword: React.FC = () => {
     // Configurar listener para mudanças de auth
     const { data: authListener } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        console.log("Auth event:", event, session);
+        console.log("Auth event in ResetPassword:", event, session);
         
-        if (event === 'PASSWORD_RECOVERY') {
+        if (event === 'PASSWORD_RECOVERY' || (session?.user && event === 'SIGNED_IN')) {
+          console.log("Password recovery session detected");
           setIsValidSession(true);
         } else if (event === 'SIGNED_OUT') {
           setIsValidSession(false);
@@ -139,6 +169,8 @@ const ResetPassword: React.FC = () => {
         throw updateError;
       }
 
+      console.log("Password updated successfully");
+      
       toast({
         title: "Senha redefinida",
         description: "Sua senha foi redefinida com sucesso!",
