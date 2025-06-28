@@ -21,6 +21,9 @@ const SpaceDetailsTabs: React.FC<SpaceDetailsTabsProps> = ({
 }) => {
   const totalPhotos = photoUrls.length;
 
+  // Debug log para verificar se o telefone está sendo passado
+  console.log("📞 SPACE_DETAILS: Telefone do espaço:", space.phone);
+
   return (
     <Tabs defaultValue="details" className="w-full">
       <TabsList className="w-full">
