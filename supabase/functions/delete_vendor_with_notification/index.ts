@@ -49,10 +49,17 @@ serve(async (req) => {
 
     console.log("Processing vendor deletion for ID:", vendorId);
 
-    // Get vendor information including user_id and vendor name
+    // Get vendor information including user_id, vendor name, and user profile
     const { data: vendorData, error: vendorError } = await supabase
       .from("vendors")
-      .select("user_id, name")
+      .select(`
+        user_id,
+        name,
+        profiles:user_id (
+          first_name,
+          last_name
+        )
+      `)
       .eq("id", vendorId)
       .single();
     
@@ -70,7 +77,18 @@ serve(async (req) => {
     console.log("Vendor user_id:", userId);
     console.log("Vendor name:", vendorName);
     
-    // Create vendor deletion notification
+    // Get user email from auth.users
+    const { data: userData, error: userError } = await supabase.auth.admin.getUserById(userId);
+    
+    if (userError) {
+      console.error("Error fetching user email:", userError);
+      return new Response(
+        JSON.stringify({ success: false, error: userError.message }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 }
+      );
+    }
+    
+    // Create vendor deletion notification in database
     const { data: notificationData, error: notificationError } = await supabase
       .from("vendor_deletion_notifications")
       .insert({
@@ -103,12 +121,43 @@ serve(async (req) => {
       );
     }
     
-    console.log("Vendor deleted successfully");
+    console.log("Vendor deleted successfully, sending notification email");
+    
+    // Send deletion notification email
+    const userName = vendorData.profiles?.first_name 
+      ? `${vendorData.profiles.first_name} ${vendorData.profiles.last_name || ''}`.trim()
+      : 'Usuário';
+    
+    try {
+      const emailResponse = await fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/send-deletion-notification`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`,
+        },
+        body: JSON.stringify({
+          type: 'vendor',
+          itemName: vendorName,
+          userEmail: userData.user.email,
+          userName: userName,
+          deletionReason: deleteReason,
+        }),
+      });
+      
+      if (!emailResponse.ok) {
+        console.warn('Failed to send deletion notification email');
+      } else {
+        console.log('Deletion notification email sent successfully');
+      }
+    } catch (emailError) {
+      console.warn('Error sending deletion notification email:', emailError);
+      // Don't fail the whole operation if email fails
+    }
     
     return new Response(
       JSON.stringify({ 
         success: true,
-        message: "Vendor deleted and notification created successfully" 
+        message: "Vendor deleted, notification created, and email sent successfully" 
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );

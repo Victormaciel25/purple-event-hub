@@ -63,6 +63,48 @@ const SpaceApproval = () => {
     setDrawerOpen(false);
   };
 
+  const handleDeleteSpace = async (spaceId: string, deletionReason: string) => {
+    try {
+      console.log("Deleting space with notification:", spaceId);
+      
+      const functionUrl = `${SUPABASE_CONFIG.URL}/functions/v1/delete_space_with_notification`;
+      
+      const response = await fetch(functionUrl, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${SUPABASE_CONFIG.PUBLIC_KEY}`,
+        },
+        body: JSON.stringify({ 
+          space_id: spaceId,
+          deletion_reason: deletionReason
+        }),
+      });
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error("Edge function error response:", errorText);
+        throw new Error(`Error ${response.status}: ${errorText || "Unknown error"}`);
+      }
+      
+      const result = await response.json();
+      console.log("Edge function result:", result);
+      
+      if (!result.success) {
+        throw new Error(result.error || "Failed to delete space");
+      }
+
+      toast.success("Espaço excluído com sucesso e notificação enviada");
+      setDrawerOpen(false);
+      
+      // Refresh the spaces list
+      window.location.reload();
+    } catch (error) {
+      console.error("Error deleting space:", error);
+      toast.error("Erro ao excluir espaço");
+    }
+  };
+
   // Log quando as fotos mudam
   React.useEffect(() => {
     if (selectedSpace) {
@@ -122,6 +164,7 @@ const SpaceApproval = () => {
                 photoUrls={photoUrls}
                 photosLoading={photosLoading}
                 onRefreshPhotos={refetchPhotos}
+                onDelete={handleDeleteSpace}
               />
 
               {selectedSpace.status === "pending" && (

@@ -121,7 +121,7 @@ const VendorDetails: React.FC<VendorDetailsProps> = ({
     try {
       setIsDeleting(true);
       
-      // Call the edge function to delete the vendor and create notification
+      // Call the updated edge function that sends email notifications
       const functionUrl = `${SUPABASE_CONFIG.URL}/functions/v1/delete_vendor_with_notification`;
       
       console.log("Calling edge function for vendor deletion:", functionUrl);
@@ -151,7 +151,7 @@ const VendorDetails: React.FC<VendorDetailsProps> = ({
         throw new Error(result.error || "Failed to delete vendor");
       }
 
-      toast.success("Fornecedor excluído com sucesso");
+      toast.success("Fornecedor excluído com sucesso e notificação enviada");
       
       if (onDelete) {
         onDelete();
@@ -342,7 +342,7 @@ const VendorDetails: React.FC<VendorDetailsProps> = ({
             <AlertDialogTitle>Excluir Fornecedor</AlertDialogTitle>
             <AlertDialogDescription>
               Tem certeza que deseja excluir este fornecedor? Esta ação não pode ser
-              desfeita.
+              desfeita e um email será enviado ao proprietário.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <Textarea

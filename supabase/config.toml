@@ -4,7 +4,11 @@ project_id = "kfqorqjwbkxzrqhuvnyh"
 verify_jwt = false
 [functions.delete_space_with_photos]
 verify_jwt = false
+[functions.delete_space_with_notification]
+verify_jwt = false
 [functions.delete_vendor_with_notification]
+verify_jwt = false
+[functions.send-deletion-notification]
 verify_jwt = false
 [functions.send-report]
 verify_jwt = false
