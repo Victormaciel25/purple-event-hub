@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card } from "@/components/ui/card";
@@ -45,17 +44,17 @@ const SpaceDetailsTabs: React.FC<SpaceDetailsTabsProps> = ({
           </div>
         </Card>
 
-        <div className="grid grid-cols-2 gap-4">
-          <Card className="p-4">
-            <div className="flex items-center">
-              <Phone className="text-gray-400 mr-3" size={18} />
-              <div>
-                <p className="text-sm font-medium text-gray-500">Telefone</p>
-                <p className="text-sm text-gray-700">{space.phone || "Não informado"}</p>
-              </div>
+        <Card className="p-4">
+          <div className="flex items-center">
+            <Phone className="text-gray-400 mr-3" size={18} />
+            <div>
+              <p className="text-sm font-medium text-gray-500">Telefone de Contato</p>
+              <p className="text-sm text-gray-700">{space.phone || "Não informado"}</p>
             </div>
-          </Card>
+          </div>
+        </Card>
 
+        <div className="grid grid-cols-2 gap-4">
           <Card className="p-4">
             <div className="flex items-center">
               <User className="text-gray-400 mr-3" size={18} />
@@ -67,19 +66,19 @@ const SpaceDetailsTabs: React.FC<SpaceDetailsTabsProps> = ({
               </div>
             </div>
           </Card>
-        </div>
 
-        <Card className="p-4">
-          <div className="flex items-center">
-            <DollarSign className="text-gray-400 mr-3" size={18} />
-            <div>
-              <p className="text-sm font-medium text-gray-500">Valor</p>
-              <p className="text-sm text-gray-700">
-                {space.price ? `R$ ${space.price}` : "Não informado"}
-              </p>
+          <Card className="p-4">
+            <div className="flex items-center">
+              <DollarSign className="text-gray-400 mr-3" size={18} />
+              <div>
+                <p className="text-sm font-medium text-gray-500">Valor</p>
+                <p className="text-sm text-gray-700">
+                  {space.price ? `R$ ${space.price}` : "Não informado"}
+                </p>
+              </div>
             </div>
-          </div>
-        </Card>
+          </Card>
+        </div>
 
         <Card className="p-4">
           <div className="flex items-start">
