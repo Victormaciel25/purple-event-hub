@@ -14,6 +14,7 @@ const ResetPassword: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [passwordErrors, setPasswordErrors] = useState<string[]>([]);
   const [isValidSession, setIsValidSession] = useState<boolean | null>(null);
+  const [isRedirecting, setIsRedirecting] = useState(false);
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -119,7 +120,7 @@ const ResetPassword: React.FC = () => {
         if (event === 'PASSWORD_RECOVERY' || (session?.user && event === 'SIGNED_IN')) {
           console.log("Password recovery session detected");
           setIsValidSession(true);
-        } else if (event === 'SIGNED_OUT') {
+        } else if (event === 'SIGNED_OUT' && !isRedirecting) {
           setIsValidSession(false);
         }
       }
@@ -128,7 +129,7 @@ const ResetPassword: React.FC = () => {
     return () => {
       authListener.subscription.unsubscribe();
     };
-  }, []);
+  }, [isRedirecting]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -171,19 +172,20 @@ const ResetPassword: React.FC = () => {
 
       console.log("Password updated successfully");
       
+      // Marcar que estamos redirecionando para evitar que o auth listener interfira
+      setIsRedirecting(true);
+      
       toast({
         title: "Senha redefinida",
         description: "Sua senha foi redefinida com sucesso! Faça login com sua nova senha.",
       });
 
-      // Fazer logout da sessão de recuperação e redirecionar para login
+      // Fazer logout da sessão de recuperação e redirecionar para login imediatamente
       console.log("Signing out recovery session...");
       await supabase.auth.signOut();
       
-      // Aguardar um pouco e depois redirecionar para login
-      setTimeout(() => {
-        navigate("/login");
-      }, 2000);
+      // Redirecionar imediatamente para login
+      navigate("/login");
 
     } catch (error: any) {
       console.error("Error resetting password:", error);
@@ -217,8 +219,8 @@ const ResetPassword: React.FC = () => {
     );
   }
 
-  // Link inválido ou expirado
-  if (isValidSession === false) {
+  // Link inválido ou expirado - não mostrar se estamos redirecionando
+  if (isValidSession === false && !isRedirecting) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-background p-4">
         <div className="w-full max-w-md space-y-4 animate-fade-in">
@@ -261,6 +263,26 @@ const ResetPassword: React.FC = () => {
               </Button>
             </div>
           </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Se estamos redirecionando, mostrar apenas uma tela em branco ou loading
+  if (isRedirecting) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-background p-4">
+        <div className="text-center">
+          <div className="flex justify-center mb-4">
+            <div className="h-32 w-32">
+              <img
+                src="/lovable-uploads/b59e9ab5-1380-47bb-b7f4-95ecfc1fe03c.png"
+                alt="iParty Balloons"
+                className="w-full h-full"
+              />
+            </div>
+          </div>
+          <p className="text-gray-500">Redirecionando...</p>
         </div>
       </div>
     );
