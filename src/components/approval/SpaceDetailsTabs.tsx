@@ -4,10 +4,11 @@ import { Card } from "@/components/ui/card";
 import { Image, MapPin, Home, User, Phone, DollarSign, Check, X, Tag, RefreshCw, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { AspectRatio } from "@/components/ui/aspect-ratio";
+import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from "@/components/ui/alert-dialog";
+import { Textarea } from "@/components/ui/textarea";
 import type { SpaceWithProfile } from "@/types/approval";
 import { useState } from "react";
 import { useUserRoles } from "@/hooks/useUserRoles";
-import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction, Textarea } from "@/components/ui/alert-dialog";
 
 interface SpaceDetailsTabsProps {
   space: SpaceWithProfile;

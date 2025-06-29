@@ -17,6 +17,8 @@ import SpacesList from "@/components/approval/SpacesList";
 import SpaceDetailsTabs from "@/components/approval/SpaceDetailsTabs";
 import SpaceApprovalActions from "@/components/approval/SpaceApprovalActions";
 import type { SpaceWithProfile } from "@/types/approval";
+import { toast } from "sonner";
+import { SUPABASE_CONFIG } from "@/config/app-config";
 
 const SpaceApproval = () => {
   const [selectedSpace, setSelectedSpace] = useState<SpaceWithProfile | null>(null);
