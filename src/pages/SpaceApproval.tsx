@@ -67,9 +67,18 @@ const SpaceApproval = () => {
 
   const handleDeleteSpace = async (spaceId: string, deletionReason: string) => {
     try {
-      console.log("Deleting space with notification:", spaceId);
+      console.log("=== INICIANDO EXCLUSÃO DE ESPAÇO ===");
+      console.log("ID do espaço:", spaceId);
+      console.log("Motivo da exclusão:", deletionReason);
       
       const functionUrl = `${SUPABASE_CONFIG.URL}/functions/v1/delete_space_with_notification`;
+      console.log("URL da função:", functionUrl);
+      
+      const requestBody = { 
+        space_id: spaceId,
+        deletion_reason: deletionReason
+      };
+      console.log("Dados da requisição:", requestBody);
       
       const response = await fetch(functionUrl, {
         method: "POST",
@@ -77,20 +86,26 @@ const SpaceApproval = () => {
           "Content-Type": "application/json",
           "Authorization": `Bearer ${SUPABASE_CONFIG.PUBLIC_KEY}`,
         },
-        body: JSON.stringify({ 
-          space_id: spaceId,
-          deletion_reason: deletionReason
-        }),
+        body: JSON.stringify(requestBody),
       });
       
+      console.log("Status da resposta:", response.status);
+      console.log("Status text:", response.statusText);
+      
+      const responseText = await response.text();
+      console.log("Resposta raw:", responseText);
+      
       if (!response.ok) {
-        const errorText = await response.text();
-        console.error("Edge function error response:", errorText);
-        throw new Error(`Error ${response.status}: ${errorText || "Unknown error"}`);
+        console.error("Erro na resposta da edge function:", {
+          status: response.status,
+          statusText: response.statusText,
+          body: responseText
+        });
+        throw new Error(`Error ${response.status}: ${responseText || "Unknown error"}`);
       }
       
-      const result = await response.json();
-      console.log("Edge function result:", result);
+      const result = JSON.parse(responseText);
+      console.log("Resultado da edge function:", result);
       
       if (!result.success) {
         throw new Error(result.error || "Failed to delete space");
@@ -102,8 +117,8 @@ const SpaceApproval = () => {
       // Refresh the spaces list
       window.location.reload();
     } catch (error) {
-      console.error("Error deleting space:", error);
-      toast.error("Erro ao excluir espaço");
+      console.error("Erro ao excluir espaço:", error);
+      toast.error("Erro ao excluir espaço: " + (error instanceof Error ? error.message : "Erro desconhecido"));
     }
   };
 

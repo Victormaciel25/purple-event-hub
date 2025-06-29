@@ -3,8 +3,6 @@ import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.26.0";
 import { Resend } from "npm:resend@2.0.0";
 
-const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
-
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
@@ -19,16 +17,24 @@ interface DeletionNotificationRequest {
 }
 
 const handler = async (req: Request): Promise<Response> => {
+  console.log("=== FUNÇÃO DE NOTIFICAÇÃO DE EXCLUSÃO INICIADA ===");
+  
   // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    console.log("Send deletion notification function called");
+    console.log("Processando requisição de notificação de exclusão");
     
     const requestData: DeletionNotificationRequest = await req.json();
-    console.log("Deletion notification data received:", requestData);
+    console.log("Dados da notificação recebidos:", {
+      type: requestData.type,
+      itemName: requestData.itemName,
+      userEmail: requestData.userEmail,
+      userName: requestData.userName,
+      hasReason: !!requestData.deletionReason
+    });
 
     const {
       type,
@@ -40,7 +46,13 @@ const handler = async (req: Request): Promise<Response> => {
 
     // Validate required fields
     if (!type || !itemName || !userEmail || !userName || !deletionReason) {
-      console.error("Missing required fields");
+      console.error("Campos obrigatórios ausentes:", {
+        type: !!type,
+        itemName: !!itemName,
+        userEmail: !!userEmail,
+        userName: !!userName,
+        deletionReason: !!deletionReason
+      });
       return new Response(
         JSON.stringify({ error: "Missing required fields" }),
         {
@@ -49,6 +61,22 @@ const handler = async (req: Request): Promise<Response> => {
         }
       );
     }
+
+    // Initialize Resend
+    const resendApiKey = Deno.env.get("RESEND_API_KEY");
+    if (!resendApiKey) {
+      console.error("RESEND_API_KEY não encontrada nas variáveis de ambiente");
+      return new Response(
+        JSON.stringify({ error: "Email service not configured" }),
+        {
+          status: 500,
+          headers: { "Content-Type": "application/json", ...corsHeaders },
+        }
+      );
+    }
+    
+    const resend = new Resend(resendApiKey);
+    console.log("Resend inicializado com sucesso");
 
     const itemTypeText = type === 'space' ? 'espaço' : 'fornecedor';
     const subject = `Seu ${itemTypeText} foi removido - iParty Brasil`;
@@ -82,7 +110,8 @@ const handler = async (req: Request): Promise<Response> => {
       </div>
     `;
 
-    console.log(`Sending deletion notification email to ${userEmail}`);
+    console.log(`Enviando email de notificação de exclusão para: ${userEmail}`);
+    console.log(`Assunto: ${subject}`);
 
     const emailResponse = await resend.emails.send({
       from: "iParty Brasil <suporte@ipartybrasil.com>",
@@ -91,9 +120,26 @@ const handler = async (req: Request): Promise<Response> => {
       html: emailHtml,
     });
 
-    console.log("Deletion notification email sent successfully:", emailResponse);
+    console.log("Resposta do Resend:", emailResponse);
 
-    return new Response(JSON.stringify({ success: true, emailResponse }), {
+    if (emailResponse.error) {
+      console.error("Erro do Resend:", emailResponse.error);
+      return new Response(
+        JSON.stringify({ error: emailResponse.error }),
+        {
+          status: 500,
+          headers: { "Content-Type": "application/json", ...corsHeaders },
+        }
+      );
+    }
+
+    console.log("=== EMAIL DE NOTIFICAÇÃO ENVIADO COM SUCESSO ===");
+
+    return new Response(JSON.stringify({ 
+      success: true, 
+      emailResponse,
+      message: "Notificação de exclusão enviada com sucesso"
+    }), {
       status: 200,
       headers: {
         "Content-Type": "application/json",
@@ -101,7 +147,7 @@ const handler = async (req: Request): Promise<Response> => {
       },
     });
   } catch (error: any) {
-    console.error("Error sending deletion notification email:", error);
+    console.error("Erro na função de notificação de exclusão:", error);
     return new Response(
       JSON.stringify({ error: error.message }),
       {
