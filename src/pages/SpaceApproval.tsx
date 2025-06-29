@@ -71,7 +71,9 @@ const SpaceApproval = () => {
       console.log("ID do espaço:", spaceId);
       console.log("Motivo da exclusão:", deletionReason);
       
-      const functionUrl = `${SUPABASE_CONFIG.URL}/functions/v1/delete_space_with_notification`;
+      // Use a configuração correta do Supabase
+      const supabaseUrl = "https://kfqorqjwbkxzrqhuvnyh.supabase.co";
+      const functionUrl = `${supabaseUrl}/functions/v1/delete_space_with_notification`;
       console.log("URL da função:", functionUrl);
       
       const requestBody = { 
@@ -84,7 +86,7 @@ const SpaceApproval = () => {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "Authorization": `Bearer ${SUPABASE_CONFIG.PUBLIC_KEY}`,
+          "Authorization": `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtmcW9ycWp3Ymt4enJxaHV2bnloIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDU5Mzc2NTYsImV4cCI6MjA2MTUxMzY1Nn0.bfqH3CFPuE14hgQCiB8OBhr7YDfaK2sJqqnVaZexjjU`,
         },
         body: JSON.stringify(requestBody),
       });
@@ -112,6 +114,7 @@ const SpaceApproval = () => {
       }
 
       toast.success("Espaço excluído com sucesso e notificação enviada");
+      console.log("✅ Operação concluída com sucesso");
       setDrawerOpen(false);
       
       // Refresh the spaces list

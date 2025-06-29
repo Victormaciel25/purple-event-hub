@@ -1,6 +1,5 @@
 
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.26.0";
 import { Resend } from "npm:resend@2.0.0";
 
 const corsHeaders = {
@@ -17,17 +16,22 @@ interface DeletionNotificationRequest {
 }
 
 const handler = async (req: Request): Promise<Response> => {
-  console.log("=== FUNÇÃO DE NOTIFICAÇÃO DE EXCLUSÃO INICIADA ===");
+  console.log("=== SEND DELETION NOTIFICATION - INICIO ===");
   
   // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
+    console.log("Handling CORS preflight request");
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
     console.log("Processando requisição de notificação de exclusão");
     
-    const requestData: DeletionNotificationRequest = await req.json();
+    // Parse request body
+    const requestBody = await req.text();
+    console.log("Request body raw:", requestBody);
+    
+    const requestData: DeletionNotificationRequest = JSON.parse(requestBody);
     console.log("Dados da notificação recebidos:", {
       type: requestData.type,
       itemName: requestData.itemName,
@@ -62,12 +66,14 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    // Initialize Resend
+    // Check Resend API key
     const resendApiKey = Deno.env.get("RESEND_API_KEY");
+    console.log("Resend API Key:", resendApiKey ? "Configurada" : "NÃO CONFIGURADA");
+    
     if (!resendApiKey) {
-      console.error("RESEND_API_KEY não encontrada nas variáveis de ambiente");
+      console.error("ERRO CRÍTICO: RESEND_API_KEY não encontrada nas variáveis de ambiente");
       return new Response(
-        JSON.stringify({ error: "Email service not configured" }),
+        JSON.stringify({ error: "Email service not configured - RESEND_API_KEY missing" }),
         {
           status: 500,
           headers: { "Content-Type": "application/json", ...corsHeaders },
@@ -75,6 +81,7 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
     
+    // Initialize Resend
     const resend = new Resend(resendApiKey);
     console.log("Resend inicializado com sucesso");
 
@@ -110,8 +117,11 @@ const handler = async (req: Request): Promise<Response> => {
       </div>
     `;
 
-    console.log(`Enviando email de notificação de exclusão para: ${userEmail}`);
-    console.log(`Assunto: ${subject}`);
+    console.log(`Enviando email de notificação de exclusão:`);
+    console.log(`- Para: ${userEmail}`);
+    console.log(`- Assunto: ${subject}`);
+    console.log(`- Tipo: ${itemTypeText}`);
+    console.log(`- Item: ${itemName}`);
 
     const emailResponse = await resend.emails.send({
       from: "iParty Brasil <suporte@ipartybrasil.com>",
@@ -123,9 +133,12 @@ const handler = async (req: Request): Promise<Response> => {
     console.log("Resposta do Resend:", emailResponse);
 
     if (emailResponse.error) {
-      console.error("Erro do Resend:", emailResponse.error);
+      console.error("ERRO DO RESEND:", emailResponse.error);
       return new Response(
-        JSON.stringify({ error: emailResponse.error }),
+        JSON.stringify({ 
+          error: "Erro ao enviar email",
+          details: emailResponse.error 
+        }),
         {
           status: 500,
           headers: { "Content-Type": "application/json", ...corsHeaders },
@@ -133,12 +146,14 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    console.log("=== EMAIL DE NOTIFICAÇÃO ENVIADO COM SUCESSO ===");
+    console.log("✅ EMAIL DE NOTIFICAÇÃO ENVIADO COM SUCESSO!");
+    console.log("Email ID:", emailResponse.data?.id);
 
     return new Response(JSON.stringify({ 
       success: true, 
       emailResponse,
-      message: "Notificação de exclusão enviada com sucesso"
+      message: "Notificação de exclusão enviada com sucesso",
+      emailId: emailResponse.data?.id
     }), {
       status: 200,
       headers: {
@@ -147,9 +162,13 @@ const handler = async (req: Request): Promise<Response> => {
       },
     });
   } catch (error: any) {
-    console.error("Erro na função de notificação de exclusão:", error);
+    console.error("ERRO CRÍTICO na função de notificação de exclusão:", error);
+    console.error("Stack trace:", error.stack);
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ 
+        error: "Erro interno do servidor",
+        details: error.message 
+      }),
       {
         status: 500,
         headers: { "Content-Type": "application/json", ...corsHeaders },

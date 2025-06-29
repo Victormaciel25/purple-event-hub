@@ -8,21 +8,30 @@ const corsHeaders = {
 };
 
 serve(async (req) => {
+  console.log("=== DELETE SPACE WITH NOTIFICATION - INICIO ===");
+  
   // Handle CORS preflight request
   if (req.method === 'OPTIONS') {
+    console.log("Handling CORS preflight request");
     return new Response(null, { headers: corsHeaders });
   }
   
   try {
-    console.log("=== INICIANDO EXCLUSÃO DE ESPAÇO COM NOTIFICAÇÃO ===");
+    console.log("Processando requisição de exclusão de espaço");
     
     // Get the request body
-    const { space_id, deletion_reason } = await req.json();
-    console.log("Dados recebidos:", { space_id, deletion_reason });
+    const requestBody = await req.text();
+    console.log("Request body raw:", requestBody);
+    
+    const { space_id, deletion_reason } = JSON.parse(requestBody);
+    console.log("Dados parseados:", { space_id, deletion_reason });
     
     // Check if required fields are provided
     if (!space_id || !deletion_reason) {
-      console.error("Campos obrigatórios ausentes:", { space_id: !!space_id, deletion_reason: !!deletion_reason });
+      console.error("Campos obrigatórios ausentes:", { 
+        space_id: !!space_id, 
+        deletion_reason: !!deletion_reason 
+      });
       return new Response(
         JSON.stringify({ error: 'space_id and deletion_reason are required' }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
@@ -30,12 +39,23 @@ serve(async (req) => {
     }
     
     // Create Supabase client
-    const supabaseClient = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-    );
+    const supabaseUrl = Deno.env.get('SUPABASE_URL');
+    const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
     
-    console.log(`Buscando detalhes do espaço para notificação: ${space_id}`);
+    console.log("Supabase URL:", supabaseUrl ? "Configurada" : "Não configurada");
+    console.log("Service Role Key:", serviceRoleKey ? "Configurada" : "Não configurada");
+    
+    if (!supabaseUrl || !serviceRoleKey) {
+      console.error("Variáveis de ambiente do Supabase não configuradas");
+      return new Response(
+        JSON.stringify({ error: 'Supabase configuration missing' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
+      );
+    }
+    
+    const supabaseClient = createClient(supabaseUrl, serviceRoleKey);
+    
+    console.log(`Buscando detalhes do espaço: ${space_id}`);
     
     // Get space details and user information before deletion
     const { data: spaceData, error: spaceError } = await supabaseClient
@@ -54,8 +74,16 @@ serve(async (req) => {
     if (spaceError) {
       console.error('Erro ao buscar detalhes do espaço:', spaceError);
       return new Response(
-        JSON.stringify({ error: spaceError.message }),
+        JSON.stringify({ error: `Erro ao buscar espaço: ${spaceError.message}` }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
+      );
+    }
+    
+    if (!spaceData) {
+      console.error('Espaço não encontrado:', space_id);
+      return new Response(
+        JSON.stringify({ error: 'Espaço não encontrado' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 404 }
       );
     }
     
@@ -71,36 +99,28 @@ serve(async (req) => {
     if (userError) {
       console.error('Erro ao buscar email do usuário:', userError);
       return new Response(
-        JSON.stringify({ error: userError.message }),
+        JSON.stringify({ error: `Erro ao buscar usuário: ${userError.message}` }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
+      );
+    }
+    
+    if (!userData?.user?.email) {
+      console.error('Email do usuário não encontrado');
+      return new Response(
+        JSON.stringify({ error: 'Email do usuário não encontrado' }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
       );
     }
     
     console.log("Email do usuário encontrado:", userData.user.email);
     
-    console.log(`Chamando RPC delete_space_with_photos para o espaço: ${space_id}`);
-    
-    // Call the RPC function to delete space and photos
-    const { data, error } = await supabaseClient.rpc('delete_space_with_photos', {
-      space_id_param: space_id
-    });
-    
-    if (error) {
-      console.error('Erro no delete_space_with_photos:', error);
-      return new Response(
-        JSON.stringify({ error: error.message }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
-      );
-    }
-    
-    console.log('Espaço excluído com sucesso, enviando email de notificação');
-    
-    // Send deletion notification email
+    // Send deletion notification email BEFORE deleting the space
     const userName = spaceData.profiles?.first_name 
       ? `${spaceData.profiles.first_name} ${spaceData.profiles.last_name || ''}`.trim()
       : 'Usuário';
       
-    console.log("Preparando dados para email:", {
+    console.log("Enviando email de notificação ANTES da exclusão");
+    console.log("Dados para email:", {
       userName,
       userEmail: userData.user.email,
       spaceName: spaceData.name,
@@ -108,11 +128,8 @@ serve(async (req) => {
     });
     
     try {
-      const supabaseUrl = Deno.env.get('SUPABASE_URL');
-      const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
       const notificationUrl = `${supabaseUrl}/functions/v1/send-deletion-notification`;
-      
-      console.log("Chamando função de notificação em:", notificationUrl);
+      console.log("Chamando função de notificação:", notificationUrl);
       
       const notificationResponse = await fetch(notificationUrl, {
         method: 'POST',
@@ -137,33 +154,60 @@ serve(async (req) => {
       });
       
       if (!notificationResponse.ok) {
-        console.error('Falha ao enviar email de notificação:', {
+        console.error('ERRO: Falha ao enviar email de notificação:', {
           status: notificationResponse.status,
           body: responseText
         });
-        // Não falhar a operação toda se o email falhar
+        // Não falhar a operação toda se o email falhar, mas registrar o erro
       } else {
-        console.log('Email de notificação enviado com sucesso!');
+        console.log('✅ Email de notificação enviado com sucesso!');
         const emailResult = JSON.parse(responseText);
         console.log('Resultado do email:', emailResult);
       }
     } catch (emailError) {
-      console.error('Erro ao enviar email de notificação:', emailError);
+      console.error('ERRO CRÍTICO ao enviar email de notificação:', emailError);
       // Não falhar a operação toda se o email falhar
     }
     
+    console.log(`Executando exclusão do espaço: ${space_id}`);
+    
+    // Call the RPC function to delete space and photos
+    const { data, error } = await supabaseClient.rpc('delete_space_with_photos', {
+      space_id_param: space_id
+    });
+    
+    if (error) {
+      console.error('Erro no delete_space_with_photos:', error);
+      return new Response(
+        JSON.stringify({ error: `Erro ao excluir espaço: ${error.message}` }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
+      );
+    }
+    
+    console.log('✅ Espaço excluído com sucesso');
     console.log('=== OPERAÇÃO CONCLUÍDA COM SUCESSO ===');
     
     // Return success response
     return new Response(
-      JSON.stringify({ success: true, message: 'Espaço excluído e notificação enviada' }),
+      JSON.stringify({ 
+        success: true, 
+        message: 'Espaço excluído e notificação enviada',
+        details: {
+          space_name: spaceData.name,
+          user_email: userData.user.email,
+          deletion_reason: deletion_reason
+        }
+      }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
     );
     
   } catch (error) {
-    console.error('Erro inesperado em delete_space_with_notification:', error);
+    console.error('ERRO INESPERADO em delete_space_with_notification:', error);
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ 
+        error: 'Erro interno do servidor',
+        details: error.message 
+      }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
     );
   }
