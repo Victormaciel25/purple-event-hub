@@ -19,6 +19,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
+import { filterOffensiveContent } from "@/utils/contentModeration";
 
 // Types
 interface ChatProps {
@@ -670,22 +671,25 @@ const Messages = () => {
         return;
       }
       
-      // Insert new message
+      // Filter offensive content before sending
+      const filteredMessage = filterOffensiveContent(newMessage);
+      
+      // Insert new message with filtered content
       const { error: messageError } = await supabase
         .from("messages")
         .insert({
           chat_id: selectedChat,
           sender_id: userId,
-          content: newMessage
+          content: filteredMessage
         });
         
       if (messageError) throw messageError;
       
-      // Update chat with last message
+      // Update chat with last message (also filtered)
       const { error: chatError } = await supabase
         .from("chats")
         .update({
-          last_message: newMessage,
+          last_message: filteredMessage,
           last_message_time: new Date().toISOString(),
           last_message_sender_id: userId,
           has_unread: true
@@ -1025,7 +1029,7 @@ const Messages = () => {
                             : "bg-white rounded-tl-none"
                         )}
                       >
-                        {message.content}
+                        {filterOffensiveContent(message.content)}
                       </div>
                       <div 
                         className={cn(
