@@ -1,5 +1,6 @@
 
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.4';
 import { Resend } from "npm:resend@2.0.0";
 
 const corsHeaders = {
@@ -10,7 +11,7 @@ const corsHeaders = {
 interface ApprovalNotificationRequest {
   type: 'space' | 'vendor';
   itemName: string;
-  userEmail: string;
+  userId: string;
   userName: string;
   status: 'approved' | 'rejected';
   rejectionReason?: string;
@@ -19,7 +20,7 @@ interface ApprovalNotificationRequest {
 const handler = async (req: Request): Promise<Response> => {
   console.log("=== SEND APPROVAL NOTIFICATION - INICIO ===");
   
-  // Handle CORS preflight requests
+  // Handle CORS preflight requests  
   if (req.method === "OPTIONS") {
     console.log("Handling CORS preflight request");
     return new Response(null, { headers: corsHeaders });
@@ -33,37 +34,67 @@ const handler = async (req: Request): Promise<Response> => {
     console.log("Request body raw:", requestBody);
     
     const requestData: ApprovalNotificationRequest = JSON.parse(requestBody);
-    console.log("Dados da notificação recebidos:", {
-      type: requestData.type,
-      itemName: requestData.itemName,
-      userEmail: requestData.userEmail,
-      userName: requestData.userName,
-      status: requestData.status,
-      hasRejectionReason: !!requestData.rejectionReason
-    });
+    console.log("Dados da notificação recebidos:", requestData);
 
     const {
       type,
       itemName,
-      userEmail,
+      userId,
       userName,
       status,
       rejectionReason,
     } = requestData;
 
     // Validate required fields
-    if (!type || !itemName || !userEmail || !userName || !status) {
-      console.error("Campos obrigatórios ausentes:", {
-        type: !!type,
-        itemName: !!itemName,
-        userEmail: !!userEmail,
-        userName: !!userName,
-        status: !!status
-      });
+    if (!type || !itemName || !userId || !userName || !status) {
+      console.error("Campos obrigatórios ausentes");
       return new Response(
         JSON.stringify({ error: "Missing required fields" }),
         {
           status: 400,
+          headers: { "Content-Type": "application/json", ...corsHeaders },
+        }
+      );
+    }
+
+    // Initialize Supabase client with service role key
+    const supabaseUrl = Deno.env.get('SUPABASE_URL');
+    const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+    
+    if (!supabaseUrl || !serviceRoleKey) {
+      console.error("Missing Supabase configuration");
+      return new Response(
+        JSON.stringify({ error: "Server configuration error" }),
+        {
+          status: 500,
+          headers: { "Content-Type": "application/json", ...corsHeaders },
+        }
+      );
+    }
+
+    const supabase = createClient(supabaseUrl, serviceRoleKey);
+    
+    // Get user email using admin privileges
+    const { data: userData, error: userError } = await supabase.auth.admin.getUserById(userId);
+
+    if (userError || !userData.user) {
+      console.error("Error fetching user:", userError);
+      return new Response(
+        JSON.stringify({ error: "Could not fetch user data" }),
+        {
+          status: 500,
+          headers: { "Content-Type": "application/json", ...corsHeaders },
+        }
+      );
+    }
+
+    const userEmail = userData.user.email;
+    if (!userEmail) {
+      console.error("User email not found");
+      return new Response(
+        JSON.stringify({ error: "User email not found" }),
+        {
+          status: 500,
           headers: { "Content-Type": "application/json", ...corsHeaders },
         }
       );

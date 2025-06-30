@@ -58,14 +58,6 @@ const SpaceApproval = () => {
     try {
       console.log("Enviando notificação de aprovação/rejeição para espaço:", space.id);
       
-      // Get user email from auth.users
-      const { data: userData, error: userError } = await supabase.auth.admin.getUserById(space.user_id);
-      
-      if (userError || !userData.user) {
-        console.error("Error fetching user email:", userError);
-        return;
-      }
-
       const userName = space.profiles?.first_name 
         ? `${space.profiles.first_name} ${space.profiles.last_name || ''}`.trim()
         : 'Usuário';
@@ -81,7 +73,7 @@ const SpaceApproval = () => {
         body: JSON.stringify({
           type: 'space',
           itemName: space.name,
-          userEmail: userData.user.email,
+          userId: space.user_id,
           userName: userName,
           status: status,
           rejectionReason: rejectionReason,
@@ -89,12 +81,14 @@ const SpaceApproval = () => {
       });
       
       if (!response.ok) {
-        console.warn('Failed to send approval notification email');
+        const errorText = await response.text();
+        console.error('Failed to send approval notification email:', errorText);
       } else {
-        console.log('Approval notification email sent successfully');
+        const result = await response.json();
+        console.log('Approval notification email sent successfully:', result);
       }
     } catch (error) {
-      console.warn('Error sending approval notification email:', error);
+      console.error('Error sending approval notification email:', error);
     }
   };
 

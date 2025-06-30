@@ -163,14 +163,6 @@ const VendorApproval = () => {
     try {
       console.log("Enviando notificação de aprovação/rejeição para fornecedor:", vendor.id);
       
-      // Get user email from auth.users
-      const { data: userData, error: userError } = await supabase.auth.admin.getUserById(vendor.user_id);
-      
-      if (userError || !userData.user) {
-        console.error("Error fetching user email:", userError);
-        return;
-      }
-
       const userName = vendor.profiles?.first_name 
         ? `${vendor.profiles.first_name} ${vendor.profiles.last_name || ''}`.trim()
         : 'Usuário';
@@ -186,7 +178,7 @@ const VendorApproval = () => {
         body: JSON.stringify({
           type: 'vendor',
           itemName: vendor.name,
-          userEmail: userData.user.email,
+          userId: vendor.user_id,
           userName: userName,
           status: status,
           rejectionReason: rejectionReason,
@@ -194,12 +186,14 @@ const VendorApproval = () => {
       });
       
       if (!response.ok) {
-        console.warn('Failed to send approval notification email');
+        const errorText = await response.text();
+        console.error('Failed to send approval notification email:', errorText);
       } else {
-        console.log('Approval notification email sent successfully');
+        const result = await response.json();
+        console.log('Approval notification email sent successfully:', result);
       }
     } catch (error) {
-      console.warn('Error sending approval notification email:', error);
+      console.error('Error sending approval notification email:', error);
     }
   };
 
