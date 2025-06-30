@@ -1,6 +1,7 @@
+
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { MapPin, Calendar, Clock, ChevronLeft, MoreVertical, Share, Flag, Heart } from "lucide-react";
+import { MapPin, Calendar, Clock, ChevronLeft, MoreVertical, Share, Flag, Heart, Phone } from "lucide-react";
 import OptimizedImage from "@/components/OptimizedImage";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -19,7 +20,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useUserRoles } from "@/hooks/useUserRoles";
-import { useFavorites } from "@/hooks/useFavorites";
+import { useEventSpaceFavorites } from "@/hooks/useEventSpaceFavorites";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -67,7 +68,7 @@ const EventSpaceDetails = () => {
   const [space, setSpace] = useState<Space | null>(null);
   const [loading, setLoading] = useState(true);
   const { isAdmin, isSuperAdmin } = useUserRoles();
-  const { isFavorite, toggleFavorite } = useFavorites();
+  const { isFavorite, toggleFavorite } = useEventSpaceFavorites();
 
   // State for space deletion
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -108,22 +109,51 @@ const EventSpaceDetails = () => {
 
         console.log("Space details fetched:", data);
 
+        // Get space photos
+        const { data: photosData } = await supabase
+          .from("space_photos")
+          .select("storage_path")
+          .eq("space_id", id);
+
+        // Get public URLs for photos
+        const imageUrls: string[] = [];
+        if (photosData && photosData.length > 0) {
+          for (const photo of photosData) {
+            const { data: urlData } = supabase.storage
+              .from("spaces")
+              .getPublicUrl(photo.storage_path);
+            if (urlData?.publicUrl) {
+              imageUrls.push(urlData.publicUrl);
+            }
+          }
+        }
+
         // Map the data from Supabase to our Space interface
         const spaceData: Space = {
           id: data.id,
           name: data.name,
-          category: data.category,
+          category: data.categories?.[0] || "Espaço para Eventos", // Use first category or default
           description: data.description,
           address: data.address,
-          capacity: data.capacity,
-          price: data.price,
-          contact_number: data.contact_number,
-          amenities: data.amenities,
-          images: data.images,
-          available_days: data.available_days,
-          working_hours: data.working_hours,
+          capacity: parseInt(data.capacity) || 0,
+          price: parseFloat(data.price) || 0,
+          contact_number: data.phone, // Map phone field to contact_number
+          amenities: [], // We'll derive this from boolean fields
+          images: imageUrls.length > 0 ? imageUrls : null,
+          available_days: [], // Not available in spaces table
+          working_hours: null, // Not available in spaces table
           rating: 4.8, // Default rating until we implement a rating system
         };
+
+        // Build amenities array from boolean fields
+        const amenities: string[] = [];
+        if (data.parking) amenities.push("Estacionamento");
+        if (data.wifi) amenities.push("Wi-Fi");
+        if (data.sound_system) amenities.push("Sistema de Som");
+        if (data.air_conditioning) amenities.push("Ar Condicionado");
+        if (data.kitchen) amenities.push("Cozinha");
+        if (data.pool) amenities.push("Piscina");
+        spaceData.amenities = amenities;
 
         setSpace(spaceData);
       } catch (error) {
@@ -428,6 +458,22 @@ const EventSpaceDetails = () => {
                       {availableDays.map((day) => (
                         <Badge key={day} variant="secondary" className="text-xs">
                           {day}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {space.amenities && space.amenities.length > 0 && (
+                <div className="flex items-start">
+                  <Calendar size={20} className="text-iparty mr-3 mt-1" />
+                  <div>
+                    <h3 className="font-semibold mb-1">Comodidades</h3>
+                    <div className="flex flex-wrap gap-2 mt-2">
+                      {space.amenities.map((amenity) => (
+                        <Badge key={amenity} variant="secondary" className="text-xs">
+                          {amenity}
                         </Badge>
                       ))}
                     </div>
