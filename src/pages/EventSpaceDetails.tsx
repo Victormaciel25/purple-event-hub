@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -54,6 +53,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import ReportForm from "@/components/ReportForm";
+import { SUPABASE_CONFIG } from "@/config/app-config";
 
 type SpaceDetails = {
   id: string;
@@ -249,6 +249,7 @@ const EventSpaceDetails: React.FC = () => {
     setReportFormOpen(true);
   };
 
+  // Handler for vendor deletion
   const handleDeleteSpace = async () => {
     if (!deleteReason.trim()) {
       toast.error("Por favor, forneça um motivo para a exclusão");
@@ -257,40 +258,45 @@ const EventSpaceDetails: React.FC = () => {
 
     try {
       setDeletingSpace(true);
-
-      // Criar notificação para o proprietário do espaço
-      if (space && space.user_id) {
-        const { error: notificationError } = await supabase
-          .from("space_deletion_notifications")
-          .insert({
-            user_id: space.user_id,
-            space_name: space.name,
-            deletion_reason: deleteReason
-          });
-
-        if (notificationError) {
-          console.error("Erro ao criar notificação:", notificationError);
-          toast.error("Erro ao notificar o proprietário");
-        }
+      
+      // Call the updated edge function that sends email notifications
+      const functionUrl = `${SUPABASE_CONFIG.URL}/functions/v1/delete_space_with_notification`;
+      
+      console.log("Calling edge function for space deletion:", functionUrl);
+      
+      const response = await fetch(functionUrl, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${SUPABASE_CONFIG.PUBLIC_KEY}`,
+        },
+        body: JSON.stringify({ 
+          space_id: space?.id,
+          deletion_reason: deleteReason
+        }),
+      });
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error("Edge function error response:", errorText);
+        throw new Error(`Error ${response.status}: ${errorText || "Unknown error"}`);
+      }
+      
+      const result = await response.json();
+      console.log("Edge function result:", result);
+      
+      if (!result.success) {
+        throw new Error(result.error || "Failed to delete space");
       }
 
-      // Excluir o espaço usando a função existente
-      if (space) {
-        const { error } = await supabase.functions.invoke("delete_space_with_photos", {
-          body: { space_id: space.id }
-        });
-
-        if (error) throw error;
-
-        toast.success("Espaço excluído com sucesso");
-        setDeleteDialogOpen(false);
-        navigate('/explore');
-      }
+      toast.success("Espaço excluído com sucesso e notificação enviada");
+      navigate('/explore');
     } catch (error) {
-      console.error("Erro ao excluir espaço:", error);
+      console.error("Error deleting space:", error);
       toast.error("Erro ao excluir espaço");
     } finally {
       setDeletingSpace(false);
+      setDeleteDialogOpen(false);
     }
   };
 
