@@ -1,32 +1,16 @@
-
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import { MapPin, Calendar, Clock, ChevronLeft, MoreVertical, Share, Flag, Heart } from "lucide-react";
+import OptimizedImage from "@/components/OptimizedImage";
 import { Button } from "@/components/ui/button";
-import { 
-  ChevronLeft, 
-  Phone, 
-  Wifi, 
-  ParkingMeter, 
-  Speaker, 
-  AirVent, 
-  Utensils, 
-  Waves, 
-  Users, 
-  Heart, 
-  Loader2,
-  MessageSquare,
-  Trash2,
-  MoreVertical,
-  Share,
-  Flag,
-  MapPin
-} from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+import ReportForm from "@/components/ReportForm";
 import {
   Carousel,
   CarouselContent,
   CarouselItem,
-  CarouselPrevious,
-  CarouselNext,
 } from "@/components/ui/carousel";
 import {
   DropdownMenu,
@@ -34,15 +18,8 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Badge } from "@/components/ui/badge";
-import { useEventSpaceFavorites } from "../hooks/useEventSpaceFavorites";
-import { useUserSpacePhotos } from "../hooks/useUserSpacePhotos";
-import { supabase } from "@/integrations/supabase/client";
-import { toast } from "sonner";
-import { Textarea } from "@/components/ui/textarea";
 import { useUserRoles } from "@/hooks/useUserRoles";
-import OptimizedImage from "@/components/OptimizedImage";
-import ImageViewer from "@/components/ImageViewer";
+import { useFavorites } from "@/hooks/useFavorites";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -53,181 +30,134 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import ReportForm from "@/components/ReportForm";
+import { Textarea } from "@/components/ui/textarea";
+import { Trash2 } from "lucide-react";
+import { SUPABASE_CONFIG } from "@/config/app-config";
+import ImageViewer from "@/components/ImageViewer";
 
-type SpaceDetails = {
+interface Space {
   id: string;
   name: string;
-  address: string;
-  number: string;
-  state: string;
-  zip_code: string;
+  category: string;
   description: string;
-  price: string;
-  capacity: string;
-  phone: string;
-  parking: boolean;
-  wifi: boolean;
-  sound_system: boolean;
-  air_conditioning: boolean;
-  kitchen: boolean;
-  pool: boolean;
-  latitude?: number;
-  longitude?: number;
-  user_id?: string;
+  address: string;
+  capacity: number;
+  price: number;
+  contact_number: string;
+  amenities?: string[] | null;
+  images?: string[] | null;
+  available_days?: string[] | null;
+  working_hours?: string | null;
+  rating?: number;
+}
+
+const dayTranslations: Record<string, string> = {
+  monday: 'Segunda',
+  tuesday: 'Terça',
+  wednesday: 'Quarta',
+  thursday: 'Quinta',
+  friday: 'Sexta',
+  saturday: 'Sábado',
+  sunday: 'Domingo'
 };
 
-const EventSpaceDetails: React.FC = () => {
+const EventSpaceDetails = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { isFavorite, toggleFavorite } = useEventSpaceFavorites();
-  const { isAdmin } = useUserRoles();
-  
-  // Usar o hook useUserSpacePhotos para buscar as fotos (funciona para todos os usuários)
-  const { photos, photoUrls, loading: photosLoading } = useUserSpacePhotos(id || null);
-
-  const [space, setSpace] = useState<SpaceDetails | null>(null);
+  const [space, setSpace] = useState<Space | null>(null);
   const [loading, setLoading] = useState(true);
-  const [spaceOwner, setSpaceOwner] = useState<{ id: string; name: string } | null>(null);
-  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
-  const [processingChat, setProcessingChat] = useState(false);
-  const [reportFormOpen, setReportFormOpen] = useState(false);
+  const { isAdmin, isSuperAdmin } = useUserRoles();
+  const { isFavorite, toggleFavorite } = useFavorites();
 
+  // State for space deletion
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleteReason, setDeleteReason] = useState("");
-  const [deletingSpace, setDeletingSpace] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  // State for report form
+  const [reportFormOpen, setReportFormOpen] = useState(false);
 
   // State for image viewer
   const [imageViewerOpen, setImageViewerOpen] = useState(false);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
 
   useEffect(() => {
-    (async () => {
-      const { data } = await supabase.auth.getUser();
-      if (data.user) setCurrentUserId(data.user.id);
-    })();
-    if (id) fetchSpaceDetails(id);
+    const fetchSpaceDetails = async () => {
+      if (!id) return;
+
+      try {
+        setLoading(true);
+        console.log("Fetching space details for ID:", id);
+
+        const { data, error } = await supabase
+          .from("spaces")
+          .select("*")
+          .eq("id", id)
+          .eq("status", "approved")
+          .single();
+
+        if (error) {
+          console.error("Error fetching space details:", error);
+          toast.error("Erro ao carregar detalhes do espaço");
+          return;
+        }
+
+        if (!data) {
+          console.error("No space data found for ID:", id);
+          return;
+        }
+
+        console.log("Space details fetched:", data);
+
+        // Map the data from Supabase to our Space interface
+        const spaceData: Space = {
+          id: data.id,
+          name: data.name,
+          category: data.category,
+          description: data.description,
+          address: data.address,
+          capacity: data.capacity,
+          price: data.price,
+          contact_number: data.contact_number,
+          amenities: data.amenities,
+          images: data.images,
+          available_days: data.available_days,
+          working_hours: data.working_hours,
+          rating: 4.8, // Default rating until we implement a rating system
+        };
+
+        setSpace(spaceData);
+      } catch (error) {
+        console.error("Failed to fetch space details:", error);
+        toast.error("Erro ao carregar detalhes do espaço");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchSpaceDetails();
   }, [id]);
 
-  const fetchSpaceDetails = async (spaceId: string) => {
-    try {
-      setLoading(true);
-      console.log("🔍 SPACE_DETAILS: Buscando detalhes do espaço:", spaceId);
-      
-      const { data: sd, error: se } = await supabase
-        .from("spaces")
-        .select("*")
-        .eq("id", spaceId)
-        .single();
-      
-      if (se || !sd) {
-        console.error("❌ SPACE_DETAILS: Erro ao buscar espaço:", se);
-        throw se || new Error("Not found");
-      }
-      
-      console.log("✅ SPACE_DETAILS: Espaço encontrado:", sd.name);
-      
-      if (sd.user_id) {
-        const { data: pd } = await supabase
-          .from("profiles")
-          .select("id, first_name, last_name")
-          .eq("id", sd.user_id)
-          .single();
-        if (pd) setSpaceOwner({
-          id: pd.id,
-          name: pd.first_name && pd.last_name
-            ? `${pd.first_name} ${pd.last_name}`
-            : "Proprietário"
-        });
-        else setSpaceOwner({ id: sd.user_id, name: "Proprietário" });
-      }
-      
-      setSpace(sd);
-    } catch (err) {
-      console.error("❌ SPACE_DETAILS: Erro ao carregar detalhes:", err);
-      toast.error("Erro ao carregar detalhes");
-      navigate("/explore");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const formatPrice = (v: string) =>
-    parseFloat(v).toLocaleString("pt-BR", {
-      style: "currency",
-      currency: "BRL",
-    });
-
+  // Handler for WhatsApp redirect
   const handleWhatsApp = () => {
     if (!space) return;
-    const phone = space.phone.replace(/\D/g, "");
-    window.open(
-      `https://wa.me/+55${phone}?text=${encodeURIComponent(
-        `Olá, tenho interesse no espaço ${space.name}`
-      )}`,
-      "_blank"
-    );
-  };
 
-  const startChat = async () => {
-    if (!space || !spaceOwner) return;
-    if (currentUserId === spaceOwner.id) {
-      toast.error("Não pode conversar consigo mesmo");
-      return;
-    }
-    setProcessingChat(true);
-    try {
-      const { data: ud } = await supabase.auth.getUser();
-      if (!ud.user) {
-        toast.error("Faça login");
-        navigate("/login");
-        return;
-      }
-      const { data: exist } = await supabase.functions.invoke(
-        "get_chat_by_users_and_space",
-        {
-          body: JSON.stringify({
-            current_user_id: ud.user.id,
-            space_owner_id: spaceOwner.id,
-            current_space_id: space.id,
-          }),
-        }
-      );
-      let chatId: string;
-      if (Array.isArray(exist) && exist.length) {
-        chatId = exist[0].id;
-      } else {
-        const { data: nc } = await supabase
-          .from("chats")
-          .insert({
-            user_id: ud.user.id,
-            owner_id: spaceOwner.id,
-            space_id: space.id,
-            space_name: space.name,
-            space_image: photoUrls[0] || null,
-            last_message: "",
-            last_message_time: new Date().toISOString(),
-          })
-          .select("id")
-          .single();
-        chatId = nc!.id;
-      }
-      navigate("/messages", { state: { chatId } });
-    } catch (e) {
-      console.error(e);
-      toast.error("Erro ao iniciar conversa");
-    } finally {
-      setProcessingChat(false);
-    }
+    // Clean the phone number (remove non-numeric characters)
+    const cleanPhone = space.contact_number.replace(/\D/g, "");
+
+    // Create WhatsApp URL with pre-filled message
+    const message = encodeURIComponent(`Olá, tenho interesse em alugar o espaço ${space.name}`);
+    const whatsappUrl = `https://wa.me/+55${cleanPhone}?text=${message}`;
+
+    // Open WhatsApp in a new tab
+    window.open(whatsappUrl, "_blank");
   };
 
   const handleShare = () => {
     if (!space) return;
-    
+
     const url = window.location.href;
-    const priceFormatted = formatPrice(space.price);
-    const text = `Confira este espaço incrível: ${space.name} - ${priceFormatted} para até ${space.capacity} pessoas`;
-    
+    const text = `Confira este espaço para eventos: ${space.name} - ${space.category}`;
+
     if (navigator.share) {
       navigator.share({
         title: `${space.name} - iParty`,
@@ -235,8 +165,9 @@ const EventSpaceDetails: React.FC = () => {
         url: url,
       }).catch(console.error);
     } else {
-      const shareText = `${text}\n\nLocalização: ${space.address}, ${space.number} - ${space.state}\n\nAcesse: ${url}`;
-      
+      // Create a more complete share text with the link
+      const shareText = `${text}\n\nAcesse: ${url}`;
+
       navigator.clipboard.writeText(shareText).then(() => {
         toast.success("Link copiado para a área de transferência!");
       }).catch(() => {
@@ -250,79 +181,114 @@ const EventSpaceDetails: React.FC = () => {
   };
 
   const handleDeleteSpace = async () => {
-    if (!deleteReason.trim()) {
-      toast.error("Por favor, forneça um motivo para a exclusão");
+    if (!id || !deleteReason.trim()) {
       return;
     }
 
     try {
-      setDeletingSpace(true);
-
-      // Criar notificação para o proprietário do espaço
-      if (space && space.user_id) {
-        const { error: notificationError } = await supabase
-          .from("space_deletion_notifications")
-          .insert({
-            user_id: space.user_id,
-            space_name: space.name,
-            deletion_reason: deleteReason
-          });
-
-        if (notificationError) {
-          console.error("Erro ao criar notificação:", notificationError);
-          toast.error("Erro ao notificar o proprietário");
-        }
-      }
-
-      // Excluir o espaço usando a função existente
-      if (space) {
-        const { error } = await supabase.functions.invoke("delete_space_with_photos", {
-          body: { space_id: space.id }
+      setDeleting(true);
+      console.log("=== INICIANDO EXCLUSÃO DE ESPAÇO ===");
+      console.log("ID do espaço:", id);
+      console.log("Motivo da exclusão:", deleteReason);
+      
+      // Use the edge function that sends email notifications
+      const functionUrl = `${SUPABASE_CONFIG.URL}/functions/v1/delete_space_with_notification`;
+      console.log("URL da função:", functionUrl);
+      
+      const requestBody = { 
+        space_id: id,
+        deletion_reason: deleteReason
+      };
+      console.log("Dados da requisição:", requestBody);
+      
+      const response = await fetch(functionUrl, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${SUPABASE_CONFIG.PUBLIC_KEY}`,
+        },
+        body: JSON.stringify(requestBody),
+      });
+      
+      console.log("Status da resposta:", response.status);
+      console.log("Status text:", response.statusText);
+      
+      const responseText = await response.text();
+      console.log("Resposta raw:", responseText);
+      
+      if (!response.ok) {
+        console.error("Erro na resposta da edge function:", {
+          status: response.status,
+          statusText: response.statusText,
+          body: responseText
         });
-
-        if (error) throw error;
-
-        toast.success("Espaço excluído com sucesso");
-        setDeleteDialogOpen(false);
-        navigate('/explore');
+        throw new Error(`Error ${response.status}: ${responseText || "Unknown error"}`);
       }
+      
+      const result = JSON.parse(responseText);
+      console.log("Resultado da edge function:", result);
+      
+      if (!result.success) {
+        throw new Error(result.error || "Failed to delete space");
+      }
+
+      toast.success("Espaço excluído com sucesso e notificação enviada");
+      console.log("✅ Operação concluída com sucesso");
+      navigate("/profile");
     } catch (error) {
       console.error("Erro ao excluir espaço:", error);
-      toast.error("Erro ao excluir espaço");
+      toast.error("Erro ao excluir espaço: " + (error instanceof Error ? error.message : "Erro desconhecido"));
     } finally {
-      setDeletingSpace(false);
+      setDeleting(false);
+      setDeleteDialogOpen(false);
     }
   };
 
-  // Determinar quais imagens exibir
-  console.log("🖼️ SPACE_DETAILS: Estado das fotos:", {
-    photosLoading,
-    photoUrlsLength: photoUrls?.length || 0,
-    photoUrls: photoUrls?.slice(0, 2) // Log apenas as primeiras 2 URLs para debug
-  });
+  const handleFavoriteToggle = () => {
+    if (!space) return;
+    toggleFavorite(space.id);
 
-  const displayImages = photoUrls && photoUrls.length > 0 
-    ? photoUrls 
-    : ["https://images.unsplash.com/photo-1566681855366-282a74153321?q=80&w=600&auto=format&fit=crop"];
-
-  if (loading || !space) {
-    return (
-      <div className="container px-4 py-6 flex items-center justify-center h-[70vh]">
-        <Loader2 className="animate-spin text-iparty h-8 w-8" />
-      </div>
-    );
-  }
+    const isFav = isFavorite(space.id);
+    toast.success(isFav ? "Removido dos favoritos" : "Adicionado aos favoritos");
+  };
 
   const handleImageClick = (index: number) => {
     setSelectedImageIndex(index);
     setImageViewerOpen(true);
   };
 
+  if (loading) {
+    return (
+      <div className="container px-4 py-6 max-w-4xl mx-auto flex items-center justify-center h-[80vh]">
+        <p>Carregando detalhes do espaço...</p>
+      </div>
+    );
+  }
+
+  if (!space) {
+    return (
+      <div className="container px-4 py-6 max-w-4xl mx-auto flex items-center justify-center h-[80vh]">
+        <p>Espaço não encontrado.</p>
+      </div>
+    );
+  }
+
+  // Determine which images to display
+  const displayImages = space.images && space.images.length > 0
+    ? space.images
+    : ["https://source.unsplash.com/random/800x600?event"];
+
+  // Format available days from the database
+  const availableDays = space.available_days && space.available_days.length > 0
+    ? space.available_days.map(day => dayTranslations[day] || day)
+    : [];
+
+  const isSpaceFavorited = isFavorite(space.id);
+
   return (
     <div className="h-screen w-full overflow-hidden">
       <div className="h-full w-full overflow-y-auto scrollbar-hide">
-        <div className="container px-4 py-6 pb-20 mx-auto">
-          {/* back & actions dropdown at top */}
+        <div className="container px-4 py-6 max-w-4xl mx-auto">
           <div className="flex items-center justify-between mb-4">
             <Button variant="ghost" size="sm" onClick={() => navigate(-1)}>
               <ChevronLeft size={20} />
@@ -334,12 +300,9 @@ const EventSpaceDetails: React.FC = () => {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-48">
-                <DropdownMenuItem onClick={() => toggleFavorite(space.id)}>
-                  <Heart
-                    size={16}
-                    className={`mr-2 ${isFavorite(space.id) ? "fill-red-500 text-red-500" : "text-gray-500"}`}
-                  />
-                  {isFavorite(space.id) ? "Remover dos favoritos" : "Adicionar aos favoritos"}
+                <DropdownMenuItem onClick={handleFavoriteToggle}>
+                  <Heart size={16} className="mr-2" fill={isSpaceFavorited ? "currentColor" : "none"} />
+                  {isSpaceFavorited ? "Remover dos favoritos" : "Adicionar aos favoritos"}
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={handleShare}>
                   <Share size={16} className="mr-2" />
@@ -355,198 +318,154 @@ const EventSpaceDetails: React.FC = () => {
 
           {/* image display - responsive carousel for all screen sizes */}
           <div className="mb-6">
-            {photosLoading ? (
-              <div className="h-64 md:h-48 lg:h-56 bg-gray-200 rounded-lg flex items-center justify-center">
-                <Loader2 className="animate-spin h-8 w-8 text-gray-400" />
-                <span className="ml-2 text-gray-500">Carregando fotos...</span>
-              </div>
-            ) : (
-              <>
-                {/* Mobile: Carousel */}
-                <div className="block md:hidden">
-                  <Carousel>
-                    <CarouselContent>
-                      {displayImages.map((image, i) => (
-                        <CarouselItem key={i}>
-                          <div className="relative rounded-lg overflow-hidden h-64 cursor-pointer" onClick={() => handleImageClick(i)}>
-                            <OptimizedImage
-                              src={image}
-                              alt={`${space.name} ${i + 1}`}
-                              className="object-cover w-full h-full hover:scale-105 transition-transform duration-200"
-                            />
-                            <div className="absolute bottom-2 right-2">
-                              <span className="bg-black/70 text-white px-2 py-1 rounded text-xs">
-                                {i + 1}/{displayImages.length}
-                              </span>
-                            </div>
-                          </div>
-                        </CarouselItem>
-                      ))}
-                    </CarouselContent>
-                  </Carousel>
-                </div>
+            {/* Mobile: Carousel */}
+            <div className="block md:hidden">
+              <Carousel>
+                <CarouselContent>
+                  {displayImages.map((image, index) => (
+                    <CarouselItem key={index} className="w-full h-64">
+                      <div className="relative rounded-lg overflow-hidden h-full cursor-pointer" onClick={() => handleImageClick(index)}>
+                        <OptimizedImage
+                          src={image}
+                          alt={`${space.name} - Imagem ${index + 1}`}
+                          className="w-full h-full object-cover hover:scale-105 transition-transform duration-200"
+                          loadingClassName="animate-pulse bg-gray-200"
+                        />
+                        <div className="absolute bottom-2 right-2">
+                          <span className="bg-black/70 text-white px-2 py-1 rounded text-xs">
+                            {index + 1}/{displayImages.length}
+                          </span>
+                        </div>
+                      </div>
+                    </CarouselItem>
+                  ))}
+                </CarouselContent>
+              </Carousel>
+            </div>
 
-                {/* Tablet/Desktop: Horizontal Scrollable Row */}
-                <div className="hidden md:block">
-                  <Carousel>
-                    <CarouselContent className="-ml-2 md:-ml-4">
-                      {displayImages.map((image, i) => (
-                        <CarouselItem key={i} className="pl-2 md:pl-4 md:basis-1/3 lg:basis-1/4">
-                          <div className="relative rounded-lg overflow-hidden h-48 lg:h-56 cursor-pointer" onClick={() => handleImageClick(i)}>
-                            <OptimizedImage
-                              src={image}
-                              alt={`${space.name} ${i + 1}`}
-                              className="object-cover w-full h-full hover:scale-105 transition-transform duration-200"
-                            />
-                            <div className="absolute bottom-2 right-2">
-                              <span className="bg-black/70 text-white px-2 py-1 rounded text-xs">
-                                {i + 1}
-                              </span>
-                            </div>
-                          </div>
-                        </CarouselItem>
-                      ))}
-                    </CarouselContent>
-                  </Carousel>
-                </div>
-              </>
-            )}
+            {/* Tablet/Desktop: Horizontal Scrollable Row */}
+            <div className="hidden md:block">
+              <Carousel>
+                <CarouselContent className="-ml-2 md:-ml-4">
+                  {displayImages.map((image, index) => (
+                    <CarouselItem key={index} className="pl-2 md:pl-4 md:basis-1/3 lg:basis-1/4">
+                      <div className="relative rounded-lg overflow-hidden h-48 lg:h-56 cursor-pointer" onClick={() => handleImageClick(index)}>
+                        <OptimizedImage
+                          src={image}
+                          alt={`${space.name} - Imagem ${index + 1}`}
+                          className="object-cover w-full h-full hover:scale-105 transition-transform duration-200"
+                        />
+                        <div className="absolute bottom-2 right-2">
+                          <span className="bg-black/70 text-white px-2 py-1 rounded text-xs">
+                            {index + 1}
+                          </span>
+                        </div>
+                      </div>
+                    </CarouselItem>
+                  ))}
+                </CarouselContent>
+              </Carousel>
+            </div>
           </div>
 
-          {/* title */}
-          <h1 className="text-2xl font-bold mb-6 truncate">{space.name}</h1>
-
-          {/* price / details */}
           <div className="mb-6">
-            <div className="flex justify-between items-center mb-2">
-              <h2 className="text-2xl font-bold">{formatPrice(space.price)}</h2>
-              <Badge variant="secondary">
-                <Users className="mr-1" size={14} />
-                Até {space.capacity} pessoas
-              </Badge>
-            </div>
-            <p className="text-muted-foreground">
-              {space.address}, {space.number} – {space.state}
-            </p>
-            <p className="text-muted-foreground">CEP: {space.zip_code}</p>
-          </div>
+            <h1 className="text-2xl font-bold mb-2">{space.name}</h1>
+            <Badge variant="outline" className="mb-4 bg-secondary">
+              {space.category}
+            </Badge>
 
-          {/* about */}
-          <div className="mb-6">
-            <h3 className="text-lg font-semibold mb-2">Sobre o espaço</h3>
-            <p className="text-muted-foreground">{space.description}</p>
-          </div>
+            <p className="text-gray-700 mb-6">{space.description}</p>
 
-          {/* location map section */}
-          {space.latitude && space.longitude ? (
-            <div className="mb-6">
-              <h3 className="text-lg font-semibold mb-2 flex items-center">
-                <MapPin className="mr-2" size={20} />
-                Localização
-              </h3>
-              <div className="h-[200px] bg-gray-100 rounded-lg overflow-hidden border">
-                <iframe
-                  width="100%"
-                  height="100%"
-                  frameBorder="0"
-                  src={`https://www.google.com/maps/embed/v1/place?key=AIzaSyDmquKmV6OtKkJCG2eEe4NIPE8MzcrkUyw&q=${space.latitude},${space.longitude}&zoom=15`}
-                  allowFullScreen
-                  title={`Localização de ${space.name}`}
-                ></iframe>
+            <div className="space-y-4">
+              <div className="flex items-start">
+                <MapPin size={20} className="text-iparty mr-3 mt-1" />
+                <div>
+                  <h3 className="font-semibold mb-1">Endereço</h3>
+                  <p className="text-gray-700">{space.address}</p>
+                </div>
               </div>
-              <p className="text-xs text-gray-500 mt-2">
-                📍 {space.address}, {space.number} - {space.state}
-              </p>
-            </div>
-          ) : (
-            <div className="mb-6">
-              <h3 className="text-lg font-semibold mb-2 flex items-center">
-                <MapPin className="mr-2" size={20} />
-                Localização
-              </h3>
-              <div className="h-[120px] bg-gray-50 rounded-lg border border-dashed border-gray-300 flex flex-col items-center justify-center">
-                <MapPin size={32} className="text-gray-300 mb-2" />
-                <p className="text-gray-500 text-sm">Localização não definida no mapa</p>
-                <p className="text-xs text-gray-400 mt-1">
-                  📍 {space.address}, {space.number} - {space.state}
-                </p>
-              </div>
-            </div>
-          )}
 
-          {/* amenities */}
-          <div className="mb-8">
-            <h3 className="text-lg font-semibold mb-2">Comodidades</h3>
-            <div className="grid grid-cols-2 gap-4">
-              <div className={`flex items-center ${space.parking ? "" : "text-muted-foreground/50"}`}>
-                <ParkingMeter className="mr-2" size={18} />
-                <span>{space.parking ? "Estacionamento" : "Sem estacionamento"}</span>
+              <div className="flex items-start">
+                <Calendar size={20} className="text-iparty mr-3 mt-1" />
+                <div>
+                  <h3 className="font-semibold mb-1">Capacidade</h3>
+                  <p className="text-gray-700">{space.capacity} pessoas</p>
+                </div>
               </div>
-              <div className={`flex items-center ${space.wifi ? "" : "text-muted-foreground/50"}`}>
-                <Wifi className="mr-2" size={18} />
-                <span>{space.wifi ? "Wi-Fi" : "Sem Wi-Fi"}</span>
-              </div>
-              <div className={`flex items-center ${space.sound_system ? "" : "text-muted-foreground/50"}`}>
-                <Speaker className="mr-2" size={18} />
-                <span>{space.sound_system ? "Sistema de som" : "Sem sistema de som"}</span>
-              </div>
-              <div className={`flex items-center ${space.air_conditioning ? "" : "text-muted-foreground/50"}`}>
-                <AirVent className="mr-2" size={18} />
-                <span>{space.air_conditioning ? "Ar condicionado" : "Sem ar condicionado"}</span>
-              </div>
-              <div className={`flex items-center ${space.kitchen ? "" : "text-muted-foreground/50"}`}>
-                <Utensils className="mr-2" size={18} />
-                <span>{space.kitchen ? "Cozinha" : "Sem cozinha"}</span>
-              </div>
-              <div className={`flex items-center ${space.pool ? "" : "text-muted-foreground/50"}`}>
-                <Waves className="mr-2" size={18} />
-                <span>{space.pool ? "Piscina" : "Sem piscina"}</span>
-              </div>
-            </div>
-          </div>
 
-          {/* contact buttons */}
-          <div className="grid grid-cols-2 gap-4 mb-6">
-            <Button className="bg-green-600 hover:bg-green-700" size="lg" onClick={handleWhatsApp}>
-              <Phone className="mr-2" size={18} />
-              Contato
-            </Button>
-            <Button
-              className="bg-iparty hover:bg-iparty-dark"
-              size="lg"
-              onClick={startChat}
-              disabled={currentUserId === spaceOwner?.id || processingChat}
-            >
-              {processingChat ? (
-                <Loader2 className="mr-2 animate-spin" size={18} />
-              ) : (
-                <MessageSquare className="mr-2" size={18} />
+              <div className="flex items-start">
+                <Clock size={20} className="text-iparty mr-3 mt-1" />
+                <div>
+                  <h3 className="font-semibold mb-1">Preço</h3>
+                  <p className="text-gray-700">R$ {space.price}</p>
+                </div>
+              </div>
+
+              <div className="flex items-start">
+                <Phone size={20} className="text-iparty mr-3 mt-1" />
+                <div>
+                  <h3 className="font-semibold mb-1">Contato</h3>
+                  <p className="text-gray-700">{space.contact_number}</p>
+                </div>
+              </div>
+
+              {space.working_hours && (
+                <div className="flex items-start">
+                  <Clock size={20} className="text-iparty mr-3 mt-1" />
+                  <div>
+                    <h3 className="font-semibold mb-1">Horário de Atendimento</h3>
+                    <p className="text-gray-700">{space.working_hours}</p>
+                  </div>
+                </div>
               )}
-              Mensagem
-            </Button>
+
+              {availableDays && availableDays.length > 0 && (
+                <div className="flex items-start">
+                  <Calendar size={20} className="text-iparty mr-3 mt-1" />
+                  <div>
+                    <h3 className="font-semibold mb-1">Dias Disponíveis</h3>
+                    <div className="flex flex-wrap gap-2 mt-2">
+                      {availableDays.map((day) => (
+                        <Badge key={day} variant="secondary" className="text-xs">
+                          {day}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
 
-          {/* delete button for admin */}
-          {isAdmin && (
+          <Button
+            className="w-full mb-4 bg-green-600 text-white hover:bg-green-700"
+            onClick={handleWhatsApp}
+          >
+            <Phone className="mr-2" size={18} />
+            WhatsApp
+          </Button>
+
+          {/* Admin Delete Button */}
+          {(isAdmin || isSuperAdmin) && (
             <Button
               variant="destructive"
-              className="w-full mb-6"
-              size="lg"
+              className="w-full mb-4 flex items-center justify-center"
               onClick={() => setDeleteDialogOpen(true)}
+              disabled={deleting}
             >
               <Trash2 className="mr-2" size={18} />
-              Excluir Espaço
+              {deleting ? "Excluindo..." : "Excluir Espaço"}
             </Button>
           )}
 
-          {/* delete confirmation */}
+          {/* Delete Confirmation Dialog */}
           <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
             <AlertDialogContent>
               <AlertDialogHeader>
                 <AlertDialogTitle>Excluir Espaço</AlertDialogTitle>
                 <AlertDialogDescription>
                   Tem certeza que deseja excluir este espaço? Esta ação não pode ser
-                  desfeita.
+                  desfeita e um email será enviado ao proprietário.
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <Textarea
@@ -557,13 +476,13 @@ const EventSpaceDetails: React.FC = () => {
                 rows={3}
               />
               <AlertDialogFooter className="mt-4">
-                <AlertDialogCancel disabled={deletingSpace}>Cancelar</AlertDialogCancel>
+                <AlertDialogCancel disabled={deleting}>Cancelar</AlertDialogCancel>
                 <AlertDialogAction
                   onClick={handleDeleteSpace}
-                  disabled={deletingSpace}
+                  disabled={deleting || !deleteReason.trim()}
                   className="bg-red-600 hover:bg-red-700"
                 >
-                  {deletingSpace ? "Excluindo..." : "Excluir"}
+                  {deleting ? "Excluindo..." : "Excluir"}
                 </AlertDialogAction>
               </AlertDialogFooter>
             </AlertDialogContent>
@@ -585,6 +504,8 @@ const EventSpaceDetails: React.FC = () => {
             onClose={() => setImageViewerOpen(false)}
             initialIndex={selectedImageIndex}
           />
+
+          <div className="h-20"></div> {/* Space for bottom nav */}
         </div>
       </div>
     </div>

@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -120,11 +119,19 @@ const VendorDetails: React.FC<VendorDetailsProps> = ({
     
     try {
       setIsDeleting(true);
+      console.log("=== INICIANDO EXCLUSÃO DE FORNECEDOR ===");
+      console.log("ID do fornecedor:", selectedVendor.id);
+      console.log("Motivo da exclusão:", deleteReason);
       
       // Call the updated edge function that sends email notifications
       const functionUrl = `${SUPABASE_CONFIG.URL}/functions/v1/delete_vendor_with_notification`;
+      console.log("URL da função:", functionUrl);
       
-      console.log("Calling edge function for vendor deletion:", functionUrl);
+      const requestBody = { 
+        vendorId: selectedVendor.id,
+        deleteReason: deleteReason
+      };
+      console.log("Dados da requisição:", requestBody);
       
       const response = await fetch(functionUrl, {
         method: "POST",
@@ -132,33 +139,40 @@ const VendorDetails: React.FC<VendorDetailsProps> = ({
           "Content-Type": "application/json",
           "Authorization": `Bearer ${SUPABASE_CONFIG.PUBLIC_KEY}`,
         },
-        body: JSON.stringify({ 
-          vendorId: selectedVendor.id,
-          deleteReason: deleteReason
-        }),
+        body: JSON.stringify(requestBody),
       });
       
+      console.log("Status da resposta:", response.status);
+      console.log("Status text:", response.statusText);
+      
+      const responseText = await response.text();
+      console.log("Resposta raw:", responseText);
+      
       if (!response.ok) {
-        const errorText = await response.text();
-        console.error("Edge function error response:", errorText);
-        throw new Error(`Error ${response.status}: ${errorText || "Unknown error"}`);
+        console.error("Erro na resposta da edge function:", {
+          status: response.status,
+          statusText: response.statusText,
+          body: responseText
+        });
+        throw new Error(`Error ${response.status}: ${responseText || "Unknown error"}`);
       }
       
-      const result = await response.json();
-      console.log("Edge function result:", result);
+      const result = JSON.parse(responseText);
+      console.log("Resultado da edge function:", result);
       
       if (!result.success) {
         throw new Error(result.error || "Failed to delete vendor");
       }
 
       toast.success("Fornecedor excluído com sucesso e notificação enviada");
+      console.log("✅ Operação concluída com sucesso");
       
       if (onDelete) {
         onDelete();
       }
     } catch (error) {
-      console.error("Error deleting vendor:", error);
-      toast.error("Erro ao excluir fornecedor");
+      console.error("Erro ao excluir fornecedor:", error);
+      toast.error("Erro ao excluir fornecedor: " + (error instanceof Error ? error.message : "Erro desconhecido"));
     } finally {
       setIsDeleting(false);
       setDeleteDialogOpen(false);
