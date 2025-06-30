@@ -49,17 +49,10 @@ serve(async (req) => {
 
     console.log("Processing vendor deletion for ID:", vendorId);
 
-    // Get vendor information including user_id, vendor name, and user profile
+    // Get vendor information including user_id and vendor name
     const { data: vendorData, error: vendorError } = await supabase
       .from("vendors")
-      .select(`
-        user_id,
-        name,
-        profiles:user_id (
-          first_name,
-          last_name
-        )
-      `)
+      .select("user_id, name")
       .eq("id", vendorId)
       .single();
     
@@ -76,6 +69,18 @@ serve(async (req) => {
     
     console.log("Vendor user_id:", userId);
     console.log("Vendor name:", vendorName);
+    
+    // Get user profile information separately
+    const { data: profileData, error: profileError } = await supabase
+      .from("profiles")
+      .select("first_name, last_name")
+      .eq("id", userId)
+      .single();
+    
+    if (profileError) {
+      console.error("Error fetching user profile:", profileError);
+      // Continue without profile data - use default name
+    }
     
     // Get user email from auth.users
     const { data: userData, error: userError } = await supabase.auth.admin.getUserById(userId);
@@ -124,8 +129,8 @@ serve(async (req) => {
     console.log("Vendor deleted successfully, sending notification email");
     
     // Send deletion notification email
-    const userName = vendorData.profiles?.first_name 
-      ? `${vendorData.profiles.first_name} ${vendorData.profiles.last_name || ''}`.trim()
+    const userName = profileData && profileData.first_name 
+      ? `${profileData.first_name} ${profileData.last_name || ''}`.trim()
       : 'Usuário';
     
     try {
