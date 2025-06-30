@@ -156,6 +156,12 @@ const RegisterSpace = () => {
       return;
     }
 
+    if (selectedCategories.length === 0) {
+      console.log("❌ SUBMIT DEBUG: Nenhuma categoria foi selecionada");
+      toast.error("Por favor, selecione pelo menos uma categoria de evento");
+      return;
+    }
+
     setSubmitting(true);
 
     try {
@@ -596,7 +602,10 @@ const RegisterSpace = () => {
           />
 
           <div>
-            <FormLabel>Categorias de Eventos</FormLabel>
+            <FormLabel>Categorias de Eventos *</FormLabel>
+            <p className="text-sm text-muted-foreground mb-2">
+              Selecione pelo menos uma categoria de evento
+            </p>
             <div className="flex flex-wrap gap-2 mt-2">
               {categories.map((category) => (
                 <div
@@ -614,6 +623,11 @@ const RegisterSpace = () => {
                 </div>
               ))}
             </div>
+            {selectedCategories.length === 0 && (
+              <p className="text-sm text-red-500 mt-1">
+                Por favor, selecione pelo menos uma categoria
+              </p>
+            )}
           </div>
 
           <Button 

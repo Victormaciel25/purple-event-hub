@@ -166,6 +166,11 @@ const RegisterVendor = () => {
       return;
     }
 
+    if (!values.category) {
+      toast.error("Por favor, selecione uma categoria");
+      return;
+    }
+
     setSubmitting(true);
 
     try {
@@ -282,7 +287,7 @@ const RegisterVendor = () => {
             name="category"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Categoria</FormLabel>
+                <FormLabel>Categoria *</FormLabel>
                 <Select onValueChange={field.onChange} defaultValue={field.value}>
                   <FormControl>
                     <SelectTrigger>
