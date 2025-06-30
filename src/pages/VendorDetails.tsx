@@ -409,7 +409,7 @@ const VendorDetails = () => {
             onClick={handleWhatsApp}
           >
             <Phone className="mr-2" size={18} />
-            WhatsApp
+            Contato
           </Button>
 
           {/* Admin Delete Button */}
