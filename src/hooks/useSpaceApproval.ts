@@ -98,48 +98,6 @@ export const useSpaceApproval = () => {
     }
   };
 
-  const approveSpace = async (spaceId: string) => {
-    try {
-      const { error } = await supabase
-        .from("spaces")
-        .update({ status: "approved" })
-        .eq("id", spaceId);
-
-      if (error) throw error;
-      
-      toast.success("Espaço aprovado com sucesso!");
-      await fetchSpaces();
-    } catch (error) {
-      console.error("Erro ao aprovar espaço:", error);
-      toast.error("Erro ao aprovar espaço");
-    }
-  };
-
-  const rejectSpace = async (spaceId: string, reason: string) => {
-    if (!reason.trim()) {
-      toast.error("Motivo da rejeição é obrigatório");
-      return;
-    }
-
-    try {
-      const { error } = await supabase
-        .from("spaces")
-        .update({
-          status: "rejected",
-          rejection_reason: reason
-        })
-        .eq("id", spaceId);
-
-      if (error) throw error;
-      
-      toast.success("Espaço rejeitado");
-      await fetchSpaces();
-    } catch (error) {
-      console.error("Erro ao rejeitar espaço:", error);
-      toast.error("Erro ao rejeitar espaço");
-    }
-  };
-
   useEffect(() => {
     fetchSpaces();
   }, []);
@@ -147,8 +105,6 @@ export const useSpaceApproval = () => {
   return {
     spaces,
     loading,
-    fetchSpaces,
-    approveSpace,
-    rejectSpace
+    fetchSpaces
   };
 };

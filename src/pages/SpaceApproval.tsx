@@ -19,6 +19,7 @@ import SpaceApprovalActions from "@/components/approval/SpaceApprovalActions";
 import type { SpaceWithProfile } from "@/types/approval";
 import { toast } from "sonner";
 import { SUPABASE_CONFIG } from "@/config/app-config";
+import { supabase } from "@/integrations/supabase/client";
 
 const SpaceApproval = () => {
   const [selectedSpace, setSelectedSpace] = useState<SpaceWithProfile | null>(null);
@@ -26,7 +27,7 @@ const SpaceApproval = () => {
   const { isAdmin, loading: roleLoading } = useUserRoles();
   const navigate = useNavigate();
   
-  const { spaces, loading, approveSpace, rejectSpace } = useSpaceApproval();
+  const { spaces, loading, fetchSpaces } = useSpaceApproval();
   const { photoUrls, loading: photosLoading, refetch: refetchPhotos } = useSpacePhotos(selectedSpace?.id || null);
 
   React.useEffect(() => {
@@ -53,16 +54,102 @@ const SpaceApproval = () => {
     }
   };
 
+  const sendApprovalNotification = async (space: SpaceWithProfile, status: 'approved' | 'rejected', rejectionReason?: string) => {
+    try {
+      console.log("Enviando notificação de aprovação/rejeição para espaço:", space.id);
+      
+      // Get user email from auth.users
+      const { data: userData, error: userError } = await supabase.auth.admin.getUserById(space.user_id);
+      
+      if (userError || !userData.user) {
+        console.error("Error fetching user email:", userError);
+        return;
+      }
+
+      const userName = space.profiles?.first_name 
+        ? `${space.profiles.first_name} ${space.profiles.last_name || ''}`.trim()
+        : 'Usuário';
+
+      const functionUrl = `${SUPABASE_CONFIG.URL}/functions/v1/send-approval-notification`;
+      
+      const response = await fetch(functionUrl, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${SUPABASE_CONFIG.PUBLIC_KEY}`,
+        },
+        body: JSON.stringify({
+          type: 'space',
+          itemName: space.name,
+          userEmail: userData.user.email,
+          userName: userName,
+          status: status,
+          rejectionReason: rejectionReason,
+        }),
+      });
+      
+      if (!response.ok) {
+        console.warn('Failed to send approval notification email');
+      } else {
+        console.log('Approval notification email sent successfully');
+      }
+    } catch (error) {
+      console.warn('Error sending approval notification email:', error);
+    }
+  };
+
   const handleApprove = async () => {
     if (!selectedSpace) return;
-    await approveSpace(selectedSpace.id);
-    setDrawerOpen(false);
+    
+    try {
+      const { error } = await supabase
+        .from("spaces")
+        .update({ status: "approved" })
+        .eq("id", selectedSpace.id);
+
+      if (error) throw error;
+      
+      // Send approval notification email
+      await sendApprovalNotification(selectedSpace, 'approved');
+      
+      toast.success("Espaço aprovado com sucesso!");
+      await fetchSpaces();
+      setDrawerOpen(false);
+    } catch (error) {
+      console.error("Erro ao aprovar espaço:", error);
+      toast.error("Erro ao aprovar espaço");
+    }
   };
 
   const handleReject = async (reason: string) => {
     if (!selectedSpace) return;
-    await rejectSpace(selectedSpace.id, reason);
-    setDrawerOpen(false);
+    
+    if (!reason.trim()) {
+      toast.error("Motivo da rejeição é obrigatório");
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from("spaces")
+        .update({
+          status: "rejected",
+          rejection_reason: reason
+        })
+        .eq("id", selectedSpace.id);
+
+      if (error) throw error;
+      
+      // Send rejection notification email
+      await sendApprovalNotification(selectedSpace, 'rejected', reason);
+      
+      toast.success("Espaço rejeitado");
+      await fetchSpaces();
+      setDrawerOpen(false);
+    } catch (error) {
+      console.error("Erro ao rejeitar espaço:", error);
+      toast.error("Erro ao rejeitar espaço");
+    }
   };
 
   const handleDeleteSpace = async (spaceId: string, deletionReason: string) => {

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { ChevronLeft } from "lucide-react";
@@ -160,6 +159,50 @@ const VendorApproval = () => {
     }
   };
 
+  const sendApprovalNotification = async (vendor: VendorDetailsType, status: 'approved' | 'rejected', rejectionReason?: string) => {
+    try {
+      console.log("Enviando notificação de aprovação/rejeição para fornecedor:", vendor.id);
+      
+      // Get user email from auth.users
+      const { data: userData, error: userError } = await supabase.auth.admin.getUserById(vendor.user_id);
+      
+      if (userError || !userData.user) {
+        console.error("Error fetching user email:", userError);
+        return;
+      }
+
+      const userName = vendor.profiles?.first_name 
+        ? `${vendor.profiles.first_name} ${vendor.profiles.last_name || ''}`.trim()
+        : 'Usuário';
+
+      const functionUrl = `${SUPABASE_CONFIG.URL}/functions/v1/send-approval-notification`;
+      
+      const response = await fetch(functionUrl, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${SUPABASE_CONFIG.PUBLIC_KEY}`,
+        },
+        body: JSON.stringify({
+          type: 'vendor',
+          itemName: vendor.name,
+          userEmail: userData.user.email,
+          userName: userName,
+          status: status,
+          rejectionReason: rejectionReason,
+        }),
+      });
+      
+      if (!response.ok) {
+        console.warn('Failed to send approval notification email');
+      } else {
+        console.log('Approval notification email sent successfully');
+      }
+    } catch (error) {
+      console.warn('Error sending approval notification email:', error);
+    }
+  };
+
   const approveVendor = async () => {
     if (!selectedVendor) return;
     
@@ -194,6 +237,9 @@ const VendorApproval = () => {
       if (!result.success) {
         throw new Error(result.error || "Failed to approve vendor");
       }
+      
+      // Send approval notification email
+      await sendApprovalNotification(selectedVendor, 'approved');
       
       toast.success("Fornecedor aprovado com sucesso!");
       
@@ -263,6 +309,9 @@ const VendorApproval = () => {
         .eq("id", selectedVendor.id);
 
       if (error) throw error;
+      
+      // Send rejection notification email
+      await sendApprovalNotification(selectedVendor, 'rejected', rejectionReason);
       
       toast.success("Fornecedor rejeitado");
       setDrawerOpen(false);
