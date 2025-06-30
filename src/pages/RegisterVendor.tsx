@@ -82,6 +82,7 @@ const RegisterVendor = () => {
   const [selectedDays, setSelectedDays] = useState<string[]>([]);
   const [mapLocation, setMapLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [mapCenter, setMapCenter] = useState<{ lat: number; lng: number } | null>(null);
+  const [showCategoryError, setShowCategoryError] = useState(false);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -168,6 +169,7 @@ const RegisterVendor = () => {
 
     if (!values.category) {
       toast.error("Por favor, selecione uma categoria");
+      setShowCategoryError(true);
       return;
     }
 
@@ -288,7 +290,12 @@ const RegisterVendor = () => {
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Categoria *</FormLabel>
-                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <Select onValueChange={(value) => {
+                  field.onChange(value);
+                  if (showCategoryError) {
+                    setShowCategoryError(false);
+                  }
+                }} defaultValue={field.value}>
                   <FormControl>
                     <SelectTrigger>
                       <SelectValue placeholder="Selecione uma categoria" />
@@ -303,6 +310,11 @@ const RegisterVendor = () => {
                   </SelectContent>
                 </Select>
                 <FormMessage />
+                {showCategoryError && !field.value && (
+                  <p className="text-sm text-red-500 mt-1">
+                    Por favor, selecione uma categoria
+                  </p>
+                )}
               </FormItem>
             )}
           />

@@ -58,6 +58,7 @@ const RegisterSpace = () => {
   const [mapCenter, setMapCenter] = useState<{ lat: number; lng: number } | null>(null);
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [submitting, setSubmitting] = useState(false);
+  const [showCategoryError, setShowCategoryError] = useState(false);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -159,6 +160,7 @@ const RegisterSpace = () => {
     if (selectedCategories.length === 0) {
       console.log("❌ SUBMIT DEBUG: Nenhuma categoria foi selecionada");
       toast.error("Por favor, selecione pelo menos uma categoria de evento");
+      setShowCategoryError(true);
       return;
     }
 
@@ -615,7 +617,12 @@ const RegisterSpace = () => {
                   <Checkbox
                     id={category}
                     checked={selectedCategories.includes(category)}
-                    onCheckedChange={() => toggleCategory(category)}
+                    onCheckedChange={() => {
+                      toggleCategory(category);
+                      if (showCategoryError) {
+                        setShowCategoryError(false);
+                      }
+                    }}
                   />
                   <FormLabel htmlFor={category} className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
                     {category.charAt(0).toUpperCase() + category.slice(1)}
@@ -623,7 +630,7 @@ const RegisterSpace = () => {
                 </div>
               ))}
             </div>
-            {selectedCategories.length === 0 && (
+            {showCategoryError && selectedCategories.length === 0 && (
               <p className="text-sm text-red-500 mt-1">
                 Por favor, selecione pelo menos uma categoria
               </p>
