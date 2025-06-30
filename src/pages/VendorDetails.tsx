@@ -182,19 +182,11 @@ const VendorDetails = () => {
 
     try {
       setDeleting(true);
-      console.log("=== INICIANDO EXCLUSÃO DE FORNECEDOR ===");
-      console.log("ID do fornecedor:", id);
-      console.log("Motivo da exclusão:", deleteReason);
       
       // Call the updated edge function that sends email notifications
       const functionUrl = `${SUPABASE_CONFIG.URL}/functions/v1/delete_vendor_with_notification`;
-      console.log("URL da função:", functionUrl);
       
-      const requestBody = { 
-        vendorId: id,
-        deleteReason: deleteReason
-      };
-      console.log("Dados da requisição:", requestBody);
+      console.log("Calling edge function for vendor deletion:", functionUrl);
       
       const response = await fetch(functionUrl, {
         method: "POST",
@@ -202,37 +194,30 @@ const VendorDetails = () => {
           "Content-Type": "application/json",
           "Authorization": `Bearer ${SUPABASE_CONFIG.PUBLIC_KEY}`,
         },
-        body: JSON.stringify(requestBody),
+        body: JSON.stringify({ 
+          vendorId: id,
+          deleteReason: deleteReason
+        }),
       });
       
-      console.log("Status da resposta:", response.status);
-      console.log("Status text:", response.statusText);
-      
-      const responseText = await response.text();
-      console.log("Resposta raw:", responseText);
-      
       if (!response.ok) {
-        console.error("Erro na resposta da edge function:", {
-          status: response.status,
-          statusText: response.statusText,
-          body: responseText
-        });
-        throw new Error(`Error ${response.status}: ${responseText || "Unknown error"}`);
+        const errorText = await response.text();
+        console.error("Edge function error response:", errorText);
+        throw new Error(`Error ${response.status}: ${errorText || "Unknown error"}`);
       }
       
-      const result = JSON.parse(responseText);
-      console.log("Resultado da edge function:", result);
+      const result = await response.json();
+      console.log("Edge function result:", result);
       
       if (!result.success) {
         throw new Error(result.error || "Failed to delete vendor");
       }
 
       toast.success("Fornecedor excluído com sucesso e notificação enviada");
-      console.log("✅ Operação concluída com sucesso");
       navigate("/vendors");
     } catch (error) {
-      console.error("Erro ao excluir fornecedor:", error);
-      toast.error("Erro ao excluir fornecedor: " + (error instanceof Error ? error.message : "Erro desconhecido"));
+      console.error("Error deleting vendor:", error);
+      toast.error("Erro ao excluir fornecedor");
     } finally {
       setDeleting(false);
       setDeleteDialogOpen(false);
