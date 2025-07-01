@@ -1,5 +1,4 @@
 
-
 import React, { useEffect, useState } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -37,6 +36,7 @@ import SubscriptionsManagement from "./pages/SubscriptionsManagement";
 import DeleteAccount from "./pages/DeleteAccount";
 import Index from "./pages/Index";
 import VendorPendingApproval from "./components/VendorPendingApproval";
+import SplashScreen from "./components/SplashScreen";
 import { useSpaceDeletionNotifications } from "./hooks/useSpaceDeletionNotifications";
 import { useVendorDeletionNotifications } from "./hooks/useVendorDeletionNotifications";
 
@@ -47,12 +47,18 @@ const queryClient = new QueryClient();
 const App: React.FC = () => {
   const [session, setSession] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [showSplash, setShowSplash] = useState(true);
   const [isPasswordRecovery, setIsPasswordRecovery] = useState(false);
 
   useSpaceDeletionNotifications();
   useVendorDeletionNotifications();
 
   useEffect(() => {
+    // Splash screen timer
+    const splashTimer = setTimeout(() => {
+      setShowSplash(false);
+    }, 2500);
+
     const url = new URL(window.location.href);
     const type = url.searchParams.get("type");
     const accessToken = url.searchParams.get("access_token");
@@ -83,6 +89,7 @@ const App: React.FC = () => {
     });
 
     return () => {
+      clearTimeout(splashTimer);
       authListener.subscription.unsubscribe();
     };
   }, []);
@@ -94,6 +101,11 @@ const App: React.FC = () => {
   const AuthenticatedLayout = () => {
     return <Layout />;
   };
+
+  // Show splash screen
+  if (showSplash) {
+    return <SplashScreen />;
+  }
 
   if (loading) {
     return <div>Carregando...</div>;
@@ -171,4 +183,3 @@ const App: React.FC = () => {
 };
 
 export default App;
-
