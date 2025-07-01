@@ -3,7 +3,7 @@ import React from "react";
 
 const SplashScreen: React.FC = () => {
   return (
-    <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-gradient-to-br from-purple-500 to-purple-700">
+    <div className="fixed inset-0 z-50 flex flex-col items-center justify-center" style={{ backgroundColor: '#a287f7' }}>
       {/* Logo/Image */}
       <div className="mb-8 animate-scale-in">
         <img
