@@ -3,22 +3,22 @@ import React from "react";
 
 const SplashScreen: React.FC = () => {
   return (
-    <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-gradient-to-br from-pink-400 via-purple-500 to-indigo-600">
+    <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-gradient-to-br from-purple-500 to-purple-700">
       {/* Logo/Image */}
       <div className="mb-8 animate-scale-in">
         <img
-          src="/lovable-uploads/290803b3-bebd-4c82-aa40-6a909967638d.png"
+          src="/lovable-uploads/9f21f8fa-1332-411b-9620-537e12dc5a6c.png"
           alt="iParty Balloons"
           className="w-32 h-32 md:w-40 md:h-40 object-contain drop-shadow-2xl"
         />
       </div>
       
-      {/* App Name */}
-      <div className="animate-fade-in">
+      {/* App Name - Centralized */}
+      <div className="animate-fade-in text-center">
         <h1 className="text-4xl md:text-5xl font-bold text-white mb-4 tracking-wider">
           iParty
         </h1>
-        <p className="text-white/80 text-lg md:text-xl text-center px-8">
+        <p className="text-white/80 text-lg md:text-xl px-8">
           Encontre o espaço perfeito para o seu evento
         </p>
       </div>
