@@ -1,4 +1,4 @@
-package VM.iparty;
+package com.victormaciel.iparty;
 
 import com.getcapacitor.BridgeActivity;
 
