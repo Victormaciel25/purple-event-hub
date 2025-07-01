@@ -18,9 +18,6 @@ const SplashScreen: React.FC = () => {
         <h1 className="text-4xl md:text-5xl font-bold text-white mb-4 tracking-wider">
           iParty
         </h1>
-        <p className="text-white/80 text-lg md:text-xl px-8">
-          Encontre o espaço perfeito para o seu evento
-        </p>
       </div>
       
       {/* Loading indicator */}
