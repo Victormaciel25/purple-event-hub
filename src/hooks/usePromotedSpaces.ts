@@ -148,6 +148,7 @@ export const usePromotedSpaces = () => {
 
       if (!spacesData) {
         setSpaces([]);
+        setLoading(false);
         return;
       }
 
@@ -254,11 +255,13 @@ export const usePromotedSpaces = () => {
     fetchSpaces();
   }, []);
 
-  return {
-    spaces,
-    loading,
-    error,
-    refetch: fetchSpaces,
-    userLocation,
+ return {
+  spaces,
+  loading,
+  error,
+  refetch: fetchSpaces,
+  userLocation: userLocation
+    ? { lat: userLocation.latitude, lng: userLocation.longitude }
+    : null,
   };
 };

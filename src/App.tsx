@@ -1,5 +1,4 @@
-
-
+// App.tsx
 import React, { useEffect, useState } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -39,6 +38,7 @@ import Index from "./pages/Index";
 import VendorPendingApproval from "./components/VendorPendingApproval";
 import { useSpaceDeletionNotifications } from "./hooks/useSpaceDeletionNotifications";
 import { useVendorDeletionNotifications } from "./hooks/useVendorDeletionNotifications";
+import { Geolocation } from "@capacitor/geolocation"; 
 
 import "./index.css";
 
@@ -53,6 +53,18 @@ const App: React.FC = () => {
   useVendorDeletionNotifications();
 
   useEffect(() => {
+    const requestLocation = async () => {
+      try {
+        const permission = await Geolocation.requestPermissions();
+        const coordinates = await Geolocation.getCurrentPosition();
+        console.log("User location:", coordinates);
+      } catch (error) {
+        console.error("Erro ao obter localização:", error);
+      }
+    };
+
+    requestLocation(); // ⬅️ Chamada aqui
+
     const url = new URL(window.location.href);
     const type = url.searchParams.get("type");
     const accessToken = url.searchParams.get("access_token");
@@ -61,7 +73,6 @@ const App: React.FC = () => {
     const isRecovery = type === "recovery" && accessToken && refreshToken;
 
     if (isRecovery) {
-      // Forçar login da sessão de recuperação
       supabase.auth.setSession({
         access_token: accessToken,
         refresh_token: refreshToken,
@@ -71,12 +82,12 @@ const App: React.FC = () => {
       });
     }
 
-    // Listener de auth padrão
-    const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-    });
+    const { data: authListener } = supabase.auth.onAuthStateChange(
+      (_event, session) => {
+        setSession(session);
+      }
+    );
 
-    // Verifica sessão atual
     supabase.auth.getSession().then(({ data }) => {
       setSession(data.session);
       setLoading(false);
@@ -107,25 +118,22 @@ const App: React.FC = () => {
         <BrowserRouter>
           <Routes>
             <Route path="/" element={<Index />} />
-
-            <Route 
-              path="/login" 
+            <Route
+              path="/login"
               element={
-                isPasswordRecovery 
-                  ? <Navigate to="/reset-password" replace /> 
+                isPasswordRecovery
+                  ? <Navigate to="/reset-password" replace />
                   : (session ? <Navigate to="/explore" replace /> : <Login />)
               }
             />
-
-            <Route 
-              path="/forgot-password" 
+            <Route
+              path="/forgot-password"
               element={
-                isPasswordRecovery 
-                  ? <Navigate to="/reset-password" replace /> 
+                isPasswordRecovery
+                  ? <Navigate to="/reset-password" replace />
                   : (session ? <Navigate to="/explore" replace /> : <ForgotPassword />)
               }
             />
-
             <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/privacy-policy" element={<PrivacyPolicy />} />
             <Route path="/help-support" element={<HelpSupport />} />
@@ -171,4 +179,3 @@ const App: React.FC = () => {
 };
 
 export default App;
-

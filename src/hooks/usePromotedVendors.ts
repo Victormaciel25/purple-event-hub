@@ -241,6 +241,8 @@ export const usePromotedVendors = () => {
     loading,
     error,
     refetch: fetchVendorsWithPromotion,
-    userLocation
+    userLocation: userLocation
+      ? { lat: userLocation.latitude, lng: userLocation.longitude }
+      : null,
   };
 };
