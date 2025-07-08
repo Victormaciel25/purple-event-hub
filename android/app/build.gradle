@@ -1,3 +1,4 @@
+
 apply plugin: 'com.android.application'
 
 android {
@@ -34,7 +35,7 @@ android {
 
     buildTypes {
         release {
-            signingConfig signingConfigs.debug // ✅ Ativa a assinatura
+            signingConfig signingConfigs.release // ✅ Ativa a assinatura
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
