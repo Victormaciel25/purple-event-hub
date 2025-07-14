@@ -45,6 +45,16 @@ const shuffleArray = <T>(array: T[]): T[] => {
   return shuffled;
 };
 
+// Função para selecionar aleatoriamente até 3 fornecedores promovidos
+const selectRandomPromotedVendors = (promotedVendors: PromotedVendor[]): PromotedVendor[] => {
+  if (promotedVendors.length <= 3) {
+    return shuffleArray(promotedVendors);
+  }
+  
+  const shuffled = shuffleArray(promotedVendors);
+  return shuffled.slice(0, 3);
+};
+
 export const usePromotedVendors = () => {
   const [vendors, setVendors] = useState<PromotedVendor[]>([]);
   const [loading, setLoading] = useState(true);
@@ -176,14 +186,13 @@ export const usePromotedVendors = () => {
       let finalVendors: PromotedVendor[] = [];
 
       if (location) {
-        // Se temos localização, ordenar por proximidade
-        // Para fornecedores promovidos, filtrar apenas os que estão dentro de 100km
+        // Se temos localização, filtrar fornecedores promovidos dentro de 100km
         const nearbyPromotedVendors = promotedVendors.filter(vendor => 
           vendor.distanceKm === undefined || vendor.distanceKm <= 100
         );
         console.log(`Fornecedores promovidos dentro de 100km: ${nearbyPromotedVendors.length} de ${promotedVendors.length}`);
 
-        // Ordenar fornecedores promovidos próximos por distância (mais próximos primeiro)
+        // Ordenar fornecedores promovidos próximos por distância
         nearbyPromotedVendors.sort((a, b) => {
           if (a.distanceKm === undefined && b.distanceKm === undefined) return 0;
           if (a.distanceKm === undefined) return 1;
@@ -191,7 +200,10 @@ export const usePromotedVendors = () => {
           return a.distanceKm - b.distanceKm;
         });
 
-        // Ordenar fornecedores normais por distância também (mais próximos primeiro)
+        // Selecionar aleatoriamente até 3 fornecedores promovidos próximos
+        const selectedPromotedVendors = selectRandomPromotedVendors(nearbyPromotedVendors);
+
+        // Ordenar fornecedores normais por distância
         normalVendors.sort((a, b) => {
           if (a.distanceKm === undefined && b.distanceKm === undefined) return 0;
           if (a.distanceKm === undefined) return 1;
@@ -199,26 +211,23 @@ export const usePromotedVendors = () => {
           return a.distanceKm - b.distanceKm;
         });
 
-        // Combinar: fornecedores promovidos próximos primeiro, depois fornecedores normais ordenados por proximidade
-        finalVendors = [...nearbyPromotedVendors, ...normalVendors];
+        // Combinar: até 3 fornecedores promovidos selecionados no topo, depois fornecedores normais
+        finalVendors = [...selectedPromotedVendors, ...normalVendors];
         
         console.log('Vendors ordered by proximity');
-        console.log('Promoted vendors nearby:', nearbyPromotedVendors.length);
+        console.log(`Promoted vendors selected for top: ${selectedPromotedVendors.length} de ${nearbyPromotedVendors.length} nearby`);
         console.log('Normal vendors:', normalVendors.length);
       } else {
-        // Se não temos localização, embaralhar de forma aleatória
-        console.log('No user location - shuffling vendors randomly');
-        
-        // Embaralhar fornecedores promovidos e normais separadamente
-        const shuffledPromotedVendors = shuffleArray(promotedVendors);
+        // Se não temos localização, selecionar aleatoriamente até 3 fornecedores promovidos
+        const selectedPromotedVendors = selectRandomPromotedVendors(promotedVendors);
         const shuffledNormalVendors = shuffleArray(normalVendors);
         
-        // Combinar: fornecedores promovidos embaralhados primeiro, depois fornecedores normais embaralhados
-        finalVendors = [...shuffledPromotedVendors, ...shuffledNormalVendors];
+        // Combinar: até 3 fornecedores promovidos selecionados no topo, depois fornecedores normais embaralhados
+        finalVendors = [...selectedPromotedVendors, ...shuffledNormalVendors];
         
-        console.log('Vendors shuffled randomly');
-        console.log('Promoted vendors:', shuffledPromotedVendors.length);
-        console.log('Normal vendors:', shuffledNormalVendors.length);
+        console.log('No user location - selected random promoted vendors');
+        console.log(`Promoted vendors selected: ${selectedPromotedVendors.length} de ${promotedVendors.length} available`);
+        console.log('Normal vendors shuffled:', shuffledNormalVendors.length);
       }
 
       setVendors(finalVendors);

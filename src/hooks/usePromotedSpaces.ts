@@ -46,6 +46,16 @@ const shuffleArray = <T>(array: T[]): T[] => {
   return shuffled;
 };
 
+// Função para selecionar aleatoriamente até 3 espaços promovidos
+const selectRandomPromotedSpaces = (promotedSpaces: PromotedSpace[]): PromotedSpace[] => {
+  if (promotedSpaces.length <= 3) {
+    return shuffleArray(promotedSpaces);
+  }
+  
+  const shuffled = shuffleArray(promotedSpaces);
+  return shuffled.slice(0, 3);
+};
+
 export const usePromotedSpaces = () => {
   const [spaces, setSpaces] = useState<PromotedSpace[]>([]);
   const [loading, setLoading] = useState(true);
@@ -205,42 +215,45 @@ export const usePromotedSpaces = () => {
         })
       );
 
-      // Ordenar espaços
+      // Separar espaços promovidos e regulares
+      const promotedSpaces = processedSpaces.filter(space => space.isPromoted);
+      const regularSpaces = processedSpaces.filter(space => !space.isPromoted);
+
       let sortedSpaces: PromotedSpace[];
       
       if (location) {
-        // Se temos localização, ordenar por promoção e proximidade
-        sortedSpaces = processedSpaces.sort((a, b) => {
-          // Primeiro critério: espaços promovidos vêm primeiro
-          if (a.isPromoted && !b.isPromoted) return -1;
-          if (!a.isPromoted && b.isPromoted) return 1;
-          
-          // Segundo critério: ordenar por proximidade
+        // Se temos localização, ordenar espaços promovidos por proximidade primeiro
+        promotedSpaces.sort((a, b) => {
           if (a.distanceKm === undefined && b.distanceKm === undefined) return 0;
           if (a.distanceKm === undefined) return 1;
           if (b.distanceKm === undefined) return -1;
           return a.distanceKm - b.distanceKm;
         });
 
-        console.log("Espaços processados e ordenados por proximidade:", sortedSpaces.length);
-        console.log("Espaços próximos (primeiros 3):", sortedSpaces.slice(0, 3).map(s => ({ 
-          name: s.name, 
-          distance: s.distanceKm ? `${s.distanceKm.toFixed(1)}km` : 'N/A',
-          isPromoted: s.isPromoted 
-        })));
-      } else {
-        // Se não temos localização, ordenar espaços promovidos primeiro, depois aleatório
-        const promotedSpaces = processedSpaces.filter(space => space.isPromoted);
-        const regularSpaces = processedSpaces.filter(space => !space.isPromoted);
-        
-        sortedSpaces = [
-          ...promotedSpaces, // Espaços promovidos primeiro
-          ...shuffleArray(regularSpaces) // Espaços regulares em ordem aleatória
-        ];
+        // Ordenar espaços regulares por proximidade
+        regularSpaces.sort((a, b) => {
+          if (a.distanceKm === undefined && b.distanceKm === undefined) return 0;
+          if (a.distanceKm === undefined) return 1;
+          if (b.distanceKm === undefined) return -1;
+          return a.distanceKm - b.distanceKm;
+        });
 
-        console.log("Espaços processados em ordem aleatória (sem localização):", sortedSpaces.length);
-        console.log("Espaços promovidos:", promotedSpaces.length);
+        console.log("Espaços processados e ordenados por proximidade:", processedSpaces.length);
+      } else {
+        console.log("Espaços processados sem localização:", processedSpaces.length);
       }
+
+      // Selecionar aleatoriamente até 3 espaços promovidos para aparecer no topo
+      const selectedPromotedSpaces = selectRandomPromotedSpaces(promotedSpaces);
+      
+      console.log(`Espaços promovidos selecionados para o topo: ${selectedPromotedSpaces.length} de ${promotedSpaces.length} disponíveis`);
+      console.log("Espaços promovidos selecionados:", selectedPromotedSpaces.map(s => ({ 
+        name: s.name, 
+        distance: s.distanceKm ? `${s.distanceKm.toFixed(1)}km` : 'N/A'
+      })));
+
+      // Combinar: até 3 espaços promovidos selecionados aleatoriamente no topo, depois espaços regulares
+      sortedSpaces = [...selectedPromotedSpaces, ...regularSpaces];
 
       setSpaces(sortedSpaces);
     } catch (err) {
