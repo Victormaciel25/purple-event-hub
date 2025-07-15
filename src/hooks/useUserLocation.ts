@@ -13,12 +13,27 @@ type LocationState = {
   error: string | null;
 };
 
-// SINGLETON GLOBAL SIMPLIFICADO
+// SINGLETON GLOBAL MELHORADO
 let globalLocation: UserLocation | null = null;
 let locationPromise: Promise<UserLocation | null> | null = null;
 let lastLocationTime: number = 0;
 const LOCATION_CACHE_DURATION = 5 * 60 * 1000; // 5 minutos
 let debounceTimer: NodeJS.Timeout | null = null;
+
+// Helper para validar coordenadas
+const isValidLocation = (lat: number, lng: number): boolean => {
+  return (
+    typeof lat === 'number' && 
+    typeof lng === 'number' && 
+    !isNaN(lat) && 
+    !isNaN(lng) && 
+    lat >= -90 && 
+    lat <= 90 && 
+    lng >= -180 && 
+    lng <= 180 &&
+    !(lat === 0 && lng === 0) // Evitar coordenadas 0,0
+  );
+};
 
 export const useUserLocation = () => {
   const [state, setState] = useState<LocationState>({
@@ -32,7 +47,7 @@ export const useUserLocation = () => {
     
     // Cache válido
     if (globalLocation && now - lastLocationTime < LOCATION_CACHE_DURATION) {
-      console.log('🎯 LOCATION: Using valid cache');
+      console.log('🎯 LOCATION: Using valid cache', globalLocation);
       return globalLocation;
     }
 
@@ -47,59 +62,122 @@ export const useUserLocation = () => {
     
     locationPromise = (async () => {
       try {
-        // Timeout mais agressivo - apenas 2 segundos
-        const position = await Promise.race([
-          Geolocation.getCurrentPosition({
-            enableHighAccuracy: false, // Mais rápido
-            timeout: 2000, // 2 segundos apenas
-            maximumAge: 300000 // 5 minutos
-          }),
-          new Promise((_, reject) => 
-            setTimeout(() => reject(new Error('Location timeout')), 2000)
-          )
-        ]);
+        console.log('🎯 LOCATION: Trying Capacitor with high accuracy first...');
+        
+        // ESTRATÉGIA 1: Tentar alta precisão primeiro
+        let position;
+        try {
+          position = await Promise.race([
+            Geolocation.getCurrentPosition({
+              enableHighAccuracy: true,
+              timeout: 5000,
+              maximumAge: 10000
+            }),
+            new Promise((_, reject) => 
+              setTimeout(() => reject(new Error('High accuracy timeout')), 5000)
+            )
+          ]);
+        } catch (highAccuracyError) {
+          console.log('⚠️ LOCATION: High accuracy failed, trying low accuracy...', highAccuracyError);
+          
+          // ESTRATÉGIA 2: Fallback para baixa precisão
+          position = await Promise.race([
+            Geolocation.getCurrentPosition({
+              enableHighAccuracy: false,
+              timeout: 3000,
+              maximumAge: 300000
+            }),
+            new Promise((_, reject) => 
+              setTimeout(() => reject(new Error('Low accuracy timeout')), 3000)
+            )
+          ]);
+        }
 
-        const location = {
-          latitude: (position as any).coords.latitude,
-          longitude: (position as any).coords.longitude
-        };
+        // VALIDAÇÃO ROBUSTA
+        if (!position || !position.coords) {
+          throw new Error('Invalid position object - no coords');
+        }
+
+        const { coords } = position;
+        if (!coords.latitude || !coords.longitude) {
+          throw new Error('Invalid coordinates - latitude or longitude missing');
+        }
+
+        const lat = parseFloat(coords.latitude.toString());
+        const lng = parseFloat(coords.longitude.toString());
+
+        if (!isValidLocation(lat, lng)) {
+          throw new Error(`Invalid coordinates: lat=${lat}, lng=${lng}`);
+        }
+
+        const location = { latitude: lat, longitude: lng };
         
         const endTime = performance.now();
-        console.log(`✅ LOCATION: Obtained in ${(endTime - startTime).toFixed(0)}ms`);
+        console.log(`✅ LOCATION: Valid location obtained in ${(endTime - startTime).toFixed(0)}ms:`, location);
         
         globalLocation = location;
         lastLocationTime = now;
         return location;
-      } catch (error) {
-        console.warn('❌ LOCATION: Capacitor failed, trying browser fallback');
+
+      } catch (capacitorError) {
+        console.warn('❌ LOCATION: Capacitor failed, trying browser fallback:', capacitorError);
         
-        // Fallback browser rápido
+        // FALLBACK BROWSER MELHORADO
         if (typeof navigator !== 'undefined' && navigator.geolocation) {
           return new Promise((resolve) => {
-            navigator.geolocation.getCurrentPosition(
-              (position) => {
-                const location = {
-                  latitude: position.coords.latitude,
-                  longitude: position.coords.longitude
-                };
-                console.log('✅ LOCATION: Browser location obtained');
+            const successCallback = (position: GeolocationPosition) => {
+              try {
+                const lat = parseFloat(position.coords.latitude.toString());
+                const lng = parseFloat(position.coords.longitude.toString());
+
+                if (!isValidLocation(lat, lng)) {
+                  console.error('❌ LOCATION: Browser returned invalid coordinates:', { lat, lng });
+                  resolve(null);
+                  return;
+                }
+
+                const location = { latitude: lat, longitude: lng };
+                console.log('✅ LOCATION: Browser location obtained:', location);
                 globalLocation = location;
                 lastLocationTime = Date.now();
                 resolve(location);
-              },
-              () => {
-                console.warn('⚠️ LOCATION: All methods failed');
+              } catch (error) {
+                console.error('❌ LOCATION: Error processing browser location:', error);
                 resolve(null);
+              }
+            };
+
+            const errorCallback = (error: GeolocationPositionError) => {
+              console.warn('⚠️ LOCATION: Browser geolocation failed:', error);
+              resolve(null);
+            };
+
+            // Tentar alta precisão primeiro
+            navigator.geolocation.getCurrentPosition(
+              successCallback,
+              (error) => {
+                console.log('⚠️ LOCATION: Browser high accuracy failed, trying low accuracy...');
+                // Fallback para baixa precisão
+                navigator.geolocation.getCurrentPosition(
+                  successCallback,
+                  errorCallback,
+                  {
+                    enableHighAccuracy: false,
+                    timeout: 3000,
+                    maximumAge: 300000
+                  }
+                );
               },
               {
-                enableHighAccuracy: false,
-                timeout: 2000,
-                maximumAge: 300000
+                enableHighAccuracy: true,
+                timeout: 5000,
+                maximumAge: 10000
               }
             );
           });
         }
         
+        console.error('💥 LOCATION: All geolocation methods failed');
         return null;
       } finally {
         locationPromise = null;
@@ -118,6 +196,7 @@ export const useUserLocation = () => {
     debounceTimer = setTimeout(async () => {
       // Cache válido - usar imediatamente
       if (globalLocation && Date.now() - lastLocationTime < LOCATION_CACHE_DURATION) {
+        console.log('🎯 LOCATION: Using cache for immediate response');
         setState({
           location: globalLocation,
           loading: false,
@@ -136,14 +215,14 @@ export const useUserLocation = () => {
           error: location ? null : 'Localização não disponível'
         });
       } catch (error) {
-        console.error('💥 LOCATION: Error:', error);
+        console.error('💥 LOCATION: Error in fetchLocation:', error);
         setState({
           location: null,
           loading: false,
           error: 'Erro ao obter localização'
         });
       }
-    }, 50); // Debounce mínimo
+    }, 50);
   }, [getUserLocation]);
 
   useEffect(() => {

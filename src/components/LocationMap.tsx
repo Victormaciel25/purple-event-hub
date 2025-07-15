@@ -1,4 +1,3 @@
-
 import React, { useEffect, useRef, useState } from "react";
 import { Loader2, X } from "lucide-react";
 import { GoogleMap, useJsApiLoader, Marker, OverlayView } from "@react-google-maps/api";
@@ -47,10 +46,25 @@ const defaultCenter = {
   lng: -46.6333
 };
 
-// Changed the threshold to 12 as per the requirement
 const PIN_VISIBILITY_ZOOM_THRESHOLD = 12.0;
-// Define libraries correctly according to @react-google-maps/api types
 const libraries: ["places"] = ["places"];
+
+// Helper para validar localização
+const isValidLocation = (location: { lat: number; lng: number } | null): boolean => {
+  if (!location) return false;
+  const { lat, lng } = location;
+  return (
+    typeof lat === 'number' && 
+    typeof lng === 'number' && 
+    !isNaN(lat) && 
+    !isNaN(lng) && 
+    lat >= -90 && 
+    lat <= 90 && 
+    lng >= -180 && 
+    lng <= 180 &&
+    !(lat === 0 && lng === 0)
+  );
+};
 
 const LocationMap = ({
   onLocationSelected,
@@ -62,7 +76,7 @@ const LocationMap = ({
   onMapLoad,
   keepPinsVisible = false
 }: LocationMapProps) => {
-  const [position, setPosition] = useState<{ lat: number, lng: number } | null>(initialLocation || null);
+  const [position, setPosition] = useState<{ lat: number, lng: number } | null>(null);
   const [selectedSpace, setSelectedSpace] = useState<Space | null>(null);
   const [currentZoom, setCurrentZoom] = useState<number>(12);
   const [showPins, setShowPins] = useState<boolean>(true);
@@ -70,31 +84,37 @@ const LocationMap = ({
   const [isAnimating, setIsAnimating] = useState<boolean>(false);
   const mapRef = useRef<google.maps.Map | null>(null);
   
-  // Track the moved spaces to prevent duplicate movements
   const [movedSpaces, setMovedSpaces] = useState<Record<string, boolean>>({});
-  // Track the offset positions for each space
   const [offsetPositions, setOffsetPositions] = useState<Record<string, {lat: number, lng: number}>>({});
   
-  // Add the useJsApiLoader hook to load the Google Maps API
   const { isLoaded, loadError } = useJsApiLoader({
     id: 'google-map-script',
     googleMapsApiKey: GOOGLE_MAPS_API_KEY,
     libraries
   });
 
-  // Changed the condition to hide pins when zoom is less than threshold
+  // VALIDAÇÃO INICIAL DE LOCALIZAÇÃO
+  useEffect(() => {
+    if (initialLocation) {
+      if (isValidLocation(initialLocation)) {
+        console.log('🗺️ LOCATION_MAP: Using VALID initial location:', initialLocation);
+        setPosition(initialLocation);
+      } else {
+        console.warn('⚠️ LOCATION_MAP: Initial location is INVALID, using default:', initialLocation);
+        setPosition(defaultCenter);
+      }
+    } else {
+      console.log('🗺️ LOCATION_MAP: No initial location, using default center');
+      setPosition(defaultCenter);
+    }
+  }, [initialLocation]);
+
   useEffect(() => {
     setShowPins(keepPinsVisible || currentZoom >= PIN_VISIBILITY_ZOOM_THRESHOLD);
   }, [currentZoom, keepPinsVisible]);
 
   useEffect(() => {
-    if (initialLocation) {
-      setPosition(initialLocation);
-    }
-  }, [initialLocation]);
-
-  useEffect(() => {
-    if (spaces.length > 0 && mapRef.current && !initialLocation) {
+    if (spaces.length > 0 && mapRef.current && !isValidLocation(initialLocation)) {
       const bounds = new google.maps.LatLngBounds();
       spaces.forEach(space => {
         if (typeof space.latitude === 'number' && typeof space.longitude === 'number') {
@@ -122,8 +142,13 @@ const LocationMap = ({
   const handleMapClick = (event: google.maps.MapMouseEvent) => {
     if (viewOnly || !event.latLng) return;
     const newPosition = { lat: event.latLng.lat(), lng: event.latLng.lng() };
-    setPosition(newPosition);
-    onLocationSelected?.(newPosition.lat, newPosition.lng);
+    
+    if (isValidLocation(newPosition)) {
+      setPosition(newPosition);
+      onLocationSelected?.(newPosition.lat, newPosition.lng);
+    } else {
+      console.warn('⚠️ LOCATION_MAP: Invalid position clicked:', newPosition);
+    }
   };
 
   const handleMarkerClick = (space: Space) => {
@@ -135,12 +160,10 @@ const LocationMap = ({
       const currentCenter = mapRef.current.getCenter();
       const targetPosition = { lat: space.latitude, lng: space.longitude };
       
-      // Check if we're already very close to the target position (within ~10 meters)
       const isAlreadyAtPosition = currentCenter && 
         Math.abs(currentCenter.lat() - targetPosition.lat) < 0.0001 && 
         Math.abs(currentCenter.lng() - targetPosition.lng) < 0.0001;
 
-      // If we already have an offset position for this space, use it
       if (offsetPositions[space.id]) {
         const targetOffsetPosition = offsetPositions[space.id];
         const isAlreadyAtOffsetPosition = currentCenter &&
@@ -148,77 +171,62 @@ const LocationMap = ({
           Math.abs(currentCenter.lng() - targetOffsetPosition.lng) < 0.0001;
 
         if (isAlreadyAtOffsetPosition) {
-          // Already at offset position, show container immediately
           setShowContainer(true);
           setIsAnimating(false);
         } else {
-          // Move to offset position
           mapRef.current.panTo(targetOffsetPosition);
-          // Show container after pan animation
           setTimeout(() => {
             setShowContainer(true);
             setIsAnimating(false);
           }, 750);
         }
       } else if (isAlreadyAtPosition) {
-        // Already at marker position, calculate offset and show immediately
         const projection = mapRef.current.getProjection();
         if (projection) {
           const point = projection.fromLatLngToPoint(new google.maps.LatLng(targetPosition.lat, targetPosition.lng));
           point.y -= 220 / Math.pow(2, mapRef.current.getZoom() || 0);
           const newLatLng = projection.fromPointToLatLng(point);
           
-          // Store the offset position for future use
           setOffsetPositions(prev => ({
             ...prev,
             [space.id]: {lat: newLatLng.lat(), lng: newLatLng.lng()}
           }));
           
-          // Move to the offset position
           mapRef.current.panTo(newLatLng);
           
-          // Mark this space as having been moved
           setMovedSpaces(prev => ({
             ...prev,
             [space.id]: true
           }));
           
-          // Show container after a shorter delay since we're already close
           setTimeout(() => {
             setShowContainer(true);
             setIsAnimating(false);
           }, 200);
         }
       } else {
-        // First center on the marker
         mapRef.current.panTo(targetPosition);
         
-        // Then calculate and apply the offset position with additional 40px
         setTimeout(() => {
           if (mapRef.current) {
             const projection = mapRef.current.getProjection();
             if (projection) {
               const point = projection.fromLatLngToPoint(new google.maps.LatLng(targetPosition.lat, targetPosition.lng));
-              // Increased offset from 130px to 170px (130 + 40)
               point.y -= 220 / Math.pow(2, mapRef.current.getZoom() || 0);
               const newLatLng = projection.fromPointToLatLng(point);
               
-              // Store the offset position for future use
               setOffsetPositions(prev => ({
                 ...prev,
                 [space.id]: {lat: newLatLng.lat(), lng: newLatLng.lng()}
               }));
               
-              // Move to the offset position
               mapRef.current.panTo(newLatLng);
               
-              // Mark this space as having been moved
               setMovedSpaces(prev => ({
                 ...prev,
                 [space.id]: true
               }));
               
-              // Show container after pan animation completes
               setTimeout(() => {
                 setShowContainer(true);
                 setIsAnimating(false);
@@ -246,6 +254,18 @@ const LocationMap = ({
     return <div className="text-center text-red-500 p-4 bg-red-50 rounded-lg shadow">Erro ao carregar o mapa</div>;
   }
 
+  // GUARD: Não renderizar se não temos posição válida
+  if (!position || !isValidLocation(position)) {
+    return (
+      <div className="absolute inset-0 flex items-center justify-center bg-gray-100 rounded-xl">
+        <div className="flex flex-col items-center gap-2">
+          <Loader2 className="animate-spin h-8 w-8 text-iparty" />
+          <span className="text-sm text-gray-600">Obtendo localização...</span>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="relative w-full h-full rounded-xl overflow-hidden shadow-md">
       {!isLoaded ? (
@@ -255,7 +275,7 @@ const LocationMap = ({
       ) : (
         <GoogleMap
           mapContainerStyle={mapContainerStyle}
-          center={position || defaultCenter}
+          center={position}
           zoom={15}
           onClick={handleMapClick}
           options={{
@@ -359,8 +379,11 @@ const LocationMap = ({
                 const lat = e.latLng?.lat();
                 const lng = e.latLng?.lng();
                 if (lat && lng) {
-                  setPosition({ lat, lng });
-                  onLocationSelected?.(lat, lng);
+                  const newPosition = { lat, lng };
+                  if (isValidLocation(newPosition)) {
+                    setPosition(newPosition);
+                    onLocationSelected?.(lat, lng);
+                  }
                 }
               }}
               icon={{
