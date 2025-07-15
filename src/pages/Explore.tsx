@@ -4,16 +4,18 @@ import PromotedSpaceCard from "@/components/PromotedSpaceCard";
 import { Input } from "@/components/ui/input";
 import { Search, Circle, Heart, Briefcase, Cake, GraduationCap } from "lucide-react";
 import { SPACE_CATEGORIES } from "@/config/app-config";
-import { useOptimizedSpaces } from "@/hooks/useOptimizedSpaces";
+import { useAppData } from "@/hooks/useAppData";
 import { ExplorePageSkeleton } from "@/components/LoadingSkeleton";
 
 const Explore = () => {
-  const { spaces, loading, userLocation } = useOptimizedSpaces();
+  const { spaces, loading, userLocation } = useAppData();
   const [searchTerm, setSearchTerm] = useState("");
   const [activeCategory, setActiveCategory] = useState(SPACE_CATEGORIES.ALL);
   
   // Filtrar espaços com base na busca e categoria
   const filteredSpaces = React.useMemo(() => {
+    console.log('🔍 EXPLORE: Filtering spaces...', { total: spaces.length, searchTerm, activeCategory });
+    
     let filtered = spaces;
     
     // Filtrar por categoria
@@ -37,6 +39,7 @@ const Explore = () => {
       );
     }
     
+    console.log(`🔍 EXPLORE: Filtered to ${filtered.length} spaces`);
     return filtered;
   }, [spaces, activeCategory, searchTerm]);
 
@@ -104,7 +107,12 @@ const Explore = () => {
 
       {filteredSpaces.length === 0 ? (
         <div className="py-12 text-center">
-          <p className="text-gray-500">Nenhum espaço encontrado.</p>
+          <p className="text-gray-500">
+            {spaces.length === 0 
+              ? "Nenhum espaço encontrado." 
+              : `Nenhum espaço encontrado${activeCategory !== SPACE_CATEGORIES.ALL ? ` na categoria selecionada` : ""}.`
+            }
+          </p>
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pb-20">

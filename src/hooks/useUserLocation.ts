@@ -13,52 +13,49 @@ type LocationState = {
   error: string | null;
 };
 
-// Cache global SINGLETON para localização
-let cachedLocation: UserLocation | null = null;
+// SINGLETON GLOBAL SIMPLIFICADO
+let globalLocation: UserLocation | null = null;
 let locationPromise: Promise<UserLocation | null> | null = null;
 let lastLocationTime: number = 0;
 const LOCATION_CACHE_DURATION = 5 * 60 * 1000; // 5 minutos
-
-// Debounce para evitar múltiplas chamadas simultâneas
 let debounceTimer: NodeJS.Timeout | null = null;
 
 export const useUserLocation = () => {
   const [state, setState] = useState<LocationState>({
-    location: cachedLocation,
-    loading: !cachedLocation && Date.now() - lastLocationTime > LOCATION_CACHE_DURATION,
+    location: globalLocation,
+    loading: !globalLocation,
     error: null
   });
 
   const getUserLocation = useCallback(async (): Promise<UserLocation | null> => {
     const now = Date.now();
     
-    // Se temos cache válido, retornar imediatamente
-    if (cachedLocation && now - lastLocationTime < LOCATION_CACHE_DURATION) {
+    // Cache válido
+    if (globalLocation && now - lastLocationTime < LOCATION_CACHE_DURATION) {
       console.log('🎯 LOCATION: Using valid cache');
-      return cachedLocation;
+      return globalLocation;
     }
 
-    // Se já existe uma promise em andamento, aguardar ela
+    // Requisição já em andamento
     if (locationPromise) {
-      console.log('⏳ LOCATION: Waiting for existing promise');
+      console.log('⏳ LOCATION: Waiting for existing request');
       return locationPromise;
     }
 
-    // Criar nova promise para obter localização
+    console.log('📍 LOCATION: Starting fresh location request...');
+    const startTime = performance.now();
+    
     locationPromise = (async () => {
       try {
-        console.log('🔍 LOCATION: Starting fresh location request...');
-        const startTime = performance.now();
-        
-        // Timeout reduzido para 3 segundos
+        // Timeout mais agressivo - apenas 2 segundos
         const position = await Promise.race([
           Geolocation.getCurrentPosition({
-            enableHighAccuracy: false, // Mudado para false para ser mais rápido
-            timeout: 3000, // Reduzido de 5000 para 3000
-            maximumAge: 60000 // 1 minuto
+            enableHighAccuracy: false, // Mais rápido
+            timeout: 2000, // 2 segundos apenas
+            maximumAge: 300000 // 5 minutos
           }),
           new Promise((_, reject) => 
-            setTimeout(() => reject(new Error('Location timeout')), 3000)
+            setTimeout(() => reject(new Error('Location timeout')), 2000)
           )
         ]);
 
@@ -68,17 +65,16 @@ export const useUserLocation = () => {
         };
         
         const endTime = performance.now();
-        console.log(`✅ LOCATION: Obtained in ${(endTime - startTime).toFixed(0)}ms:`, location);
+        console.log(`✅ LOCATION: Obtained in ${(endTime - startTime).toFixed(0)}ms`);
         
-        cachedLocation = location;
+        globalLocation = location;
         lastLocationTime = now;
         return location;
       } catch (error) {
-        console.warn('❌ LOCATION: Capacitor failed, trying browser fallback:', error);
+        console.warn('❌ LOCATION: Capacitor failed, trying browser fallback');
         
-        // Fallback para web/navegador com timeout reduzido
+        // Fallback browser rápido
         if (typeof navigator !== 'undefined' && navigator.geolocation) {
-          console.log('🔄 LOCATION: Using browser geolocation...');
           return new Promise((resolve) => {
             navigator.geolocation.getCurrentPosition(
               (position) => {
@@ -86,19 +82,19 @@ export const useUserLocation = () => {
                   latitude: position.coords.latitude,
                   longitude: position.coords.longitude
                 };
-                console.log('✅ LOCATION: Browser location obtained:', location);
-                cachedLocation = location;
+                console.log('✅ LOCATION: Browser location obtained');
+                globalLocation = location;
                 lastLocationTime = Date.now();
                 resolve(location);
               },
-              (error) => {
-                console.warn('⚠️ LOCATION: Browser geolocation failed:', error);
+              () => {
+                console.warn('⚠️ LOCATION: All methods failed');
                 resolve(null);
               },
               {
                 enableHighAccuracy: false,
-                timeout: 3000,
-                maximumAge: 60000
+                timeout: 2000,
+                maximumAge: 300000
               }
             );
           });
@@ -114,16 +110,16 @@ export const useUserLocation = () => {
   }, []);
 
   const fetchLocation = useCallback(async () => {
-    // Debounce para evitar múltiplas chamadas
+    // Debounce simples
     if (debounceTimer) {
       clearTimeout(debounceTimer);
     }
 
     debounceTimer = setTimeout(async () => {
-      // Se temos cache válido, usar imediatamente
-      if (cachedLocation && Date.now() - lastLocationTime < LOCATION_CACHE_DURATION) {
+      // Cache válido - usar imediatamente
+      if (globalLocation && Date.now() - lastLocationTime < LOCATION_CACHE_DURATION) {
         setState({
-          location: cachedLocation,
+          location: globalLocation,
           loading: false,
           error: null
         });
@@ -137,17 +133,17 @@ export const useUserLocation = () => {
         setState({
           location,
           loading: false,
-          error: location ? null : 'Não foi possível obter sua localização'
+          error: location ? null : 'Localização não disponível'
         });
       } catch (error) {
-        console.error('💥 LOCATION: Error fetching location:', error);
+        console.error('💥 LOCATION: Error:', error);
         setState({
           location: null,
           loading: false,
           error: 'Erro ao obter localização'
         });
       }
-    }, 100); // Debounce de 100ms
+    }, 50); // Debounce mínimo
   }, [getUserLocation]);
 
   useEffect(() => {

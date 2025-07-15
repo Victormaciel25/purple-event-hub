@@ -3,7 +3,7 @@ import React, { useState } from "react";
 import VendorCard from "@/components/VendorCard";
 import { Input } from "@/components/ui/input";
 import { Search, ChefHat, Camera, Video, FileText, Shirt, Palette, Cookie, Cake, Sparkles, Clipboard } from "lucide-react";
-import { useOptimizedVendors } from "@/hooks/useOptimizedVendors";
+import { useAppData } from "@/hooks/useAppData";
 import { VendorsPageSkeleton } from "@/components/LoadingSkeleton";
 
 const predefinedCategories = [
@@ -23,19 +23,26 @@ const predefinedCategories = [
 const Vendors = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("Todos");
-  const { vendors, loading } = useOptimizedVendors();
+  const { vendors, loading } = useAppData();
 
-  const filteredVendors = vendors.filter((vendor) => {
-    // Filtrar por busca
-    const matchesSearch = vendor.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      vendor.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      vendor.contact_number.toLowerCase().includes(searchTerm.toLowerCase());
+  const filteredVendors = React.useMemo(() => {
+    console.log('🔍 VENDORS: Filtering vendors...', { total: vendors.length, searchTerm, selectedCategory });
     
-    // Filtrar por categoria
-    const matchesCategory = selectedCategory === "Todos" || vendor.category === selectedCategory;
-    
-    return matchesSearch && matchesCategory;
-  });
+    let filtered = vendors.filter((vendor) => {
+      // Filtrar por busca
+      const matchesSearch = vendor.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        vendor.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        vendor.contact_number.toLowerCase().includes(searchTerm.toLowerCase());
+      
+      // Filtrar por categoria
+      const matchesCategory = selectedCategory === "Todos" || vendor.category === selectedCategory;
+      
+      return matchesSearch && matchesCategory;
+    });
+
+    console.log(`🔍 VENDORS: Filtered to ${filtered.length} vendors`);
+    return filtered;
+  }, [vendors, searchTerm, selectedCategory]);
 
   if (loading) {
     return <VendorsPageSkeleton />;
