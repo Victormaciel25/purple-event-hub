@@ -1,7 +1,8 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { APP_CONSTANTS } from '@/config/app-config';
+import { toast } from "sonner";
+import { Geolocation } from '@capacitor/geolocation';
 
 type PromotedVendor = {
   id: string;
@@ -62,33 +63,63 @@ export const usePromotedVendors = () => {
   const [userLocation, setUserLocation] = useState<UserLocation | null>(null);
 
   const getUserLocation = async (): Promise<UserLocation | null> => {
-    return new Promise((resolve) => {
-      if (!navigator.geolocation) {
-        console.log('Geolocalização não suportada pelo navegador');
-        resolve(null);
-        return;
+    try {
+      console.log('🔍 Requesting vendor location permissions...');
+      
+      // Verificar e solicitar permissões
+      const permissions = await Geolocation.requestPermissions();
+      console.log('📍 Vendor permissions result:', permissions);
+      
+      if (permissions.location === 'denied') {
+        console.warn('⚠️ Vendor location permission denied');
+        return null;
       }
 
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          const location = {
-            latitude: position.coords.latitude,
-            longitude: position.coords.longitude
-          };
-          console.log('Localização do usuário obtida:', location);
-          resolve(location);
-        },
-        (error) => {
-          console.log('Erro ao obter localização:', error.message);
-          resolve(null);
-        },
-        {
-          enableHighAccuracy: true,
-          timeout: 10000,
-          maximumAge: 300000 // 5 minutos
-        }
-      );
-    });
+      console.log('🌍 Getting vendor current position...');
+      const position = await Geolocation.getCurrentPosition({
+        enableHighAccuracy: true,
+        timeout: 15000,
+        maximumAge: 300000
+      });
+
+      const location = {
+        latitude: position.coords.latitude,
+        longitude: position.coords.longitude
+      };
+      
+      console.log('✅ Vendor location obtained:', location);
+      return location;
+    } catch (error) {
+      console.error('❌ Error getting vendor location:', error);
+      
+      // Fallback para web/navegador
+      if (typeof navigator !== 'undefined' && navigator.geolocation) {
+        console.log('🔄 Falling back to browser geolocation for vendors...');
+        return new Promise((resolve) => {
+          navigator.geolocation.getCurrentPosition(
+            (position) => {
+              const location = {
+                latitude: position.coords.latitude,
+                longitude: position.coords.longitude
+              };
+              console.log('✅ Vendor browser location obtained:', location);
+              resolve(location);
+            },
+            (error) => {
+              console.warn('⚠️ Vendor browser geolocation failed:', error);
+              resolve(null);
+            },
+            {
+              enableHighAccuracy: true,
+              timeout: 10000,
+              maximumAge: 300000
+            }
+          );
+        });
+      }
+      
+      return null;
+    }
   };
 
   const fetchVendorsWithPromotion = async () => {
@@ -96,14 +127,25 @@ export const usePromotedVendors = () => {
       setLoading(true);
       setError(null);
 
-      console.log('Fetching vendors with promotions...');
+      console.log('🚀 Fetching vendors with promotions...');
 
-      // Obter localização do usuário
-      const location = await getUserLocation();
+      // Obter localização do usuário com timeout
+      const locationPromise = getUserLocation();
+      const timeoutPromise = new Promise<UserLocation | null>((resolve) => {
+        setTimeout(() => resolve(null), 8000); // 8 segundos timeout
+      });
+      
+      const location = await Promise.race([locationPromise, timeoutPromise]);
       setUserLocation(location);
+      
+      if (location) {
+        console.log('📍 User location obtained for vendors');
+      } else {
+        console.log('⚠️ No user location - proceeding without location data for vendors');
+      }
 
-      // Primeiro, buscar todos os fornecedores aprovados
-      const { data: allVendors, error: vendorsError } = await supabase
+      // Primeiro, buscar todos os fornecedores aprovados com timeout
+      const vendorsPromise = supabase
         .from('vendors')
         .select(`
           id,
@@ -119,27 +161,45 @@ export const usePromotedVendors = () => {
         .eq('status', 'approved')
         .order('created_at', { ascending: false });
 
+      const vendorsResult = await Promise.race([
+        vendorsPromise,
+        new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Vendors query timeout')), 10000)
+        )
+      ]);
+
+      const { data: allVendors, error: vendorsError } = vendorsResult as any;
+
       if (vendorsError) {
-        console.error('Error fetching vendors:', vendorsError);
+        console.error('❌ Error fetching vendors:', vendorsError);
         throw vendorsError;
       }
 
-      console.log('All vendors found:', allVendors?.length || 0);
+      console.log('📋 All vendors found:', allVendors?.length || 0);
 
-      // Buscar promoções ativas com payment_status aprovado
-      const { data: activePromotions, error: promotionsError } = await supabase
-        .from('vendor_promotions')
-        .select('vendor_id, expires_at, plan_id')
-        .eq('active', true)
-        .eq('payment_status', 'approved')
-        .gt('expires_at', new Date().toISOString());
+      // Buscar promoções ativas com payment_status aprovado com timeout
+      let activePromotions = null;
+      try {
+        const promotionsPromise = supabase
+          .from('vendor_promotions')
+          .select('vendor_id, expires_at, plan_id')
+          .eq('active', true)
+          .eq('payment_status', 'approved')
+          .gt('expires_at', new Date().toISOString());
 
-      if (promotionsError) {
-        console.error('Error fetching promotions:', promotionsError);
-        // Não falhar se não conseguir buscar promoções, apenas mostrar sem destaque
+        const promotionsResult = await Promise.race([
+          promotionsPromise,
+          new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('Vendor promotions query timeout')), 5000)
+          )
+        ]);
+        
+        activePromotions = (promotionsResult as any).data;
+      } catch (error) {
+        console.warn('⚠️ Failed to fetch vendor promotions, continuing without:', error);
       }
 
-      console.log('Active approved vendor promotions found:', activePromotions?.length || 0);
+      console.log('🎯 Active approved vendor promotions found:', activePromotions?.length || 0);
 
       // Criar um map de promoções por vendor_id
       const promotionsMap = new Map();
@@ -190,7 +250,7 @@ export const usePromotedVendors = () => {
         const nearbyPromotedVendors = promotedVendors.filter(vendor => 
           vendor.distanceKm === undefined || vendor.distanceKm <= 100
         );
-        console.log(`Fornecedores promovidos dentro de 100km: ${nearbyPromotedVendors.length} de ${promotedVendors.length}`);
+        console.log(`📍 Fornecedores promovidos dentro de 100km: ${nearbyPromotedVendors.length} de ${promotedVendors.length}`);
 
         // Ordenar fornecedores promovidos próximos por distância
         nearbyPromotedVendors.sort((a, b) => {
@@ -214,9 +274,9 @@ export const usePromotedVendors = () => {
         // Combinar: até 3 fornecedores promovidos selecionados no topo, depois fornecedores normais
         finalVendors = [...selectedPromotedVendors, ...normalVendors];
         
-        console.log('Vendors ordered by proximity');
-        console.log(`Promoted vendors selected for top: ${selectedPromotedVendors.length} de ${nearbyPromotedVendors.length} nearby`);
-        console.log('Normal vendors:', normalVendors.length);
+        console.log('✅ Vendors ordered by proximity');
+        console.log(`🎯 Promoted vendors selected for top: ${selectedPromotedVendors.length} de ${nearbyPromotedVendors.length} nearby`);
+        console.log('📋 Normal vendors:', normalVendors.length);
       } else {
         // Se não temos localização, selecionar aleatoriamente até 3 fornecedores promovidos
         const selectedPromotedVendors = selectRandomPromotedVendors(promotedVendors);
@@ -225,17 +285,18 @@ export const usePromotedVendors = () => {
         // Combinar: até 3 fornecedores promovidos selecionados no topo, depois fornecedores normais embaralhados
         finalVendors = [...selectedPromotedVendors, ...shuffledNormalVendors];
         
-        console.log('No user location - selected random promoted vendors');
-        console.log(`Promoted vendors selected: ${selectedPromotedVendors.length} de ${promotedVendors.length} available`);
-        console.log('Normal vendors shuffled:', shuffledNormalVendors.length);
+        console.log('✅ No user location - selected random promoted vendors');
+        console.log(`🎯 Promoted vendors selected: ${selectedPromotedVendors.length} de ${promotedVendors.length} available`);
+        console.log('📋 Normal vendors shuffled:', shuffledNormalVendors.length);
       }
 
       setVendors(finalVendors);
-      console.log('Total vendors processed:', finalVendors.length);
+      console.log('🎉 Vendors loading completed successfully, total:', finalVendors.length);
 
     } catch (error) {
-      console.error('Error fetching vendors:', error);
+      console.error('💥 Error fetching vendors:', error);
       setError('Erro ao carregar fornecedores');
+      toast.error("Erro ao carregar fornecedores. Tente novamente.");
     } finally {
       setLoading(false);
     }

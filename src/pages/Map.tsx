@@ -1,9 +1,9 @@
-
 import React, { useState, useEffect, useRef } from "react";
 import { Loader2 } from "lucide-react";
 import { Wrapper } from "@googlemaps/react-wrapper";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
+import { Geolocation } from '@capacitor/geolocation';
 
 import LocationMap from "@/components/LocationMap";
 import AddressAutoComplete from "@/components/AddressAutoComplete";
@@ -43,25 +43,60 @@ const Map: React.FC = () => {
   const navigate = useNavigate();
 
   // Função para obter localização atual do usuário
-  const getCurrentLocation = (): Promise<{ lat: number; lng: number }> => {
-    return new Promise((resolve, reject) => {
-      if (!navigator.geolocation) {
-        reject(new Error("Geolocalização não suportada"));
-        return;
+  const getCurrentLocation = async (): Promise<{ lat: number; lng: number }> => {
+    try {
+      console.log('🔍 MAP: Requesting location permissions...');
+      
+      // Verificar e solicitar permissões
+      const permissions = await Geolocation.requestPermissions();
+      console.log('📍 MAP: Permissions result:', permissions);
+      
+      if (permissions.location === 'denied') {
+        throw new Error('Location permission denied');
       }
 
-      navigator.geolocation.getCurrentPosition(
-        ({ coords }) => {
-          const userLoc = { lat: coords.latitude, lng: coords.longitude };
-          console.log('📍 MAP: Localização atual obtida:', userLoc);
-          resolve(userLoc);
-        },
-        (err) => {
-          console.warn("❌ MAP: Erro ao obter localização:", err);
-          reject(err);
-        }
-      );
-    });
+      console.log('🌍 MAP: Getting current position...');
+      const position = await Geolocation.getCurrentPosition({
+        enableHighAccuracy: true,
+        timeout: 15000,
+        maximumAge: 300000
+      });
+
+      const userLoc = { 
+        lat: position.coords.latitude, 
+        lng: position.coords.longitude 
+      };
+      
+      console.log('✅ MAP: Localização atual obtida:', userLoc);
+      return userLoc;
+    } catch (error) {
+      console.warn("❌ MAP: Erro ao obter localização via Capacitor:", error);
+      
+      // Fallback para web/navegador
+      if (typeof navigator !== 'undefined' && navigator.geolocation) {
+        console.log('🔄 MAP: Using browser geolocation fallback...');
+        return new Promise((resolve, reject) => {
+          navigator.geolocation.getCurrentPosition(
+            ({ coords }) => {
+              const userLoc = { lat: coords.latitude, lng: coords.longitude };
+              console.log('✅ MAP: Browser location obtained:', userLoc);
+              resolve(userLoc);
+            },
+            (err) => {
+              console.warn("❌ MAP: Browser geolocation failed:", err);
+              reject(err);
+            },
+            {
+              enableHighAccuracy: true,
+              timeout: 10000,
+              maximumAge: 300000
+            }
+          );
+        });
+      }
+      
+      throw error;
+    }
   };
 
   // Função para obter a última posição salva do mapa
@@ -174,12 +209,21 @@ const Map: React.FC = () => {
     try {
       console.log("🔍 MAP: Buscando espaços aprovados...");
       
-      const { data: spacesData, error } = await supabase
+      const spacesPromise = supabase
         .from("spaces")
         .select("id, name, address, number, state, latitude, longitude, zip_code, space_photos(storage_path)")
         .eq("status", "approved")
         .not("latitude", "is", null)
         .not("longitude", "is", null);
+
+      const spacesResult = await Promise.race([
+        spacesPromise,
+        new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Spaces query timeout')), 15000)
+        )
+      ]);
+
+      const { data: spacesData, error } = spacesResult as any;
 
       if (error) {
         console.error("❌ MAP: Erro ao buscar espaços:", error);

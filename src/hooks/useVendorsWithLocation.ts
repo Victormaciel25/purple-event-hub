@@ -1,6 +1,7 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { Geolocation } from '@capacitor/geolocation';
 
 type Vendor = {
   id: string;
@@ -39,33 +40,63 @@ export const useVendorsWithLocation = () => {
   const [userLocation, setUserLocation] = useState<UserLocation | null>(null);
 
   const getUserLocation = async (): Promise<UserLocation | null> => {
-    return new Promise((resolve) => {
-      if (!navigator.geolocation) {
-        console.log('Geolocalização não suportada pelo navegador');
-        resolve(null);
-        return;
+    try {
+      console.log('🔍 Requesting location permissions for vendors...');
+      
+      // Verificar e solicitar permissões
+      const permissions = await Geolocation.requestPermissions();
+      console.log('📍 Vendor location permissions result:', permissions);
+      
+      if (permissions.location === 'denied') {
+        console.warn('⚠️ Vendor location permission denied');
+        return null;
       }
 
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          const location = {
-            latitude: position.coords.latitude,
-            longitude: position.coords.longitude
-          };
-          console.log('Localização do usuário obtida:', location);
-          resolve(location);
-        },
-        (error) => {
-          console.log('Erro ao obter localização:', error.message);
-          resolve(null);
-        },
-        {
-          enableHighAccuracy: true,
-          timeout: 10000,
-          maximumAge: 300000 // 5 minutos
-        }
-      );
-    });
+      console.log('🌍 Getting current position for vendors...');
+      const position = await Geolocation.getCurrentPosition({
+        enableHighAccuracy: true,
+        timeout: 15000,
+        maximumAge: 300000 // 5 minutos
+      });
+
+      const location = {
+        latitude: position.coords.latitude,
+        longitude: position.coords.longitude
+      };
+      
+      console.log('✅ Vendor location obtained:', location);
+      return location;
+    } catch (error) {
+      console.error('❌ Error getting vendor location:', error);
+      
+      // Fallback para web/navegador
+      if (typeof navigator !== 'undefined' && navigator.geolocation) {
+        console.log('🔄 Falling back to browser geolocation for vendors...');
+        return new Promise((resolve) => {
+          navigator.geolocation.getCurrentPosition(
+            (position) => {
+              const location = {
+                latitude: position.coords.latitude,
+                longitude: position.coords.longitude
+              };
+              console.log('✅ Vendor browser location obtained:', location);
+              resolve(location);
+            },
+            (error) => {
+              console.warn('⚠️ Vendor browser geolocation failed:', error);
+              resolve(null);
+            },
+            {
+              enableHighAccuracy: true,
+              timeout: 10000,
+              maximumAge: 300000 // 5 minutos
+            }
+          );
+        });
+      }
+      
+      return null;
+    }
   };
 
   const fetchVendors = async () => {
@@ -73,24 +104,39 @@ export const useVendorsWithLocation = () => {
       setLoading(true);
       setError(null);
 
-      console.log("Fetching approved vendors...");
+      console.log("🚀 Fetching approved vendors...");
       
-      // Obter localização do usuário
-      const location = await getUserLocation();
+      // Obter localização do usuário com timeout
+      const locationPromise = getUserLocation();
+      const timeoutPromise = new Promise<UserLocation | null>((resolve) => {
+        setTimeout(() => resolve(null), 8000); // 8 segundos timeout
+      });
+      
+      const location = await Promise.race([locationPromise, timeoutPromise]);
       setUserLocation(location);
 
-      const { data, error } = await supabase
+      // Buscar fornecedores aprovados com timeout
+      const vendorsPromise = supabase
         .from("vendors")
         .select("*")
         .eq("status", "approved");
 
+      const vendorsResult = await Promise.race([
+        vendorsPromise,
+        new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Vendors query timeout')), 10000)
+        )
+      ]);
+
+      const { data, error } = vendorsResult as any;
+
       if (error) {
-        console.error("Error fetching vendors:", error);
+        console.error("❌ Error fetching vendors:", error);
         throw error;
       }
 
-      console.log("Vendors fetched:", data);
-      console.log("Number of approved vendors:", data ? data.length : 0);
+      console.log("📋 Vendors fetched:", data);
+      console.log("📊 Number of approved vendors:", data ? data.length : 0);
 
       if (data) {
         const processedVendors = data.map((vendor) => {
@@ -127,10 +173,10 @@ export const useVendorsWithLocation = () => {
         });
 
         setVendors(processedVendors);
-        console.log('Vendors loaded and sorted by proximity:', processedVendors.length);
+        console.log('✅ Vendors loaded and sorted by proximity:', processedVendors.length);
       }
     } catch (error) {
-      console.error("Erro ao buscar fornecedores:", error);
+      console.error("💥 Erro ao buscar fornecedores:", error);
       setError("Não foi possível carregar os fornecedores");
     } finally {
       setLoading(false);

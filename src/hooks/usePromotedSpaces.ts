@@ -2,6 +2,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { Geolocation } from '@capacitor/geolocation';
 
 type PromotedSpace = {
   id: string;
@@ -63,33 +64,63 @@ export const usePromotedSpaces = () => {
   const [userLocation, setUserLocation] = useState<UserLocation | null>(null);
 
   const getUserLocation = async (): Promise<UserLocation | null> => {
-    return new Promise((resolve) => {
-      if (!navigator.geolocation) {
-        console.log('Geolocalização não suportada pelo navegador');
-        resolve(null);
-        return;
+    try {
+      console.log('🔍 Requesting location permissions...');
+      
+      // Verificar e solicitar permissões
+      const permissions = await Geolocation.requestPermissions();
+      console.log('📍 Permissions result:', permissions);
+      
+      if (permissions.location === 'denied') {
+        console.warn('⚠️ Location permission denied');
+        return null;
       }
 
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          const location = {
-            latitude: position.coords.latitude,
-            longitude: position.coords.longitude
-          };
-          console.log('Localização do usuário obtida:', location);
-          resolve(location);
-        },
-        (error) => {
-          console.log('Erro ao obter localização:', error.message);
-          resolve(null);
-        },
-        {
-          enableHighAccuracy: true,
-          timeout: 10000,
-          maximumAge: 300000 // 5 minutos
-        }
-      );
-    });
+      console.log('🌍 Getting current position...');
+      const position = await Geolocation.getCurrentPosition({
+        enableHighAccuracy: true,
+        timeout: 15000,
+        maximumAge: 300000
+      });
+
+      const location = {
+        latitude: position.coords.latitude,
+        longitude: position.coords.longitude
+      };
+      
+      console.log('✅ Location obtained:', location);
+      return location;
+    } catch (error) {
+      console.error('❌ Error getting location:', error);
+      
+      // Fallback para web/navegador
+      if (typeof navigator !== 'undefined' && navigator.geolocation) {
+        console.log('🔄 Falling back to browser geolocation...');
+        return new Promise((resolve) => {
+          navigator.geolocation.getCurrentPosition(
+            (position) => {
+              const location = {
+                latitude: position.coords.latitude,
+                longitude: position.coords.longitude
+              };
+              console.log('✅ Browser location obtained:', location);
+              resolve(location);
+            },
+            (error) => {
+              console.warn('⚠️ Browser geolocation failed:', error);
+              resolve(null);
+            },
+            {
+              enableHighAccuracy: true,
+              timeout: 10000,
+              maximumAge: 300000
+            }
+          );
+        });
+      }
+      
+      return null;
+    }
   };
 
   const createPhotoUrl = async (spaceId: string): Promise<string> => {
@@ -139,41 +170,75 @@ export const usePromotedSpaces = () => {
       setLoading(true);
       setError(null);
 
-      console.log("Buscando espaços aprovados...");
+      console.log("🚀 Buscando espaços aprovados...");
       
-      // Obter localização do usuário
-      const location = await getUserLocation();
+      // Obter localização do usuário com timeout
+      const locationPromise = getUserLocation();
+      const timeoutPromise = new Promise<UserLocation | null>((resolve) => {
+        setTimeout(() => resolve(null), 8000); // 8 segundos timeout
+      });
+      
+      const location = await Promise.race([locationPromise, timeoutPromise]);
       setUserLocation(location);
+      
+      if (location) {
+        console.log('📍 User location obtained for spaces');
+      } else {
+        console.log('⚠️ No user location - proceeding without location data');
+      }
 
-      // Buscar espaços aprovados
-      const { data: spacesData, error: spacesError } = await supabase
+      // Buscar espaços aprovados com timeout
+      const spacesPromise = supabase
         .from("spaces")
         .select("*")
         .eq("status", "approved")
         .order("created_at", { ascending: false });
 
+      const spacesResult = await Promise.race([
+        spacesPromise,
+        new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Spaces query timeout')), 10000)
+        )
+      ]);
+
+      const { data: spacesData, error: spacesError } = spacesResult as any;
+
       if (spacesError) {
+        console.error('❌ Error fetching spaces:', spacesError);
         throw spacesError;
       }
 
       if (!spacesData) {
+        console.log('📋 No spaces found');
         setSpaces([]);
-        setLoading(false);
         return;
       }
 
-      console.log("Espaços encontrados:", spacesData.length);
+      console.log("📋 Espaços encontrados:", spacesData.length);
 
-      // Buscar promoções ativas
+      // Buscar promoções ativas com timeout
       const now = new Date().toISOString();
-      const { data: promotionsData } = await supabase
+      const promotionsPromise = supabase
         .from("space_promotions")
         .select("space_id, expires_at")
         .eq("active", true)
         .eq("payment_status", "approved")
         .gte("expires_at", now);
 
-      console.log("Promoções ativas encontradas:", promotionsData?.length || 0);
+      let promotionsData = null;
+      try {
+        const promotionsResult = await Promise.race([
+          promotionsPromise,
+          new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('Promotions query timeout')), 5000)
+          )
+        ]);
+        promotionsData = (promotionsResult as any).data;
+      } catch (error) {
+        console.warn('⚠️ Failed to fetch promotions, continuing without:', error);
+      }
+
+      console.log("🎯 Promoções ativas encontradas:", promotionsData?.length || 0);
 
       // Criar mapa de promoções
       const promotionMap = new Map(
@@ -184,7 +249,13 @@ export const usePromotedSpaces = () => {
       const processedSpaces = await Promise.all(
         spacesData.map(async (space) => {
           const isPromoted = promotionMap.has(space.id);
-          const photoUrl = await createPhotoUrl(space.id);
+          
+          let photoUrl = "";
+          try {
+            photoUrl = await createPhotoUrl(space.id);
+          } catch (error) {
+            console.warn(`⚠️ Failed to get photo for space ${space.name}:`, error);
+          }
 
           // Calcular distância se temos localização do usuário e do espaço
           let distanceKm: number | undefined;
@@ -219,8 +290,6 @@ export const usePromotedSpaces = () => {
       const promotedSpaces = processedSpaces.filter(space => space.isPromoted);
       const regularSpaces = processedSpaces.filter(space => !space.isPromoted);
 
-      let sortedSpaces: PromotedSpace[];
-      
       if (location) {
         // Se temos localização, ordenar espaços promovidos por proximidade primeiro
         promotedSpaces.sort((a, b) => {
@@ -238,27 +307,25 @@ export const usePromotedSpaces = () => {
           return a.distanceKm - b.distanceKm;
         });
 
-        console.log("Espaços processados e ordenados por proximidade:", processedSpaces.length);
+        console.log("✅ Espaços processados e ordenados por proximidade:", processedSpaces.length);
       } else {
-        console.log("Espaços processados sem localização:", processedSpaces.length);
+        console.log("✅ Espaços processados sem localização:", processedSpaces.length);
       }
 
       // Selecionar aleatoriamente até 3 espaços promovidos para aparecer no topo
       const selectedPromotedSpaces = selectRandomPromotedSpaces(promotedSpaces);
       
-      console.log(`Espaços promovidos selecionados para o topo: ${selectedPromotedSpaces.length} de ${promotedSpaces.length} disponíveis`);
-      console.log("Espaços promovidos selecionados:", selectedPromotedSpaces.map(s => ({ 
-        name: s.name, 
-        distance: s.distanceKm ? `${s.distanceKm.toFixed(1)}km` : 'N/A'
-      })));
+      console.log(`🎯 Espaços promovidos selecionados para o topo: ${selectedPromotedSpaces.length} de ${promotedSpaces.length} disponíveis`);
 
       // Combinar: até 3 espaços promovidos selecionados aleatoriamente no topo, depois espaços regulares
-      sortedSpaces = [...selectedPromotedSpaces, ...regularSpaces];
+      const sortedSpaces = [...selectedPromotedSpaces, ...regularSpaces];
 
       setSpaces(sortedSpaces);
+      console.log("🎉 Spaces loading completed successfully");
     } catch (err) {
-      console.error("Erro ao buscar espaços promovidos:", err);
+      console.error("💥 Erro ao buscar espaços promovidos:", err);
       setError("Erro ao carregar espaços");
+      toast.error("Erro ao carregar espaços. Tente novamente.");
     } finally {
       setLoading(false);
     }
@@ -268,13 +335,13 @@ export const usePromotedSpaces = () => {
     fetchSpaces();
   }, []);
 
- return {
-  spaces,
-  loading,
-  error,
-  refetch: fetchSpaces,
-  userLocation: userLocation
-    ? { lat: userLocation.latitude, lng: userLocation.longitude }
-    : null,
+  return {
+    spaces,
+    loading,
+    error,
+    refetch: fetchSpaces,
+    userLocation: userLocation
+      ? { lat: userLocation.latitude, lng: userLocation.longitude }
+      : null,
   };
 };
