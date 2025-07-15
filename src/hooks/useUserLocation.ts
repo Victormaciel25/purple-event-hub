@@ -1,5 +1,5 @@
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Geolocation } from '@capacitor/geolocation';
 
 type UserLocation = {
@@ -42,7 +42,17 @@ export const useUserLocation = () => {
     error: null
   });
 
+  // Prevent multiple calls
+  const isMountedRef = useRef(true);
+  
+  useEffect(() => {
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
+
   const getUserLocation = useCallback(async (): Promise<UserLocation | null> => {
+    if (!isMountedRef.current) return null;
     const now = Date.now();
     
     // Cache válido
@@ -188,12 +198,15 @@ export const useUserLocation = () => {
   }, []);
 
   const fetchLocation = useCallback(async () => {
+    if (!isMountedRef.current) return;
+    
     // Debounce simples
     if (debounceTimer) {
       clearTimeout(debounceTimer);
     }
 
     debounceTimer = setTimeout(async () => {
+      if (!isMountedRef.current) return;
       // Cache válido - usar imediatamente
       if (globalLocation && Date.now() - lastLocationTime < LOCATION_CACHE_DURATION) {
         console.log('🎯 LOCATION: Using cache for immediate response');
@@ -226,8 +239,10 @@ export const useUserLocation = () => {
   }, [getUserLocation]);
 
   useEffect(() => {
-    fetchLocation();
-  }, [fetchLocation]);
+    if (isMountedRef.current) {
+      fetchLocation();
+    }
+  }, []); // Remove fetchLocation dependency to prevent loops
 
   return {
     location: state.location,
