@@ -4,9 +4,9 @@ import PromotedSpaceCard from "@/components/PromotedSpaceCard";
 import { Input } from "@/components/ui/input";
 import { Search, Circle, Heart, Briefcase, Cake, GraduationCap } from "lucide-react";
 import { toast } from "sonner";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { SPACE_CATEGORIES } from "@/config/app-config";
 import { usePromotedSpaces } from "@/hooks/usePromotedSpaces";
+import { ExplorePageSkeleton } from "@/components/LoadingSkeleton";
 
 const Explore = () => {
   const { spaces, loading, error, userLocation } = usePromotedSpaces();
@@ -120,6 +120,10 @@ const Explore = () => {
     }
   ];
 
+  if (loading) {
+    return <ExplorePageSkeleton />;
+  }
+
   return (
     <div className="container px-4 py-6 max-w-4xl mx-auto">
       <div className="relative mb-4">
@@ -173,11 +177,7 @@ const Explore = () => {
         </div>
       </div>
 
-      {loading ? (
-        <div className="py-12 text-center">
-          <p className="text-gray-500">Carregando espaços...</p>
-        </div>
-      ) : filteredSpaces.length === 0 ? (
+      {filteredSpaces.length === 0 ? (
         <div className="py-12 text-center">
           <p className="text-gray-500">Nenhum espaço encontrado.</p>
         </div>

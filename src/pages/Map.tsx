@@ -1,14 +1,15 @@
+
 import React, { useState, useEffect, useRef } from "react";
 import { Loader2 } from "lucide-react";
 import { Wrapper } from "@googlemaps/react-wrapper";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import { Geolocation } from '@capacitor/geolocation';
 
 import LocationMap from "@/components/LocationMap";
 import AddressAutoComplete from "@/components/AddressAutoComplete";
 import { supabase } from "@/integrations/supabase/client";
 import { GOOGLE_MAPS_API_KEY } from "@/config/app-config";
+import { useUserLocation } from "@/hooks/useUserLocation";
 
 type Space = {
   id: string;
@@ -29,7 +30,6 @@ type GeocodingResult = {
 };
 
 const LAST_MAP_POSITION_KEY = 'last_map_position';
-const CURRENT_USER_KEY = 'current_map_user';
 
 const Map: React.FC = () => {
   const [spaces, setSpaces] = useState<Space[]>([]);
@@ -41,63 +41,9 @@ const Map: React.FC = () => {
 
   const mapRef = useRef<google.maps.Map | null>(null);
   const navigate = useNavigate();
-
-  // Função para obter localização atual do usuário
-  const getCurrentLocation = async (): Promise<{ lat: number; lng: number }> => {
-    try {
-      console.log('🔍 MAP: Requesting location permissions...');
-      
-      // Verificar e solicitar permissões
-      const permissions = await Geolocation.requestPermissions();
-      console.log('📍 MAP: Permissions result:', permissions);
-      
-      if (permissions.location === 'denied') {
-        throw new Error('Location permission denied');
-      }
-
-      console.log('🌍 MAP: Getting current position...');
-      const position = await Geolocation.getCurrentPosition({
-        enableHighAccuracy: true,
-        timeout: 15000,
-        maximumAge: 300000
-      });
-
-      const userLoc = { 
-        lat: position.coords.latitude, 
-        lng: position.coords.longitude 
-      };
-      
-      console.log('✅ MAP: Localização atual obtida:', userLoc);
-      return userLoc;
-    } catch (error) {
-      console.warn("❌ MAP: Erro ao obter localização via Capacitor:", error);
-      
-      // Fallback para web/navegador
-      if (typeof navigator !== 'undefined' && navigator.geolocation) {
-        console.log('🔄 MAP: Using browser geolocation fallback...');
-        return new Promise((resolve, reject) => {
-          navigator.geolocation.getCurrentPosition(
-            ({ coords }) => {
-              const userLoc = { lat: coords.latitude, lng: coords.longitude };
-              console.log('✅ MAP: Browser location obtained:', userLoc);
-              resolve(userLoc);
-            },
-            (err) => {
-              console.warn("❌ MAP: Browser geolocation failed:", err);
-              reject(err);
-            },
-            {
-              enableHighAccuracy: true,
-              timeout: 10000,
-              maximumAge: 300000
-            }
-          );
-        });
-      }
-      
-      throw error;
-    }
-  };
+  
+  // Usar hook centralizado de localização
+  const { location: userLocation, loading: locationLoading, error: locationError } = useUserLocation();
 
   // Função para obter a última posição salva do mapa
   const getLastMapPosition = (): { lat: number; lng: number } | null => {
@@ -112,84 +58,37 @@ const Map: React.FC = () => {
   // Função para salvar a posição atual do mapa
   const saveMapPosition = (position: { lat: number; lng: number }) => {
     localStorage.setItem(LAST_MAP_POSITION_KEY, JSON.stringify(position));
-    console.log('🗺️ MAP: Posição salva:', position);
+    console.log('🗺️ MAP: Position saved:', position);
   };
 
-  // Inicialização do mapa
+  // Inicialização do mapa com localização otimizada
   useEffect(() => {
-    const initializeMap = async () => {
-      console.log('🚀 MAP: Inicializando mapa...');
-      
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        const currentUserId = session?.user?.id;
-        const storedUserId = localStorage.getItem(CURRENT_USER_KEY);
-
-        console.log('🔐 MAP: Estado inicial:', {
-          currentUserId,
-          storedUserId,
-          hasSession: !!session
-        });
-
-        // Se há um usuário logado
-        if (currentUserId) {
-          // Se é um usuário diferente do armazenado, limpar dados e usar localização atual
-          if (storedUserId && currentUserId !== storedUserId) {
-            console.log('👤 MAP: Usuário diferente detectado - usando localização atual');
-            localStorage.removeItem(LAST_MAP_POSITION_KEY);
-            localStorage.setItem(CURRENT_USER_KEY, currentUserId);
-            
-            try {
-              const currentLocation = await getCurrentLocation();
-              setMapCenter(currentLocation);
-              saveMapPosition(currentLocation);
-            } catch (error) {
-              console.warn("❌ MAP: Erro ao obter localização atual:", error);
-              setSearchError("Não foi possível obter sua localização");
-            }
-          } else {
-            // Mesmo usuário ou primeiro login - verificar se tem posição salva
-            localStorage.setItem(CURRENT_USER_KEY, currentUserId);
-            const lastPosition = getLastMapPosition();
-            
-            if (lastPosition) {
-              console.log('🗺️ MAP: Usando última posição salva:', lastPosition);
-              setMapCenter(lastPosition);
-            } else {
-              console.log('🗺️ MAP: Nenhuma posição salva - obtendo localização atual');
-              try {
-                const currentLocation = await getCurrentLocation();
-                setMapCenter(currentLocation);
-                saveMapPosition(currentLocation);
-              } catch (error) {
-                console.warn("❌ MAP: Erro ao obter localização atual:", error);
-                setSearchError("Não foi possível obter sua localização");
-              }
-            }
-          }
-        } else {
-          // Sem usuário logado - usar localização atual sempre
-          console.log('🔓 MAP: Sem usuário logado - usando localização atual');
-          localStorage.removeItem(CURRENT_USER_KEY);
-          
-          try {
-            const currentLocation = await getCurrentLocation();
-            setMapCenter(currentLocation);
-          } catch (error) {
-            console.warn("❌ MAP: Erro ao obter localização:", error);
-            setSearchError("Não foi possível obter sua localização");
-          }
-        }
-      } catch (error) {
-        console.error("💥 MAP: Erro na inicialização:", error);
-        setSearchError("Erro ao inicializar o mapa");
-      } finally {
-        setLoading(false);
+    console.log('🚀 MAP: Initializing map...');
+    
+    // Priorizar localização do usuário, depois posição salva
+    if (userLocation) {
+      console.log('📍 MAP: Using user location:', userLocation);
+      setMapCenter({ lat: userLocation.latitude, lng: userLocation.longitude });
+      saveMapPosition({ lat: userLocation.latitude, lng: userLocation.longitude });
+      setSearchError(null);
+    } else if (!locationLoading && !mapCenter) {
+      // Se não conseguiu obter localização, usar posição salva ou São Paulo como fallback
+      const lastPosition = getLastMapPosition();
+      if (lastPosition) {
+        console.log('🗺️ MAP: Using saved position:', lastPosition);
+        setMapCenter(lastPosition);
+      } else {
+        console.log('🏙️ MAP: Using São Paulo as fallback');
+        const fallbackPosition = { lat: -23.5505, lng: -46.6333 }; // São Paulo
+        setMapCenter(fallbackPosition);
+        saveMapPosition(fallbackPosition);
       }
-    };
-
-    initializeMap();
-  }, []);
+      
+      if (locationError) {
+        setSearchError(locationError);
+      }
+    }
+  }, [userLocation, locationLoading, locationError, mapCenter]);
 
   // Sempre que mapCenter muda, centraliza o mapa
   useEffect(() => {
@@ -199,7 +98,7 @@ const Map: React.FC = () => {
     }
   }, [mapCenter]);
 
-  // Carrega espaços do Supabase
+  // Carrega espaços do Supabase de forma otimizada
   useEffect(() => {
     fetchSpaces();
   }, []);
@@ -207,109 +106,83 @@ const Map: React.FC = () => {
   const fetchSpaces = async () => {
     setLoading(true);
     try {
-      console.log("🔍 MAP: Buscando espaços aprovados...");
+      console.log("🔍 MAP: Fetching approved spaces with photos...");
       
+      // Consulta otimizada com JOIN para reduzir requests
       const spacesPromise = supabase
         .from("spaces")
-        .select("id, name, address, number, state, latitude, longitude, zip_code, space_photos(storage_path)")
+        .select(`
+          id, 
+          name, 
+          address, 
+          number, 
+          state, 
+          latitude, 
+          longitude, 
+          zip_code,
+          space_photos!inner (
+            storage_path
+          )
+        `)
         .eq("status", "approved")
         .not("latitude", "is", null)
-        .not("longitude", "is", null);
+        .not("longitude", "is", null)
+        .limit(1, { foreignTable: 'space_photos' }); // Apenas primeira foto
 
       const spacesResult = await Promise.race([
         spacesPromise,
         new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('Spaces query timeout')), 15000)
+          setTimeout(() => reject(new Error('Spaces query timeout')), 8000)
         )
       ]);
 
       const { data: spacesData, error } = spacesResult as any;
 
       if (error) {
-        console.error("❌ MAP: Erro ao buscar espaços:", error);
+        console.error("❌ MAP: Error fetching spaces:", error);
         throw error;
       }
 
-      console.log("📋 MAP: Espaços encontrados:", spacesData?.length || 0);
+      console.log("📋 MAP: Spaces found:", spacesData?.length || 0);
 
-      const spacesWithImages = await Promise.all(
-        (spacesData || []).map(async (space) => {
-          let imageUrl: string | undefined;
+      // Processar espaços de forma mais eficiente
+      const spacesWithImages = (spacesData || []).map((space) => {
+        let imageUrl: string | undefined;
+        
+        if (space.space_photos?.length) {
+          const firstPhoto = space.space_photos[0];
           
-          console.log(`🖼️ MAP: Processando imagens para espaço "${space.name}":`, {
-            id: space.id,
-            photos: space.space_photos?.length || 0,
-            firstPhoto: space.space_photos?.[0]
-          });
-          
-          if (space.space_photos?.length) {
-            const firstPhoto = space.space_photos[0];
-            console.log("📸 MAP: Primeira foto encontrada:", {
-              storage_path: firstPhoto.storage_path,
-              isFullURL: firstPhoto.storage_path?.startsWith('http')
-            });
-            
-            try {
-              // Se já é uma URL completa, usar diretamente
-              if (firstPhoto.storage_path?.startsWith('http')) {
-                imageUrl = firstPhoto.storage_path;
-                console.log("✅ MAP: Usando URL completa:", imageUrl);
-              } else {
-                // Criar URL pública a partir do storage path
-                const { data: urlData } = supabase.storage
-                  .from("spaces")
-                  .getPublicUrl(firstPhoto.storage_path);
-                
-                if (urlData?.publicUrl) {
-                  imageUrl = urlData.publicUrl;
-                  console.log("✅ MAP: URL pública criada:", imageUrl);
-                  
-                  // Testar acessibilidade
-                  try {
-                    const response = await fetch(imageUrl, { method: 'HEAD' });
-                    console.log("🔍 MAP: Teste de acesso:", {
-                      url: imageUrl,
-                      status: response.status,
-                      ok: response.ok
-                    });
-                  } catch (fetchError) {
-                    console.warn("⚠️ MAP: URL pode não estar acessível:", fetchError);
-                  }
-                } else {
-                  console.warn("⚠️ MAP: Falha ao criar URL pública para:", firstPhoto.storage_path);
-                }
-              }
-            } catch (imageError) {
-              console.error("❌ MAP: Erro ao processar imagem:", imageError);
-            }
+          if (firstPhoto.storage_path?.startsWith('http')) {
+            imageUrl = firstPhoto.storage_path;
           } else {
-            console.log("⚠️ MAP: Nenhuma foto encontrada para o espaço:", space.name);
+            // Usar URL pública (mais rápida)
+            const { data: urlData } = supabase.storage
+              .from("spaces")
+              .getPublicUrl(firstPhoto.storage_path);
+            
+            imageUrl = urlData?.publicUrl || "";
           }
-          
-          return {
-            id: space.id,
-            name: space.name,
-            address: space.address,
-            number: space.number,
-            state: space.state,
-            latitude: Number(space.latitude),
-            longitude: Number(space.longitude),
-            zipCode: space.zip_code || "",
-            imageUrl,
-          };
-        })
-      );
+        }
+        
+        return {
+          id: space.id,
+          name: space.name,
+          address: space.address,
+          number: space.number,
+          state: space.state,
+          latitude: Number(space.latitude),
+          longitude: Number(space.longitude),
+          zipCode: space.zip_code || "",
+          imageUrl,
+        };
+      });
 
-      console.log("✨ MAP: Espaços processados com imagens:", spacesWithImages.map(s => ({
-        name: s.name,
-        hasImage: !!s.imageUrl,
-        imageUrl: s.imageUrl
-      })));
+      console.log("✨ MAP: Spaces processed:", spacesWithImages.length);
 
       setSpaces(spacesWithImages);
       setFilteredSpaces(spacesWithImages);
     } catch (error) {
-      console.error("💥 MAP: Erro ao buscar espaços:", error);
+      console.error("💥 MAP: Error fetching spaces:", error);
       toast.error("Erro ao carregar espaços");
     } finally {
       setLoading(false);
@@ -348,7 +221,7 @@ const Map: React.FC = () => {
       if (center) {
         const newPosition = { lat: center.lat(), lng: center.lng() };
         saveMapPosition(newPosition);
-        console.log('🗺️ MAP: Posição salva após movimento manual:', newPosition);
+        console.log('🗺️ MAP: Position saved after manual movement:', newPosition);
       }
     }
   };
@@ -375,8 +248,13 @@ const Map: React.FC = () => {
         )}
 
         <div className="bg-gray-200 rounded-xl h-[calc(100vh-200px)] flex items-center justify-center">
-          {loading ? (
-            <Loader2 className="animate-spin h-8 w-8 text-iparty" />
+          {loading || locationLoading ? (
+            <div className="flex flex-col items-center gap-2">
+              <Loader2 className="animate-spin h-8 w-8 text-iparty" />
+              <span className="text-sm text-gray-600">
+                {locationLoading ? "Obtendo sua localização..." : "Carregando espaços..."}
+              </span>
+            </div>
           ) : (
             <LocationMap
               viewOnly

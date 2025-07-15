@@ -1,9 +1,11 @@
+
 import React, { useState } from "react";
 import VendorCard from "@/components/VendorCard";
 import { Input } from "@/components/ui/input";
 import { Search, ChefHat, Camera, Video, FileText, Shirt, Palette, Cookie, Cake, Sparkles, Clipboard } from "lucide-react";
 import { toast } from "sonner";
 import { usePromotedVendors } from "@/hooks/usePromotedVendors";
+import { VendorsPageSkeleton } from "@/components/LoadingSkeleton";
 
 const predefinedCategories = [
   { name: "Todos", icon: Sparkles },
@@ -46,6 +48,10 @@ const Vendors = () => {
 
   const currentVendors = getVendorsByCategory(selectedCategory);
 
+  if (loading) {
+    return <VendorsPageSkeleton />;
+  }
+
   return (
     <div className="container px-4 py-6 max-w-4xl mx-auto">
       <div className="relative mb-4">
@@ -61,9 +67,7 @@ const Vendors = () => {
         />
       </div>
 
-      {loading ? (
-        <div className="text-center py-10">Carregando fornecedores...</div>
-      ) : vendors.length === 0 ? (
+      {vendors.length === 0 ? (
         <div className="text-center py-10">
           Nenhum fornecedor aprovado encontrado.
         </div>
