@@ -1,8 +1,8 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from "sonner";
 import { Geolocation } from '@capacitor/geolocation';
+import { Tables } from '@/integrations/supabase/types';
 
 type PromotedVendor = {
   id: string;
@@ -178,7 +178,7 @@ export const usePromotedVendors = () => {
       console.log('📋 All vendors found:', allVendors?.length || 0);
 
       // Buscar promoções ativas com payment_status aprovado com timeout
-      let activePromotions = null;
+      let activePromotions: Tables<'vendor_promotions'>[] = [];
       try {
         const promotionsPromise = supabase
           .from('vendor_promotions')
@@ -194,21 +194,22 @@ export const usePromotedVendors = () => {
           )
         ]);
         
-        activePromotions = (promotionsResult as any).data;
+        const { data } = promotionsResult as any;
+        activePromotions = data || [];
       } catch (error) {
         console.warn('⚠️ Failed to fetch vendor promotions, continuing without:', error);
       }
 
-      console.log('🎯 Active approved vendor promotions found:', activePromotions?.length || 0);
+      console.log('🎯 Active approved vendor promotions found:', activePromotions.length);
 
-      // Criar um map de promoções por vendor_id
+      // Crear un map de promoções por vendor_id
       const promotionsMap = new Map();
-      (activePromotions || []).forEach(promo => {
+      activePromotions.forEach(promo => {
         promotionsMap.set(promo.vendor_id, promo);
       });
 
       // Processar todos os fornecedores
-      const processedVendors = (allVendors || []).map((vendor) => {
+      const processedVendors: PromotedVendor[] = (allVendors || []).map((vendor: any) => {
         const promotion = promotionsMap.get(vendor.id);
         const isPromoted = !!promotion;
         
