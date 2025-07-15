@@ -30,6 +30,7 @@ type GeocodingResult = {
 };
 
 const LAST_MAP_POSITION_KEY = 'last_map_position';
+const SAO_PAULO_CENTER = { lat: -23.5505, lng: -46.6333 };
 
 const Map: React.FC = () => {
   const [spaces, setSpaces] = useState<Space[]>([]);
@@ -37,15 +38,14 @@ const Map: React.FC = () => {
   const [searchValue, setSearchValue] = useState("");
   const [filteredSpaces, setFilteredSpaces] = useState<Space[]>([]);
   const [mapCenter, setMapCenter] = useState<{ lat: number; lng: number } | null>(null);
-  const [searchError, setSearchError] = useState<string | null>(null);
 
   const mapRef = useRef<google.maps.Map | null>(null);
   const navigate = useNavigate();
   
-  // Usar hook centralizado de localização
-  const { location: userLocation, loading: locationLoading, error: locationError } = useUserLocation();
+  // Hook de localização centralizado
+  const { location: userLocation, loading: locationLoading } = useUserLocation();
 
-  // Função para obter a última posição salva do mapa
+  // Função utilitária para localStorage
   const getLastMapPosition = (): { lat: number; lng: number } | null => {
     try {
       const saved = localStorage.getItem(LAST_MAP_POSITION_KEY);
@@ -55,146 +55,119 @@ const Map: React.FC = () => {
     }
   };
 
-  // Função para salvar a posição atual do mapa
   const saveMapPosition = (position: { lat: number; lng: number }) => {
     localStorage.setItem(LAST_MAP_POSITION_KEY, JSON.stringify(position));
-    console.log('🗺️ MAP: Position saved:', position);
   };
 
-  // Inicialização do mapa com localização otimizada
+  // Inicialização do centro do mapa (SIMPLIFICADA)
   useEffect(() => {
-    console.log('🚀 MAP: Initializing map...');
+    if (mapCenter) return; // Só inicializar uma vez
+
+    console.log('🗺️ MAP: Initializing center...');
     
-    // Priorizar localização do usuário, depois posição salva
+    let initialCenter: { lat: number; lng: number };
+
     if (userLocation) {
-      console.log('📍 MAP: Using user location:', userLocation);
-      setMapCenter({ lat: userLocation.latitude, lng: userLocation.longitude });
-      saveMapPosition({ lat: userLocation.latitude, lng: userLocation.longitude });
-      setSearchError(null);
-    } else if (!locationLoading && !mapCenter) {
-      // Se não conseguiu obter localização, usar posição salva ou São Paulo como fallback
+      console.log('📍 MAP: Using user location');
+      initialCenter = { lat: userLocation.latitude, lng: userLocation.longitude };
+    } else {
       const lastPosition = getLastMapPosition();
       if (lastPosition) {
-        console.log('🗺️ MAP: Using saved position:', lastPosition);
-        setMapCenter(lastPosition);
+        console.log('💾 MAP: Using saved position');
+        initialCenter = lastPosition;
       } else {
-        console.log('🏙️ MAP: Using São Paulo as fallback');
-        const fallbackPosition = { lat: -23.5505, lng: -46.6333 }; // São Paulo
-        setMapCenter(fallbackPosition);
-        saveMapPosition(fallbackPosition);
-      }
-      
-      if (locationError) {
-        setSearchError(locationError);
+        console.log('🏙️ MAP: Using São Paulo fallback');
+        initialCenter = SAO_PAULO_CENTER;
       }
     }
-  }, [userLocation, locationLoading, locationError, mapCenter]);
 
-  // Sempre que mapCenter muda, centraliza o mapa
-  useEffect(() => {
-    if (mapRef.current && mapCenter) {
-      mapRef.current.panTo(mapCenter);
-      mapRef.current.setZoom(14);
-    }
-  }, [mapCenter]);
+    setMapCenter(initialCenter);
+    saveMapPosition(initialCenter);
+  }, [userLocation, mapCenter]);
 
-  // Carrega espaços do Supabase de forma otimizada
+  // Carregar espaços (OTIMIZADO)
   useEffect(() => {
+    const fetchSpaces = async () => {
+      try {
+        console.log("🚀 MAP: Fetching spaces...");
+        const startTime = performance.now();
+
+        // Query otimizada com JOIN
+        const { data: spacesData, error } = await supabase
+          .from("spaces")
+          .select(`
+            id, 
+            name, 
+            address, 
+            number, 
+            state, 
+            latitude, 
+            longitude, 
+            zip_code,
+            space_photos!left (
+              storage_path
+            )
+          `)
+          .eq("status", "approved")
+          .not("latitude", "is", null)
+          .not("longitude", "is", null)
+          .limit(1, { foreignTable: 'space_photos' });
+
+        if (error) throw error;
+
+        // Processar espaços de forma eficiente
+        const processedSpaces = (spacesData || []).map((space) => {
+          let imageUrl: string | undefined;
+          
+          if (space.space_photos?.length) {
+            const firstPhoto = space.space_photos[0];
+            if (firstPhoto.storage_path?.startsWith('http')) {
+              imageUrl = firstPhoto.storage_path;
+            } else {
+              const { data: urlData } = supabase.storage
+                .from("spaces")
+                .getPublicUrl(firstPhoto.storage_path);
+              imageUrl = urlData?.publicUrl || "";
+            }
+          }
+          
+          return {
+            id: space.id,
+            name: space.name,
+            address: space.address,
+            number: space.number,
+            state: space.state,
+            latitude: Number(space.latitude),
+            longitude: Number(space.longitude),
+            zipCode: space.zip_code || "",
+            imageUrl,
+          };
+        });
+
+        setSpaces(processedSpaces);
+        setFilteredSpaces(processedSpaces);
+        
+        const endTime = performance.now();
+        console.log(`✅ MAP: Spaces loaded in ${(endTime - startTime).toFixed(0)}ms:`, processedSpaces.length);
+
+      } catch (error) {
+        console.error("💥 MAP: Error fetching spaces:", error);
+        toast.error("Erro ao carregar espaços");
+      } finally {
+        setLoading(false);
+      }
+    };
+
     fetchSpaces();
   }, []);
 
-  const fetchSpaces = async () => {
-    setLoading(true);
-    try {
-      console.log("🔍 MAP: Fetching approved spaces with photos...");
-      
-      // Consulta otimizada com JOIN para reduzir requests
-      const spacesPromise = supabase
-        .from("spaces")
-        .select(`
-          id, 
-          name, 
-          address, 
-          number, 
-          state, 
-          latitude, 
-          longitude, 
-          zip_code,
-          space_photos!inner (
-            storage_path
-          )
-        `)
-        .eq("status", "approved")
-        .not("latitude", "is", null)
-        .not("longitude", "is", null)
-        .limit(1, { foreignTable: 'space_photos' }); // Apenas primeira foto
-
-      const spacesResult = await Promise.race([
-        spacesPromise,
-        new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('Spaces query timeout')), 8000)
-        )
-      ]);
-
-      const { data: spacesData, error } = spacesResult as any;
-
-      if (error) {
-        console.error("❌ MAP: Error fetching spaces:", error);
-        throw error;
-      }
-
-      console.log("📋 MAP: Spaces found:", spacesData?.length || 0);
-
-      // Processar espaços de forma mais eficiente
-      const spacesWithImages = (spacesData || []).map((space) => {
-        let imageUrl: string | undefined;
-        
-        if (space.space_photos?.length) {
-          const firstPhoto = space.space_photos[0];
-          
-          if (firstPhoto.storage_path?.startsWith('http')) {
-            imageUrl = firstPhoto.storage_path;
-          } else {
-            // Usar URL pública (mais rápida)
-            const { data: urlData } = supabase.storage
-              .from("spaces")
-              .getPublicUrl(firstPhoto.storage_path);
-            
-            imageUrl = urlData?.publicUrl || "";
-          }
-        }
-        
-        return {
-          id: space.id,
-          name: space.name,
-          address: space.address,
-          number: space.number,
-          state: space.state,
-          latitude: Number(space.latitude),
-          longitude: Number(space.longitude),
-          zipCode: space.zip_code || "",
-          imageUrl,
-        };
-      });
-
-      console.log("✨ MAP: Spaces processed:", spacesWithImages.length);
-
-      setSpaces(spacesWithImages);
-      setFilteredSpaces(spacesWithImages);
-    } catch (error) {
-      console.error("💥 MAP: Error fetching spaces:", error);
-      toast.error("Erro ao carregar espaços");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Filtra os espaços quando searchValue muda
+  // Filtrar espaços
   useEffect(() => {
     if (!searchValue.trim()) {
       setFilteredSpaces(spaces);
       return;
     }
+    
     const term = searchValue.toLowerCase();
     setFilteredSpaces(
       spaces.filter((s) =>
@@ -205,23 +178,20 @@ const Map: React.FC = () => {
     );
   }, [searchValue, spaces]);
 
-  // Chamado pelo AddressAutoComplete
+  // Handlers
   const handleLocationSelected = (loc: GeocodingResult) => {
     const newPosition = { lat: loc.lat, lng: loc.lng };
     setMapCenter(newPosition);
     saveMapPosition(newPosition);
-    setSearchError(null);
     toast.success("Localização encontrada!");
   };
 
-  // Função para salvar posição quando o usuário move o mapa manualmente
   const handleMapDrag = () => {
     if (mapRef.current) {
       const center = mapRef.current.getCenter();
       if (center) {
         const newPosition = { lat: center.lat(), lng: center.lng() };
         saveMapPosition(newPosition);
-        console.log('🗺️ MAP: Position saved after manual movement:', newPosition);
       }
     }
   };
@@ -229,6 +199,8 @@ const Map: React.FC = () => {
   const handleSpaceClick = (spaceId: string) => {
     navigate(`/event-space/${spaceId}`);
   };
+
+  const isLoading = loading || locationLoading || !mapCenter;
 
   return (
     <Wrapper apiKey={GOOGLE_MAPS_API_KEY} libraries={["places"]}>
@@ -241,18 +213,12 @@ const Map: React.FC = () => {
           />
         </div>
 
-        {searchError && (
-          <div className="mb-2 p-2 bg-red-100 text-red-700 rounded-md text-sm">
-            {searchError}
-          </div>
-        )}
-
         <div className="bg-gray-200 rounded-xl h-[calc(100vh-200px)] flex items-center justify-center">
-          {loading || locationLoading ? (
+          {isLoading ? (
             <div className="flex flex-col items-center gap-2">
               <Loader2 className="animate-spin h-8 w-8 text-iparty" />
               <span className="text-sm text-gray-600">
-                {locationLoading ? "Obtendo sua localização..." : "Carregando espaços..."}
+                {locationLoading ? "Obtendo localização..." : "Carregando mapa..."}
               </span>
             </div>
           ) : (
@@ -260,15 +226,9 @@ const Map: React.FC = () => {
               viewOnly
               spaces={filteredSpaces}
               onSpaceClick={handleSpaceClick}
-              initialLocation={mapCenter || undefined}
+              initialLocation={mapCenter}
               onMapLoad={(mapInstance) => {
                 mapRef.current = mapInstance;
-                if (mapCenter) {
-                  mapInstance.panTo(mapCenter);
-                  mapInstance.setZoom(14);
-                }
-                
-                // Adicionar listener para quando o usuário parar de arrastar o mapa
                 mapInstance.addListener('dragend', handleMapDrag);
                 mapInstance.addListener('zoom_changed', handleMapDrag);
               }}

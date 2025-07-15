@@ -3,121 +3,49 @@ import React, { useState } from "react";
 import PromotedSpaceCard from "@/components/PromotedSpaceCard";
 import { Input } from "@/components/ui/input";
 import { Search, Circle, Heart, Briefcase, Cake, GraduationCap } from "lucide-react";
-import { toast } from "sonner";
 import { SPACE_CATEGORIES } from "@/config/app-config";
-import { usePromotedSpaces } from "@/hooks/usePromotedSpaces";
+import { useOptimizedSpaces } from "@/hooks/useOptimizedSpaces";
 import { ExplorePageSkeleton } from "@/components/LoadingSkeleton";
 
 const Explore = () => {
-  const { spaces, loading, error, userLocation } = usePromotedSpaces();
+  const { spaces, loading, userLocation } = useOptimizedSpaces();
   const [searchTerm, setSearchTerm] = useState("");
   const [activeCategory, setActiveCategory] = useState(SPACE_CATEGORIES.ALL);
   
-  React.useEffect(() => {
-    if (error) {
-      toast.error(error);
-    }
-  }, [error]);
-  
-  // Filter spaces based on search term across multiple fields and by category
+  // Filtrar espaços com base na busca e categoria
   const filteredSpaces = React.useMemo(() => {
-    console.log('=== FILTERING DEBUG ===');
-    console.log('Active category:', activeCategory);
-    console.log('SPACE_CATEGORIES.ALL:', SPACE_CATEGORIES.ALL);
-    console.log('All spaces:', spaces.map(s => ({ 
-      name: s.name, 
-      categories: s.categories, 
-      isPromoted: s.isPromoted,
-      distanceKm: s.distanceKm
-    })));
+    let filtered = spaces;
     
-    let filtered = spaces.filter(space => {
-      // First filter by category if not "all"
-      if (activeCategory !== SPACE_CATEGORIES.ALL) {
-        console.log(`\n--- Checking space "${space.name}" ---`);
-        console.log('Space categories:', space.categories);
-        console.log('Looking for category:', activeCategory);
-        console.log('Categories type:', typeof space.categories);
-        console.log('Is array:', Array.isArray(space.categories));
-        
-        if (!space.categories || !Array.isArray(space.categories)) {
-          console.log(`❌ Space "${space.name}" has no valid categories array`);
-          return false;
-        }
-        
-        // Ensure we're comparing strings properly
-        const normalizedSpaceCategories = space.categories.map(cat => String(cat).toLowerCase());
-        const normalizedActiveCategory = String(activeCategory).toLowerCase();
-        
-        console.log('Normalized space categories:', normalizedSpaceCategories);
-        console.log('Normalized active category:', normalizedActiveCategory);
-        
-        const hasCategory = normalizedSpaceCategories.includes(normalizedActiveCategory);
-        console.log(`Space "${space.name}" has category "${activeCategory}":`, hasCategory);
-        
-        if (!hasCategory) {
-          console.log(`❌ Space "${space.name}" does NOT have category "${activeCategory}"`);
-          return false;
-        }
-        
-        console.log(`✅ Space "${space.name}" HAS category "${activeCategory}"`);
-      } else {
-        console.log(`✅ Showing all categories - including space "${space.name}"`);
-      }
-      
-      // Then filter by search term across multiple fields
-      if (searchTerm === "") return true;
-      
+    // Filtrar por categoria
+    if (activeCategory !== SPACE_CATEGORIES.ALL) {
+      filtered = spaces.filter(space => {
+        if (!space.categories || !Array.isArray(space.categories)) return false;
+        const normalizedCategories = space.categories.map(cat => String(cat).toLowerCase());
+        return normalizedCategories.includes(String(activeCategory).toLowerCase());
+      });
+    }
+    
+    // Filtrar por termo de busca
+    if (searchTerm.trim()) {
       const term = searchTerm.toLowerCase();
-      const matchesSearch = (
+      filtered = filtered.filter(space =>
         space.name.toLowerCase().includes(term) ||
         space.address.toLowerCase().includes(term) ||
         space.description.toLowerCase().includes(term) ||
         space.state.toLowerCase().includes(term) ||
         space.price.toLowerCase().includes(term)
       );
-      
-      console.log(`Search filter for "${space.name}":`, matchesSearch);
-      return matchesSearch;
-    });
-
-    console.log('\n=== FILTER RESULTS ===');
-    console.log('Filtered spaces before final sort:', filtered.map(s => ({ 
-      name: s.name, 
-      isPromoted: s.isPromoted,
-      distanceKm: s.distanceKm
-    })));
-    console.log('=== END FILTERING DEBUG ===\n');
+    }
     
     return filtered;
   }, [spaces, activeCategory, searchTerm]);
 
   const categories = [
-    {
-      key: SPACE_CATEGORIES.ALL,
-      label: "Todos",
-      icon: Circle
-    },
-    {
-      key: SPACE_CATEGORIES.WEDDINGS,
-      label: "Casamentos",
-      icon: Heart
-    },
-    {
-      key: SPACE_CATEGORIES.CORPORATE,
-      label: "Corporativo",
-      icon: Briefcase
-    },
-    {
-      key: SPACE_CATEGORIES.BIRTHDAYS,
-      label: "Aniversários",
-      icon: Cake
-    },
-    {
-      key: SPACE_CATEGORIES.GRADUATIONS,
-      label: "Formaturas",
-      icon: GraduationCap
-    }
+    { key: SPACE_CATEGORIES.ALL, label: "Todos", icon: Circle },
+    { key: SPACE_CATEGORIES.WEDDINGS, label: "Casamentos", icon: Heart },
+    { key: SPACE_CATEGORIES.CORPORATE, label: "Corporativo", icon: Briefcase },
+    { key: SPACE_CATEGORIES.BIRTHDAYS, label: "Aniversários", icon: Cake },
+    { key: SPACE_CATEGORIES.GRADUATIONS, label: "Formaturas", icon: GraduationCap }
   ];
 
   if (loading) {
@@ -154,10 +82,7 @@ const Explore = () => {
                       : 'bg-white border border-gray-200 text-gray-600 hover:border-gray-300 hover:bg-gray-50'
                     }
                   `}
-                  onClick={() => {
-                    console.log(`Clicking "${category.label}" button`);
-                    setActiveCategory(category.key);
-                  }}
+                  onClick={() => setActiveCategory(category.key)}
                 >
                   <Icon 
                     size={20} 
