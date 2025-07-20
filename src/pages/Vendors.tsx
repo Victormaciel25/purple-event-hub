@@ -41,6 +41,14 @@ const Vendors = () => {
     });
 
     console.log(`🔍 VENDORS: Filtered to ${filtered.length} vendors`);
+    filtered.forEach((vendor, index) => {
+      console.log(`📋 VENDOR ${index + 1}:`, {
+        name: vendor.name,
+        image: vendor.images?.[0],
+        hasImage: !!(vendor.images?.[0])
+      });
+    });
+    
     return filtered;
   }, [vendors, searchTerm, selectedCategory]);
 
@@ -105,13 +113,13 @@ const Vendors = () => {
         {filteredVendors.length > 0 ? (
           filteredVendors.map((vendor) => (
             <VendorCard
-              key={vendor.id}
+              key={`${vendor.id}-${Date.now()}`} // Force re-render para garantir atualização
               id={vendor.id}
               name={vendor.name}
               category={vendor.category}
               rating={0}
               contactNumber={vendor.contact_number}
-              image={vendor.images[0] || "https://source.unsplash.com/random/200x200?food"}
+              image={vendor.images[0] || "https://images.unsplash.com/photo-1566681855366-282a74153321?q=80&w=600&auto=format&fit=crop"}
               isPromoted={vendor.isPromoted}
               address={vendor.address}
             />

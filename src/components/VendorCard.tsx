@@ -35,6 +35,7 @@ const VendorCard: React.FC<VendorProps> = ({
   const navigate = useNavigate();
 
   const handleClick = () => {
+    console.log("🎯 VENDOR_CARD: Card clicked:", { id, name, status });
     if (status === 'pending') {
       navigate(`/vendor-pending/${id}`);
     } else {
@@ -68,6 +69,18 @@ const VendorCard: React.FC<VendorProps> = ({
     );
   };
 
+  // Garantir que a imagem tenha uma URL válida
+  const imageUrl = image && image.trim() 
+    ? image 
+    : "https://images.unsplash.com/photo-1566681855366-282a74153321?q=80&w=600&auto=format&fit=crop";
+
+  console.log("🖼️ VENDOR_CARD: Rendering vendor card:", { 
+    id, 
+    name, 
+    imageUrl, 
+    originalImage: image 
+  });
+
   return (
     <Card 
       className={`overflow-hidden border-0 card-shadow cursor-pointer transition-transform hover:scale-[1.01] ${
@@ -76,11 +89,12 @@ const VendorCard: React.FC<VendorProps> = ({
       onClick={handleClick}
     >
       <div className="flex p-4">
-        <div className="h-20 w-20 rounded-full overflow-hidden mr-4 relative">
+        <div className="h-20 w-20 rounded-full overflow-hidden mr-4 relative flex-shrink-0">
           <OptimizedImage
-            src={image}
-            alt={name}
+            src={imageUrl}
+            alt={`${name} - ${category}`}
             className="w-full h-full"
+            key={`${id}-${imageUrl}`} // Force re-render quando a imagem muda
           />
           {isPromoted && (
             <div className="absolute -top-1 -right-1 bg-yellow-500 rounded-full p-1">
