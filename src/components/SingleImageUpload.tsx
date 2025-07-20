@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { X, Images, Upload } from "lucide-react";
 import { toast } from "sonner";
@@ -17,6 +18,12 @@ interface SingleImageUploadProps {
   maxImages?: number;
 }
 
+interface LocalPreview {
+  file: File;
+  previewUrl: string;
+  uploading: boolean;
+}
+
 const SingleImageUpload: React.FC<SingleImageUploadProps> = ({
   onImageChange,
   uploadPath,
@@ -28,8 +35,18 @@ const SingleImageUpload: React.FC<SingleImageUploadProps> = ({
   className = "w-full",
   maxImages = 5,
 }) => {
-  const [previewUrls, setPreviewUrls] = useState<string[]>(initialImages);
+  const [uploadedUrls, setUploadedUrls] = useState<string[]>(initialImages);
+  const [localPreviews, setLocalPreviews] = useState<LocalPreview[]>([]);
   const inputId = `image-upload-${Math.random().toString(36).substring(2, 15)}`;
+
+  // Cleanup function for local previews
+  const cleanupLocalPreviews = (previews: LocalPreview[]) => {
+    previews.forEach(preview => {
+      if (preview.previewUrl.startsWith('blob:')) {
+        URL.revokeObjectURL(preview.previewUrl);
+      }
+    });
+  };
 
   const compressImage = async (file: File): Promise<File> => {
     try {
@@ -59,6 +76,16 @@ const SingleImageUpload: React.FC<SingleImageUploadProps> = ({
     }
   };
 
+  const createLocalPreview = (file: File): string => {
+    try {
+      return URL.createObjectURL(file);
+    } catch (error) {
+      console.error("Erro ao criar preview local:", error);
+      // Fallback: retorna uma string vazia que será tratada no render
+      return "";
+    }
+  };
+
   const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     console.log("🚀 UPLOAD DEBUG: Iniciando upload de arquivos...");
     if (!event.target.files || event.target.files.length === 0) {
@@ -69,20 +96,41 @@ const SingleImageUpload: React.FC<SingleImageUploadProps> = ({
     const files = Array.from(event.target.files);
     console.log("📁 UPLOAD DEBUG: Arquivos selecionados:", files.length);
     
-    if (previewUrls.length + files.length > maxImages) {
+    const totalImages = uploadedUrls.length + localPreviews.length + files.length;
+    if (totalImages > maxImages) {
       console.log("❌ UPLOAD DEBUG: Limite de imagens excedido");
       toast.error(`Você pode enviar no máximo ${maxImages} imagens`);
       return;
     }
     
-    console.log("✅ UPLOAD DEBUG: Validações iniciais passaram, iniciando upload...");
+    console.log("✅ UPLOAD DEBUG: Validações iniciais passaram, criando previews locais...");
     
+    // Criar previews locais imediatamente
+    const newLocalPreviews: LocalPreview[] = files.map(file => ({
+      file: file,
+      previewUrl: createLocalPreview(file),
+      uploading: false
+    }));
+    
+    setLocalPreviews(prev => [...prev, ...newLocalPreviews]);
+    
+    // Iniciar uploads
     setIsUploading(true);
     
     try {
       const newUrls: string[] = [];
       
-      for (const file of files) {
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        const previewIndex = localPreviews.length + i;
+        
+        // Marcar como uploading
+        setLocalPreviews(prev => 
+          prev.map((preview, idx) => 
+            idx === previewIndex ? { ...preview, uploading: true } : preview
+          )
+        );
+        
         const fileSizeInMB = file.size / (1024 * 1024);
         
         let fileToUpload = file;
@@ -127,11 +175,16 @@ const SingleImageUpload: React.FC<SingleImageUploadProps> = ({
       }
       
       if (newUrls.length > 0) {
-        const allUrls = [...previewUrls, ...newUrls];
-        setPreviewUrls(allUrls);
-        onImageChange(allUrls);
+        const allUploadedUrls = [...uploadedUrls, ...newUrls];
+        setUploadedUrls(allUploadedUrls);
+        onImageChange(allUploadedUrls);
         toast.success(`${newUrls.length} ${newUrls.length === 1 ? 'imagem enviada' : 'imagens enviadas'} com sucesso!`);
       }
+      
+      // Limpar previews locais após upload bem-sucedido
+      cleanupLocalPreviews(localPreviews);
+      setLocalPreviews([]);
+      
     } catch (error) {
       console.error("💥 Erro geral no upload:", error);
       toast.error("Erro ao enviar as imagens. Tente novamente.");
@@ -143,31 +196,45 @@ const SingleImageUpload: React.FC<SingleImageUploadProps> = ({
     }
   };
 
-  const removeImage = (index: number) => {
-    const newPreviewUrls = [...previewUrls];
-    newPreviewUrls.splice(index, 1);
-    setPreviewUrls(newPreviewUrls);
-    onImageChange(newPreviewUrls);
+  const removeUploadedImage = (index: number) => {
+    const newUploadedUrls = [...uploadedUrls];
+    newUploadedUrls.splice(index, 1);
+    setUploadedUrls(newUploadedUrls);
+    onImageChange(newUploadedUrls);
   };
+
+  const removeLocalPreview = (index: number) => {
+    const previewToRemove = localPreviews[index];
+    if (previewToRemove && previewToRemove.previewUrl.startsWith('blob:')) {
+      URL.revokeObjectURL(previewToRemove.previewUrl);
+    }
+    
+    const newLocalPreviews = [...localPreviews];
+    newLocalPreviews.splice(index, 1);
+    setLocalPreviews(newLocalPreviews);
+  };
+
+  const totalImages = uploadedUrls.length + localPreviews.length;
 
   return (
     <div className={className}>
-      {previewUrls.length > 0 ? (
+      {totalImages > 0 ? (
         <div className="space-y-4">
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 w-full">
-            {previewUrls.map((url, index) => (
+            {/* Imagens já enviadas */}
+            {uploadedUrls.map((url, index) => (
               <div 
-                key={`image-${index}`} 
+                key={`uploaded-${index}`} 
                 className="relative aspect-square border border-gray-200 rounded-lg overflow-hidden"
               >
                 <img
                   src={url}
-                  alt={`Preview ${index + 1}`}
+                  alt={`Enviada ${index + 1}`}
                   className="w-full h-full object-cover"
                 />
                 <button
                   type="button"
-                  onClick={() => removeImage(index)}
+                  onClick={() => removeUploadedImage(index)}
                   className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1.5 hover:bg-red-600 transition-colors"
                   disabled={isUploading}
                 >
@@ -176,7 +243,52 @@ const SingleImageUpload: React.FC<SingleImageUploadProps> = ({
               </div>
             ))}
             
-            {previewUrls.length < maxImages && (
+            {/* Previews locais */}
+            {localPreviews.map((preview, index) => (
+              <div 
+                key={`local-${index}`} 
+                className="relative aspect-square border border-gray-200 rounded-lg overflow-hidden"
+              >
+                {preview.previewUrl ? (
+                  <img
+                    src={preview.previewUrl}
+                    alt={`Preview ${index + 1}`}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="w-full h-full bg-gray-100 flex items-center justify-center">
+                    <Images size={24} className="text-gray-400" />
+                  </div>
+                )}
+                
+                {/* Overlay de loading */}
+                {preview.uploading && (
+                  <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                    <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                  </div>
+                )}
+                
+                {/* Botão de remover */}
+                <button
+                  type="button"
+                  onClick={() => removeLocalPreview(index)}
+                  className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1.5 hover:bg-red-600 transition-colors"
+                  disabled={preview.uploading}
+                >
+                  <X size={16} />
+                </button>
+                
+                {/* Indicador de status */}
+                {!preview.uploading && (
+                  <div className="absolute bottom-2 left-2 bg-orange-500 text-white text-xs px-2 py-1 rounded">
+                    Aguardando
+                  </div>
+                )}
+              </div>
+            ))}
+            
+            {/* Botão para adicionar mais imagens */}
+            {totalImages < maxImages && (
               <label className="cursor-pointer border-2 border-dashed border-gray-300 rounded-lg flex flex-col items-center justify-center aspect-square p-4">
                 <Images size={32} className="text-gray-300 mb-2" />
                 <span className="text-sm text-gray-500 text-center mb-2">
@@ -186,7 +298,7 @@ const SingleImageUpload: React.FC<SingleImageUploadProps> = ({
                   ({aspectRatio}, max {maxSize}MB)
                 </span>
                 <span className="text-xs text-gray-400 text-center">
-                  Compressão automática
+                  Preview instantâneo
                 </span>
                 <input
                   type="file"
@@ -200,7 +312,12 @@ const SingleImageUpload: React.FC<SingleImageUploadProps> = ({
             )}
           </div>
           <p className="text-xs text-gray-500">
-            {previewUrls.length} de {maxImages} imagens
+            {totalImages} de {maxImages} imagens
+            {localPreviews.length > 0 && (
+              <span className="text-orange-600 ml-2">
+                ({localPreviews.length} aguardando upload)
+              </span>
+            )}
           </p>
         </div>
       ) : (
@@ -217,7 +334,7 @@ const SingleImageUpload: React.FC<SingleImageUploadProps> = ({
               Formatos: JPG, PNG, WebP
             </p>
             <p className="text-xs text-gray-400">
-              Compressão automática aplicada
+              Preview instantâneo no dispositivo
             </p>
           </div>
           <Button
