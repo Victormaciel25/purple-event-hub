@@ -69,7 +69,7 @@ const VendorCard: React.FC<VendorProps> = ({
     );
   };
 
-  // Garantir que a imagem tenha uma URL válida
+  // Garantir que a imagem tenha uma URL válida e única
   const imageUrl = image && image.trim() 
     ? image 
     : "https://images.unsplash.com/photo-1566681855366-282a74153321?q=80&w=600&auto=format&fit=crop";
@@ -94,7 +94,8 @@ const VendorCard: React.FC<VendorProps> = ({
             src={imageUrl}
             alt={`${name} - ${category}`}
             className="w-full h-full"
-            key={`${id}-${imageUrl}`} // Force re-render quando a imagem muda
+            key={`vendor-${id}-${Date.now()}`}
+            loadingClassName="animate-pulse bg-gray-200 flex items-center justify-center"
           />
           {isPromoted && (
             <div className="absolute -top-1 -right-1 bg-yellow-500 rounded-full p-1">

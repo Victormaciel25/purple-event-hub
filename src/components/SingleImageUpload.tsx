@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { X, Images, Upload } from "lucide-react";
 import { toast } from "sonner";
@@ -22,6 +21,7 @@ interface LocalPreview {
   file: File;
   previewUrl: string;
   uploading: boolean;
+  id: string;
 }
 
 const SingleImageUpload: React.FC<SingleImageUploadProps> = ({
@@ -39,11 +39,22 @@ const SingleImageUpload: React.FC<SingleImageUploadProps> = ({
   const [localPreviews, setLocalPreviews] = useState<LocalPreview[]>([]);
   const inputId = `image-upload-${Math.random().toString(36).substring(2, 15)}`;
 
+  // Detectar se está no Android/Capacitor
+  const isAndroidCapacitor = () => {
+    return !!(window as any).Capacitor && 
+           !!(window as any).Capacitor.getPlatform && 
+           (window as any).Capacitor.getPlatform() === 'android';
+  };
+
   // Cleanup function for local previews
   const cleanupLocalPreviews = (previews: LocalPreview[]) => {
     previews.forEach(preview => {
-      if (preview.previewUrl.startsWith('blob:')) {
-        URL.revokeObjectURL(preview.previewUrl);
+      if (preview.previewUrl && preview.previewUrl.startsWith('blob:')) {
+        try {
+          URL.revokeObjectURL(preview.previewUrl);
+        } catch (error) {
+          console.warn("Erro ao limpar URL do objeto:", error);
+        }
       }
     });
   };
@@ -78,7 +89,14 @@ const SingleImageUpload: React.FC<SingleImageUploadProps> = ({
 
   const createLocalPreview = (file: File): string => {
     try {
-      return URL.createObjectURL(file);
+      if (isAndroidCapacitor()) {
+        // Para Android, tentar criar URL com fallback
+        const url = URL.createObjectURL(file);
+        console.log("🖼️ UPLOAD: Preview URL criada para Android:", url);
+        return url;
+      } else {
+        return URL.createObjectURL(file);
+      }
     } catch (error) {
       console.error("Erro ao criar preview local:", error);
       // Fallback: retorna uma string vazia que será tratada no render
@@ -109,10 +127,14 @@ const SingleImageUpload: React.FC<SingleImageUploadProps> = ({
     const newLocalPreviews: LocalPreview[] = files.map(file => ({
       file: file,
       previewUrl: createLocalPreview(file),
-      uploading: false
+      uploading: false,
+      id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
     }));
     
     setLocalPreviews(prev => [...prev, ...newLocalPreviews]);
+    
+    // Toast para informar que os previews foram criados
+    toast.success(`${files.length} ${files.length === 1 ? 'imagem selecionada' : 'imagens selecionadas'}. Iniciando upload...`);
     
     // Iniciar uploads
     setIsUploading(true);
@@ -122,12 +144,12 @@ const SingleImageUpload: React.FC<SingleImageUploadProps> = ({
       
       for (let i = 0; i < files.length; i++) {
         const file = files[i];
-        const previewIndex = localPreviews.length + i;
+        const previewId = newLocalPreviews[i].id;
         
         // Marcar como uploading
         setLocalPreviews(prev => 
-          prev.map((preview, idx) => 
-            idx === previewIndex ? { ...preview, uploading: true } : preview
+          prev.map(preview => 
+            preview.id === previewId ? { ...preview, uploading: true } : preview
           )
         );
         
@@ -206,7 +228,11 @@ const SingleImageUpload: React.FC<SingleImageUploadProps> = ({
   const removeLocalPreview = (index: number) => {
     const previewToRemove = localPreviews[index];
     if (previewToRemove && previewToRemove.previewUrl.startsWith('blob:')) {
-      URL.revokeObjectURL(previewToRemove.previewUrl);
+      try {
+        URL.revokeObjectURL(previewToRemove.previewUrl);
+      } catch (error) {
+        console.warn("Erro ao limpar URL do objeto:", error);
+      }
     }
     
     const newLocalPreviews = [...localPreviews];
@@ -224,13 +250,19 @@ const SingleImageUpload: React.FC<SingleImageUploadProps> = ({
             {/* Imagens já enviadas */}
             {uploadedUrls.map((url, index) => (
               <div 
-                key={`uploaded-${index}`} 
+                key={`uploaded-${index}-${Date.now()}`} 
                 className="relative aspect-square border border-gray-200 rounded-lg overflow-hidden"
               >
                 <img
-                  src={url}
+                  src={`${url}?t=${Date.now()}`}
                   alt={`Enviada ${index + 1}`}
                   className="w-full h-full object-cover"
+                  loading="lazy"
+                  decoding="async"
+                  style={{
+                    WebkitTransform: 'translateZ(0)',
+                    transform: 'translateZ(0)',
+                  }}
                 />
                 <button
                   type="button"
@@ -246,7 +278,7 @@ const SingleImageUpload: React.FC<SingleImageUploadProps> = ({
             {/* Previews locais */}
             {localPreviews.map((preview, index) => (
               <div 
-                key={`local-${index}`} 
+                key={`local-${preview.id}`} 
                 className="relative aspect-square border border-gray-200 rounded-lg overflow-hidden"
               >
                 {preview.previewUrl ? (
@@ -254,6 +286,10 @@ const SingleImageUpload: React.FC<SingleImageUploadProps> = ({
                     src={preview.previewUrl}
                     alt={`Preview ${index + 1}`}
                     className="w-full h-full object-cover"
+                    style={{
+                      WebkitTransform: 'translateZ(0)',
+                      transform: 'translateZ(0)',
+                    }}
                   />
                 ) : (
                   <div className="w-full h-full bg-gray-100 flex items-center justify-center">
