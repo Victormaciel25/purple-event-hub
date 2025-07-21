@@ -6,6 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import imageCompression from "browser-image-compression";
 import { Button } from "@/components/ui/button";
 import ImagePreview from "./ImagePreview";
+import { usePlatform } from "@/hooks/usePlatform";
 
 interface SingleImageUploadProps {
   onImageChange: (urls: string[]) => void;
@@ -38,18 +39,19 @@ const SingleImageUpload: React.FC<SingleImageUploadProps> = ({
 }) => {
   const [uploadedUrls, setUploadedUrls] = useState<string[]>(initialImages);
   const [localPreviews, setLocalPreviews] = useState<LocalPreview[]>([]);
+  const { isAndroid, isCapacitor } = usePlatform();
   const inputId = `image-upload-${Math.random().toString(36).substring(2, 15)}`;
 
   const compressImage = async (file: File): Promise<File> => {
     try {
       const options = {
-        maxSizeMB: 1.9,
-        maxWidthOrHeight: 1280,
-        useWebWorker: true,
+        maxSizeMB: 1.8,
+        maxWidthOrHeight: isAndroid ? 1024 : 1280, // Menor resolução no Android
+        useWebWorker: !isCapacitor, // Não usar web worker no Capacitor
         fileType: file.type,
       };
       
-      console.log(`📦 UPLOAD: Comprimindo ${file.name} (${(file.size / 1024 / 1024).toFixed(2)}MB)`);
+      console.log(`📦 UPLOAD: Comprimindo ${file.name} (${(file.size / 1024 / 1024).toFixed(2)}MB) - Android: ${isAndroid}`);
       
       const compressedFile = await imageCompression(file, options);
       
@@ -69,7 +71,7 @@ const SingleImageUpload: React.FC<SingleImageUploadProps> = ({
   };
 
   const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    console.log("🚀 UPLOAD: Iniciando processamento de arquivos...");
+    console.log("🚀 UPLOAD: Iniciando processamento de arquivos... Android:", isAndroid);
     
     if (!event.target.files || event.target.files.length === 0) {
       console.log("❌ UPLOAD: Nenhum arquivo selecionado");
@@ -85,15 +87,20 @@ const SingleImageUpload: React.FC<SingleImageUploadProps> = ({
       return;
     }
     
-    // Criar previews locais imediatamente
+    // Criar previews locais imediatamente com IDs únicos
+    const timestamp = Date.now();
     const newLocalPreviews: LocalPreview[] = files.map((file, index) => ({
-      id: `preview-${Date.now()}-${index}-${Math.random().toString(36).substr(2, 9)}`,
+      id: `preview-${timestamp}-${index}-${Math.random().toString(36).substr(2, 9)}`,
       file,
       uploading: false,
     }));
     
     setLocalPreviews(prev => [...prev, ...newLocalPreviews]);
-    toast.success(`${files.length} imagem(ns) selecionada(s). Iniciando upload...`);
+    
+    // Dar um tempo para o preview aparecer antes de começar o upload
+    setTimeout(() => {
+      toast.success(`${files.length} imagem(ns) selecionada(s). Iniciando upload...`);
+    }, 100);
     
     // Iniciar uploads
     setIsUploading(true);
@@ -117,7 +124,7 @@ const SingleImageUpload: React.FC<SingleImageUploadProps> = ({
         const fileSizeInMB = file.size / (1024 * 1024);
         
         let fileToUpload = file;
-        if (fileSizeInMB > 1.9) {
+        if (fileSizeInMB > 1.5) { // Comprimir mais cedo no Android
           toast.info(`Comprimindo: ${file.name}`);
           fileToUpload = await compressImage(file);
         }
@@ -129,14 +136,17 @@ const SingleImageUpload: React.FC<SingleImageUploadProps> = ({
         }
         
         const fileExt = fileToUpload.name.split('.').pop();
-        const fileName = `${Math.random().toString(36).substring(2, 15)}.${fileExt}`;
+        const fileName = `${timestamp}-${Math.random().toString(36).substring(2, 15)}.${fileExt}`;
         const filePath = `${uploadPath}/${fileName}`;
         
         console.log(`📤 UPLOAD: Enviando para ${filePath}`);
         
         const { data, error } = await supabase.storage
           .from('spaces')
-          .upload(filePath, fileToUpload);
+          .upload(filePath, fileToUpload, {
+            cacheControl: '3600',
+            upsert: false
+          });
         
         if (error) {
           console.error("❌ UPLOAD: Erro:", error);
@@ -149,8 +159,15 @@ const SingleImageUpload: React.FC<SingleImageUploadProps> = ({
           .from('spaces')
           .getPublicUrl(filePath);
         
-        console.log("✅ UPLOAD: URL criada:", publicURLData.publicUrl);
-        newUrls.push(publicURLData.publicUrl);
+        let finalUrl = publicURLData.publicUrl;
+        
+        // No Android, adicionar parâmetros para evitar cache
+        if (isAndroid && isCapacitor) {
+          finalUrl = `${finalUrl}?t=${timestamp}&v=${Math.random().toString(36).substr(2, 9)}`;
+        }
+        
+        console.log("✅ UPLOAD: URL criada:", finalUrl);
+        newUrls.push(finalUrl);
       }
       
       if (newUrls.length > 0) {
@@ -197,7 +214,7 @@ const SingleImageUpload: React.FC<SingleImageUploadProps> = ({
             {/* Imagens já enviadas */}
             {uploadedUrls.map((url, index) => (
               <ImagePreview
-                key={`uploaded-${index}-${url}`}
+                key={`uploaded-${index}-${url.split('?')[0]}`} // Use URL base como key
                 url={url}
                 alt={`Enviada ${index + 1}`}
                 onRemove={() => removeUploadedImage(index)}
@@ -219,7 +236,7 @@ const SingleImageUpload: React.FC<SingleImageUploadProps> = ({
             
             {/* Botão para adicionar mais imagens */}
             {totalImages < maxImages && (
-              <label className="cursor-pointer border-2 border-dashed border-gray-300 rounded-lg flex flex-col items-center justify-center aspect-square p-4">
+              <label className="cursor-pointer border-2 border-dashed border-gray-300 rounded-lg flex flex-col items-center justify-center aspect-square p-4 hover:border-iparty transition-colors">
                 <Images size={32} className="text-gray-300 mb-2" />
                 <span className="text-sm text-gray-500 text-center mb-2">
                   {isUploading ? "Enviando..." : "Adicionar"}
@@ -260,6 +277,11 @@ const SingleImageUpload: React.FC<SingleImageUploadProps> = ({
             <p className="text-xs text-gray-400">
               Formatos: JPG, PNG, WebP
             </p>
+            {isAndroid && (
+              <p className="text-xs text-blue-500">
+                Modo Android detectado
+              </p>
+            )}
           </div>
           <Button
             type="button"

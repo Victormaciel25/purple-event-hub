@@ -1,6 +1,7 @@
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { X } from "lucide-react";
+import { usePlatform } from "@/hooks/usePlatform";
 
 interface ImagePreviewProps {
   file?: File;
@@ -22,60 +23,84 @@ const ImagePreview: React.FC<ImagePreviewProps> = ({
   const [previewSrc, setPreviewSrc] = useState<string>("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
-
-  // Detectar se está no Android/Capacitor
-  const isAndroidCapacitor = () => {
-    return !!(window as any).Capacitor && 
-           !!(window as any).Capacitor.getPlatform && 
-           (window as any).Capacitor.getPlatform() === 'android';
-  };
+  const { isAndroid, isCapacitor } = usePlatform();
+  const fileReaderRef = useRef<FileReader | null>(null);
+  const objectUrlRef = useRef<string | null>(null);
 
   useEffect(() => {
-    let objectUrl: string | null = null;
+    let isMounted = true;
 
     const loadPreview = async () => {
+      if (!isMounted) return;
+      
       setLoading(true);
       setError(false);
 
       try {
         if (url) {
           // Para URLs já existentes (imagens já enviadas)
-          const finalUrl = isAndroidCapacitor() 
-            ? `${url}${url.includes('?') ? '&' : '?'}t=${Date.now()}`
-            : url;
-          setPreviewSrc(finalUrl);
+          let finalUrl = url;
+          
+          if (isAndroid && isCapacitor) {
+            // No Android, adicionar timestamp para forçar reload
+            finalUrl = `${url}${url.includes('?') ? '&' : '?'}t=${Date.now()}&android=1`;
+          }
+          
+          if (isMounted) {
+            setPreviewSrc(finalUrl);
+            setLoading(false);
+          }
         } else if (file) {
           // Para arquivos locais (preview antes do upload)
-          if (isAndroidCapacitor()) {
-            // No Android, usar FileReader para melhor compatibilidade
+          if (isAndroid && isCapacitor) {
+            // No Android, usar FileReader
             const reader = new FileReader();
+            fileReaderRef.current = reader;
+            
             reader.onload = (e) => {
-              const result = e.target?.result as string;
-              if (result) {
-                setPreviewSrc(result);
+              if (isMounted && e.target?.result) {
+                setPreviewSrc(e.target.result as string);
                 setLoading(false);
-              } else {
+              }
+            };
+            
+            reader.onerror = () => {
+              if (isMounted) {
                 setError(true);
                 setLoading(false);
               }
             };
-            reader.onerror = () => {
-              setError(true);
-              setLoading(false);
-            };
+            
             reader.readAsDataURL(file);
-            return; // Não continuar com URL.createObjectURL
           } else {
             // Na web, usar URL.createObjectURL
-            objectUrl = URL.createObjectURL(file);
-            setPreviewSrc(objectUrl);
+            try {
+              const objectUrl = URL.createObjectURL(file);
+              objectUrlRef.current = objectUrl;
+              
+              if (isMounted) {
+                setPreviewSrc(objectUrl);
+                setLoading(false);
+              }
+            } catch (err) {
+              console.error("Erro ao criar object URL:", err);
+              if (isMounted) {
+                setError(true);
+                setLoading(false);
+              }
+            }
+          }
+        } else {
+          if (isMounted) {
+            setLoading(false);
           }
         }
-        setLoading(false);
       } catch (err) {
         console.error("Erro ao carregar preview:", err);
-        setError(true);
-        setLoading(false);
+        if (isMounted) {
+          setError(true);
+          setLoading(false);
+        }
       }
     };
 
@@ -83,18 +108,29 @@ const ImagePreview: React.FC<ImagePreviewProps> = ({
 
     // Cleanup
     return () => {
-      if (objectUrl) {
-        URL.revokeObjectURL(objectUrl);
+      isMounted = false;
+      
+      // Cleanup FileReader
+      if (fileReaderRef.current) {
+        fileReaderRef.current.abort();
+        fileReaderRef.current = null;
+      }
+      
+      // Cleanup object URL
+      if (objectUrlRef.current) {
+        URL.revokeObjectURL(objectUrlRef.current);
+        objectUrlRef.current = null;
       }
     };
-  }, [file, url]);
+  }, [file, url, isAndroid, isCapacitor]);
 
   const handleImageLoad = () => {
     setLoading(false);
     setError(false);
   };
 
-  const handleImageError = () => {
+  const handleImageError = (e: React.SyntheticEvent<HTMLImageElement>) => {
+    console.error("Erro ao carregar imagem:", e);
     setError(true);
     setLoading(false);
   };
@@ -103,15 +139,21 @@ const ImagePreview: React.FC<ImagePreviewProps> = ({
     <div className={`relative ${className} border border-gray-200 rounded-lg overflow-hidden bg-gray-50`}>
       {/* Loading State */}
       {loading && (
-        <div className="absolute inset-0 flex items-center justify-center bg-gray-100">
-          <div className="text-xs text-gray-500">Carregando...</div>
+        <div className="absolute inset-0 flex items-center justify-center bg-gray-100 z-10">
+          <div className="flex flex-col items-center space-y-2">
+            <div className="w-6 h-6 border-2 border-iparty border-t-transparent rounded-full animate-spin"></div>
+            <div className="text-xs text-gray-500">Carregando...</div>
+          </div>
         </div>
       )}
 
       {/* Error State */}
       {error && !loading && (
-        <div className="absolute inset-0 flex items-center justify-center bg-gray-100">
-          <div className="text-xs text-red-500">Erro ao carregar</div>
+        <div className="absolute inset-0 flex items-center justify-center bg-gray-100 z-10">
+          <div className="flex flex-col items-center space-y-2">
+            <div className="text-red-500">⚠️</div>
+            <div className="text-xs text-red-500 text-center">Erro ao carregar</div>
+          </div>
         </div>
       )}
 
@@ -125,27 +167,38 @@ const ImagePreview: React.FC<ImagePreviewProps> = ({
           }`}
           onLoad={handleImageLoad}
           onError={handleImageError}
-          loading="eager"
-          decoding="sync"
           style={{
+            // Forçar renderização no Android
             WebkitBackfaceVisibility: 'hidden',
             backfaceVisibility: 'hidden',
             WebkitTransform: 'translate3d(0,0,0)',
             transform: 'translate3d(0,0,0)',
+            // Evitar cache no Android
+            ...(isAndroid && isCapacitor ? {
+              WebkitUserSelect: 'none',
+              userSelect: 'none',
+              pointerEvents: 'none'
+            } : {})
           }}
+          crossOrigin="anonymous"
+          loading="eager"
+          decoding="async"
         />
       )}
 
       {/* Upload overlay */}
       {isUploading && (
-        <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
-          <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+        <div className="absolute inset-0 bg-black/50 flex items-center justify-center z-20">
+          <div className="flex flex-col items-center space-y-2">
+            <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+            <div className="text-xs text-white">Enviando...</div>
+          </div>
         </div>
       )}
 
       {/* Status indicator */}
       {!isUploading && file && !url && (
-        <div className="absolute bottom-2 left-2 bg-orange-500 text-white text-xs px-2 py-1 rounded">
+        <div className="absolute bottom-2 left-2 bg-orange-500 text-white text-xs px-2 py-1 rounded z-15">
           Aguardando
         </div>
       )}
@@ -154,7 +207,7 @@ const ImagePreview: React.FC<ImagePreviewProps> = ({
       <button
         type="button"
         onClick={onRemove}
-        className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1.5 hover:bg-red-600 transition-colors z-10"
+        className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1.5 hover:bg-red-600 transition-colors z-30"
         disabled={isUploading}
       >
         <X size={16} />
