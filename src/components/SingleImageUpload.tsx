@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { X, Images, Upload } from "lucide-react";
 import { toast } from "sonner";
@@ -46,14 +47,50 @@ const SingleImageUpload: React.FC<SingleImageUploadProps> = ({
            (window as any).Capacitor.getPlatform() === 'android';
   };
 
-  // Cleanup function for local previews
+  // Função para criar preview local mais robusta
+  const createLocalPreview = (file: File): string => {
+    try {
+      console.log("🖼️ UPLOAD: Criando preview para arquivo:", file.name);
+      
+      if (isAndroidCapacitor()) {
+        // Para Android, usar FileReader como fallback
+        return new Promise<string>((resolve) => {
+          const reader = new FileReader();
+          reader.onload = (e) => {
+            const result = e.target?.result as string;
+            console.log("📱 UPLOAD: Preview criado via FileReader");
+            resolve(result);
+          };
+          reader.onerror = () => {
+            console.warn("📱 UPLOAD: Erro no FileReader, usando URL.createObjectURL");
+            try {
+              const url = URL.createObjectURL(file);
+              resolve(url);
+            } catch (urlError) {
+              console.error("📱 UPLOAD: Erro ao criar URL:", urlError);
+              resolve("");
+            }
+          };
+          reader.readAsDataURL(file);
+        }) as any; // Cast para string temporariamente
+      } else {
+        return URL.createObjectURL(file);
+      }
+    } catch (error) {
+      console.error("❌ UPLOAD: Erro ao criar preview:", error);
+      return "";
+    }
+  };
+
+  // Cleanup melhorado para previews locais
   const cleanupLocalPreviews = (previews: LocalPreview[]) => {
     previews.forEach(preview => {
       if (preview.previewUrl && preview.previewUrl.startsWith('blob:')) {
         try {
           URL.revokeObjectURL(preview.previewUrl);
+          console.log("🧹 UPLOAD: Preview limpo:", preview.id);
         } catch (error) {
-          console.warn("Erro ao limpar URL do objeto:", error);
+          console.warn("⚠️ UPLOAD: Erro ao limpar preview:", error);
         }
       }
     });
@@ -68,7 +105,7 @@ const SingleImageUpload: React.FC<SingleImageUploadProps> = ({
         fileType: file.type,
       };
       
-      console.log(`Comprimindo imagem: ${file.name} (${(file.size / 1024 / 1024).toFixed(2)}MB)`);
+      console.log(`📦 UPLOAD: Comprimindo ${file.name} (${(file.size / 1024 / 1024).toFixed(2)}MB)`);
       
       const compressedFile = await imageCompression(file, options);
       
@@ -77,64 +114,77 @@ const SingleImageUpload: React.FC<SingleImageUploadProps> = ({
         lastModified: new Date().getTime(),
       });
       
-      console.log(`Imagem comprimida: ${file.name} (${(resultFile.size / 1024 / 1024).toFixed(2)}MB)`);
+      console.log(`✅ UPLOAD: Compressão concluída (${(resultFile.size / 1024 / 1024).toFixed(2)}MB)`);
       
       return resultFile;
     } catch (error) {
-      console.error("Erro ao comprimir imagem:", error);
-      toast.error(`Erro ao comprimir a imagem ${file.name}`);
+      console.error("❌ UPLOAD: Erro na compressão:", error);
+      toast.error(`Erro ao comprimir ${file.name}`);
       return file;
     }
   };
 
-  const createLocalPreview = (file: File): string => {
-    try {
-      if (isAndroidCapacitor()) {
-        // Para Android, tentar criar URL com fallback
-        const url = URL.createObjectURL(file);
-        console.log("🖼️ UPLOAD: Preview URL criada para Android:", url);
-        return url;
-      } else {
-        return URL.createObjectURL(file);
-      }
-    } catch (error) {
-      console.error("Erro ao criar preview local:", error);
-      // Fallback: retorna uma string vazia que será tratada no render
-      return "";
-    }
-  };
-
   const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    console.log("🚀 UPLOAD DEBUG: Iniciando upload de arquivos...");
+    console.log("🚀 UPLOAD: Iniciando processamento de arquivos...");
+    
     if (!event.target.files || event.target.files.length === 0) {
-      console.log("❌ UPLOAD DEBUG: Nenhum arquivo selecionado");
+      console.log("❌ UPLOAD: Nenhum arquivo selecionado");
       return;
     }
     
     const files = Array.from(event.target.files);
-    console.log("📁 UPLOAD DEBUG: Arquivos selecionados:", files.length);
+    console.log("📁 UPLOAD: Processando", files.length, "arquivo(s)");
     
     const totalImages = uploadedUrls.length + localPreviews.length + files.length;
     if (totalImages > maxImages) {
-      console.log("❌ UPLOAD DEBUG: Limite de imagens excedido");
-      toast.error(`Você pode enviar no máximo ${maxImages} imagens`);
+      toast.error(`Máximo ${maxImages} imagens permitidas`);
       return;
     }
     
-    console.log("✅ UPLOAD DEBUG: Validações iniciais passaram, criando previews locais...");
-    
     // Criar previews locais imediatamente
-    const newLocalPreviews: LocalPreview[] = files.map(file => ({
-      file: file,
-      previewUrl: createLocalPreview(file),
-      uploading: false,
-      id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
-    }));
+    const newLocalPreviews: LocalPreview[] = [];
+    
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      const previewId = `preview-${Date.now()}-${i}-${Math.random().toString(36).substr(2, 9)}`;
+      
+      try {
+        let previewUrl = "";
+        
+        if (isAndroidCapacitor()) {
+          // Para Android, usar FileReader
+          previewUrl = await new Promise<string>((resolve) => {
+            const reader = new FileReader();
+            reader.onload = (e) => resolve(e.target?.result as string || "");
+            reader.onerror = () => {
+              console.warn("📱 Fallback para URL.createObjectURL");
+              try {
+                resolve(URL.createObjectURL(file));
+              } catch {
+                resolve("");
+              }
+            };
+            reader.readAsDataURL(file);
+          });
+        } else {
+          previewUrl = URL.createObjectURL(file);
+        }
+        
+        newLocalPreviews.push({
+          file,
+          previewUrl,
+          uploading: false,
+          id: previewId
+        });
+        
+        console.log("✅ UPLOAD: Preview criado para", file.name);
+      } catch (error) {
+        console.error("❌ UPLOAD: Erro ao criar preview para", file.name, error);
+      }
+    }
     
     setLocalPreviews(prev => [...prev, ...newLocalPreviews]);
-    
-    // Toast para informar que os previews foram criados
-    toast.success(`${files.length} ${files.length === 1 ? 'imagem selecionada' : 'imagens selecionadas'}. Iniciando upload...`);
+    toast.success(`${files.length} imagem(ns) selecionada(s). Iniciando upload...`);
     
     // Iniciar uploads
     setIsUploading(true);
@@ -144,28 +194,28 @@ const SingleImageUpload: React.FC<SingleImageUploadProps> = ({
       
       for (let i = 0; i < files.length; i++) {
         const file = files[i];
-        const previewId = newLocalPreviews[i].id;
+        const previewId = newLocalPreviews[i]?.id;
         
-        // Marcar como uploading
-        setLocalPreviews(prev => 
-          prev.map(preview => 
-            preview.id === previewId ? { ...preview, uploading: true } : preview
-          )
-        );
+        if (previewId) {
+          // Marcar como uploading
+          setLocalPreviews(prev => 
+            prev.map(preview => 
+              preview.id === previewId ? { ...preview, uploading: true } : preview
+            )
+          );
+        }
         
         const fileSizeInMB = file.size / (1024 * 1024);
         
         let fileToUpload = file;
         if (fileSizeInMB > 1.9) {
-          toast.info(`Comprimindo imagem: ${file.name}`);
+          toast.info(`Comprimindo: ${file.name}`);
           fileToUpload = await compressImage(file);
-        } else {
-          console.log(`Imagem já está abaixo do limite: ${file.name} (${fileSizeInMB.toFixed(2)}MB)`);
         }
         
         const finalSizeInMB = fileToUpload.size / (1024 * 1024);
         if (finalSizeInMB > maxSize) {
-          toast.error(`A imagem ${file.name} ainda é muito grande mesmo após compressão. Tamanho máximo: ${maxSize}MB`);
+          toast.error(`${file.name} muito grande (max: ${maxSize}MB)`);
           continue;
         }
         
@@ -173,43 +223,45 @@ const SingleImageUpload: React.FC<SingleImageUploadProps> = ({
         const fileName = `${Math.random().toString(36).substring(2, 15)}.${fileExt}`;
         const filePath = `${uploadPath}/${fileName}`;
         
-        console.log(`📤 Fazendo upload para bucket 'spaces' com caminho: ${filePath}`);
+        console.log(`📤 UPLOAD: Enviando para ${filePath}`);
         
         const { data, error } = await supabase.storage
           .from('spaces')
           .upload(filePath, fileToUpload);
         
         if (error) {
-          console.error("❌ Erro no upload:", error);
-          toast.error(`Erro ao enviar imagem ${fileToUpload.name}: ${error.message}`);
+          console.error("❌ UPLOAD: Erro:", error);
+          toast.error(`Erro ao enviar ${fileToUpload.name}`);
           continue;
         }
         
-        console.log(`✅ Upload realizado com sucesso:`, data);
-        
-        // Obter a URL pública
+        // Obter URL pública com cache busting
         const { data: publicURLData } = supabase.storage
           .from('spaces')
           .getPublicUrl(filePath);
         
-        console.log(`🔗 URL pública criada:`, publicURLData.publicUrl);
-        newUrls.push(publicURLData.publicUrl);
+        const finalUrl = isAndroidCapacitor() 
+          ? `${publicURLData.publicUrl}?t=${Date.now()}`
+          : publicURLData.publicUrl;
+        
+        console.log("✅ UPLOAD: URL criada:", finalUrl);
+        newUrls.push(finalUrl);
       }
       
       if (newUrls.length > 0) {
         const allUploadedUrls = [...uploadedUrls, ...newUrls];
         setUploadedUrls(allUploadedUrls);
         onImageChange(allUploadedUrls);
-        toast.success(`${newUrls.length} ${newUrls.length === 1 ? 'imagem enviada' : 'imagens enviadas'} com sucesso!`);
+        toast.success(`${newUrls.length} imagem(ns) enviada(s)!`);
       }
       
-      // Limpar previews locais após upload bem-sucedido
+      // Limpar previews locais
       cleanupLocalPreviews(localPreviews);
       setLocalPreviews([]);
       
     } catch (error) {
-      console.error("💥 Erro geral no upload:", error);
-      toast.error("Erro ao enviar as imagens. Tente novamente.");
+      console.error("💥 UPLOAD: Erro geral:", error);
+      toast.error("Erro no upload. Tente novamente.");
     } finally {
       setIsUploading(false);
       if (event.target) {
@@ -231,7 +283,7 @@ const SingleImageUpload: React.FC<SingleImageUploadProps> = ({
       try {
         URL.revokeObjectURL(previewToRemove.previewUrl);
       } catch (error) {
-        console.warn("Erro ao limpar URL do objeto:", error);
+        console.warn("⚠️ UPLOAD: Erro ao limpar URL:", error);
       }
     }
     
@@ -248,37 +300,46 @@ const SingleImageUpload: React.FC<SingleImageUploadProps> = ({
         <div className="space-y-4">
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 w-full">
             {/* Imagens já enviadas */}
-            {uploadedUrls.map((url, index) => (
-              <div 
-                key={`uploaded-${index}-${Date.now()}`} 
-                className="relative aspect-square border border-gray-200 rounded-lg overflow-hidden"
-              >
-                <img
-                  src={`${url}?t=${Date.now()}`}
-                  alt={`Enviada ${index + 1}`}
-                  className="w-full h-full object-cover"
-                  loading="lazy"
-                  decoding="async"
-                  style={{
-                    WebkitTransform: 'translateZ(0)',
-                    transform: 'translateZ(0)',
-                  }}
-                />
-                <button
-                  type="button"
-                  onClick={() => removeUploadedImage(index)}
-                  className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1.5 hover:bg-red-600 transition-colors"
-                  disabled={isUploading}
+            {uploadedUrls.map((url, index) => {
+              const uniqueKey = `uploaded-${index}-${url.length}-${Date.now()}`;
+              const imageUrl = isAndroidCapacitor() 
+                ? `${url}${url.includes('?') ? '&' : '?'}display=${Date.now()}`
+                : url;
+              
+              return (
+                <div 
+                  key={uniqueKey}
+                  className="relative aspect-square border border-gray-200 rounded-lg overflow-hidden"
                 >
-                  <X size={16} />
-                </button>
-              </div>
-            ))}
+                  <img
+                    src={imageUrl}
+                    alt={`Enviada ${index + 1}`}
+                    className="w-full h-full object-cover"
+                    loading="eager"
+                    decoding="sync"
+                    style={{
+                      WebkitBackfaceVisibility: 'hidden',
+                      backfaceVisibility: 'hidden',
+                      WebkitTransform: 'translate3d(0,0,0)',
+                      transform: 'translate3d(0,0,0)',
+                    }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => removeUploadedImage(index)}
+                    className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1.5 hover:bg-red-600 transition-colors"
+                    disabled={isUploading}
+                  >
+                    <X size={16} />
+                  </button>
+                </div>
+              );
+            })}
             
             {/* Previews locais */}
             {localPreviews.map((preview, index) => (
               <div 
-                key={`local-${preview.id}`} 
+                key={preview.id}
                 className="relative aspect-square border border-gray-200 rounded-lg overflow-hidden"
               >
                 {preview.previewUrl ? (
@@ -287,8 +348,10 @@ const SingleImageUpload: React.FC<SingleImageUploadProps> = ({
                     alt={`Preview ${index + 1}`}
                     className="w-full h-full object-cover"
                     style={{
-                      WebkitTransform: 'translateZ(0)',
-                      transform: 'translateZ(0)',
+                      WebkitBackfaceVisibility: 'hidden',
+                      backfaceVisibility: 'hidden',
+                      WebkitTransform: 'translate3d(0,0,0)',
+                      transform: 'translate3d(0,0,0)',
                     }}
                   />
                 ) : (
@@ -333,9 +396,6 @@ const SingleImageUpload: React.FC<SingleImageUploadProps> = ({
                 <span className="text-xs text-gray-400 text-center mb-1">
                   ({aspectRatio}, max {maxSize}MB)
                 </span>
-                <span className="text-xs text-gray-400 text-center">
-                  Preview instantâneo
-                </span>
                 <input
                   type="file"
                   accept="image/*"
@@ -351,7 +411,7 @@ const SingleImageUpload: React.FC<SingleImageUploadProps> = ({
             {totalImages} de {maxImages} imagens
             {localPreviews.length > 0 && (
               <span className="text-orange-600 ml-2">
-                ({localPreviews.length} aguardando upload)
+                ({localPreviews.length} aguardando)
               </span>
             )}
           </p>
@@ -368,9 +428,6 @@ const SingleImageUpload: React.FC<SingleImageUploadProps> = ({
             </p>
             <p className="text-xs text-gray-400">
               Formatos: JPG, PNG, WebP
-            </p>
-            <p className="text-xs text-gray-400">
-              Preview instantâneo no dispositivo
             </p>
           </div>
           <Button

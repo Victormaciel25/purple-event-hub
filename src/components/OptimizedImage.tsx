@@ -19,104 +19,145 @@ const OptimizedImage: React.FC<OptimizedImageProps> = ({
 }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
-  const [currentSrc, setCurrentSrc] = useState("");
+  const [imageSrc, setImageSrc] = useState("");
   const [retryCount, setRetryCount] = useState(0);
   const imgRef = useRef<HTMLImageElement>(null);
   const maxRetries = 3;
 
-  // Função para detectar se está no ambiente Android/Capacitor
+  // Detectar se está no Android/Capacitor
   const isAndroidCapacitor = () => {
     return !!(window as any).Capacitor && 
            !!(window as any).Capacitor.getPlatform && 
            (window as any).Capacitor.getPlatform() === 'android';
   };
 
-  // Reset completo quando src muda
-  useEffect(() => {
-    console.log("🖼️ OPTIMIZED_IMG: Source changed:", src);
+  // Função para limpar cache da imagem
+  const clearImageCache = () => {
+    if (isAndroidCapacitor()) {
+      try {
+        // Tentar limpar cache específico da imagem
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          ctx.clearRect(0, 0, 1, 1);
+        }
+        
+        // Forçar garbage collection se disponível
+        if ((window as any).gc) {
+          (window as any).gc();
+        }
+      } catch (e) {
+        console.warn("Não foi possível limpar cache:", e);
+      }
+    }
+  };
+
+  // Função para preparar URL da imagem com cache busting
+  const prepareImageUrl = (url: string, forceReload = false) => {
+    if (!url || !url.trim()) return fallbackSrc;
     
-    // Reset completo do estado
+    let finalUrl = url.trim();
+    
+    if (isAndroidCapacitor()) {
+      // Para Android, sempre adicionar parâmetros únicos
+      const separator = finalUrl.includes('?') ? '&' : '?';
+      const timestamp = Date.now();
+      const random = Math.random().toString(36).substring(7);
+      
+      if (forceReload) {
+        finalUrl = `${finalUrl}${separator}force=${timestamp}&r=${random}`;
+      } else {
+        finalUrl = `${finalUrl}${separator}t=${timestamp}`;
+      }
+    }
+    
+    return finalUrl;
+  };
+
+  // Reset e configuração inicial quando src muda
+  useEffect(() => {
+    console.log("🖼️ OPTIMIZED_IMG: Nova fonte detectada:", src);
+    
+    // Reset completo
     setLoading(true);
     setError(false);
     setRetryCount(0);
-    setCurrentSrc("");
+    setImageSrc("");
     
-    // Para Android, adicionar delay antes de definir a nova src
-    const delay = isAndroidCapacitor() ? 50 : 10;
+    // Limpar cache se Android
+    clearImageCache();
     
+    // Configurar nova imagem com delay
     const timer = setTimeout(() => {
-      if (src && src.trim()) {
-        // Para Android, forçar reload adicionando timestamp
-        const finalSrc = isAndroidCapacitor() && !src.includes('?') 
-          ? `${src}?t=${Date.now()}`
-          : src;
-        
-        console.log("🖼️ OPTIMIZED_IMG: Setting source:", finalSrc);
-        setCurrentSrc(finalSrc);
-      } else {
-        console.warn("🖼️ OPTIMIZED_IMG: Empty src, using fallback");
-        setCurrentSrc(fallbackSrc);
-      }
-    }, delay);
+      const newSrc = prepareImageUrl(src);
+      console.log("🖼️ OPTIMIZED_IMG: Configurando nova fonte:", newSrc);
+      setImageSrc(newSrc);
+    }, isAndroidCapacitor() ? 100 : 50);
 
     return () => clearTimeout(timer);
   }, [src, fallbackSrc]);
 
   // Função para forçar reload da imagem
-  const forceReload = () => {
-    if (imgRef.current && currentSrc) {
-      console.log("🔄 OPTIMIZED_IMG: Forcing image reload");
-      
+  const forceImageReload = () => {
+    console.log("🔄 OPTIMIZED_IMG: Forçando reload da imagem");
+    
+    if (imgRef.current) {
       // Remover src temporariamente
       imgRef.current.src = "";
+      imgRef.current.removeAttribute('src');
       
-      // Re-adicionar src após um breve delay
+      // Limpar cache
+      clearImageCache();
+      
+      // Re-adicionar src após delay
       setTimeout(() => {
-        if (imgRef.current) {
-          const reloadSrc = currentSrc.includes('?') 
-            ? `${currentSrc}&reload=${Date.now()}`
-            : `${currentSrc}?reload=${Date.now()}`;
-          
+        if (imgRef.current && imageSrc) {
+          const reloadSrc = prepareImageUrl(imageSrc, true);
+          console.log("🔄 OPTIMIZED_IMG: Definindo nova src:", reloadSrc);
           imgRef.current.src = reloadSrc;
         }
-      }, 100);
+      }, 200);
     }
   };
 
   const handleLoad = () => {
-    console.log("✅ OPTIMIZED_IMG: Image loaded successfully:", currentSrc);
+    console.log("✅ OPTIMIZED_IMG: Imagem carregada com sucesso:", imageSrc);
     setLoading(false);
     setError(false);
   };
 
-  const handleError = () => {
-    console.error("❌ OPTIMIZED_IMG: Image failed to load:", currentSrc);
+  const handleError = (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
+    console.error("❌ OPTIMIZED_IMG: Erro ao carregar imagem:", imageSrc, e);
     
-    if (retryCount < maxRetries) {
-      console.log(`🔄 OPTIMIZED_IMG: Retrying... (${retryCount + 1}/${maxRetries})`);
+    if (retryCount < maxRetries && imageSrc !== fallbackSrc) {
+      console.log(`🔄 OPTIMIZED_IMG: Tentativa ${retryCount + 1}/${maxRetries}`);
       setRetryCount(prev => prev + 1);
       
-      // Delay maior para Android
-      const retryDelay = isAndroidCapacitor() ? 2000 : 1000;
+      // Delay progressivo para tentativas
+      const retryDelay = isAndroidCapacitor() ? (1000 * (retryCount + 1)) : (500 * (retryCount + 1));
       
       setTimeout(() => {
-        forceReload();
+        forceImageReload();
       }, retryDelay);
     } else {
-      console.log("🔄 OPTIMIZED_IMG: Max retries reached, using fallback");
+      console.log("🔄 OPTIMIZED_IMG: Máximo de tentativas atingido, usando fallback");
       setError(true);
       setLoading(false);
-      setCurrentSrc(fallbackSrc);
+      
+      // Definir fallback como src
+      if (imgRef.current && imageSrc !== fallbackSrc) {
+        const fallbackUrl = prepareImageUrl(fallbackSrc);
+        setImageSrc(fallbackUrl);
+        imgRef.current.src = fallbackUrl;
+      }
     }
   };
 
-  // Se não tem src válido, mostrar fallback
-  if (!currentSrc) {
+  // Se não tem src válido, mostrar placeholder
+  if (!imageSrc) {
     return (
-      <div className={`${className} ${loadingClassName}`}>
-        <div className="w-full h-full flex items-center justify-center bg-gray-100">
-          <span className="text-gray-400 text-xs">Carregando...</span>
-        </div>
+      <div className={`${className} ${loadingClassName} flex items-center justify-center bg-gray-100`}>
+        <span className="text-gray-400 text-xs">Carregando...</span>
       </div>
     );
   }
@@ -124,35 +165,46 @@ const OptimizedImage: React.FC<OptimizedImageProps> = ({
   return (
     <div className={`${className} relative overflow-hidden`}>
       {loading && (
-        <div className={`absolute inset-0 ${loadingClassName} flex items-center justify-center`}>
+        <div className={`absolute inset-0 ${loadingClassName} flex items-center justify-center z-10`}>
           <span className="text-gray-400 text-xs">Carregando...</span>
         </div>
       )}
       
       <img
         ref={imgRef}
-        src={currentSrc}
+        src={imageSrc}
         alt={alt}
-        className={`w-full h-full object-cover transition-opacity duration-300 ${
+        className={`w-full h-full object-cover transition-opacity duration-500 ${
           loading ? "opacity-0" : "opacity-100"
         }`}
         onLoad={handleLoad}
         onError={handleError}
-        loading="lazy"
-        decoding="async"
+        loading="eager"
+        decoding="sync"
         crossOrigin="anonymous"
         style={{
-          // Forçar re-renderização no Android
-          WebkitTransform: 'translateZ(0)',
-          transform: 'translateZ(0)',
+          WebkitBackfaceVisibility: 'hidden',
+          backfaceVisibility: 'hidden',
+          WebkitTransform: 'translate3d(0,0,0)',
+          transform: 'translate3d(0,0,0)',
+          WebkitPerspective: '1000px',
+          perspective: '1000px',
+          imageRendering: 'auto',
         }}
         {...rest}
       />
       
       {/* Indicador de retry para debug */}
-      {retryCount > 0 && (
-        <div className="absolute top-1 right-1 bg-orange-500 text-white text-xs px-1 rounded">
-          {retryCount}
+      {retryCount > 0 && !loading && (
+        <div className="absolute top-1 right-1 bg-orange-500 text-white text-xs px-1 rounded z-20">
+          R{retryCount}
+        </div>
+      )}
+      
+      {/* Indicador de erro */}
+      {error && (
+        <div className="absolute bottom-1 left-1 bg-red-500 text-white text-xs px-1 rounded z-20">
+          Erro
         </div>
       )}
     </div>
