@@ -23,7 +23,7 @@ const ImagePreview: React.FC<ImagePreviewProps> = ({
   const [previewSrc, setPreviewSrc] = useState<string>("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
-  const { isAndroid, isCapacitor } = usePlatform();
+  const { isAndroid, isMobileCapacitor } = usePlatform();
   const fileReaderRef = useRef<FileReader | null>(null);
   const objectUrlRef = useRef<string | null>(null);
 
@@ -41,9 +41,10 @@ const ImagePreview: React.FC<ImagePreviewProps> = ({
           // Para URLs já existentes (imagens já enviadas)
           let finalUrl = url;
           
-          if (isAndroid && isCapacitor) {
-            // No Android, adicionar timestamp para forçar reload
-            finalUrl = `${url}${url.includes('?') ? '&' : '?'}t=${Date.now()}&android=1`;
+          // Forçar reload com timestamp em ambientes móveis
+          if (isMobileCapacitor) {
+            const separator = url.includes('?') ? '&' : '?';
+            finalUrl = `${url}${separator}t=${Date.now()}&mobile=1&rnd=${Math.random().toString(36).substr(2, 9)}`;
           }
           
           if (isMounted) {
@@ -52,28 +53,44 @@ const ImagePreview: React.FC<ImagePreviewProps> = ({
           }
         } else if (file) {
           // Para arquivos locais (preview antes do upload)
-          if (isAndroid && isCapacitor) {
-            // No Android, usar FileReader
+          console.log(`🔍 PREVIEW: Carregando preview para ${file.name} - Mobile: ${isMobileCapacitor}, Android: ${isAndroid}`);
+          
+          // Usar FileReader em todos os ambientes móveis (Android e iOS)
+          if (isMobileCapacitor) {
+            console.log('📱 PREVIEW: Usando FileReader para ambiente móvel');
+            
             const reader = new FileReader();
             fileReaderRef.current = reader;
             
             reader.onload = (e) => {
               if (isMounted && e.target?.result) {
-                setPreviewSrc(e.target.result as string);
+                const result = e.target.result as string;
+                console.log('✅ PREVIEW: FileReader concluído, tamanho:', result.length);
+                setPreviewSrc(result);
                 setLoading(false);
               }
             };
             
-            reader.onerror = () => {
+            reader.onerror = (error) => {
+              console.error('❌ PREVIEW: Erro no FileReader:', error);
               if (isMounted) {
                 setError(true);
                 setLoading(false);
               }
             };
             
-            reader.readAsDataURL(file);
+            try {
+              reader.readAsDataURL(file);
+            } catch (error) {
+              console.error('❌ PREVIEW: Erro ao iniciar FileReader:', error);
+              if (isMounted) {
+                setError(true);
+                setLoading(false);
+              }
+            }
           } else {
-            // Na web, usar URL.createObjectURL
+            // Na web desktop, usar URL.createObjectURL
+            console.log('🌐 PREVIEW: Usando createObjectURL para web');
             try {
               const objectUrl = URL.createObjectURL(file);
               objectUrlRef.current = objectUrl;
@@ -83,7 +100,7 @@ const ImagePreview: React.FC<ImagePreviewProps> = ({
                 setLoading(false);
               }
             } catch (err) {
-              console.error("Erro ao criar object URL:", err);
+              console.error("❌ PREVIEW: Erro ao criar object URL:", err);
               if (isMounted) {
                 setError(true);
                 setLoading(false);
@@ -96,7 +113,7 @@ const ImagePreview: React.FC<ImagePreviewProps> = ({
           }
         }
       } catch (err) {
-        console.error("Erro ao carregar preview:", err);
+        console.error("💥 PREVIEW: Erro geral ao carregar preview:", err);
         if (isMounted) {
           setError(true);
           setLoading(false);
@@ -116,21 +133,22 @@ const ImagePreview: React.FC<ImagePreviewProps> = ({
         fileReaderRef.current = null;
       }
       
-      // Cleanup object URL
-      if (objectUrlRef.current) {
+      // Cleanup object URL (apenas se não for móvel)
+      if (objectUrlRef.current && !isMobileCapacitor) {
         URL.revokeObjectURL(objectUrlRef.current);
         objectUrlRef.current = null;
       }
     };
-  }, [file, url, isAndroid, isCapacitor]);
+  }, [file, url, isMobileCapacitor, isAndroid]);
 
   const handleImageLoad = () => {
+    console.log('✅ PREVIEW: Imagem carregada com sucesso');
     setLoading(false);
     setError(false);
   };
 
   const handleImageError = (e: React.SyntheticEvent<HTMLImageElement>) => {
-    console.error("Erro ao carregar imagem:", e);
+    console.error("❌ PREVIEW: Erro ao carregar imagem:", e);
     setError(true);
     setLoading(false);
   };
@@ -153,6 +171,9 @@ const ImagePreview: React.FC<ImagePreviewProps> = ({
           <div className="flex flex-col items-center space-y-2">
             <div className="text-red-500">⚠️</div>
             <div className="text-xs text-red-500 text-center">Erro ao carregar</div>
+            {isMobileCapacitor && (
+              <div className="text-xs text-blue-500 text-center">Modo móvel</div>
+            )}
           </div>
         </div>
       )}
@@ -168,16 +189,18 @@ const ImagePreview: React.FC<ImagePreviewProps> = ({
           onLoad={handleImageLoad}
           onError={handleImageError}
           style={{
-            // Forçar renderização no Android
+            // Otimizações para renderização móvel
             WebkitBackfaceVisibility: 'hidden',
             backfaceVisibility: 'hidden',
             WebkitTransform: 'translate3d(0,0,0)',
             transform: 'translate3d(0,0,0)',
-            // Evitar cache no Android
-            ...(isAndroid && isCapacitor ? {
+            // Propriedades específicas para mobile
+            ...(isMobileCapacitor ? {
               WebkitUserSelect: 'none',
               userSelect: 'none',
-              pointerEvents: 'none'
+              WebkitTouchCallout: 'none',
+              imageRendering: 'auto',
+              WebkitImageOrientation: 'from-image'
             } : {})
           }}
           crossOrigin="anonymous"
@@ -200,6 +223,13 @@ const ImagePreview: React.FC<ImagePreviewProps> = ({
       {!isUploading && file && !url && (
         <div className="absolute bottom-2 left-2 bg-orange-500 text-white text-xs px-2 py-1 rounded z-15">
           Aguardando
+        </div>
+      )}
+
+      {/* Mobile indicator */}
+      {isMobileCapacitor && !isUploading && (
+        <div className="absolute top-2 left-2 bg-blue-500 text-white text-xs px-2 py-1 rounded z-15">
+          📱
         </div>
       )}
 

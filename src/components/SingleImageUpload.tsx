@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Images, Upload } from "lucide-react";
 import { toast } from "sonner";
@@ -39,19 +38,20 @@ const SingleImageUpload: React.FC<SingleImageUploadProps> = ({
 }) => {
   const [uploadedUrls, setUploadedUrls] = useState<string[]>(initialImages);
   const [localPreviews, setLocalPreviews] = useState<LocalPreview[]>([]);
-  const { isAndroid, isCapacitor } = usePlatform();
+  const { isAndroid, isMobileCapacitor } = usePlatform();
   const inputId = `image-upload-${Math.random().toString(36).substring(2, 15)}`;
 
   const compressImage = async (file: File): Promise<File> => {
     try {
       const options = {
-        maxSizeMB: 1.8,
-        maxWidthOrHeight: isAndroid ? 1024 : 1280, // Menor resolução no Android
-        useWebWorker: !isCapacitor, // Não usar web worker no Capacitor
+        maxSizeMB: isMobileCapacitor ? 1.5 : 1.8, // Compressão mais agressiva no mobile
+        maxWidthOrHeight: isMobileCapacitor ? 1024 : 1280,
+        useWebWorker: !isMobileCapacitor, // Não usar web worker no mobile
         fileType: file.type,
+        initialQuality: isMobileCapacitor ? 0.8 : 0.9,
       };
       
-      console.log(`📦 UPLOAD: Comprimindo ${file.name} (${(file.size / 1024 / 1024).toFixed(2)}MB) - Android: ${isAndroid}`);
+      console.log(`📦 UPLOAD: Comprimindo ${file.name} (${(file.size / 1024 / 1024).toFixed(2)}MB) - Mobile: ${isMobileCapacitor}`);
       
       const compressedFile = await imageCompression(file, options);
       
@@ -71,7 +71,7 @@ const SingleImageUpload: React.FC<SingleImageUploadProps> = ({
   };
 
   const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    console.log("🚀 UPLOAD: Iniciando processamento de arquivos... Android:", isAndroid);
+    console.log("🚀 UPLOAD: Iniciando processamento de arquivos... Mobile:", isMobileCapacitor, "Android:", isAndroid);
     
     if (!event.target.files || event.target.files.length === 0) {
       console.log("❌ UPLOAD: Nenhum arquivo selecionado");
@@ -95,12 +95,13 @@ const SingleImageUpload: React.FC<SingleImageUploadProps> = ({
       uploading: false,
     }));
     
+    console.log("🖼️ UPLOAD: Criando previews locais:", newLocalPreviews.map(p => p.id));
     setLocalPreviews(prev => [...prev, ...newLocalPreviews]);
     
     // Dar um tempo para o preview aparecer antes de começar o upload
     setTimeout(() => {
       toast.success(`${files.length} imagem(ns) selecionada(s). Iniciando upload...`);
-    }, 100);
+    }, 200);
     
     // Iniciar uploads
     setIsUploading(true);
@@ -111,6 +112,8 @@ const SingleImageUpload: React.FC<SingleImageUploadProps> = ({
       for (let i = 0; i < files.length; i++) {
         const file = files[i];
         const previewId = newLocalPreviews[i]?.id;
+        
+        console.log(`📤 UPLOAD: Processando arquivo ${i + 1}/${files.length}: ${file.name}`);
         
         if (previewId) {
           // Marcar como uploading
@@ -124,7 +127,7 @@ const SingleImageUpload: React.FC<SingleImageUploadProps> = ({
         const fileSizeInMB = file.size / (1024 * 1024);
         
         let fileToUpload = file;
-        if (fileSizeInMB > 1.5) { // Comprimir mais cedo no Android
+        if (fileSizeInMB > (isMobileCapacitor ? 1.2 : 1.5)) {
           toast.info(`Comprimindo: ${file.name}`);
           fileToUpload = await compressImage(file);
         }
@@ -161,9 +164,9 @@ const SingleImageUpload: React.FC<SingleImageUploadProps> = ({
         
         let finalUrl = publicURLData.publicUrl;
         
-        // No Android, adicionar parâmetros para evitar cache
-        if (isAndroid && isCapacitor) {
-          finalUrl = `${finalUrl}?t=${timestamp}&v=${Math.random().toString(36).substr(2, 9)}`;
+        // Em ambientes móveis, adicionar parâmetros para evitar cache
+        if (isMobileCapacitor) {
+          finalUrl = `${finalUrl}?t=${timestamp}&mobile=1&v=${Math.random().toString(36).substr(2, 9)}`;
         }
         
         console.log("✅ UPLOAD: URL criada:", finalUrl);
@@ -214,7 +217,7 @@ const SingleImageUpload: React.FC<SingleImageUploadProps> = ({
             {/* Imagens já enviadas */}
             {uploadedUrls.map((url, index) => (
               <ImagePreview
-                key={`uploaded-${index}-${url.split('?')[0]}`} // Use URL base como key
+                key={`uploaded-${index}-${url.split('?')[0]}`}
                 url={url}
                 alt={`Enviada ${index + 1}`}
                 onRemove={() => removeUploadedImage(index)}
@@ -262,6 +265,11 @@ const SingleImageUpload: React.FC<SingleImageUploadProps> = ({
                 ({localPreviews.length} aguardando)
               </span>
             )}
+            {isMobileCapacitor && (
+              <span className="text-blue-600 ml-2">
+                📱 Modo móvel
+              </span>
+            )}
           </p>
         </div>
       ) : (
@@ -277,9 +285,9 @@ const SingleImageUpload: React.FC<SingleImageUploadProps> = ({
             <p className="text-xs text-gray-400">
               Formatos: JPG, PNG, WebP
             </p>
-            {isAndroid && (
+            {isMobileCapacitor && (
               <p className="text-xs text-blue-500">
-                Modo Android detectado
+                📱 Modo móvel detectado
               </p>
             )}
           </div>
