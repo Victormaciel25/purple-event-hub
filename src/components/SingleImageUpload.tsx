@@ -1,10 +1,11 @@
 
 import React, { useState } from "react";
-import { X, Images, Upload } from "lucide-react";
+import { Images, Upload } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import imageCompression from "browser-image-compression";
 import { Button } from "@/components/ui/button";
+import ImagePreview from "./ImagePreview";
 
 interface SingleImageUploadProps {
   onImageChange: (urls: string[]) => void;
@@ -19,10 +20,9 @@ interface SingleImageUploadProps {
 }
 
 interface LocalPreview {
-  file: File;
-  previewUrl: string;
-  uploading: boolean;
   id: string;
+  file: File;
+  uploading: boolean;
 }
 
 const SingleImageUpload: React.FC<SingleImageUploadProps> = ({
@@ -39,62 +39,6 @@ const SingleImageUpload: React.FC<SingleImageUploadProps> = ({
   const [uploadedUrls, setUploadedUrls] = useState<string[]>(initialImages);
   const [localPreviews, setLocalPreviews] = useState<LocalPreview[]>([]);
   const inputId = `image-upload-${Math.random().toString(36).substring(2, 15)}`;
-
-  // Detectar se está no Android/Capacitor
-  const isAndroidCapacitor = () => {
-    return !!(window as any).Capacitor && 
-           !!(window as any).Capacitor.getPlatform && 
-           (window as any).Capacitor.getPlatform() === 'android';
-  };
-
-  // Função para criar preview local mais robusta
-  const createLocalPreview = (file: File): string => {
-    try {
-      console.log("🖼️ UPLOAD: Criando preview para arquivo:", file.name);
-      
-      if (isAndroidCapacitor()) {
-        // Para Android, usar FileReader como fallback
-        return new Promise<string>((resolve) => {
-          const reader = new FileReader();
-          reader.onload = (e) => {
-            const result = e.target?.result as string;
-            console.log("📱 UPLOAD: Preview criado via FileReader");
-            resolve(result);
-          };
-          reader.onerror = () => {
-            console.warn("📱 UPLOAD: Erro no FileReader, usando URL.createObjectURL");
-            try {
-              const url = URL.createObjectURL(file);
-              resolve(url);
-            } catch (urlError) {
-              console.error("📱 UPLOAD: Erro ao criar URL:", urlError);
-              resolve("");
-            }
-          };
-          reader.readAsDataURL(file);
-        }) as any; // Cast para string temporariamente
-      } else {
-        return URL.createObjectURL(file);
-      }
-    } catch (error) {
-      console.error("❌ UPLOAD: Erro ao criar preview:", error);
-      return "";
-    }
-  };
-
-  // Cleanup melhorado para previews locais
-  const cleanupLocalPreviews = (previews: LocalPreview[]) => {
-    previews.forEach(preview => {
-      if (preview.previewUrl && preview.previewUrl.startsWith('blob:')) {
-        try {
-          URL.revokeObjectURL(preview.previewUrl);
-          console.log("🧹 UPLOAD: Preview limpo:", preview.id);
-        } catch (error) {
-          console.warn("⚠️ UPLOAD: Erro ao limpar preview:", error);
-        }
-      }
-    });
-  };
 
   const compressImage = async (file: File): Promise<File> => {
     try {
@@ -142,46 +86,11 @@ const SingleImageUpload: React.FC<SingleImageUploadProps> = ({
     }
     
     // Criar previews locais imediatamente
-    const newLocalPreviews: LocalPreview[] = [];
-    
-    for (let i = 0; i < files.length; i++) {
-      const file = files[i];
-      const previewId = `preview-${Date.now()}-${i}-${Math.random().toString(36).substr(2, 9)}`;
-      
-      try {
-        let previewUrl = "";
-        
-        if (isAndroidCapacitor()) {
-          // Para Android, usar FileReader
-          previewUrl = await new Promise<string>((resolve) => {
-            const reader = new FileReader();
-            reader.onload = (e) => resolve(e.target?.result as string || "");
-            reader.onerror = () => {
-              console.warn("📱 Fallback para URL.createObjectURL");
-              try {
-                resolve(URL.createObjectURL(file));
-              } catch {
-                resolve("");
-              }
-            };
-            reader.readAsDataURL(file);
-          });
-        } else {
-          previewUrl = URL.createObjectURL(file);
-        }
-        
-        newLocalPreviews.push({
-          file,
-          previewUrl,
-          uploading: false,
-          id: previewId
-        });
-        
-        console.log("✅ UPLOAD: Preview criado para", file.name);
-      } catch (error) {
-        console.error("❌ UPLOAD: Erro ao criar preview para", file.name, error);
-      }
-    }
+    const newLocalPreviews: LocalPreview[] = files.map((file, index) => ({
+      id: `preview-${Date.now()}-${index}-${Math.random().toString(36).substr(2, 9)}`,
+      file,
+      uploading: false,
+    }));
     
     setLocalPreviews(prev => [...prev, ...newLocalPreviews]);
     toast.success(`${files.length} imagem(ns) selecionada(s). Iniciando upload...`);
@@ -235,17 +144,13 @@ const SingleImageUpload: React.FC<SingleImageUploadProps> = ({
           continue;
         }
         
-        // Obter URL pública com cache busting
+        // Obter URL pública
         const { data: publicURLData } = supabase.storage
           .from('spaces')
           .getPublicUrl(filePath);
         
-        const finalUrl = isAndroidCapacitor() 
-          ? `${publicURLData.publicUrl}?t=${Date.now()}`
-          : publicURLData.publicUrl;
-        
-        console.log("✅ UPLOAD: URL criada:", finalUrl);
-        newUrls.push(finalUrl);
+        console.log("✅ UPLOAD: URL criada:", publicURLData.publicUrl);
+        newUrls.push(publicURLData.publicUrl);
       }
       
       if (newUrls.length > 0) {
@@ -256,7 +161,6 @@ const SingleImageUpload: React.FC<SingleImageUploadProps> = ({
       }
       
       // Limpar previews locais
-      cleanupLocalPreviews(localPreviews);
       setLocalPreviews([]);
       
     } catch (error) {
@@ -278,15 +182,6 @@ const SingleImageUpload: React.FC<SingleImageUploadProps> = ({
   };
 
   const removeLocalPreview = (index: number) => {
-    const previewToRemove = localPreviews[index];
-    if (previewToRemove && previewToRemove.previewUrl.startsWith('blob:')) {
-      try {
-        URL.revokeObjectURL(previewToRemove.previewUrl);
-      } catch (error) {
-        console.warn("⚠️ UPLOAD: Erro ao limpar URL:", error);
-      }
-    }
-    
     const newLocalPreviews = [...localPreviews];
     newLocalPreviews.splice(index, 1);
     setLocalPreviews(newLocalPreviews);
@@ -300,90 +195,26 @@ const SingleImageUpload: React.FC<SingleImageUploadProps> = ({
         <div className="space-y-4">
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 w-full">
             {/* Imagens já enviadas */}
-            {uploadedUrls.map((url, index) => {
-              const uniqueKey = `uploaded-${index}-${url.length}-${Date.now()}`;
-              const imageUrl = isAndroidCapacitor() 
-                ? `${url}${url.includes('?') ? '&' : '?'}display=${Date.now()}`
-                : url;
-              
-              return (
-                <div 
-                  key={uniqueKey}
-                  className="relative aspect-square border border-gray-200 rounded-lg overflow-hidden"
-                >
-                  <img
-                    src={imageUrl}
-                    alt={`Enviada ${index + 1}`}
-                    className="w-full h-full object-cover"
-                    loading="eager"
-                    decoding="sync"
-                    style={{
-                      WebkitBackfaceVisibility: 'hidden',
-                      backfaceVisibility: 'hidden',
-                      WebkitTransform: 'translate3d(0,0,0)',
-                      transform: 'translate3d(0,0,0)',
-                    }}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => removeUploadedImage(index)}
-                    className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1.5 hover:bg-red-600 transition-colors"
-                    disabled={isUploading}
-                  >
-                    <X size={16} />
-                  </button>
-                </div>
-              );
-            })}
+            {uploadedUrls.map((url, index) => (
+              <ImagePreview
+                key={`uploaded-${index}-${url}`}
+                url={url}
+                alt={`Enviada ${index + 1}`}
+                onRemove={() => removeUploadedImage(index)}
+                className="aspect-square"
+              />
+            ))}
             
             {/* Previews locais */}
             {localPreviews.map((preview, index) => (
-              <div 
+              <ImagePreview
                 key={preview.id}
-                className="relative aspect-square border border-gray-200 rounded-lg overflow-hidden"
-              >
-                {preview.previewUrl ? (
-                  <img
-                    src={preview.previewUrl}
-                    alt={`Preview ${index + 1}`}
-                    className="w-full h-full object-cover"
-                    style={{
-                      WebkitBackfaceVisibility: 'hidden',
-                      backfaceVisibility: 'hidden',
-                      WebkitTransform: 'translate3d(0,0,0)',
-                      transform: 'translate3d(0,0,0)',
-                    }}
-                  />
-                ) : (
-                  <div className="w-full h-full bg-gray-100 flex items-center justify-center">
-                    <Images size={24} className="text-gray-400" />
-                  </div>
-                )}
-                
-                {/* Overlay de loading */}
-                {preview.uploading && (
-                  <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
-                    <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                  </div>
-                )}
-                
-                {/* Botão de remover */}
-                <button
-                  type="button"
-                  onClick={() => removeLocalPreview(index)}
-                  className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1.5 hover:bg-red-600 transition-colors"
-                  disabled={preview.uploading}
-                >
-                  <X size={16} />
-                </button>
-                
-                {/* Indicador de status */}
-                {!preview.uploading && (
-                  <div className="absolute bottom-2 left-2 bg-orange-500 text-white text-xs px-2 py-1 rounded">
-                    Aguardando
-                  </div>
-                )}
-              </div>
+                file={preview.file}
+                alt={`Preview ${index + 1}`}
+                onRemove={() => removeLocalPreview(index)}
+                isUploading={preview.uploading}
+                className="aspect-square"
+              />
             ))}
             
             {/* Botão para adicionar mais imagens */}
