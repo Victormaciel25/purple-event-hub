@@ -59,47 +59,39 @@ const SingleImageUpload: React.FC<SingleImageUploadProps> = ({
         lastModified: Date.now(),
       });
       
-      console.log(`✅ UPLOAD: Compressão concluída (${(resultFile.size / 1024 / 1024).toFixed(2)}MB)`);
+      console.log(`✅ UPLOAD: Compressão concluída`);
       
       return resultFile;
     } catch (error) {
       console.error("❌ UPLOAD: Erro na compressão:", error);
-      toast.error(`Erro ao comprimir ${file.name}`);
       return file;
     }
   };
 
   const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    console.log("🚀 UPLOAD: Iniciando processamento de arquivos");
+    console.log("🚀 UPLOAD: Processando arquivos");
     
-    if (!event.target.files || event.target.files.length === 0) {
-      return;
-    }
+    if (!event.target.files?.length) return;
     
     const files = Array.from(event.target.files);
-    console.log("📁 UPLOAD: Arquivos selecionados:", files.length);
-    
     const totalImages = uploadedUrls.length + localPreviews.length + files.length;
+    
     if (totalImages > maxImages) {
       toast.error(`Máximo ${maxImages} imagens permitidas`);
       return;
     }
     
-    // Criar previews locais imediatamente
-    const timestamp = Date.now();
+    // Criar previews locais
     const newLocalPreviews: LocalPreview[] = files.map((file, index) => ({
-      id: `local-${timestamp}-${index}-${Math.random().toString(36).substr(2, 9)}`,
+      id: `local-${Date.now()}-${index}`,
       file,
       uploading: false,
     }));
     
-    console.log("🖼️ UPLOAD: Criando previews locais:", newLocalPreviews.length);
     setLocalPreviews(prev => [...prev, ...newLocalPreviews]);
-    
-    // Feedback imediato
     toast.success(`${files.length} imagem(ns) selecionada(s)`);
     
-    // Iniciar uploads em background
+    // Upload em background
     setIsUploading(true);
     
     try {
@@ -109,49 +101,35 @@ const SingleImageUpload: React.FC<SingleImageUploadProps> = ({
         const file = files[i];
         const previewId = newLocalPreviews[i]?.id;
         
-        console.log(`📤 UPLOAD: Processando ${i + 1}/${files.length}: ${file.name}`);
-        
         // Marcar como uploading
         if (previewId) {
           setLocalPreviews(prev => 
-            prev.map(preview => 
-              preview.id === previewId ? { ...preview, uploading: true } : preview
-            )
+            prev.map(p => p.id === previewId ? { ...p, uploading: true } : p)
           );
         }
         
         // Comprimir se necessário
         let fileToUpload = file;
-        const fileSizeInMB = file.size / (1024 * 1024);
-        
-        if (fileSizeInMB > 1.0) {
-          toast.info(`Comprimindo: ${file.name}`);
+        if (file.size > 1024 * 1024) { // > 1MB
           fileToUpload = await compressImage(file);
         }
         
-        const finalSizeInMB = fileToUpload.size / (1024 * 1024);
-        if (finalSizeInMB > maxSize) {
-          toast.error(`${file.name} muito grande (max: ${maxSize}MB)`);
+        if (fileToUpload.size > maxSize * 1024 * 1024) {
+          toast.error(`${file.name} muito grande`);
           continue;
         }
         
-        // Upload para Supabase
+        // Upload
         const fileExt = fileToUpload.name.split('.').pop();
-        const fileName = `${timestamp}-${Math.random().toString(36).substring(2, 15)}.${fileExt}`;
+        const fileName = `${Date.now()}-${Math.random().toString(36)}.${fileExt}`;
         const filePath = `${uploadPath}/${fileName}`;
         
-        console.log(`📤 UPLOAD: Enviando para ${filePath}`);
-        
-        const { data, error } = await supabase.storage
+        const { error } = await supabase.storage
           .from('spaces')
-          .upload(filePath, fileToUpload, {
-            cacheControl: '3600',
-            upsert: false
-          });
+          .upload(filePath, fileToUpload);
         
         if (error) {
-          console.error("❌ UPLOAD: Erro no upload:", error);
-          toast.error(`Erro ao enviar ${fileToUpload.name}`);
+          console.error("❌ UPLOAD: Erro:", error);
           continue;
         }
         
@@ -159,44 +137,38 @@ const SingleImageUpload: React.FC<SingleImageUploadProps> = ({
           .from('spaces')
           .getPublicUrl(filePath);
         
-        const finalUrl = publicURLData.publicUrl;
-        
-        console.log("✅ UPLOAD: URL criada:", finalUrl);
-        newUrls.push(finalUrl);
+        newUrls.push(publicURLData.publicUrl);
       }
       
       if (newUrls.length > 0) {
-        const allUploadedUrls = [...uploadedUrls, ...newUrls];
-        setUploadedUrls(allUploadedUrls);
-        onImageChange(allUploadedUrls);
+        const allUrls = [...uploadedUrls, ...newUrls];
+        setUploadedUrls(allUrls);
+        onImageChange(allUrls);
         toast.success(`${newUrls.length} imagem(ns) enviada(s)!`);
       }
       
-      // Limpar previews locais
       setLocalPreviews([]);
       
     } catch (error) {
-      console.error("💥 UPLOAD: Erro geral:", error);
-      toast.error("Erro no upload. Tente novamente.");
+      console.error("💥 UPLOAD: Erro:", error);
+      toast.error("Erro no upload");
     } finally {
       setIsUploading(false);
-      if (event.target) {
-        event.target.value = '';
-      }
+      if (event.target) event.target.value = '';
     }
   };
 
   const removeUploadedImage = (index: number) => {
-    const newUploadedUrls = [...uploadedUrls];
-    newUploadedUrls.splice(index, 1);
-    setUploadedUrls(newUploadedUrls);
-    onImageChange(newUploadedUrls);
+    const newUrls = [...uploadedUrls];
+    newUrls.splice(index, 1);
+    setUploadedUrls(newUrls);
+    onImageChange(newUrls);
   };
 
   const removeLocalPreview = (index: number) => {
-    const newLocalPreviews = [...localPreviews];
-    newLocalPreviews.splice(index, 1);
-    setLocalPreviews(newLocalPreviews);
+    const newPreviews = [...localPreviews];
+    newPreviews.splice(index, 1);
+    setLocalPreviews(newPreviews);
   };
 
   const totalImages = uploadedUrls.length + localPreviews.length;
@@ -205,11 +177,11 @@ const SingleImageUpload: React.FC<SingleImageUploadProps> = ({
     <div className={className}>
       {totalImages > 0 ? (
         <div className="space-y-4">
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 w-full">
-            {/* Imagens já enviadas */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+            {/* Imagens enviadas */}
             {uploadedUrls.map((url, index) => (
               <ImagePreview
-                key={`uploaded-${index}-${url.split('?')[0]}`}
+                key={`uploaded-${index}`}
                 url={url}
                 alt={`Enviada ${index + 1}`}
                 onRemove={() => removeUploadedImage(index)}
@@ -229,15 +201,12 @@ const SingleImageUpload: React.FC<SingleImageUploadProps> = ({
               />
             ))}
             
-            {/* Botão para adicionar mais */}
+            {/* Botão adicionar */}
             {totalImages < maxImages && (
               <label className="cursor-pointer border-2 border-dashed border-gray-300 rounded-lg flex flex-col items-center justify-center aspect-square p-4 hover:border-iparty transition-colors">
                 <Images size={32} className="text-gray-300 mb-2" />
-                <span className="text-sm text-gray-500 text-center mb-2">
+                <span className="text-sm text-gray-500 text-center">
                   {isUploading ? "Enviando..." : "Adicionar"}
-                </span>
-                <span className="text-xs text-gray-400 text-center">
-                  ({aspectRatio}, max {maxSize}MB)
                 </span>
                 <input
                   type="file"
@@ -250,13 +219,9 @@ const SingleImageUpload: React.FC<SingleImageUploadProps> = ({
               </label>
             )}
           </div>
+          
           <p className="text-xs text-gray-500">
             {totalImages} de {maxImages} imagens
-            {localPreviews.length > 0 && (
-              <span className="text-orange-600 ml-2">
-                ({localPreviews.length} aguardando)
-              </span>
-            )}
           </p>
         </div>
       ) : (
@@ -264,13 +229,10 @@ const SingleImageUpload: React.FC<SingleImageUploadProps> = ({
           <Images size={48} className="text-gray-300 mb-4" />
           <div className="space-y-2 text-center">
             <p className="text-sm text-gray-600">
-              {isUploading ? "Enviando imagens..." : "Adicionar imagens"}
+              {isUploading ? "Enviando..." : "Adicionar imagens"}
             </p>
             <p className="text-xs text-gray-400">
               Máximo {maxImages} imagens, até {maxSize}MB cada
-            </p>
-            <p className="text-xs text-gray-400">
-              Formatos: JPG, PNG, WebP
             </p>
           </div>
           <Button
@@ -281,7 +243,7 @@ const SingleImageUpload: React.FC<SingleImageUploadProps> = ({
             disabled={isUploading}
           >
             <Upload size={16} className="mr-2" />
-            {isUploading ? "Enviando..." : "Selecionar Imagens"}
+            {isUploading ? "Enviando..." : "Selecionar"}
           </Button>
           <input
             id={inputId}

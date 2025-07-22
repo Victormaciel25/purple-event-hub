@@ -33,58 +33,39 @@ export const useImagePreview = ({ file, url }: UseImagePreviewProps) => {
           return;
         }
 
-        // Para arquivos locais, usar FileReader primeiro (mais compatível)
+        // Para arquivos locais, usar FileReader sempre
         if (file) {
-          console.log('📁 PREVIEW_HOOK: Processando arquivo local:', file.name, 'Tamanho:', (file.size / 1024 / 1024).toFixed(2) + 'MB');
+          console.log('📁 PREVIEW_HOOK: Processando arquivo local:', file.name);
           
-          // Método 1: FileReader (mais compatível com Capacitor)
           const reader = new FileReader();
           
-          const readPromise = new Promise<string>((resolve, reject) => {
-            reader.onload = (event) => {
-              const result = event.target?.result;
-              if (typeof result === 'string') {
-                console.log('✅ PREVIEW_HOOK: FileReader concluído com sucesso');
-                resolve(result);
-              } else {
-                reject(new Error('FileReader result is not a string'));
-              }
-            };
-            
-            reader.onerror = () => {
-              console.error('❌ PREVIEW_HOOK: Erro no FileReader');
-              reject(new Error('FileReader failed'));
-            };
-            
-            reader.readAsDataURL(file);
-          });
-
-          try {
-            const base64Result = await readPromise;
-            if (isMounted) {
-              setPreviewUrl(base64Result);
+          reader.onload = (event) => {
+            const result = event.target?.result;
+            if (typeof result === 'string' && isMounted) {
+              console.log('✅ PREVIEW_HOOK: FileReader concluído');
+              setPreviewUrl(result);
               setIsLoading(false);
             }
-            return;
-          } catch (fileReaderError) {
-            console.warn('⚠️ PREVIEW_HOOK: FileReader falhou, tentando createObjectURL como fallback');
-            
-            // Método 2: createObjectURL (fallback)
-            try {
-              objectUrl = URL.createObjectURL(file);
-              console.log('✅ PREVIEW_HOOK: createObjectURL como fallback funcionou');
-              
-              if (isMounted) {
-                setPreviewUrl(objectUrl);
-                setIsLoading(false);
-              }
-              return;
-            } catch (objectUrlError) {
-              console.error('❌ PREVIEW_HOOK: Ambos os métodos falharam:', { fileReaderError, objectUrlError });
-              throw objectUrlError;
+          };
+          
+          reader.onerror = () => {
+            console.error('❌ PREVIEW_HOOK: Erro no FileReader');
+            if (isMounted) {
+              setHasError(true);
+              setIsLoading(false);
             }
-          }
+          };
+          
+          reader.readAsDataURL(file);
+          return;
         }
+
+        // Se não tem file nem url, marcar como erro
+        if (isMounted) {
+          setHasError(true);
+          setIsLoading(false);
+        }
+        
       } catch (error) {
         console.error('💥 PREVIEW_HOOK: Erro geral:', error);
         if (isMounted) {
