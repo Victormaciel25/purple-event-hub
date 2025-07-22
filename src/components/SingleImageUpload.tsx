@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { Images, Upload } from "lucide-react";
 import { toast } from "sonner";
@@ -38,29 +39,29 @@ const SingleImageUpload: React.FC<SingleImageUploadProps> = ({
 }) => {
   const [uploadedUrls, setUploadedUrls] = useState<string[]>(initialImages);
   const [localPreviews, setLocalPreviews] = useState<LocalPreview[]>([]);
-  const { isAndroid, isMobileCapacitor } = usePlatform();
+  const { isMobileCapacitor } = usePlatform();
   const inputId = `image-upload-${Math.random().toString(36).substring(2, 15)}`;
 
   const compressImage = async (file: File): Promise<File> => {
     try {
       const options = {
-        maxSizeMB: isMobileCapacitor ? 1.5 : 1.8, // Compressão mais agressiva no mobile
+        maxSizeMB: isMobileCapacitor ? 1.2 : 1.8,
         maxWidthOrHeight: isMobileCapacitor ? 1024 : 1280,
-        useWebWorker: !isMobileCapacitor, // Não usar web worker no mobile
+        useWebWorker: false, // Desabilitar web worker completamente
         fileType: file.type,
-        initialQuality: isMobileCapacitor ? 0.8 : 0.9,
+        initialQuality: isMobileCapacitor ? 0.7 : 0.85,
       };
       
-      console.log(`📦 UPLOAD: Comprimindo ${file.name} (${(file.size / 1024 / 1024).toFixed(2)}MB) - Mobile: ${isMobileCapacitor}`);
+      console.log(`📦 UPLOAD: Comprimindo ${file.name} - Mobile: ${isMobileCapacitor}`);
       
       const compressedFile = await imageCompression(file, options);
       
       const resultFile = new File([compressedFile], file.name, {
         type: file.type,
-        lastModified: new Date().getTime(),
+        lastModified: Date.now(),
       });
       
-      console.log(`✅ UPLOAD: Compressão concluída (${(resultFile.size / 1024 / 1024).toFixed(2)}MB)`);
+      console.log(`✅ UPLOAD: Compressão OK (${(resultFile.size / 1024 / 1024).toFixed(2)}MB)`);
       
       return resultFile;
     } catch (error) {
@@ -71,15 +72,14 @@ const SingleImageUpload: React.FC<SingleImageUploadProps> = ({
   };
 
   const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    console.log("🚀 UPLOAD: Iniciando processamento de arquivos... Mobile:", isMobileCapacitor, "Android:", isAndroid);
+    console.log("🚀 UPLOAD: Processando arquivos - Mobile:", isMobileCapacitor);
     
     if (!event.target.files || event.target.files.length === 0) {
-      console.log("❌ UPLOAD: Nenhum arquivo selecionado");
       return;
     }
     
     const files = Array.from(event.target.files);
-    console.log("📁 UPLOAD: Processando", files.length, "arquivo(s)");
+    console.log("📁 UPLOAD: Arquivos selecionados:", files.length);
     
     const totalImages = uploadedUrls.length + localPreviews.length + files.length;
     if (totalImages > maxImages) {
@@ -87,7 +87,7 @@ const SingleImageUpload: React.FC<SingleImageUploadProps> = ({
       return;
     }
     
-    // Criar previews locais imediatamente com IDs únicos
+    // Criar previews locais com IDs únicos
     const timestamp = Date.now();
     const newLocalPreviews: LocalPreview[] = files.map((file, index) => ({
       id: `preview-${timestamp}-${index}-${Math.random().toString(36).substr(2, 9)}`,
@@ -95,13 +95,13 @@ const SingleImageUpload: React.FC<SingleImageUploadProps> = ({
       uploading: false,
     }));
     
-    console.log("🖼️ UPLOAD: Criando previews locais:", newLocalPreviews.map(p => p.id));
+    console.log("🖼️ UPLOAD: Criando previews:", newLocalPreviews.length);
     setLocalPreviews(prev => [...prev, ...newLocalPreviews]);
     
-    // Dar um tempo para o preview aparecer antes de começar o upload
+    // Feedback imediato
     setTimeout(() => {
-      toast.success(`${files.length} imagem(ns) selecionada(s). Iniciando upload...`);
-    }, 200);
+      toast.success(`${files.length} imagem(ns) selecionada(s)`);
+    }, 100);
     
     // Iniciar uploads
     setIsUploading(true);
@@ -113,10 +113,9 @@ const SingleImageUpload: React.FC<SingleImageUploadProps> = ({
         const file = files[i];
         const previewId = newLocalPreviews[i]?.id;
         
-        console.log(`📤 UPLOAD: Processando arquivo ${i + 1}/${files.length}: ${file.name}`);
+        console.log(`📤 UPLOAD: Enviando ${i + 1}/${files.length}: ${file.name}`);
         
         if (previewId) {
-          // Marcar como uploading
           setLocalPreviews(prev => 
             prev.map(preview => 
               preview.id === previewId ? { ...preview, uploading: true } : preview
@@ -127,7 +126,7 @@ const SingleImageUpload: React.FC<SingleImageUploadProps> = ({
         const fileSizeInMB = file.size / (1024 * 1024);
         
         let fileToUpload = file;
-        if (fileSizeInMB > (isMobileCapacitor ? 1.2 : 1.5)) {
+        if (fileSizeInMB > 1.0) {
           toast.info(`Comprimindo: ${file.name}`);
           fileToUpload = await compressImage(file);
         }
@@ -157,14 +156,13 @@ const SingleImageUpload: React.FC<SingleImageUploadProps> = ({
           continue;
         }
         
-        // Obter URL pública
         const { data: publicURLData } = supabase.storage
           .from('spaces')
           .getPublicUrl(filePath);
         
         let finalUrl = publicURLData.publicUrl;
         
-        // Em ambientes móveis, adicionar parâmetros para evitar cache
+        // Para mobile, adicionar parâmetros anti-cache
         if (isMobileCapacitor) {
           finalUrl = `${finalUrl}?t=${timestamp}&mobile=1&v=${Math.random().toString(36).substr(2, 9)}`;
         }
@@ -180,7 +178,6 @@ const SingleImageUpload: React.FC<SingleImageUploadProps> = ({
         toast.success(`${newUrls.length} imagem(ns) enviada(s)!`);
       }
       
-      // Limpar previews locais
       setLocalPreviews([]);
       
     } catch (error) {
@@ -237,14 +234,14 @@ const SingleImageUpload: React.FC<SingleImageUploadProps> = ({
               />
             ))}
             
-            {/* Botão para adicionar mais imagens */}
+            {/* Botão para adicionar mais */}
             {totalImages < maxImages && (
               <label className="cursor-pointer border-2 border-dashed border-gray-300 rounded-lg flex flex-col items-center justify-center aspect-square p-4 hover:border-iparty transition-colors">
                 <Images size={32} className="text-gray-300 mb-2" />
                 <span className="text-sm text-gray-500 text-center mb-2">
                   {isUploading ? "Enviando..." : "Adicionar"}
                 </span>
-                <span className="text-xs text-gray-400 text-center mb-1">
+                <span className="text-xs text-gray-400 text-center">
                   ({aspectRatio}, max {maxSize}MB)
                 </span>
                 <input
@@ -266,9 +263,7 @@ const SingleImageUpload: React.FC<SingleImageUploadProps> = ({
               </span>
             )}
             {isMobileCapacitor && (
-              <span className="text-blue-600 ml-2">
-                📱 Modo móvel
-              </span>
+              <span className="text-blue-600 ml-2">📱</span>
             )}
           </p>
         </div>
@@ -286,9 +281,7 @@ const SingleImageUpload: React.FC<SingleImageUploadProps> = ({
               Formatos: JPG, PNG, WebP
             </p>
             {isMobileCapacitor && (
-              <p className="text-xs text-blue-500">
-                📱 Modo móvel detectado
-              </p>
+              <p className="text-xs text-blue-500">📱 Android detectado</p>
             )}
           </div>
           <Button
