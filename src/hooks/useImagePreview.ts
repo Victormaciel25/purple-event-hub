@@ -1,6 +1,5 @@
 
 import { useState, useEffect } from 'react';
-import { usePlatform } from './usePlatform';
 
 interface UseImagePreviewProps {
   file?: File;
@@ -11,63 +10,80 @@ export const useImagePreview = ({ file, url }: UseImagePreviewProps) => {
   const [previewUrl, setPreviewUrl] = useState<string>('');
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
-  const { isMobileCapacitor } = usePlatform();
 
   useEffect(() => {
     let isMounted = true;
+    let objectUrl: string | null = null;
     
     const generatePreview = async () => {
+      console.log('🎨 PREVIEW_HOOK: Iniciando preview:', { hasFile: !!file, hasUrl: !!url });
+      
       setIsLoading(true);
       setHasError(false);
       setPreviewUrl('');
 
       try {
+        // Para URLs existentes, usar diretamente
         if (url) {
-          // Para URLs existentes, usar diretamente
-          let finalUrl = url;
-          if (isMobileCapacitor) {
-            const separator = url.includes('?') ? '&' : '?';
-            finalUrl = `${url}${separator}v=${Date.now()}&m=1`;
-          }
-          
+          console.log('📎 PREVIEW_HOOK: Usando URL existente');
           if (isMounted) {
-            setPreviewUrl(finalUrl);
+            setPreviewUrl(url);
             setIsLoading(false);
           }
           return;
         }
 
+        // Para arquivos locais, usar FileReader primeiro (mais compatível)
         if (file) {
-          console.log('🎨 PREVIEW_HOOK: Convertendo arquivo para Base64:', file.name);
+          console.log('📁 PREVIEW_HOOK: Processando arquivo local:', file.name, 'Tamanho:', (file.size / 1024 / 1024).toFixed(2) + 'MB');
           
-          // Método simples: FileReader direto para Base64
+          // Método 1: FileReader (mais compatível com Capacitor)
           const reader = new FileReader();
           
-          reader.onload = (event) => {
-            if (!isMounted) return;
+          const readPromise = new Promise<string>((resolve, reject) => {
+            reader.onload = (event) => {
+              const result = event.target?.result;
+              if (typeof result === 'string') {
+                console.log('✅ PREVIEW_HOOK: FileReader concluído com sucesso');
+                resolve(result);
+              } else {
+                reject(new Error('FileReader result is not a string'));
+              }
+            };
             
-            const result = event.target?.result;
-            if (typeof result === 'string') {
-              console.log('✅ PREVIEW_HOOK: Base64 gerado com sucesso');
-              setPreviewUrl(result);
-              setIsLoading(false);
-            } else {
-              console.error('❌ PREVIEW_HOOK: Resultado não é string');
-              setHasError(true);
-              setIsLoading(false);
-            }
-          };
-          
-          reader.onerror = (error) => {
-            console.error('❌ PREVIEW_HOOK: Erro no FileReader:', error);
+            reader.onerror = () => {
+              console.error('❌ PREVIEW_HOOK: Erro no FileReader');
+              reject(new Error('FileReader failed'));
+            };
+            
+            reader.readAsDataURL(file);
+          });
+
+          try {
+            const base64Result = await readPromise;
             if (isMounted) {
-              setHasError(true);
+              setPreviewUrl(base64Result);
               setIsLoading(false);
             }
-          };
-          
-          // Ler como Data URL (Base64)
-          reader.readAsDataURL(file);
+            return;
+          } catch (fileReaderError) {
+            console.warn('⚠️ PREVIEW_HOOK: FileReader falhou, tentando createObjectURL como fallback');
+            
+            // Método 2: createObjectURL (fallback)
+            try {
+              objectUrl = URL.createObjectURL(file);
+              console.log('✅ PREVIEW_HOOK: createObjectURL como fallback funcionou');
+              
+              if (isMounted) {
+                setPreviewUrl(objectUrl);
+                setIsLoading(false);
+              }
+              return;
+            } catch (objectUrlError) {
+              console.error('❌ PREVIEW_HOOK: Ambos os métodos falharam:', { fileReaderError, objectUrlError });
+              throw objectUrlError;
+            }
+          }
         }
       } catch (error) {
         console.error('💥 PREVIEW_HOOK: Erro geral:', error);
@@ -82,13 +98,15 @@ export const useImagePreview = ({ file, url }: UseImagePreviewProps) => {
 
     return () => {
       isMounted = false;
+      if (objectUrl) {
+        URL.revokeObjectURL(objectUrl);
+      }
     };
-  }, [file, url, isMobileCapacitor]);
+  }, [file, url]);
 
   return {
     previewUrl,
     isLoading,
-    hasError,
-    isMobile: isMobileCapacitor
+    hasError
   };
 };

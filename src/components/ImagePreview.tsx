@@ -20,20 +20,20 @@ const ImagePreview: React.FC<ImagePreviewProps> = ({
   isUploading = false,
   className = "aspect-square"
 }) => {
-  const { previewUrl, isLoading, hasError, isMobile } = useImagePreview({ file, url });
+  const { previewUrl, isLoading, hasError } = useImagePreview({ file, url });
 
-  console.log('🖼️ PREVIEW: Renderizando preview:', { 
+  console.log('🖼️ PREVIEW: Estado atual:', { 
     hasFile: !!file, 
     hasUrl: !!url, 
-    previewUrl: previewUrl ? 'SIM' : 'NÃO',
+    hasPreviewUrl: !!previewUrl,
     isLoading,
     hasError,
-    isMobile
+    isUploading
   });
 
   return (
     <div className={`relative ${className} border border-gray-200 rounded-lg overflow-hidden bg-gray-50`}>
-      {/* Loading */}
+      {/* Loading estado */}
       {isLoading && (
         <div className="absolute inset-0 flex items-center justify-center bg-gray-100 z-10">
           <div className="flex flex-col items-center space-y-2">
@@ -43,24 +43,32 @@ const ImagePreview: React.FC<ImagePreviewProps> = ({
         </div>
       )}
 
-      {/* Error */}
+      {/* Error estado */}
       {hasError && !isLoading && (
         <div className="absolute inset-0 flex items-center justify-center bg-red-50 z-10">
           <div className="flex flex-col items-center space-y-2">
             <div className="text-red-500 text-2xl">⚠️</div>
-            <div className="text-xs text-red-500 text-center">Erro ao processar</div>
+            <div className="text-xs text-red-500 text-center px-2">
+              Erro ao carregar
+            </div>
           </div>
         </div>
       )}
 
-      {/* Image */}
+      {/* Imagem */}
       {previewUrl && !hasError && (
         <img
           src={previewUrl}
           alt={alt}
-          className={`w-full h-full object-cover ${isLoading ? "opacity-0" : "opacity-100"}`}
-          onLoad={() => console.log('✅ PREVIEW: Imagem renderizada')}
-          onError={() => console.error('❌ PREVIEW: Erro ao renderizar')}
+          className={`w-full h-full object-cover transition-opacity duration-200 ${
+            isLoading ? "opacity-0" : "opacity-100"
+          }`}
+          onLoad={() => {
+            console.log('✅ PREVIEW: Imagem renderizada com sucesso');
+          }}
+          onError={(e) => {
+            console.error('❌ PREVIEW: Erro ao renderizar imagem:', e);
+          }}
           loading="eager"
         />
       )}
@@ -75,20 +83,14 @@ const ImagePreview: React.FC<ImagePreviewProps> = ({
         </div>
       )}
 
-      {/* Status */}
-      <div className="absolute top-2 left-2 flex flex-col gap-1 z-15">
-        {file && !url && !isUploading && (
+      {/* Status badge */}
+      {file && !url && !isUploading && (
+        <div className="absolute top-2 left-2 z-15">
           <div className="bg-orange-500 text-white text-xs px-2 py-1 rounded">
             Local
           </div>
-        )}
-        
-        {isMobile && (
-          <div className="bg-blue-500 text-white text-xs px-1 py-0.5 rounded">
-            📱
-          </div>
-        )}
-      </div>
+        </div>
+      )}
 
       {/* Remove button */}
       <button
