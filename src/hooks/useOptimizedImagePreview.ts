@@ -20,6 +20,14 @@ export const useOptimizedImagePreview = ({
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
 
+  // Detectar Android
+  const isAndroid = /android/i.test(navigator.userAgent);
+
+  const createBlobUrl = useCallback((imageFile: File): string => {
+    console.log('🔗 BLOB_URL: Criando blob URL para:', imageFile.name);
+    return URL.createObjectURL(imageFile);
+  }, []);
+
   const createCanvasPreview = useCallback((imageFile: File): Promise<string> => {
     return new Promise((resolve, reject) => {
       console.log('🎨 CANVAS_PREVIEW: Criando preview otimizado para:', imageFile.name);
@@ -77,11 +85,6 @@ export const useOptimizedImagePreview = ({
     });
   }, [maxWidth, maxHeight, quality]);
 
-  const createBlobUrl = useCallback((imageFile: File): string => {
-    console.log('🔗 BLOB_URL: Criando blob URL para:', imageFile.name);
-    return URL.createObjectURL(imageFile);
-  }, []);
-
   const createFileReaderUrl = useCallback((imageFile: File): Promise<string> => {
     return new Promise((resolve, reject) => {
       console.log('📖 FILEREADER: Processando:', imageFile.name);
@@ -109,7 +112,11 @@ export const useOptimizedImagePreview = ({
     let objectUrl: string | null = null;
     
     const generatePreview = async () => {
-      console.log('🚀 OPTIMIZED_PREVIEW: Iniciando:', { hasFile: !!file, hasUrl: !!url });
+      console.log('🚀 OPTIMIZED_PREVIEW: Iniciando:', { 
+        hasFile: !!file, 
+        hasUrl: !!url, 
+        isAndroid 
+      });
       
       setIsLoading(true);
       setHasError(false);
@@ -126,11 +133,36 @@ export const useOptimizedImagePreview = ({
           return;
         }
 
-        // Para arquivos locais, tentar múltiplas estratégias
+        // Para arquivos locais
         if (file) {
+          // Validar formato de arquivo
+          if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
+            console.warn('⚠️ OPTIMIZED_PREVIEW: Formato de imagem não suportado:', file.type);
+            if (isMounted) {
+              setHasError(true);
+              setIsLoading(false);
+            }
+            return;
+          }
+
           console.log('📁 OPTIMIZED_PREVIEW: Processando arquivo local');
           
-          // Estratégia 1: Canvas (melhor para Android)
+          // Para Android, usar Blob URL diretamente
+          if (isAndroid) {
+            console.log('🤖 OPTIMIZED_PREVIEW: Android detectado, usando Blob URL');
+            try {
+              objectUrl = createBlobUrl(file);
+              if (isMounted) {
+                setPreviewUrl(objectUrl);
+                setIsLoading(false);
+                return;
+              }
+            } catch (error) {
+              console.warn('⚠️ OPTIMIZED_PREVIEW: Blob URL falhou no Android, tentando canvas');
+            }
+          }
+
+          // Para outras plataformas ou fallback: Canvas primeiro
           try {
             const canvasUrl = await createCanvasPreview(file);
             if (isMounted) {
@@ -142,7 +174,7 @@ export const useOptimizedImagePreview = ({
             console.warn('⚠️ OPTIMIZED_PREVIEW: Canvas falhou, tentando blob URL');
           }
 
-          // Estratégia 2: Blob URL (fallback)
+          // Fallback para Blob URL
           try {
             objectUrl = createBlobUrl(file);
             if (isMounted) {
@@ -154,7 +186,7 @@ export const useOptimizedImagePreview = ({
             console.warn('⚠️ OPTIMIZED_PREVIEW: Blob URL falhou, tentando FileReader');
           }
 
-          // Estratégia 3: FileReader (último recurso)
+          // Último recurso: FileReader
           try {
             const fileReaderUrl = await createFileReaderUrl(file);
             if (isMounted) {
@@ -194,7 +226,7 @@ export const useOptimizedImagePreview = ({
         URL.revokeObjectURL(objectUrl);
       }
     };
-  }, [file, url, createCanvasPreview, createBlobUrl, createFileReaderUrl]);
+  }, [file, url, isAndroid, createCanvasPreview, createBlobUrl, createFileReaderUrl]);
 
   return {
     previewUrl,
