@@ -1,7 +1,7 @@
 
 import React from "react";
 import { X } from "lucide-react";
-import { useImagePreview } from "@/hooks/useImagePreview";
+import { useOptimizedImagePreview } from "@/hooks/useOptimizedImagePreview";
 
 interface ImagePreviewProps {
   file?: File;
@@ -20,9 +20,15 @@ const ImagePreview: React.FC<ImagePreviewProps> = ({
   isUploading = false,
   className = "aspect-square"
 }) => {
-  const { previewUrl, isLoading, hasError } = useImagePreview({ file, url });
+  const { previewUrl, isLoading, hasError } = useOptimizedImagePreview({ 
+    file, 
+    url,
+    maxWidth: 300,
+    maxHeight: 300,
+    quality: 0.8
+  });
 
-  console.log('🖼️ PREVIEW: Estado:', { 
+  console.log('🖼️ PREVIEW: Estado otimizado:', { 
     hasPreviewUrl: !!previewUrl,
     isLoading,
     hasError,
@@ -61,8 +67,11 @@ const ImagePreview: React.FC<ImagePreviewProps> = ({
           className={`w-full h-full object-cover transition-opacity duration-200 ${
             isLoading ? "opacity-0" : "opacity-100"
           }`}
-          onLoad={() => console.log('✅ PREVIEW: Imagem carregada')}
-          onError={() => console.error('❌ PREVIEW: Erro na imagem')}
+          onLoad={() => console.log('✅ PREVIEW: Imagem otimizada carregada')}
+          onError={(e) => {
+            console.error('❌ PREVIEW: Erro na imagem otimizada');
+            console.error('Error details:', e);
+          }}
         />
       )}
 

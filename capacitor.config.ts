@@ -33,7 +33,19 @@ const config: CapacitorConfig = {
   android: {
     allowMixedContent: true,
     captureInput: true,
-    webContentsDebuggingEnabled: true
+    webContentsDebuggingEnabled: true,
+    // Configurações específicas para melhorar compatibilidade com imagens
+    appendUserAgent: 'iPartyApp',
+    overrideUserAgent: undefined,
+    backgroundColor: '#ffffff',
+    // Configurações de WebView para suporte a data URLs
+    webViewPrefs: {
+      allowFileAccess: true,
+      allowFileAccessFromFileURLs: true,
+      allowUniversalAccessFromFileURLs: true,
+      mixedContentMode: 'always_allow',
+      allowsContentAccess: true
+    }
   }
 };
 
