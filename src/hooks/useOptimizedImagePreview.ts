@@ -1,5 +1,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
+import { useCapacitorImageFile } from './useCapacitorImageFile';
+import { detectPlatform } from '@/utils/platformDetection';
 
 interface UseOptimizedImagePreviewProps {
   file?: File;
@@ -19,9 +21,9 @@ export const useOptimizedImagePreview = ({
   const [previewUrl, setPreviewUrl] = useState<string>('');
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
-
-  // Detectar Android
-  const isAndroid = /android/i.test(navigator.userAgent);
+  
+  const platform = detectPlatform();
+  const { saveFileToTemp, cleanupTempFiles } = useCapacitorImageFile();
 
   const createBlobUrl = useCallback((imageFile: File): string => {
     console.log('🔗 BLOB_URL: Criando blob URL para:', imageFile.name);
@@ -115,7 +117,8 @@ export const useOptimizedImagePreview = ({
       console.log('🚀 OPTIMIZED_PREVIEW: Iniciando:', { 
         hasFile: !!file, 
         hasUrl: !!url, 
-        isAndroid 
+        isAndroid: platform.isAndroid,
+        isCapacitor: platform.isCapacitor
       });
       
       setIsLoading(true);
@@ -147,8 +150,23 @@ export const useOptimizedImagePreview = ({
 
           console.log('📁 OPTIMIZED_PREVIEW: Processando arquivo local');
           
-          // Para Android, usar Blob URL diretamente
-          if (isAndroid) {
+          // Estratégia 1: Capacitor Filesystem (para Android Capacitor)
+          if (platform.isCapacitor && platform.isAndroid) {
+            console.log('📱 OPTIMIZED_PREVIEW: Usando Capacitor Filesystem para Android');
+            try {
+              const tempFileUri = await saveFileToTemp(file);
+              if (tempFileUri && isMounted) {
+                setPreviewUrl(tempFileUri);
+                setIsLoading(false);
+                return;
+              }
+            } catch (error) {
+              console.warn('⚠️ OPTIMIZED_PREVIEW: Capacitor Filesystem falhou, tentando blob URL');
+            }
+          }
+
+          // Estratégia 2: Blob URL (para Android web ou fallback)
+          if (platform.isAndroid) {
             console.log('🤖 OPTIMIZED_PREVIEW: Android detectado, usando Blob URL');
             try {
               objectUrl = createBlobUrl(file);
@@ -162,7 +180,7 @@ export const useOptimizedImagePreview = ({
             }
           }
 
-          // Para outras plataformas ou fallback: Canvas primeiro
+          // Estratégia 3: Canvas (para outras plataformas ou fallback)
           try {
             const canvasUrl = await createCanvasPreview(file);
             if (isMounted) {
@@ -174,7 +192,7 @@ export const useOptimizedImagePreview = ({
             console.warn('⚠️ OPTIMIZED_PREVIEW: Canvas falhou, tentando blob URL');
           }
 
-          // Fallback para Blob URL
+          // Estratégia 4: Blob URL (fallback geral)
           try {
             objectUrl = createBlobUrl(file);
             if (isMounted) {
@@ -186,7 +204,7 @@ export const useOptimizedImagePreview = ({
             console.warn('⚠️ OPTIMIZED_PREVIEW: Blob URL falhou, tentando FileReader');
           }
 
-          // Último recurso: FileReader
+          // Estratégia 5: FileReader (último recurso)
           try {
             const fileReaderUrl = await createFileReaderUrl(file);
             if (isMounted) {
@@ -225,8 +243,10 @@ export const useOptimizedImagePreview = ({
       if (objectUrl) {
         URL.revokeObjectURL(objectUrl);
       }
+      // Limpar arquivos temporários quando o componente for desmontado
+      cleanupTempFiles();
     };
-  }, [file, url, isAndroid, createCanvasPreview, createBlobUrl, createFileReaderUrl]);
+  }, [file, url, platform, saveFileToTemp, cleanupTempFiles, createCanvasPreview, createBlobUrl, createFileReaderUrl]);
 
   return {
     previewUrl,

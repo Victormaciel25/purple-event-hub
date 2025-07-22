@@ -28,6 +28,10 @@ const config: CapacitorConfig = {
       enableHighAccuracy: true,
       timeout: 15000,
       maximumAge: 300000
+    },
+    Filesystem: {
+      iosFileLocation: 'Library/NoCloud',
+      androidFileLocation: 'Files'
     }
   },
   android: {
@@ -38,13 +42,18 @@ const config: CapacitorConfig = {
     appendUserAgent: 'iPartyApp',
     overrideUserAgent: undefined,
     backgroundColor: '#ffffff',
-    // Configurações de WebView para suporte a data URLs
+    // Configurações de WebView para suporte a data URLs e file URLs
     webViewPrefs: {
       allowFileAccess: true,
       allowFileAccessFromFileURLs: true,
       allowUniversalAccessFromFileURLs: true,
       mixedContentMode: 'always_allow',
-      allowsContentAccess: true
+      allowsContentAccess: true,
+      domStorageEnabled: true,
+      databaseEnabled: true,
+      javaScriptEnabled: true,
+      loadsImagesAutomatically: true,
+      mediaPlaybackRequiresUserGesture: false
     }
   }
 };
