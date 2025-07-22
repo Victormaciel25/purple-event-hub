@@ -1,5 +1,6 @@
 
 import { useState, useEffect } from 'react';
+import { detectPlatform } from '@/utils/platformDetection';
 
 export const usePlatform = () => {
   const [isAndroid, setIsAndroid] = useState(false);
@@ -7,42 +8,26 @@ export const usePlatform = () => {
   const [isMobileCapacitor, setIsMobileCapacitor] = useState(false);
 
   useEffect(() => {
-    const checkPlatform = () => {
-      try {
-        // Verificar se é Capacitor
-        const capacitorExists = !!(window as any).Capacitor;
-        setIsCapacitor(capacitorExists);
-
-        if (capacitorExists) {
-          // Verificar plataforma específica
-          const platform = (window as any).Capacitor?.getPlatform?.();
-          const isAndroidPlatform = platform === 'android';
-          const isMobilePlatform = platform === 'android' || platform === 'ios';
-          
-          setIsAndroid(isAndroidPlatform);
-          setIsMobileCapacitor(isMobilePlatform);
-        } else {
-          // Fallback: verificar user agent para detectar mobile
-          const userAgent = navigator.userAgent;
-          const isMobileUserAgent = /Android|iPhone|iPad|iPod|Mobile/i.test(userAgent);
-          
-          setIsAndroid(/Android/i.test(userAgent));
-          setIsMobileCapacitor(isMobileUserAgent);
-        }
-      } catch (error) {
-        console.warn('Erro ao detectar plataforma:', error);
-        // Fallback para user agent
-        const userAgent = navigator.userAgent;
-        setIsAndroid(/Android/i.test(userAgent));
-        setIsMobileCapacitor(/Android|iPhone|iPad|iPod|Mobile/i.test(userAgent));
-        setIsCapacitor(false);
-      }
+    const updatePlatform = () => {
+      const platform = detectPlatform();
+      
+      setIsAndroid(platform.isAndroid);
+      setIsCapacitor(platform.isCapacitor);
+      setIsMobileCapacitor(platform.isMobile);
+      
+      console.log('📱 PLATFORM_HOOK: Estado atualizado:', {
+        isAndroid: platform.isAndroid,
+        isCapacitor: platform.isCapacitor,
+        isMobileCapacitor: platform.isMobile,
+        platform: platform.platform
+      });
     };
 
-    checkPlatform();
+    // Atualizar imediatamente
+    updatePlatform();
     
-    // Recheck após um pequeno delay para garantir que o Capacitor esteja carregado
-    const timer = setTimeout(checkPlatform, 100);
+    // Verificar novamente após delay para garantir que Capacitor carregou
+    const timer = setTimeout(updatePlatform, 200);
     
     return () => clearTimeout(timer);
   }, []);

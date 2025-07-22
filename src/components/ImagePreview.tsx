@@ -22,35 +22,33 @@ const ImagePreview: React.FC<ImagePreviewProps> = ({
 }) => {
   const { previewUrl, isLoading, hasError, isMobile } = useImagePreview({ file, url });
 
-  const handleImageLoad = () => {
-    console.log('✅ PREVIEW: Imagem renderizada com sucesso');
-  };
-
-  const handleImageError = () => {
-    console.error('❌ PREVIEW: Erro ao renderizar imagem na tela');
-  };
+  console.log('🖼️ PREVIEW: Renderizando preview:', { 
+    hasFile: !!file, 
+    hasUrl: !!url, 
+    previewUrl: previewUrl ? 'SIM' : 'NÃO',
+    isLoading,
+    hasError,
+    isMobile
+  });
 
   return (
     <div className={`relative ${className} border border-gray-200 rounded-lg overflow-hidden bg-gray-50`}>
-      {/* Loading State */}
+      {/* Loading */}
       {isLoading && (
         <div className="absolute inset-0 flex items-center justify-center bg-gray-100 z-10">
           <div className="flex flex-col items-center space-y-2">
             <div className="w-6 h-6 border-2 border-iparty border-t-transparent rounded-full animate-spin"></div>
-            <div className="text-xs text-gray-500">Carregando...</div>
+            <div className="text-xs text-gray-500">Processando...</div>
           </div>
         </div>
       )}
 
-      {/* Error State */}
+      {/* Error */}
       {hasError && !isLoading && (
-        <div className="absolute inset-0 flex items-center justify-center bg-gray-100 z-10">
+        <div className="absolute inset-0 flex items-center justify-center bg-red-50 z-10">
           <div className="flex flex-col items-center space-y-2">
             <div className="text-red-500 text-2xl">⚠️</div>
-            <div className="text-xs text-red-500 text-center">Erro ao carregar</div>
-            {isMobile && (
-              <div className="text-xs text-blue-500 text-center">Modo móvel</div>
-            )}
+            <div className="text-xs text-red-500 text-center">Erro ao processar</div>
           </div>
         </div>
       )}
@@ -60,19 +58,10 @@ const ImagePreview: React.FC<ImagePreviewProps> = ({
         <img
           src={previewUrl}
           alt={alt}
-          className={`w-full h-full object-cover transition-opacity duration-300 ${
-            isLoading ? "opacity-0" : "opacity-100"
-          }`}
-          onLoad={handleImageLoad}
-          onError={handleImageError}
-          style={{
-            WebkitBackfaceVisibility: 'hidden',
-            backfaceVisibility: 'hidden',
-            WebkitTransform: 'translate3d(0,0,0)',
-            transform: 'translate3d(0,0,0)',
-          }}
+          className={`w-full h-full object-cover ${isLoading ? "opacity-0" : "opacity-100"}`}
+          onLoad={() => console.log('✅ PREVIEW: Imagem renderizada')}
+          onError={() => console.error('❌ PREVIEW: Erro ao renderizar')}
           loading="eager"
-          decoding="async"
         />
       )}
 
@@ -86,11 +75,11 @@ const ImagePreview: React.FC<ImagePreviewProps> = ({
         </div>
       )}
 
-      {/* Status indicators */}
+      {/* Status */}
       <div className="absolute top-2 left-2 flex flex-col gap-1 z-15">
-        {!isUploading && file && !url && (
+        {file && !url && !isUploading && (
           <div className="bg-orange-500 text-white text-xs px-2 py-1 rounded">
-            Aguardando
+            Local
           </div>
         )}
         
