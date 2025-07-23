@@ -22,13 +22,10 @@ const ImagePreview: React.FC<ImagePreviewProps> = ({
 }) => {
   const { previewUrl, isLoading, hasError } = useOptimizedImagePreview({ 
     file, 
-    url,
-    maxWidth: 300,
-    maxHeight: 300,
-    quality: 0.8
+    url
   });
 
-  console.log('🖼️ PREVIEW: Estado otimizado:', { 
+  console.log('🖼️ SIMPLE_PREVIEW: Estado:', { 
     hasPreviewUrl: !!previewUrl,
     isLoading,
     hasError,
@@ -64,14 +61,9 @@ const ImagePreview: React.FC<ImagePreviewProps> = ({
         <img
           src={previewUrl}
           alt={alt}
-          className={`w-full h-full object-cover transition-opacity duration-200 ${
-            isLoading ? "opacity-0" : "opacity-100"
-          }`}
-          onLoad={() => console.log('✅ PREVIEW: Imagem otimizada carregada')}
-          onError={(e) => {
-            console.error('❌ PREVIEW: Erro na imagem otimizada');
-            console.error('Error details:', e);
-          }}
+          className="w-full h-full object-cover"
+          onLoad={() => console.log('✅ SIMPLE_PREVIEW: Imagem carregada')}
+          onError={() => console.error('❌ SIMPLE_PREVIEW: Erro na imagem')}
         />
       )}
 
