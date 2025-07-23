@@ -6,6 +6,8 @@ import { supabase } from "@/integrations/supabase/client";
 import imageCompression from "browser-image-compression";
 import { Button } from "@/components/ui/button";
 import ImagePreview from "./ImagePreview";
+import { usePhotoPicker } from "@/hooks/usePhotoPicker";
+import { Capacitor } from "@capacitor/core";
 
 interface SingleImageUploadProps {
   onImageChange: (urls: string[]) => void;
@@ -21,7 +23,8 @@ interface SingleImageUploadProps {
 
 interface LocalPreview {
   id: string;
-  file: File;
+  file?: File;
+  webPath?: string;
   uploading: boolean;
 }
 
@@ -38,7 +41,7 @@ const SingleImageUpload: React.FC<SingleImageUploadProps> = ({
 }) => {
   const [uploadedUrls, setUploadedUrls] = useState<string[]>(initialImages);
   const [localPreviews, setLocalPreviews] = useState<LocalPreview[]>([]);
-  const inputId = `image-upload-${Math.random().toString(36).substring(2, 15)}`;
+  const { pick } = usePhotoPicker();
 
   const compressImage = async (file: File): Promise<File> => {
     try {
@@ -68,8 +71,98 @@ const SingleImageUpload: React.FC<SingleImageUploadProps> = ({
     }
   };
 
+  const handleCapacitorPhoto = async () => {
+    console.log("🚀 UPLOAD: Selecionando foto com Capacitor");
+    
+    const totalImages = uploadedUrls.length + localPreviews.length + 1;
+    
+    if (totalImages > maxImages) {
+      toast.error(`Máximo ${maxImages} imagens permitidas`);
+      return;
+    }
+    
+    try {
+      const photo = await pick();
+      if (!photo) return;
+      
+      console.log("📸 UPLOAD: Foto selecionada:", photo);
+      
+      // Criar preview local
+      const previewId = `capacitor-${Date.now()}`;
+      const newLocalPreview: LocalPreview = {
+        id: previewId,
+        webPath: photo.webPath,
+        uploading: false,
+      };
+      
+      setLocalPreviews(prev => [...prev, newLocalPreview]);
+      toast.success("Imagem selecionada com sucesso!");
+      
+      // Upload em background
+      setIsUploading(true);
+      
+      // Marcar como uploading
+      setLocalPreviews(prev => 
+        prev.map(p => p.id === previewId ? { ...p, uploading: true } : p)
+      );
+      
+      // Converter para File para upload
+      if (photo.webPath) {
+        const response = await fetch(photo.webPath);
+        const blob = await response.blob();
+        const file = new File([blob], `photo-${Date.now()}.jpg`, { type: 'image/jpeg' });
+        
+        // Comprimir se necessário
+        let fileToUpload = file;
+        if (file.size > 1024 * 1024) { // > 1MB
+          fileToUpload = await compressImage(file);
+        }
+        
+        if (fileToUpload.size > maxSize * 1024 * 1024) {
+          toast.error(`Imagem muito grande (máximo ${maxSize}MB)`);
+          setLocalPreviews(prev => prev.filter(p => p.id !== previewId));
+          return;
+        }
+        
+        // Upload
+        const fileExt = 'jpg';
+        const fileName = `${Date.now()}-${Math.random().toString(36)}.${fileExt}`;
+        const filePath = `${uploadPath}/${fileName}`;
+        
+        const { error } = await supabase.storage
+          .from('spaces')
+          .upload(filePath, fileToUpload);
+        
+        if (error) {
+          console.error("❌ UPLOAD: Erro:", error);
+          toast.error("Erro no upload da imagem");
+          setLocalPreviews(prev => prev.filter(p => p.id !== previewId));
+          return;
+        }
+        
+        const { data: publicURLData } = supabase.storage
+          .from('spaces')
+          .getPublicUrl(filePath);
+        
+        const newUrls = [...uploadedUrls, publicURLData.publicUrl];
+        setUploadedUrls(newUrls);
+        onImageChange(newUrls);
+        toast.success("Imagem enviada com sucesso!");
+        
+        // Remover preview local
+        setLocalPreviews(prev => prev.filter(p => p.id !== previewId));
+      }
+      
+    } catch (error) {
+      console.error("💥 UPLOAD: Erro:", error);
+      toast.error("Erro ao selecionar/enviar imagem");
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
   const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    console.log("🚀 UPLOAD: Processando arquivos");
+    console.log("🚀 UPLOAD: Processando arquivos web");
     
     if (!event.target.files?.length) return;
     
@@ -83,7 +176,7 @@ const SingleImageUpload: React.FC<SingleImageUploadProps> = ({
     
     // Criar previews locais
     const newLocalPreviews: LocalPreview[] = files.map((file, index) => ({
-      id: `local-${Date.now()}-${index}`,
+      id: `web-${Date.now()}-${index}`,
       file,
       uploading: false,
     }));
@@ -172,6 +265,7 @@ const SingleImageUpload: React.FC<SingleImageUploadProps> = ({
   };
 
   const totalImages = uploadedUrls.length + localPreviews.length;
+  const isNative = Capacitor.isNativePlatform();
 
   return (
     <div className={className}>
@@ -194,6 +288,7 @@ const SingleImageUpload: React.FC<SingleImageUploadProps> = ({
               <ImagePreview
                 key={preview.id}
                 file={preview.file}
+                url={preview.webPath}
                 alt={`Preview ${index + 1}`}
                 onRemove={() => removeLocalPreview(index)}
                 isUploading={preview.uploading}
@@ -203,20 +298,29 @@ const SingleImageUpload: React.FC<SingleImageUploadProps> = ({
             
             {/* Botão adicionar */}
             {totalImages < maxImages && (
-              <label className="cursor-pointer border-2 border-dashed border-gray-300 rounded-lg flex flex-col items-center justify-center aspect-square p-4 hover:border-iparty transition-colors">
+              <div className="cursor-pointer border-2 border-dashed border-gray-300 rounded-lg flex flex-col items-center justify-center aspect-square p-4 hover:border-iparty transition-colors">
                 <Images size={32} className="text-gray-300 mb-2" />
                 <span className="text-sm text-gray-500 text-center">
                   {isUploading ? "Enviando..." : "Adicionar"}
                 </span>
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={handleFileChange}
-                  className="hidden"
-                  disabled={isUploading}
-                  multiple
-                />
-              </label>
+                
+                {isNative ? (
+                  <button
+                    onClick={handleCapacitorPhoto}
+                    disabled={isUploading}
+                    className="absolute inset-0 w-full h-full opacity-0"
+                  />
+                ) : (
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleFileChange}
+                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                    disabled={isUploading}
+                    multiple
+                  />
+                )}
+              </div>
             )}
           </div>
           
@@ -235,25 +339,41 @@ const SingleImageUpload: React.FC<SingleImageUploadProps> = ({
               Máximo {maxImages} imagens, até {maxSize}MB cada
             </p>
           </div>
-          <Button
-            type="button"
-            variant="outline"
-            className="mt-4"
-            onClick={() => document.getElementById(inputId)?.click()}
-            disabled={isUploading}
-          >
-            <Upload size={16} className="mr-2" />
-            {isUploading ? "Enviando..." : "Selecionar"}
-          </Button>
-          <input
-            id={inputId}
-            type="file"
-            accept="image/*"
-            onChange={handleFileChange}
-            className="hidden"
-            disabled={isUploading}
-            multiple
-          />
+          
+          {isNative ? (
+            <Button
+              type="button"
+              variant="outline"
+              className="mt-4"
+              onClick={handleCapacitorPhoto}
+              disabled={isUploading}
+            >
+              <Upload size={16} className="mr-2" />
+              {isUploading ? "Enviando..." : "Selecionar Foto"}
+            </Button>
+          ) : (
+            <>
+              <Button
+                type="button"
+                variant="outline"
+                className="mt-4"
+                onClick={() => document.getElementById('file-input')?.click()}
+                disabled={isUploading}
+              >
+                <Upload size={16} className="mr-2" />
+                {isUploading ? "Enviando..." : "Selecionar"}
+              </Button>
+              <input
+                id="file-input"
+                type="file"
+                accept="image/*"
+                onChange={handleFileChange}
+                className="hidden"
+                disabled={isUploading}
+                multiple
+              />
+            </>
+          )}
         </div>
       )}
     </div>

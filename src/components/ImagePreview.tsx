@@ -29,7 +29,9 @@ const ImagePreview: React.FC<ImagePreviewProps> = ({
     hasPreviewUrl: !!previewUrl,
     isLoading,
     hasError,
-    isUploading
+    isUploading,
+    hasFile: !!file,
+    hasUrl: !!url
   });
 
   return (
@@ -67,7 +69,7 @@ const ImagePreview: React.FC<ImagePreviewProps> = ({
       )}
 
       {/* Status badge para arquivos locais */}
-      {file && !url && !isUploading && (
+      {(file || (url && !url.includes('supabase'))) && !isUploading && (
         <div className="absolute top-2 left-2 z-15">
           <div className="bg-orange-500 text-white text-xs px-2 py-1 rounded">
             Local
