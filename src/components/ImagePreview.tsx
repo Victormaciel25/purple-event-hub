@@ -25,7 +25,7 @@ const ImagePreview: React.FC<ImagePreviewProps> = ({
     url
   });
 
-  console.log('🖼️ SIMPLE_PREVIEW: Estado:', { 
+  console.log('🖼️ PREVIEW: Estado:', { 
     hasPreviewUrl: !!previewUrl,
     isLoading,
     hasError,
@@ -37,22 +37,14 @@ const ImagePreview: React.FC<ImagePreviewProps> = ({
       {/* Loading */}
       {isLoading && (
         <div className="absolute inset-0 flex items-center justify-center bg-gray-100 z-10">
-          <div className="flex flex-col items-center space-y-2">
-            <div className="w-6 h-6 border-2 border-iparty border-t-transparent rounded-full animate-spin"></div>
-            <div className="text-xs text-gray-500">Carregando...</div>
-          </div>
+          <div className="w-6 h-6 border-2 border-iparty border-t-transparent rounded-full animate-spin"></div>
         </div>
       )}
 
       {/* Error */}
       {hasError && !isLoading && (
         <div className="absolute inset-0 flex items-center justify-center bg-red-50 z-10">
-          <div className="flex flex-col items-center space-y-2">
-            <div className="text-red-500 text-2xl">⚠️</div>
-            <div className="text-xs text-red-500 text-center px-2">
-              Erro ao carregar
-            </div>
-          </div>
+          <div className="text-red-500 text-sm">❌ Erro</div>
         </div>
       )}
 
@@ -62,18 +54,15 @@ const ImagePreview: React.FC<ImagePreviewProps> = ({
           src={previewUrl}
           alt={alt}
           className="w-full h-full object-cover"
-          onLoad={() => console.log('✅ SIMPLE_PREVIEW: Imagem carregada')}
-          onError={() => console.error('❌ SIMPLE_PREVIEW: Erro na imagem')}
+          onLoad={() => console.log('✅ PREVIEW: Imagem carregada')}
+          onError={() => console.error('❌ PREVIEW: Erro na imagem')}
         />
       )}
 
       {/* Upload overlay */}
       {isUploading && (
         <div className="absolute inset-0 bg-black/50 flex items-center justify-center z-20">
-          <div className="flex flex-col items-center space-y-2">
-            <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-            <div className="text-xs text-white">Enviando...</div>
-          </div>
+          <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
         </div>
       )}
 

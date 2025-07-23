@@ -1,37 +1,25 @@
 
 import { useState, useEffect } from 'react';
-import { detectPlatform } from '@/utils/platformDetection';
 
 interface UseOptimizedImagePreviewProps {
   file?: File;
   url?: string;
-  maxWidth?: number;
-  maxHeight?: number;
-  quality?: number;
 }
 
 export const useOptimizedImagePreview = ({ 
   file, 
-  url, 
-  maxWidth = 300, 
-  maxHeight = 300, 
-  quality = 0.8 
+  url
 }: UseOptimizedImagePreviewProps) => {
   const [previewUrl, setPreviewUrl] = useState<string>('');
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
-  
-  const platform = detectPlatform();
 
   useEffect(() => {
     let isMounted = true;
+    let objectUrl: string | null = null;
     
     const generatePreview = async () => {
-      console.log('🚀 SIMPLE_PREVIEW: Iniciando:', { 
-        hasFile: !!file, 
-        hasUrl: !!url, 
-        platform: platform.platform
-      });
+      console.log('🚀 PREVIEW: Iniciando:', { hasFile: !!file, hasUrl: !!url });
       
       setIsLoading(true);
       setHasError(false);
@@ -40,7 +28,7 @@ export const useOptimizedImagePreview = ({
       try {
         // Para URLs existentes, usar diretamente
         if (url) {
-          console.log('📎 SIMPLE_PREVIEW: Usando URL existente');
+          console.log('📎 PREVIEW: Usando URL existente');
           if (isMounted) {
             setPreviewUrl(url);
             setIsLoading(false);
@@ -50,39 +38,43 @@ export const useOptimizedImagePreview = ({
 
         // Para arquivos locais
         if (file) {
-          // Validar formato de arquivo
-          if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
-            console.warn('⚠️ SIMPLE_PREVIEW: Formato não suportado:', file.type);
+          console.log('📁 PREVIEW: Processando arquivo local:', file.name);
+          
+          // Primeira opção: Blob URL (melhor para Capacitor Android)
+          try {
+            objectUrl = URL.createObjectURL(file);
+            console.log('✅ PREVIEW: Blob URL criada');
+            
             if (isMounted) {
-              setHasError(true);
+              setPreviewUrl(objectUrl);
               setIsLoading(false);
             }
             return;
+          } catch (blobError) {
+            console.warn('⚠️ PREVIEW: Erro no Blob URL, tentando FileReader:', blobError);
+            
+            // Fallback: FileReader
+            const reader = new FileReader();
+            
+            reader.onload = (event) => {
+              const result = event.target?.result;
+              if (typeof result === 'string' && isMounted) {
+                console.log('✅ PREVIEW: FileReader concluído');
+                setPreviewUrl(result);
+                setIsLoading(false);
+              }
+            };
+            
+            reader.onerror = () => {
+              console.error('❌ PREVIEW: Erro no FileReader');
+              if (isMounted) {
+                setHasError(true);
+                setIsLoading(false);
+              }
+            };
+            
+            reader.readAsDataURL(file);
           }
-
-          console.log('📁 SIMPLE_PREVIEW: Processando arquivo local com FileReader');
-          
-          // Usar sempre FileReader - método mais simples e compatível
-          const reader = new FileReader();
-          
-          reader.onload = (event) => {
-            const result = event.target?.result;
-            if (typeof result === 'string' && isMounted) {
-              console.log('✅ SIMPLE_PREVIEW: FileReader concluído');
-              setPreviewUrl(result);
-              setIsLoading(false);
-            }
-          };
-          
-          reader.onerror = () => {
-            console.error('❌ SIMPLE_PREVIEW: Erro no FileReader');
-            if (isMounted) {
-              setHasError(true);
-              setIsLoading(false);
-            }
-          };
-          
-          reader.readAsDataURL(file);
           return;
         }
 
@@ -93,7 +85,7 @@ export const useOptimizedImagePreview = ({
         }
         
       } catch (error) {
-        console.error('💥 SIMPLE_PREVIEW: Erro geral:', error);
+        console.error('💥 PREVIEW: Erro geral:', error);
         if (isMounted) {
           setHasError(true);
           setIsLoading(false);
@@ -103,10 +95,14 @@ export const useOptimizedImagePreview = ({
 
     generatePreview();
 
+    // Cleanup
     return () => {
       isMounted = false;
+      if (objectUrl) {
+        URL.revokeObjectURL(objectUrl);
+      }
     };
-  }, [file, url, platform.platform]);
+  }, [file, url]);
 
   return {
     previewUrl,
