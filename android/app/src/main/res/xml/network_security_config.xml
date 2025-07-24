@@ -1,4 +1,5 @@
-<network-security-config xmlns:android="http://schemas.android.com/apk/res/android">
+<?xml version="1.0" encoding="utf-8"?>
+<network-security-config>
     <domain-config cleartextTrafficPermitted="true">
         <domain includeSubdomains="true">localhost</domain>
         <domain includeSubdomains="true">127.0.0.1</domain>
@@ -7,7 +8,7 @@
         <domain includeSubdomains="true">supabase.co</domain>
         <domain includeSubdomains="true">kfqorqjwbkxzrqhuvnyh.supabase.co</domain>
     </domain-config>
-    <base-config cleartextTrafficPermitted="true">
+    <base-config cleartextTrafficPermitted="false">
         <trust-anchors>
             <certificates src="system"/>
             <certificates src="user"/>

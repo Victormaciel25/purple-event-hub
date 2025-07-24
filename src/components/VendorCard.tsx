@@ -35,7 +35,7 @@ const VendorCard: React.FC<VendorProps> = ({
   const navigate = useNavigate();
 
   const handleClick = () => {
-    console.log("🎯 VENDOR_CARD: Card clicado:", { id, name, status });
+    console.log("🎯 VENDOR_CARD: Card clicked:", { id, name, status });
     if (status === 'pending') {
       navigate(`/vendor-pending/${id}`);
     } else {
@@ -69,19 +69,16 @@ const VendorCard: React.FC<VendorProps> = ({
     );
   };
 
-  // Garantir URL válida e única para cada render
+  // Garantir que a imagem tenha uma URL válida e única
   const imageUrl = image && image.trim() 
     ? image 
     : "https://images.unsplash.com/photo-1566681855366-282a74153321?q=80&w=600&auto=format&fit=crop";
 
-  // Criar chave única para forçar re-render da imagem
-  const imageKey = `vendor-${id}-${imageUrl.length}-${Date.now()}`;
-
-  console.log("🖼️ VENDOR_CARD: Renderizando card do fornecedor:", { 
+  console.log("🖼️ VENDOR_CARD: Rendering vendor card:", { 
     id, 
     name, 
-    imageUrl: imageUrl.substring(0, 50) + "...", 
-    imageKey
+    imageUrl, 
+    originalImage: image 
   });
 
   return (
@@ -97,7 +94,7 @@ const VendorCard: React.FC<VendorProps> = ({
             src={imageUrl}
             alt={`${name} - ${category}`}
             className="w-full h-full"
-            key={imageKey}
+            key={`vendor-${id}-${Date.now()}`}
             loadingClassName="animate-pulse bg-gray-200 flex items-center justify-center"
           />
           {isPromoted && (
