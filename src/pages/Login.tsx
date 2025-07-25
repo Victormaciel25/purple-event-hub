@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -166,6 +165,7 @@ const Login = () => {
           email,
           password,
           options: {
+            emailRedirectTo: `${window.location.origin}/login`,
             data: {
               first_name: firstName,
               last_name: lastName,
@@ -201,7 +201,7 @@ const Login = () => {
 
         toast({
           title: "Cadastro realizado",
-          description: "Sua conta foi criada com sucesso!",
+          description: "Verifique seu email para confirmar sua conta antes de fazer login.",
         });
         
         // Automatically switch to login view after successful signup
