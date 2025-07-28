@@ -32,7 +32,7 @@ interface WebhookPayload {
 }
 
 const handler = async (req: Request): Promise<Response> => {
-  console.log("Webhook recebido:", req.method);
+  console.log("Email confirmation webhook received:", req.method);
 
   // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
@@ -41,17 +41,17 @@ const handler = async (req: Request): Promise<Response> => {
 
   try {
     const payload: WebhookPayload = await req.json();
-    console.log("Payload recebido:", JSON.stringify(payload, null, 2));
+    console.log("Webhook payload:", JSON.stringify(payload, null, 2));
 
     const { user, email_data } = payload;
     const { token_hash, redirect_to, email_action_type, site_url } = email_data;
 
-    // Construir URL de confirmação
+    // Build confirmation URL
     const confirmationUrl = `${site_url}/auth/v1/verify?token=${token_hash}&type=${email_action_type}&redirect_to=${redirect_to}`;
     
     const firstName = user.user_metadata?.first_name || "Usuário";
     
-    // Template HTML para o email
+    // HTML email template
     const htmlTemplate = `
       <!DOCTYPE html>
       <html>
@@ -103,7 +103,7 @@ const handler = async (req: Request): Promise<Response> => {
       </html>
     `;
 
-    console.log("Enviando email para:", user.email);
+    console.log("Sending email to:", user.email);
 
     const emailResponse = await resend.emails.send({
       from: "iParty <onboarding@resend.dev>",
@@ -112,7 +112,7 @@ const handler = async (req: Request): Promise<Response> => {
       html: htmlTemplate,
     });
 
-    console.log("Email enviado com sucesso:", emailResponse);
+    console.log("Email sent successfully:", emailResponse);
 
     return new Response(JSON.stringify({ success: true, emailResponse }), {
       status: 200,
@@ -122,7 +122,7 @@ const handler = async (req: Request): Promise<Response> => {
       },
     });
   } catch (error: any) {
-    console.error("Erro ao enviar email de confirmação:", error);
+    console.error("Error sending confirmation email:", error);
     return new Response(
       JSON.stringify({ 
         error: error.message,
