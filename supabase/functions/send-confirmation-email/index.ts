@@ -33,6 +33,7 @@ interface WebhookPayload {
 
 const handler = async (req: Request): Promise<Response> => {
   console.log("Email confirmation webhook received:", req.method);
+  console.log("Headers:", Object.fromEntries(req.headers.entries()));
 
   // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
