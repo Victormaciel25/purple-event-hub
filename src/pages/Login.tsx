@@ -160,12 +160,11 @@ const Login = () => {
           return;
         }
 
-        // Using first and last name separately - the trigger will handle profile creation
+        // Using Supabase's native email confirmation system
         const { error } = await supabase.auth.signUp({
           email,
           password,
           options: {
-            emailRedirectTo: `${window.location.origin}/login`,
             data: {
               first_name: firstName,
               last_name: lastName,
@@ -200,8 +199,8 @@ const Login = () => {
         }
 
         toast({
-          title: "Cadastro realizado",
-          description: "Verifique seu email para confirmar sua conta antes de fazer login.",
+          title: "Cadastro realizado com sucesso!",
+          description: "Verifique seu email para confirmar sua conta. O email pode demorar alguns minutos para chegar.",
         });
         
         // Automatically switch to login view after successful signup
