@@ -162,7 +162,7 @@ const Login = () => {
 
         console.log("Attempting signup for email:", email);
 
-        // Using Supabase's native email confirmation system with proper redirect
+        // Using Supabase's native email confirmation system with SMTP
         const { error } = await supabase.auth.signUp({
           email,
           password,
@@ -205,7 +205,7 @@ const Login = () => {
 
         toast({
           title: "Cadastro realizado com sucesso!",
-          description: "Verifique seu email para confirmar sua conta. O email pode demorar alguns minutos para chegar. Verifique também a pasta de spam.",
+          description: "Verifique seu email para confirmar sua conta. O email será enviado via SMTP configurado e pode demorar alguns minutos para chegar. Verifique também a pasta de spam.",
         });
         
         // Automatically switch to login view after successful signup

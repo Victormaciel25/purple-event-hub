@@ -1,6 +1,22 @@
 
 project_id = "kfqorqjwbkxzrqhuvnyh"
 
+[auth]
+site_url = "https://www.ipartybrasil.com"
+additional_redirect_urls = ["https://www.ipartybrasil.com", "https://kfqorqjwbkxzrqhuvnyh.supabase.co"]
+
+[auth.email]
+enable_signup = true
+enable_confirmations = true
+template = { confirmation = { subject = "Confirme seu email - iParty" } }
+
+[auth.email.smtp]
+host = "smtppro.zoho.com"
+port = 465
+user = "suporte@ipartybrasil.com"
+admin_email = "suporte@ipartybrasil.com"
+sender_name = "Suporte iParty"
+
 [functions.vendor-approval]
 verify_jwt = false
 
@@ -20,4 +36,10 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.delete-user-account]
+verify_jwt = false
+
+[functions.send-confirmation-email]
+verify_jwt = false
+
+[functions.send-email]
 verify_jwt = false
