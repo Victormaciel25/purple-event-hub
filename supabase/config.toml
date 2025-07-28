@@ -7,7 +7,7 @@ additional_redirect_urls = ["https://www.ipartybrasil.com", "https://kfqorqjwbkx
 
 [auth.email]
 enable_signup = true
-enable_confirmations = false
+enable_confirmations = true
 template = { confirmation = { subject = "Confirme seu email - iParty" } }
 
 [auth.email.smtp]
@@ -16,11 +16,6 @@ port = 465
 user = "suporte@ipartybrasil.com"
 admin_email = "suporte@ipartybrasil.com"
 sender_name = "Suporte iParty"
-
-[auth.rate_limits]
-signup = { max_frequency = "unlimited" }
-password_reset = { max_frequency = "unlimited" }
-email_verification = { max_frequency = "unlimited" }
 
 [functions.vendor-approval]
 verify_jwt = false
@@ -41,10 +36,4 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.delete-user-account]
-verify_jwt = false
-
-[functions.send-confirmation-email]
-verify_jwt = false
-
-[functions.send-email]
 verify_jwt = false

@@ -82,7 +82,6 @@ const Login = () => {
     // Set up auth state listener
     const { data: authListener } = supabase.auth.onAuthStateChange(
       (event, session) => {
-        // Only handle navigation when a user signs in
         if (event === 'SIGNED_IN' && session) {
           navigate("/explore");
         }
@@ -109,11 +108,9 @@ const Login = () => {
         if (error) {
           console.log("Login error:", error.message);
           
-          // Provide specific error messages based on error type
           let errorMessage = "Erro ao fazer login";
           
           if (error.message.includes("Invalid login credentials")) {
-            // Check if email format is valid to determine if it's email or password issue
             const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
             if (!emailRegex.test(email)) {
               errorMessage = "Email incorreto ou inválido";
@@ -137,7 +134,6 @@ const Login = () => {
           return;
         }
 
-        // Remove the success toast - navigation will be handled by onAuthStateChange
       } else {
         // Handle signup - validate password first
         const passwordValidationErrors = validatePassword(password);
@@ -163,7 +159,6 @@ const Login = () => {
 
         console.log("Attempting signup for email:", email);
 
-        // Sistema sem limitações de email - sempre prosseguir com o cadastro
         const { error, data } = await supabase.auth.signUp({
           email,
           password,
@@ -177,8 +172,7 @@ const Login = () => {
           }
         });
 
-        // Ignorar erros de rate limit - o sistema está configurado para processar sem limitações
-        if (error && !error.message.includes("rate limit")) {
+        if (error) {
           console.log("Signup error:", error.message);
           
           let errorMessage = "Erro ao criar conta";
@@ -200,34 +194,32 @@ const Login = () => {
           return;
         }
 
-        console.log("Signup processed successfully for email:", email);
+        console.log("Signup successful for email:", email);
 
-        // Sempre mostrar mensagem de sucesso
-        toast({
-          title: "Cadastro realizado com sucesso!",
-          description: "Sua conta foi criada com sucesso! Você pode fazer login agora. O sistema está configurado para processar emails sem limitações.",
-        });
+        // Check if user needs to confirm email
+        if (data.user && !data.session) {
+          toast({
+            title: "Cadastro realizado com sucesso!",
+            description: "Verifique seu email para confirmar sua conta antes de fazer login.",
+          });
+        } else {
+          toast({
+            title: "Cadastro realizado com sucesso!",
+            description: "Sua conta foi criada e você está logado!",
+          });
+        }
         
-        // Automatically switch to login view after successful signup
+        // Switch to login view after successful signup
         setIsLogin(true);
       }
     } catch (error: any) {
       console.log("Catch error:", error.message);
       
-      // Ignorar erros de rate limit - sempre mostrar sucesso
-      if (error.message.includes("rate limit")) {
-        toast({
-          title: "Cadastro processado!",
-          description: "Sua conta foi processada com sucesso. O sistema está configurado para processar emails sem limitações.",
-        });
-        setIsLogin(true);
-      } else {
-        toast({
-          title: "Erro",
-          description: error.message,
-          variant: "destructive",
-        });
-      }
+      toast({
+        title: "Erro",
+        description: error.message,
+        variant: "destructive",
+      });
     } finally {
       setLoading(false);
     }
