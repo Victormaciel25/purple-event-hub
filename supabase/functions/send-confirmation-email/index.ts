@@ -68,7 +68,7 @@ const handler = async (req: Request): Promise<Response> => {
     
     const firstName = user.user_metadata?.first_name || "Usuário";
     
-    // HTML email template
+    // HTML email template with iParty purple colors
     const htmlTemplate = `
       <!DOCTYPE html>
       <html>
@@ -80,7 +80,7 @@ const handler = async (req: Request): Promise<Response> => {
       <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
         <div style="text-align: center; margin-bottom: 30px;">
           <img src="https://www.ipartybrasil.com/lovable-uploads/b59e9ab5-1380-47bb-b7f4-95ecfc1fe03c.png" alt="iParty" style="width: 80px; height: 80px;">
-          <h1 style="color: #e91e63; margin: 20px 0;">Bem-vindo ao iParty!</h1>
+          <h1 style="color: #9b87f5; margin: 20px 0;">Bem-vindo ao iParty!</h1>
         </div>
         
         <div style="background-color: #f8f9fa; padding: 30px; border-radius: 10px; margin-bottom: 30px;">
@@ -91,7 +91,7 @@ const handler = async (req: Request): Promise<Response> => {
           
           <div style="text-align: center; margin: 30px 0;">
             <a href="${confirmationUrl}" 
-               style="background-color: #e91e63; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold; font-size: 16px;">
+               style="background-color: #9b87f5; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold; font-size: 16px;">
               Confirmar Email
             </a>
           </div>
