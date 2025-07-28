@@ -53,8 +53,15 @@ const handler = async (req: Request): Promise<Response> => {
     const { user, email_data } = payload;
     const { token_hash, redirect_to, email_action_type, site_url } = email_data;
 
-    // Build confirmation URL
-    const confirmationUrl = `${site_url}/auth/v1/verify?token=${token_hash}&type=${email_action_type}&redirect_to=${redirect_to}`;
+    // Get the anon key from environment
+    const anonKey = Deno.env.get('SUPABASE_ANON_KEY') ?? '';
+
+    // Build confirmation URL with apikey parameter
+    const confirmationUrl = `${site_url}/auth/v1/verify`
+      + `?token=${token_hash}`
+      + `&type=${email_action_type}`
+      + `&redirect_to=${encodeURIComponent(redirect_to)}`
+      + `&apikey=${anonKey}`;
     
     const firstName = user.user_metadata?.first_name || "Usuário";
     
