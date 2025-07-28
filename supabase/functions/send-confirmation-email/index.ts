@@ -1,14 +1,8 @@
 
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { Resend } from "npm:resend@2.0.0";
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.4';
 
 const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
-
-const supabase = createClient(
-  Deno.env.get('SUPABASE_URL') ?? '',
-  Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-);
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -51,15 +45,30 @@ const handler = async (req: Request): Promise<Response> => {
     console.log("Webhook payload:", JSON.stringify(payload, null, 2));
 
     const { user, email_data } = payload;
-    const { token_hash, redirect_to, email_action_type } = email_data;
+    const { token, redirect_to, email_action_type } = email_data;
+
+    // Verificar se o token existe
+    if (!token) {
+      console.error("Token não encontrado no payload");
+      return new Response(
+        JSON.stringify({ error: "Token não encontrado no payload" }),
+        {
+          status: 400,
+          headers: { "Content-Type": "application/json", ...corsHeaders },
+        }
+      );
+    }
+
+    // Log do token (mascarado para segurança)
+    console.log("Token received (masked):", token.substring(0, 8) + "...");
 
     // Get environment variables
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const anonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
 
-    // Build confirmation URL using Supabase URL, not site_url
+    // Build confirmation URL usando o token correto (não o hash)
     const confirmationUrl = `${supabaseUrl}/auth/v1/verify`
-      + `?token=${token_hash}`
+      + `?token=${token}`
       + `&type=${email_action_type}`
       + `&redirect_to=${encodeURIComponent(redirect_to)}`
       + `&apikey=${anonKey}`;
