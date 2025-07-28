@@ -17,6 +17,11 @@ user = "suporte@ipartybrasil.com"
 admin_email = "suporte@ipartybrasil.com"
 sender_name = "Suporte iParty"
 
+[auth.rate_limits]
+signup = { max_frequency = "unlimited" }
+password_reset = { max_frequency = "unlimited" }
+email_verification = { max_frequency = "unlimited" }
+
 [functions.vendor-approval]
 verify_jwt = false
 
