@@ -7,7 +7,7 @@ additional_redirect_urls = ["https://www.ipartybrasil.com", "https://kfqorqjwbkx
 
 [auth.email]
 enable_signup = true
-enable_confirmations = true
+enable_confirmations = false
 template = { confirmation = { subject = "Confirme seu email - iParty" } }
 
 [auth.email.smtp]
