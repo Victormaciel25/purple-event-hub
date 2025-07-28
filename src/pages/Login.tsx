@@ -160,11 +160,14 @@ const Login = () => {
           return;
         }
 
-        // Using Supabase's native email confirmation system
+        console.log("Attempting signup for email:", email);
+
+        // Using Supabase's native email confirmation system with proper redirect
         const { error } = await supabase.auth.signUp({
           email,
           password,
           options: {
+            emailRedirectTo: `${window.location.origin}/login`,
             data: {
               first_name: firstName,
               last_name: lastName,
@@ -198,9 +201,11 @@ const Login = () => {
           return;
         }
 
+        console.log("Signup successful for email:", email);
+
         toast({
           title: "Cadastro realizado com sucesso!",
-          description: "Verifique seu email para confirmar sua conta. O email pode demorar alguns minutos para chegar.",
+          description: "Verifique seu email para confirmar sua conta. O email pode demorar alguns minutos para chegar. Verifique também a pasta de spam.",
         });
         
         // Automatically switch to login view after successful signup
