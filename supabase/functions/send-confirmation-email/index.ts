@@ -108,6 +108,9 @@ const handler = async (req: Request): Promise<Response> => {
       </html>
     `;
 
+    // Aguardar 1 segundo antes de enviar o email
+    await new Promise(resolve => setTimeout(resolve, 1000));
+
     // Enviar email usando o SMTP configurado no Supabase
     const emailResponse = await fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/send-email`, {
       method: 'POST',
