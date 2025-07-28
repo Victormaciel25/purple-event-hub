@@ -118,8 +118,6 @@ const Login = () => {
             }
           } else if (error.message.includes("Email not confirmed")) {
             errorMessage = "Email não confirmado. Verifique sua caixa de entrada e confirme seu email antes de fazer login";
-          } else if (error.message.includes("Too many requests")) {
-            errorMessage = "Muitas tentativas. Tente novamente em alguns minutos";
           } else {
             errorMessage = error.message;
           }
