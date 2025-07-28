@@ -17,6 +17,9 @@ user = "suporte@ipartybrasil.com"
 admin_email = "suporte@ipartybrasil.com"
 sender_name = "Suporte iParty"
 
+[functions.send-confirmation-email]
+verify_jwt = false
+
 [functions.vendor-approval]
 verify_jwt = false
 
