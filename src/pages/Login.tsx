@@ -118,7 +118,7 @@ const Login = () => {
               errorMessage = "Senha incorreta";
             }
           } else if (error.message.includes("Email not confirmed")) {
-            errorMessage = "Email não confirmado. Verifique sua caixa de entrada";
+            errorMessage = "Email não confirmado. Verifique sua caixa de entrada e confirme seu email antes de fazer login";
           } else if (error.message.includes("Too many requests")) {
             errorMessage = "Muitas tentativas. Tente novamente em alguns minutos";
           } else {
@@ -172,8 +172,7 @@ const Login = () => {
           }
         });
 
-        // Ignorar completamente erros de rate limit e processar como sucesso
-        if (error && !error.message.includes("rate limit")) {
+        if (error) {
           console.log("Signup error:", error.message);
           
           let errorMessage = "Erro ao criar conta";
@@ -182,6 +181,8 @@ const Login = () => {
             errorMessage = "Este email já está cadastrado. Tente fazer login ou use outro email.";
           } else if (error.message.includes("Signup is disabled")) {
             errorMessage = "Cadastro temporariamente desabilitado. Tente novamente mais tarde.";
+          } else if (error.message.includes("rate limit")) {
+            errorMessage = "Muitas tentativas de cadastro. Tente novamente em alguns minutos.";
           } else {
             errorMessage = error.message;
           }
@@ -195,13 +196,20 @@ const Login = () => {
           return;
         }
 
-        console.log("Signup processed successfully for email:", email);
+        console.log("Signup successful for email:", email);
 
-        // Sempre mostrar mensagem de sucesso, independente de rate limits
-        toast({
-          title: "Cadastro realizado com sucesso!",
-          description: "Sua conta foi criada com sucesso! Você pode fazer login agora.",
-        });
+        // Check if user needs to confirm email
+        if (data.user && !data.session) {
+          toast({
+            title: "Cadastro realizado com sucesso!",
+            description: "Verifique seu email para confirmar sua conta. Após a confirmação, você poderá fazer login.",
+          });
+        } else {
+          toast({
+            title: "Cadastro realizado com sucesso!",
+            description: "Sua conta foi criada e você está logado!",
+          });
+        }
         
         // Switch to login view after successful signup
         setIsLogin(true);
@@ -209,20 +217,19 @@ const Login = () => {
     } catch (error: any) {
       console.log("Catch error:", error.message);
       
-      // Ignorar erros de rate limit e processar como sucesso
+      let errorMessage = "Erro inesperado";
+      
       if (error.message.includes("rate limit")) {
-        toast({
-          title: "Cadastro processado!",
-          description: "Sua conta foi processada com sucesso. Você pode fazer login agora.",
-        });
-        setIsLogin(true);
+        errorMessage = "Muitas tentativas. Tente novamente em alguns minutos.";
       } else {
-        toast({
-          title: "Erro",
-          description: error.message,
-          variant: "destructive",
-        });
+        errorMessage = error.message;
       }
+      
+      toast({
+        title: "Erro",
+        description: errorMessage,
+        variant: "destructive",
+      });
     } finally {
       setLoading(false);
     }
