@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -181,8 +180,6 @@ const Login = () => {
             errorMessage = "Este email já está cadastrado. Tente fazer login ou use outro email.";
           } else if (error.message.includes("Signup is disabled")) {
             errorMessage = "Cadastro temporariamente desabilitado. Tente novamente mais tarde.";
-          } else if (error.message.includes("rate limit")) {
-            errorMessage = "Muitas tentativas de cadastro. Tente novamente em alguns minutos.";
           } else {
             errorMessage = error.message;
           }
@@ -217,17 +214,9 @@ const Login = () => {
     } catch (error: any) {
       console.log("Catch error:", error.message);
       
-      let errorMessage = "Erro inesperado";
-      
-      if (error.message.includes("rate limit")) {
-        errorMessage = "Muitas tentativas. Tente novamente em alguns minutos.";
-      } else {
-        errorMessage = error.message;
-      }
-      
       toast({
         title: "Erro",
-        description: errorMessage,
+        description: error.message,
         variant: "destructive",
       });
     } finally {
