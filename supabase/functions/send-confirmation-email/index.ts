@@ -65,6 +65,9 @@ const handler = async (req: Request): Promise<Response> => {
       });
     }
 
+    // Aguardar 5 segundos antes de enviar o email
+    await new Promise(resolve => setTimeout(resolve, 5000));
+
     // Construir o link de confirmação
     const confirmationLink = email_data 
       ? `${email_data.site_url}/auth/confirm?token_hash=${email_data.token_hash}&type=${email_data.email_action_type}&redirect_to=${encodeURIComponent(email_data.redirect_to || `${email_data.site_url}/login`)}`
