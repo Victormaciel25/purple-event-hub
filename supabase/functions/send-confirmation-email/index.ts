@@ -1,8 +1,7 @@
 
+
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { Resend } from "npm:resend@2.0.0";
-
-const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -41,6 +40,29 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
+    // Validar variáveis de ambiente no início
+    const resendApiKey = Deno.env.get("RESEND_API_KEY");
+    if (!resendApiKey) {
+      console.error("❌ ERRO CRÍTICO: RESEND_API_KEY não encontrada");
+      throw new Error("Missing RESEND_API_KEY");
+    }
+
+    const supabaseUrl = Deno.env.get("SUPABASE_URL");
+    if (!supabaseUrl) {
+      console.error("❌ ERRO CRÍTICO: SUPABASE_URL não encontrada");
+      throw new Error("Missing SUPABASE_URL");
+    }
+
+    const anonKey = Deno.env.get("SUPABASE_ANON_KEY");
+    if (!anonKey) {
+      console.error("❌ ERRO CRÍTICO: SUPABASE_ANON_KEY não encontrada");
+      throw new Error("Missing SUPABASE_ANON_KEY");
+    }
+
+    // Inicializar Resend após validação
+    const resend = new Resend(resendApiKey);
+    console.log("✅ Variáveis de ambiente validadas e Resend inicializado");
+
     const payload: WebhookPayload = await req.json();
     console.log("Webhook payload:", JSON.stringify(payload, null, 2));
 
@@ -49,9 +71,12 @@ const handler = async (req: Request): Promise<Response> => {
 
     // Verificar se o token existe
     if (!token) {
-      console.error("Token não encontrado no payload");
+      console.error("❌ Token não encontrado no payload");
       return new Response(
-        JSON.stringify({ error: "Token não encontrado no payload" }),
+        JSON.stringify({ 
+          success: false,
+          error: "Token não encontrado no payload" 
+        }),
         {
           status: 400,
           headers: { "Content-Type": "application/json", ...corsHeaders },
@@ -61,10 +86,6 @@ const handler = async (req: Request): Promise<Response> => {
 
     // Log do token (mascarado para segurança)
     console.log("Token received (masked):", token.substring(0, 8) + "...");
-
-    // Get environment variables
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const anonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
 
     // Build confirmation URL usando o token correto (não o hash)
     const confirmationUrl = `${supabaseUrl}/auth/v1/verify`
@@ -129,7 +150,8 @@ const handler = async (req: Request): Promise<Response> => {
       </html>
     `;
 
-    console.log("Sending email to:", user.email);
+    console.log("📧 Enviando email para:", user.email);
+    console.log("📧 De: iParty <onboarding@resend.dev>");
 
     const emailResponse = await resend.emails.send({
       from: "iParty <onboarding@resend.dev>",
@@ -138,9 +160,33 @@ const handler = async (req: Request): Promise<Response> => {
       html: htmlTemplate,
     });
 
-    console.log("Email sent successfully:", emailResponse);
+    console.log("📧 Resposta do Resend:", emailResponse);
 
-    return new Response(JSON.stringify({ success: true, emailResponse }), {
+    // Verificar se houve erro no envio
+    if (emailResponse.error) {
+      console.error("❌ ERRO DO RESEND:", emailResponse.error);
+      return new Response(
+        JSON.stringify({ 
+          success: false,
+          error: "Erro ao enviar email",
+          details: emailResponse.error 
+        }),
+        {
+          status: 500,
+          headers: { "Content-Type": "application/json", ...corsHeaders },
+        }
+      );
+    }
+
+    console.log("✅ EMAIL ENVIADO COM SUCESSO!");
+    console.log("📧 Email ID:", emailResponse.data?.id);
+
+    return new Response(JSON.stringify({ 
+      success: true, 
+      emailResponse,
+      message: "Email de confirmação enviado com sucesso",
+      emailId: emailResponse.data?.id
+    }), {
       status: 200,
       headers: {
         "Content-Type": "application/json",
@@ -148,11 +194,14 @@ const handler = async (req: Request): Promise<Response> => {
       },
     });
   } catch (error: any) {
-    console.error("Error sending confirmation email:", error);
+    console.error("❌ ERRO CRÍTICO na função de envio de email:", error);
+    console.error("Stack trace:", error.stack);
     return new Response(
       JSON.stringify({ 
+        success: false,
         error: error.message,
-        details: error.toString()
+        details: error.toString(),
+        stack: error.stack
       }),
       {
         status: 500,
@@ -163,3 +212,4 @@ const handler = async (req: Request): Promise<Response> => {
 };
 
 serve(handler);
+
