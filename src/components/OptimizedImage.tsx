@@ -7,6 +7,7 @@ interface OptimizedImageProps extends React.ImgHTMLAttributes<HTMLImageElement> 
   className?: string;
   loadingClassName?: string;
   fallbackSrc?: string;
+  eager?: boolean; // Nova prop para controlar o carregamento
 }
 
 const OptimizedImage: React.FC<OptimizedImageProps> = ({
@@ -15,6 +16,7 @@ const OptimizedImage: React.FC<OptimizedImageProps> = ({
   className = "",
   loadingClassName = "animate-pulse bg-gray-200",
   fallbackSrc = "https://images.unsplash.com/photo-1566681855366-282a74153321?q=80&w=600&auto=format&fit=crop",
+  eager = true, // Por padrão, carregar imediatamente
   ...rest
 }) => {
   const [loading, setLoading] = useState(true);
@@ -138,7 +140,7 @@ const OptimizedImage: React.FC<OptimizedImageProps> = ({
         }`}
         onLoad={handleLoad}
         onError={handleError}
-        loading="lazy"
+        loading={eager ? "eager" : "lazy"} // Usar eager por padrão
         decoding="async"
         crossOrigin="anonymous"
         style={{
