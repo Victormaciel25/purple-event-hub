@@ -17,22 +17,6 @@ user = "suporte@ipartybrasil.com"
 admin_email = "suporte@ipartybrasil.com"
 sender_name = "Suporte iParty"
 
-# Enhanced security settings
-[auth.security]
-# Reduce OTP expiry from default 1 hour to 10 minutes for security
-otp_expiry = 600
-# Enable leaked password protection
-enable_password_breach_check = true
-# Minimum password length
-password_min_length = 8
-
-[auth.rate_limits]
-# Rate limiting for auth endpoints
-email_otp = "60/hour"
-sms_otp = "60/hour" 
-password_reset = "30/hour"
-signup = "30/hour"
-
 [functions.send-confirmation-email]
 verify_jwt = false
 
