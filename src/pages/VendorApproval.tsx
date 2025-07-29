@@ -15,6 +15,7 @@ import { toast } from "sonner";
 import VendorList from "@/components/approval/VendorList";
 import VendorDetails, { VendorDetailsType } from "@/components/approval/VendorDetails";
 import { SUPABASE_CONFIG } from "@/config/app-config";
+import { VendorItemProps } from "@/components/approval/VendorListItem";
 
 type VendorWithProfileInfo = {
   id: string;
@@ -23,6 +24,12 @@ type VendorWithProfileInfo = {
   created_at: string;
   status: 'pending' | 'approved' | 'rejected';
   user_id: string;
+  contact_number: string;
+  description?: string;
+  address?: string;
+  images?: string[];
+  working_hours?: string;
+  available_days?: string[];
   profiles?: {
     first_name: string | null;
     last_name: string | null;
@@ -62,7 +69,13 @@ const VendorApproval = () => {
           category,
           created_at,
           status,
-          user_id
+          user_id,
+          contact_number,
+          description,
+          address,
+          images,
+          working_hours,
+          available_days
         `)
         .order('created_at', { ascending: false });
 
