@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, Plus, RefreshCw } from "lucide-react";
@@ -19,18 +20,25 @@ const UserVendors = () => {
       setLoading(true);
       const { data: session } = await supabase.auth.getSession();
       if (!session.session) {
+        toast.error("Sessão expirada. Faça login novamente.");
         navigate("/login");
         return;
       }
+      
       const { data, error } = await supabase
         .from("vendors")
         .select("*")
         .eq("user_id", session.session.user.id)
         .order("created_at", { ascending: false });
-      if (error) throw error;
+        
+      if (error) {
+        console.error("Error fetching vendors:", error);
+        throw error;
+      }
+      
       setVendors(data || []);
     } catch (err) {
-      console.error(err);
+      console.error("Error in fetchVendors:", err);
       toast.error("Erro ao carregar fornecedores");
     } finally {
       setLoading(false);

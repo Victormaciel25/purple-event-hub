@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { ChevronLeft } from "lucide-react";
@@ -15,6 +16,7 @@ import { toast } from "sonner";
 import VendorList from "@/components/approval/VendorList";
 import VendorDetails, { VendorDetailsType } from "@/components/approval/VendorDetails";
 import { SUPABASE_CONFIG } from "@/config/app-config";
+import { validateInput, sanitizeInput } from "@/utils/securityValidation";
 
 type VendorWithProfileInfo = {
   id: string;
@@ -43,15 +45,23 @@ const VendorApproval = () => {
 
   useEffect(() => {
     if (!roleLoading && !isAdmin) {
+      toast.error("Acesso negado: Permissões de administrador necessárias");
       navigate("/profile");
     }
   }, [isAdmin, roleLoading, navigate]);
 
   useEffect(() => {
-    fetchVendors();
-  }, []);
+    if (isAdmin) {
+      fetchVendors();
+    }
+  }, [isAdmin]);
 
   const fetchVendors = async () => {
+    if (!isAdmin) {
+      toast.error("Acesso negado");
+      return;
+    }
+
     try {
       setLoading(true);
       const { data: vendorData, error } = await supabase
@@ -119,6 +129,11 @@ const VendorApproval = () => {
   };
 
   const fetchVendorDetails = async (vendorId: string) => {
+    if (!isAdmin) {
+      toast.error("Acesso negado");
+      return;
+    }
+
     try {
       const { data: vendorData, error } = await supabase
         .from("vendors")
@@ -198,7 +213,10 @@ const VendorApproval = () => {
   };
 
   const approveVendor = async () => {
-    if (!selectedVendor) return;
+    if (!selectedVendor || !isAdmin) {
+      toast.error("Acesso negado");
+      return;
+    }
     
     try {
       setApproving(true);
@@ -255,22 +273,6 @@ const VendorApproval = () => {
         });
       }
       
-      // Verify the update worked by fetching the vendor directly
-      const { data: verifyData, error: verifyError } = await supabase
-        .from("vendors")
-        .select("status")
-        .eq("id", selectedVendor.id)
-        .single();
-        
-      if (verifyError) {
-        console.warn("Failed to verify vendor status update:", verifyError);
-      } else {
-        console.log("Verified vendor status:", verifyData);
-        if (verifyData.status !== "approved") {
-          console.warn("Vendor status not updated correctly in database!");
-        }
-      }
-      
       // Close the details panel
       setTimeout(() => {
         setDrawerOpen(false);
@@ -287,9 +289,20 @@ const VendorApproval = () => {
   };
 
   const rejectVendor = async () => {
-    if (!selectedVendor) return;
+    if (!selectedVendor || !isAdmin) {
+      toast.error("Acesso negado");
+      return;
+    }
+
     if (!rejectionReason.trim()) {
       toast.error("Por favor, forneça um motivo para rejeição");
+      return;
+    }
+
+    // Validate rejection reason for security
+    const sanitizedReason = sanitizeInput(rejectionReason.trim());
+    if (!validateInput(sanitizedReason, 1000)) {
+      toast.error("Motivo de rejeição contém conteúdo inválido");
       return;
     }
 
@@ -298,14 +311,14 @@ const VendorApproval = () => {
         .from("vendors")
         .update({
           status: "rejected",
-          rejection_reason: rejectionReason
+          rejection_reason: sanitizedReason
         })
         .eq("id", selectedVendor.id);
 
       if (error) throw error;
       
       // Send rejection notification email
-      await sendApprovalNotification(selectedVendor, 'rejected', rejectionReason);
+      await sendApprovalNotification(selectedVendor, 'rejected', sanitizedReason);
       
       toast.success("Fornecedor rejeitado");
       setDrawerOpen(false);

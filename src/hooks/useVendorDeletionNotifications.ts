@@ -20,9 +20,12 @@ export const useVendorDeletionNotifications = () => {
     const fetchNotifications = async () => {
       try {
         const { data: userData } = await supabase.auth.getUser();
-        if (!userData.user) return;
+        if (!userData.user) {
+          setLoading(false);
+          return;
+        }
 
-        // Fix TS error by using the correct table name that exists in the database schema
+        // Fetch unviewed vendor deletion notifications
         const { data, error } = await supabase
           .from('vendor_deletion_notifications')
           .select('*')
@@ -32,16 +35,17 @@ export const useVendorDeletionNotifications = () => {
 
         if (error) {
           console.error('Error fetching vendor deletion notifications:', error);
+          setLoading(false);
           return;
         }
 
         if (data && data.length > 0) {
-          // Explicitly cast the data to the correct type
           const typedData = data as VendorDeletionNotification[];
           setNotifications(typedData);
           
-          // Display toast notifications for unviewed notifications
-          typedData.forEach((notification: VendorDeletionNotification) => {
+          // Display toast notifications for unviewed notifications (limit to prevent spam)
+          const recentNotifications = typedData.slice(0, 3); // Only show last 3
+          recentNotifications.forEach((notification: VendorDeletionNotification) => {
             toast.error(`O fornecedor "${notification.vendor_name}" foi excluído: ${notification.deletion_reason}`, {
               duration: 8000,
               onDismiss: () => markNotificationAsViewed(notification.id),
@@ -89,7 +93,7 @@ export const useVendorDeletionNotifications = () => {
 
   const markNotificationAsViewed = async (notificationId: string) => {
     try {
-      // Call the RPC function to mark notification as viewed
+      // Call the secure RPC function to mark notification as viewed
       const { error } = await supabase.rpc('mark_vendor_notification_viewed', {
         notification_id: notificationId
       });

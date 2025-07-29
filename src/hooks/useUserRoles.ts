@@ -27,7 +27,7 @@ export function useUserRoles() {
         const currentUserId = sessionData.session.user.id;
         setUserId(currentUserId);
         
-        // Com RLS desativado, podemos consultar diretamente a tabela user_roles sem preocupações
+        // Query user roles with proper error handling
         const { data: roles, error } = await supabase
           .from('user_roles')
           .select('role')
@@ -35,15 +35,10 @@ export function useUserRoles() {
           
         if (error) {
           console.error("Error fetching user roles:", error);
-          
-          // Special case for known admin - safety mechanism
-          if (sessionData.session.user.email === "vcr0091@gmail.com") {
-            setIsAdmin(true);
-            setIsSuperAdmin(true);
-          } else {
-            setIsAdmin(false);
-            setIsSuperAdmin(false);
-          }
+          // Don't fallback to hardcoded admin - this was a security vulnerability
+          setIsAdmin(false);
+          setIsSuperAdmin(false);
+          toast.error("Erro ao verificar permissões do usuário");
         } else {
           const hasAdminRole = roles?.some(role => role.role === 'admin') || false;
           const hasSuperAdminRole = roles?.some(role => role.role === 'super_admin') || false;
@@ -55,6 +50,7 @@ export function useUserRoles() {
         console.error("Global error in useUserRoles:", error);
         setIsAdmin(false);
         setIsSuperAdmin(false);
+        toast.error("Erro ao verificar permissões do usuário");
       } finally {
         setLoading(false);
       }

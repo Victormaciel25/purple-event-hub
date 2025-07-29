@@ -1,6 +1,7 @@
 
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 interface SpaceDeletionNotification {
   id: string;
@@ -19,6 +20,7 @@ export function useSpaceDeletionNotifications() {
         // Verificar se o usuário está logado
         const { data: sessionData } = await supabase.auth.getSession();
         if (!sessionData.session) {
+          setLoading(false);
           return;
         }
 
@@ -31,11 +33,12 @@ export function useSpaceDeletionNotifications() {
 
         if (error) {
           console.error("Erro ao buscar notificações de exclusão:", error);
+          setLoading(false);
           return;
         }
 
         if (notifications && notifications.length > 0) {
-          // Mark notifications as viewed without showing toasts
+          // Mark notifications as viewed without showing toasts to prevent spam
           notifications.forEach((notification: SpaceDeletionNotification) => {
             markNotificationAsViewed(notification.id);
           });
@@ -56,7 +59,7 @@ export function useSpaceDeletionNotifications() {
         // Verificar notificações quando o usuário fizer login
         setTimeout(() => {
           checkForDeletionNotifications();
-        }, 0); // Usar setTimeout para evitar bloqueios com o callback do onAuthStateChange
+        }, 100);
       }
     });
 
@@ -65,7 +68,7 @@ export function useSpaceDeletionNotifications() {
     };
   }, []);
 
-  // Função para marcar a notificação como visualizada
+  // Função para marcar a notificação como visualizada usando função segura
   const markNotificationAsViewed = async (notificationId: string) => {
     try {
       await supabase.rpc("mark_notification_viewed", {
