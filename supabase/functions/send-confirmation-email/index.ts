@@ -43,8 +43,9 @@ const handler = async (req: Request): Promise<Response> => {
     const { user, email_data } = payload;
     const { token_hash, email_action_type, redirect_to, site_url } = email_data;
 
-    // Construct the confirmation URL
-    const confirmationUrl = `${site_url}/auth/v1/verify?token=${token_hash}&type=${email_action_type}&redirect_to=${redirect_to || 'https://www.ipartybrasil.com/login'}`;
+    // Construct the confirmation URL with the correct site_url format
+    const baseUrl = site_url.replace('/auth/v1', '');
+    const confirmationUrl = `${baseUrl}/auth/v1/verify?token=${token_hash}&type=${email_action_type}&redirect_to=${redirect_to || 'https://www.ipartybrasil.com/login'}`;
 
     console.log("Sending confirmation email to:", user.email);
     console.log("Confirmation URL:", confirmationUrl);
