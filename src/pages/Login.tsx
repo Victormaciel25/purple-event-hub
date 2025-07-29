@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -55,6 +54,8 @@ const Login = () => {
 
   // Check if error indicates email already exists
   const isEmailAlreadyExistsError = (errorMessage: string): boolean => {
+    console.log("Checking email exists error for:", errorMessage);
+    
     const existingEmailPatterns = [
       "User already registered",
       "Email address already registered",
@@ -62,12 +63,20 @@ const Login = () => {
       "already registered",
       "email already in use",
       "duplicate email",
-      "email exists"
+      "email exists",
+      "user with this email already exists",
+      "email_already_exists",
+      "signup_disabled",
+      "user_already_exists"
     ];
     
-    return existingEmailPatterns.some(pattern => 
-      errorMessage.toLowerCase().includes(pattern.toLowerCase())
+    const errorLower = errorMessage.toLowerCase();
+    const hasPattern = existingEmailPatterns.some(pattern => 
+      errorLower.includes(pattern.toLowerCase())
     );
+    
+    console.log("Email exists pattern found:", hasPattern);
+    return hasPattern;
   };
 
   // Check if error indicates rate limit exceeded
@@ -76,7 +85,8 @@ const Login = () => {
       "email rate limit exceeded",
       "too many requests",
       "rate limit",
-      "try again later"
+      "try again later",
+      "rate_limit_exceeded"
     ];
     
     return rateLimitPatterns.some(pattern => 
@@ -227,10 +237,18 @@ const Login = () => {
         });
 
         if (error) {
-          console.log("Signup error:", error.message);
+          console.log("Signup error details:", {
+            message: error.message,
+            status: error.status,
+            name: error.name
+          });
           
           // Enhanced error handling for existing email
-          if (isEmailAlreadyExistsError(error.message)) {
+          if (isEmailAlreadyExistsError(error.message) || 
+              error.message.includes("User already registered") ||
+              error.status === 422) {
+            
+            console.log("Email already exists - showing options");
             setEmailError("Este email já está cadastrado");
             setShowEmailExistsOptions(true);
             
