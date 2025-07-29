@@ -425,7 +425,7 @@ const EventSpaceDetails: React.FC = () => {
           {/* price / details */}
           <div className="mb-6">
             <div className="flex justify-between items-center mb-2">
-              <h2 className="text-2xl font-bold">{formatPrice(space.price)}</h2>
+              <h2 className="text-2xl font-bold">A partir de {formatPrice(space.price)}</h2>
               <Badge variant="secondary">
                 <Users className="mr-1" size={14} />
                 Até {space.capacity} pessoas
