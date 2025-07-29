@@ -20,14 +20,29 @@ const ForgotPassword: React.FC = () => {
     setLoading(true);
 
     try {
-      console.log("[ForgotPassword] Starting password reset process for:", email);
+      console.log("[ForgotPassword] === STARTING PASSWORD RESET PROCESS ===");
+      console.log("[ForgotPassword] Email:", email);
+      console.log("[ForgotPassword] Timestamp:", new Date().toISOString());
+      
+      const redirectUrl = `${window.location.origin}/reset-password`;
+      console.log("[ForgotPassword] Redirect URL:", redirectUrl);
+      
+      console.log("[ForgotPassword] Calling supabase.auth.resetPasswordForEmail...");
       
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/reset-password`,
+        redirectTo: redirectUrl,
       });
 
+      console.log("[ForgotPassword] Supabase response received");
+      console.log("[ForgotPassword] Error:", error);
+
       if (error) {
-        console.error("[ForgotPassword] Supabase error:", error);
+        console.error("[ForgotPassword] Supabase error details:", {
+          message: error.message,
+          status: error.status,
+          code: error.code,
+          details: error.details,
+        });
         throw error;
       }
 
@@ -40,7 +55,14 @@ const ForgotPassword: React.FC = () => {
       });
       
     } catch (err: any) {
-      console.error("[ForgotPassword] Error:", err);
+      console.error("[ForgotPassword] === ERROR OCCURRED ===");
+      console.error("[ForgotPassword] Error type:", typeof err);
+      console.error("[ForgotPassword] Error constructor:", err.constructor.name);
+      console.error("[ForgotPassword] Error message:", err.message);
+      console.error("[ForgotPassword] Error status:", err.status);
+      console.error("[ForgotPassword] Error code:", err.code);
+      console.error("[ForgotPassword] Full error:", err);
+      
       toast({
         title: "Erro",
         description: err.message || "Não foi possível enviar o link de recuperação.",

@@ -30,23 +30,47 @@ interface WebhookPayload {
 }
 
 const handler = async (req: Request): Promise<Response> => {
-  console.log("=== PASSWORD RESET EMAIL FUNCTION CALLED ===");
+  console.log("=== PASSWORD RESET EMAIL FUNCTION STARTED ===");
+  console.log("Timestamp:", new Date().toISOString());
   console.log("Request method:", req.method);
+  console.log("Request URL:", req.url);
   console.log("Request headers:", Object.fromEntries(req.headers.entries()));
   
   if (req.method === "OPTIONS") {
+    console.log("Handling OPTIONS request");
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const payload: WebhookPayload = await req.json();
-    console.log("=== PAYLOAD RECEIVED ===");
-    console.log("Full payload:", JSON.stringify(payload, null, 2));
+    console.log("=== READING REQUEST BODY ===");
+    const rawBody = await req.text();
+    console.log("Raw request body:", rawBody);
+    
+    if (!rawBody) {
+      console.error("Empty request body received");
+      return new Response(
+        JSON.stringify({ success: false, error: "Empty request body" }),
+        {
+          status: 400,
+          headers: { "Content-Type": "application/json", ...corsHeaders },
+        }
+      );
+    }
+
+    console.log("=== PARSING JSON PAYLOAD ===");
+    const payload: WebhookPayload = JSON.parse(rawBody);
+    console.log("Parsed payload:", JSON.stringify(payload, null, 2));
 
     const { user, email_data } = payload;
     
+    console.log("=== VALIDATING PAYLOAD STRUCTURE ===");
+    console.log("User exists:", !!user);
+    console.log("Email data exists:", !!email_data);
+    
     if (!user || !email_data) {
       console.error("Missing user or email_data in payload");
+      console.error("User:", user);
+      console.error("Email data:", email_data);
       return new Response(
         JSON.stringify({ success: false, error: "Invalid payload structure" }),
         {
@@ -58,10 +82,11 @@ const handler = async (req: Request): Promise<Response> => {
 
     const { token_hash, email_action_type, redirect_to, site_url } = email_data;
 
-    console.log("=== EMAIL DATA ===");
+    console.log("=== EMAIL DATA DETAILS ===");
     console.log("Email action type:", email_action_type);
     console.log("User email:", user.email);
-    console.log("Token hash:", token_hash);
+    console.log("User ID:", user.id);
+    console.log("Token hash exists:", !!token_hash);
     console.log("Site URL:", site_url);
     console.log("Redirect to:", redirect_to);
 
@@ -77,17 +102,39 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
+    console.log("=== PROCESSING PASSWORD RECOVERY EMAIL ===");
+
+    // Verificar se temos a API key do Resend
+    const resendApiKey = Deno.env.get("RESEND_API_KEY");
+    console.log("Resend API key exists:", !!resendApiKey);
+    
+    if (!resendApiKey) {
+      console.error("RESEND_API_KEY not found in environment variables");
+      return new Response(
+        JSON.stringify({ success: false, error: "Email service not configured" }),
+        {
+          status: 500,
+          headers: { "Content-Type": "application/json", ...corsHeaders },
+        }
+      );
+    }
+
     // Construir a URL de redefinição de senha
     const baseUrl = site_url.replace('/auth/v1', '');
     const resetUrl = `${baseUrl}/auth/v1/verify?token=${token_hash}&type=${email_action_type}&redirect_to=${redirect_to || 'https://www.ipartybrasil.com/reset-password'}`;
 
-    console.log("=== SENDING PASSWORD RESET EMAIL ===");
-    console.log("Sending to:", user.email);
+    console.log("=== URL CONSTRUCTION ===");
+    console.log("Base URL:", baseUrl);
     console.log("Reset URL:", resetUrl);
 
     const firstName = user.user_metadata?.first_name || "Usuário";
+    console.log("First name for email:", firstName);
 
-    const emailResponse = await resend.emails.send({
+    console.log("=== SENDING EMAIL VIA RESEND ===");
+    console.log("Sending to:", user.email);
+    console.log("From:", "Suporte iParty <suporte@ipartybrasil.com>");
+
+    const emailPayload = {
       from: "Suporte iParty <suporte@ipartybrasil.com>",
       to: [user.email],
       subject: "Redefinir senha - iParty",
@@ -136,13 +183,17 @@ const handler = async (req: Request): Promise<Response> => {
         </body>
         </html>
       `,
-    });
+    };
+
+    console.log("Email payload prepared:", JSON.stringify(emailPayload, null, 2));
+
+    const emailResponse = await resend.emails.send(emailPayload);
 
     console.log("=== EMAIL SENT SUCCESSFULLY ===");
-    console.log("Resend response:", emailResponse);
+    console.log("Resend response:", JSON.stringify(emailResponse, null, 2));
 
     return new Response(
-      JSON.stringify({ success: true, message: "Password reset email sent successfully" }),
+      JSON.stringify({ success: true, message: "Password reset email sent successfully", emailId: emailResponse.data?.id }),
       {
         status: 200,
         headers: { "Content-Type": "application/json", ...corsHeaders },
@@ -150,6 +201,8 @@ const handler = async (req: Request): Promise<Response> => {
     );
   } catch (error: any) {
     console.error("=== ERROR SENDING PASSWORD RESET EMAIL ===");
+    console.error("Error type:", typeof error);
+    console.error("Error constructor:", error.constructor.name);
     console.error("Error details:", error);
     console.error("Error message:", error.message);
     console.error("Error stack:", error.stack);
@@ -157,7 +210,8 @@ const handler = async (req: Request): Promise<Response> => {
     return new Response(
       JSON.stringify({ 
         success: false, 
-        error: error.message || "Failed to send password reset email" 
+        error: error.message || "Failed to send password reset email",
+        errorType: error.constructor.name
       }),
       {
         status: 500,
