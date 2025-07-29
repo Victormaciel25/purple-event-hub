@@ -35,7 +35,6 @@ export const useSpacePhotos = (spaceId: string | null) => {
       }
 
       console.log("📸 ADMIN: Fotos encontradas:", photosData?.length || 0);
-      console.log("📋 ADMIN: Dados das fotos:", photosData);
       
       if (photosData && photosData.length > 0) {
         setPhotos(photosData);
@@ -57,71 +56,42 @@ export const useSpacePhotos = (spaceId: string | null) => {
     try {
       console.log("🔗 ADMIN: Criando URLs para", photosData.length, "fotos");
       
-      const urls = await Promise.all(
-        photosData.map(async (photo, index) => {
-          if (!photo.storage_path) {
-            console.error("❌ ADMIN: Caminho ausente para foto:", photo.id);
-            return null;
-          }
-
-          console.log(`🔄 ADMIN: Processando foto ${index + 1}:`, {
-            id: photo.id,
-            storage_path: photo.storage_path,
-            isFullURL: photo.storage_path.startsWith('http')
-          });
-
-          // Se já é uma URL completa, usar diretamente
-          if (photo.storage_path.startsWith('http')) {
-            console.log("✅ ADMIN: Já é URL completa:", photo.storage_path);
-            return photo.storage_path;
-          }
-
-          // Criar URL pública a partir do storage path
-          try {
-            const { data: publicUrlData } = supabase.storage
-              .from('spaces')
-              .getPublicUrl(photo.storage_path);
-            
-            console.log("🌐 ADMIN: Tentativa de URL pública:", {
-              input: photo.storage_path,
-              output: publicUrlData
-            });
-            
-            if (publicUrlData?.publicUrl) {
-              console.log(`✅ ADMIN: URL pública criada:`, {
-                originalPath: photo.storage_path,
-                url: publicUrlData.publicUrl
-              });
-              
-              // Testar se a URL é acessível
-              try {
-                const response = await fetch(publicUrlData.publicUrl, { method: 'HEAD' });
-                console.log(`🔍 ADMIN: Teste de acessibilidade da URL:`, {
-                  url: publicUrlData.publicUrl,
-                  status: response.status,
-                  ok: response.ok
-                });
-              } catch (fetchError) {
-                console.warn("⚠️ ADMIN: URL pode não estar acessível:", fetchError);
-              }
-              
-              return publicUrlData.publicUrl;
-            } else {
-              console.error("❌ ADMIN: publicUrl está vazio ou nulo");
-            }
-          } catch (urlError) {
-            console.error("❌ ADMIN: Erro ao criar URL pública:", urlError);
-          }
-
-          console.error(`❌ ADMIN: Falha para foto:`, photo.storage_path);
+      // Processar todas as URLs em paralelo para carregamento mais rápido
+      const urls = photosData.map((photo) => {
+        if (!photo.storage_path) {
+          console.error("❌ ADMIN: Caminho ausente para foto:", photo.id);
           return null;
-        })
-      );
+        }
+
+        console.log(`🔄 ADMIN: Processando foto:`, {
+          id: photo.id,
+          storage_path: photo.storage_path,
+          isFullURL: photo.storage_path.startsWith('http')
+        });
+
+        // Se já é uma URL completa, usar diretamente
+        if (photo.storage_path.startsWith('http')) {
+          console.log("✅ ADMIN: Já é URL completa:", photo.storage_path);
+          return photo.storage_path;
+        }
+
+        // Criar URL pública a partir do storage path
+        const { data: publicUrlData } = supabase.storage
+          .from('spaces')
+          .getPublicUrl(photo.storage_path);
+        
+        if (publicUrlData?.publicUrl) {
+          console.log(`✅ ADMIN: URL pública criada:`, publicUrlData.publicUrl);
+          return publicUrlData.publicUrl;
+        }
+
+        console.error(`❌ ADMIN: Falha para foto:`, photo.storage_path);
+        return null;
+      });
 
       const validUrls = urls.filter(url => url !== null) as string[];
       
       console.log("✨ ADMIN: URLs válidas criadas:", validUrls.length, "de", photosData.length, "fotos");
-      console.log("📋 ADMIN: URLs finais:", validUrls);
       
       setPhotoUrls(validUrls);
     } catch (error) {
@@ -133,11 +103,7 @@ export const useSpacePhotos = (spaceId: string | null) => {
   useEffect(() => {
     if (spaceId) {
       console.log("🔄 ADMIN useSpacePhotos - spaceId mudou para:", spaceId);
-      const timer = setTimeout(() => {
-        fetchPhotos(spaceId);
-      }, 100);
-      
-      return () => clearTimeout(timer);
+      fetchPhotos(spaceId);
     } else {
       console.log("🧹 ADMIN useSpacePhotos - spaceId é null, limpando fotos");
       setPhotos([]);

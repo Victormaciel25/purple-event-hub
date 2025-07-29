@@ -7,7 +7,7 @@ interface OptimizedImageProps extends React.ImgHTMLAttributes<HTMLImageElement> 
   className?: string;
   loadingClassName?: string;
   fallbackSrc?: string;
-  eager?: boolean; // Nova prop para controlar o carregamento
+  eager?: boolean;
 }
 
 const OptimizedImage: React.FC<OptimizedImageProps> = ({
@@ -16,7 +16,7 @@ const OptimizedImage: React.FC<OptimizedImageProps> = ({
   className = "",
   loadingClassName = "animate-pulse bg-gray-200",
   fallbackSrc = "https://images.unsplash.com/photo-1566681855366-282a74153321?q=80&w=600&auto=format&fit=crop",
-  eager = true, // Por padrão, carregar imediatamente
+  eager = true,
   ...rest
 }) => {
   const [loading, setLoading] = useState(true);
@@ -24,7 +24,7 @@ const OptimizedImage: React.FC<OptimizedImageProps> = ({
   const [currentSrc, setCurrentSrc] = useState("");
   const [retryCount, setRetryCount] = useState(0);
   const imgRef = useRef<HTMLImageElement>(null);
-  const maxRetries = 3;
+  const maxRetries = 2; // Reduzir tentativas
 
   // Função para detectar se está no ambiente Android/Capacitor
   const isAndroidCapacitor = () => {
@@ -33,57 +33,27 @@ const OptimizedImage: React.FC<OptimizedImageProps> = ({
            (window as any).Capacitor.getPlatform() === 'android';
   };
 
-  // Reset completo quando src muda
+  // Reset quando src muda
   useEffect(() => {
     console.log("🖼️ OPTIMIZED_IMG: Source changed:", src);
     
-    // Reset completo do estado
     setLoading(true);
     setError(false);
     setRetryCount(0);
-    setCurrentSrc("");
     
-    // Para Android, adicionar delay antes de definir a nova src
-    const delay = isAndroidCapacitor() ? 50 : 10;
-    
-    const timer = setTimeout(() => {
-      if (src && src.trim()) {
-        // Para Android, forçar reload adicionando timestamp
-        const finalSrc = isAndroidCapacitor() && !src.includes('?') 
-          ? `${src}?t=${Date.now()}`
-          : src;
-        
-        console.log("🖼️ OPTIMIZED_IMG: Setting source:", finalSrc);
-        setCurrentSrc(finalSrc);
-      } else {
-        console.warn("🖼️ OPTIMIZED_IMG: Empty src, using fallback");
-        setCurrentSrc(fallbackSrc);
-      }
-    }, delay);
-
-    return () => clearTimeout(timer);
-  }, [src, fallbackSrc]);
-
-  // Função para forçar reload da imagem
-  const forceReload = () => {
-    if (imgRef.current && currentSrc) {
-      console.log("🔄 OPTIMIZED_IMG: Forcing image reload");
+    if (src && src.trim()) {
+      // Para Android, adicionar timestamp apenas se necessário
+      const finalSrc = isAndroidCapacitor() && retryCount > 0 && !src.includes('?') 
+        ? `${src}?t=${Date.now()}`
+        : src;
       
-      // Remover src temporariamente
-      imgRef.current.src = "";
-      
-      // Re-adicionar src após um breve delay
-      setTimeout(() => {
-        if (imgRef.current) {
-          const reloadSrc = currentSrc.includes('?') 
-            ? `${currentSrc}&reload=${Date.now()}`
-            : `${currentSrc}?reload=${Date.now()}`;
-          
-          imgRef.current.src = reloadSrc;
-        }
-      }, 100);
+      console.log("🖼️ OPTIMIZED_IMG: Setting source:", finalSrc);
+      setCurrentSrc(finalSrc);
+    } else {
+      console.warn("🖼️ OPTIMIZED_IMG: Empty src, using fallback");
+      setCurrentSrc(fallbackSrc);
     }
-  };
+  }, [src, fallbackSrc]);
 
   const handleLoad = () => {
     console.log("✅ OPTIMIZED_IMG: Image loaded successfully:", currentSrc);
@@ -98,12 +68,13 @@ const OptimizedImage: React.FC<OptimizedImageProps> = ({
       console.log(`🔄 OPTIMIZED_IMG: Retrying... (${retryCount + 1}/${maxRetries})`);
       setRetryCount(prev => prev + 1);
       
-      // Delay maior para Android
-      const retryDelay = isAndroidCapacitor() ? 2000 : 1000;
-      
+      // Tentar novamente com delay menor
       setTimeout(() => {
-        forceReload();
-      }, retryDelay);
+        const retrySrc = currentSrc.includes('?') 
+          ? `${currentSrc}&retry=${Date.now()}`
+          : `${currentSrc}?retry=${Date.now()}`;
+        setCurrentSrc(retrySrc);
+      }, 500);
     } else {
       console.log("🔄 OPTIMIZED_IMG: Max retries reached, using fallback");
       setError(true);
@@ -135,28 +106,20 @@ const OptimizedImage: React.FC<OptimizedImageProps> = ({
         ref={imgRef}
         src={currentSrc}
         alt={alt}
-        className={`w-full h-full object-cover transition-opacity duration-300 ${
+        className={`w-full h-full object-cover transition-opacity duration-200 ${
           loading ? "opacity-0" : "opacity-100"
         }`}
         onLoad={handleLoad}
         onError={handleError}
-        loading={eager ? "eager" : "lazy"} // Usar eager por padrão
+        loading={eager ? "eager" : "lazy"}
         decoding="async"
         crossOrigin="anonymous"
         style={{
-          // Forçar re-renderização no Android
           WebkitTransform: 'translateZ(0)',
           transform: 'translateZ(0)',
         }}
         {...rest}
       />
-      
-      {/* Indicador de retry para debug */}
-      {retryCount > 0 && (
-        <div className="absolute top-1 right-1 bg-orange-500 text-white text-xs px-1 rounded">
-          {retryCount}
-        </div>
-      )}
     </div>
   );
 };
