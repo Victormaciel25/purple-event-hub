@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -426,7 +425,10 @@ const EventSpaceDetails: React.FC = () => {
           {/* price / details */}
           <div className="mb-6">
             <div className="flex justify-between items-center mb-2">
-              <h2 className="text-xl font-bold">A partir de {formatPrice(space.price)}</h2>
+              <h2 className="font-bold">
+                <span className="text-sm">A partir de </span>
+                <span className="text-xl">{formatPrice(space.price)}</span>
+              </h2>
               <Badge variant="secondary">
                 <Users className="mr-1" size={14} />
                 Até {space.capacity} pessoas
