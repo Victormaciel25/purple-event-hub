@@ -8,17 +8,6 @@ additional_redirect_urls = ["https://www.ipartybrasil.com", "https://kfqorqjwbkx
 [auth.email]
 enable_signup = true
 enable_confirmations = true
-template = { 
-  confirmation = { subject = "Confirme seu email - iParty" },
-  recovery = { subject = "Redefinir senha - iParty" }
-}
-
-[auth.email.smtp]
-host = "smtppro.zoho.com"
-port = 465
-user = "suporte@ipartybrasil.com"
-admin_email = "suporte@ipartybrasil.com"
-sender_name = "Suporte iParty"
 
 [auth.hooks.send_email]
 user_confirmation = "https://kfqorqjwbkxzrqhuvnyh.supabase.co/functions/v1/send-confirmation-email"

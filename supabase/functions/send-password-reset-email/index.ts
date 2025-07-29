@@ -38,10 +38,22 @@ const handler = async (req: Request): Promise<Response> => {
 
   try {
     const payload: WebhookPayload = await req.json();
-    console.log("Payload received:", payload);
+    console.log("Password reset payload received:", payload);
 
     const { user, email_data } = payload;
     const { token_hash, email_action_type, redirect_to, site_url } = email_data;
+
+    // Only handle recovery emails, ignore signup confirmations
+    if (email_action_type !== 'recovery') {
+      console.log(`Ignoring email type: ${email_action_type} - not a password recovery`);
+      return new Response(
+        JSON.stringify({ success: true, message: `Ignored email type: ${email_action_type}` }),
+        {
+          status: 200,
+          headers: { "Content-Type": "application/json", ...corsHeaders },
+        }
+      );
+    }
 
     // Construct the password reset URL
     const baseUrl = site_url.replace('/auth/v1', '');

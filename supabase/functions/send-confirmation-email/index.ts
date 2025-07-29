@@ -43,11 +43,11 @@ const handler = async (req: Request): Promise<Response> => {
     const { user, email_data } = payload;
     const { token_hash, email_action_type, redirect_to, site_url } = email_data;
 
-    // Only handle confirmation emails, not recovery
+    // Only handle signup confirmation emails, ignore recovery emails
     if (email_action_type !== 'signup') {
-      console.log("Not a signup confirmation, ignoring");
+      console.log(`Ignoring email type: ${email_action_type} - not a signup confirmation`);
       return new Response(
-        JSON.stringify({ success: true, message: "Not a signup confirmation" }),
+        JSON.stringify({ success: true, message: `Ignored email type: ${email_action_type}` }),
         {
           status: 200,
           headers: { "Content-Type": "application/json", ...corsHeaders },
@@ -55,7 +55,7 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    // Construct the confirmation URL with the correct site_url format
+    // Construct the confirmation URL
     const baseUrl = site_url.replace('/auth/v1', '');
     const confirmationUrl = `${baseUrl}/auth/v1/verify?token=${token_hash}&type=${email_action_type}&redirect_to=${redirect_to || 'https://www.ipartybrasil.com/login'}`;
 
@@ -115,7 +115,7 @@ const handler = async (req: Request): Promise<Response> => {
       `,
     });
 
-    console.log("Email sent successfully:", emailResponse);
+    console.log("Confirmation email sent successfully:", emailResponse);
 
     return new Response(
       JSON.stringify({ success: true, message: "Confirmation email sent" }),
