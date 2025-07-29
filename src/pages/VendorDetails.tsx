@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Phone, MapPin, Calendar, Clock, ChevronLeft, MoreVertical, Share, Flag, Heart } from "lucide-react";
@@ -311,6 +310,7 @@ const VendorDetails = () => {
                           alt={`${vendor.name} - Imagem ${index + 1}`}
                           className="w-full h-full object-cover hover:scale-105 transition-transform duration-200"
                           loadingClassName="animate-pulse bg-gray-200"
+                          eager={true}
                         />
                         <div className="absolute bottom-2 right-2">
                           <span className="bg-black/70 text-white px-2 py-1 rounded text-xs">
@@ -335,6 +335,7 @@ const VendorDetails = () => {
                           src={image}
                           alt={`${vendor.name} - Imagem ${index + 1}`}
                           className="object-cover w-full h-full hover:scale-105 transition-transform duration-200"
+                          eager={true}
                         />
                         <div className="absolute bottom-2 right-2">
                           <span className="bg-black/70 text-white px-2 py-1 rounded text-xs">
@@ -349,6 +350,7 @@ const VendorDetails = () => {
             </div>
           </div>
 
+          
           <div className="mb-6">
             <h1 className="text-2xl font-bold mb-2">{vendor.name}</h1>
             <Badge variant="outline" className="mb-4 bg-secondary">

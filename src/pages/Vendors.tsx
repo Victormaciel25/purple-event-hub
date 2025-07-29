@@ -113,7 +113,7 @@ const Vendors = () => {
         {filteredVendors.length > 0 ? (
           filteredVendors.map((vendor) => (
             <VendorCard
-              key={`${vendor.id}-${Date.now()}`} // Force re-render para garantir atualização
+              key={`${vendor.id}-${Date.now()}`}
               id={vendor.id}
               name={vendor.name}
               category={vendor.category}

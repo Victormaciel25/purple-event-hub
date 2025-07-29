@@ -96,6 +96,7 @@ const VendorCard: React.FC<VendorProps> = ({
             className="w-full h-full"
             key={`vendor-${id}-${Date.now()}`}
             loadingClassName="animate-pulse bg-gray-200 flex items-center justify-center"
+            eager={true}
           />
           {isPromoted && (
             <div className="absolute -top-1 -right-1 bg-yellow-500 rounded-full p-1">
