@@ -20,21 +20,27 @@ const ForgotPassword: React.FC = () => {
     setLoading(true);
 
     try {
-      console.log("[ForgotPassword] Sending reset email to:", email);
-
+      console.log("[ForgotPassword] Starting password reset process for:", email);
+      
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
         redirectTo: `${window.location.origin}/reset-password`,
       });
 
       if (error) {
-        console.error("[ForgotPassword] Error:", error);
+        console.error("[ForgotPassword] Supabase error:", error);
         throw error;
       }
 
-      console.log("[ForgotPassword] Reset email sent successfully");
+      console.log("[ForgotPassword] Password reset request sent successfully");
       setEmailSent(true);
+      
+      toast({
+        title: "Link enviado!",
+        description: "Verifique seu email para o link de redefinição de senha.",
+      });
+      
     } catch (err: any) {
-      console.error("[ForgotPassword] Erro ao enviar e-mail:", err);
+      console.error("[ForgotPassword] Error:", err);
       toast({
         title: "Erro",
         description: err.message || "Não foi possível enviar o link de recuperação.",

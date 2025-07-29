@@ -38,10 +38,13 @@ const handler = async (req: Request): Promise<Response> => {
 
   try {
     const payload: WebhookPayload = await req.json();
-    console.log("Password reset payload received:", payload);
+    console.log("Password reset payload received:", JSON.stringify(payload, null, 2));
 
     const { user, email_data } = payload;
     const { token_hash, email_action_type, redirect_to, site_url } = email_data;
+
+    console.log("Email action type:", email_action_type);
+    console.log("User email:", user.email);
 
     // Only handle recovery emails, ignore signup confirmations
     if (email_action_type !== 'recovery') {
