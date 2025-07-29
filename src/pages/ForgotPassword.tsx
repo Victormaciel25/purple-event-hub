@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -41,7 +40,6 @@ const ForgotPassword: React.FC = () => {
           message: error.message,
           status: error.status,
           code: error.code,
-          details: error.details,
         });
         throw error;
       }
