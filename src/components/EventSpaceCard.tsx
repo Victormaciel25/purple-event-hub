@@ -70,7 +70,7 @@ const EventSpaceCard: React.FC<EventSpaceProps> = ({
           fallbackSrc="https://images.unsplash.com/photo-1566681855366-282a74153321?q=80&w=600&auto=format&fit=crop"
         />
         <div className="absolute bottom-0 right-0 bg-iparty text-white px-3 py-1 text-sm font-medium rounded-tl-lg">
-          {formatPrice(price)}
+          A partir de {formatPrice(price)}
         </div>
       </div>
       <CardContent className="p-4">
