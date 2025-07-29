@@ -30,28 +30,69 @@ interface WebhookPayload {
 }
 
 const handler = async (req: Request): Promise<Response> => {
-  console.log("=== CONFIRMATION EMAIL FUNCTION CALLED ===");
+  console.log("=== CONFIRMATION EMAIL FUNCTION STARTED ===");
+  console.log("Timestamp:", new Date().toISOString());
   console.log("Request method:", req.method);
+  console.log("Request URL:", req.url);
+  console.log("Request headers:", Object.fromEntries(req.headers.entries()));
   
   if (req.method === "OPTIONS") {
+    console.log("Handling OPTIONS request");
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const payload: WebhookPayload = await req.json();
-    console.log("=== CONFIRMATION PAYLOAD RECEIVED ===");
-    console.log("Full payload:", JSON.stringify(payload, null, 2));
+    console.log("=== READING REQUEST BODY ===");
+    const rawBody = await req.text();
+    console.log("Raw request body:", rawBody);
+    
+    if (!rawBody) {
+      console.error("Empty request body received");
+      return new Response(
+        JSON.stringify({ success: false, error: "Empty request body" }),
+        {
+          status: 400,
+          headers: { "Content-Type": "application/json", ...corsHeaders },
+        }
+      );
+    }
+
+    console.log("=== PARSING JSON PAYLOAD ===");
+    const payload: WebhookPayload = JSON.parse(rawBody);
+    console.log("Parsed payload:", JSON.stringify(payload, null, 2));
 
     const { user, email_data } = payload;
+    
+    console.log("=== VALIDATING PAYLOAD STRUCTURE ===");
+    console.log("User exists:", !!user);
+    console.log("Email data exists:", !!email_data);
+    
+    if (!user || !email_data) {
+      console.error("Missing user or email_data in payload");
+      console.error("User:", user);
+      console.error("Email data:", email_data);
+      return new Response(
+        JSON.stringify({ success: false, error: "Invalid payload structure" }),
+        {
+          status: 400,
+          headers: { "Content-Type": "application/json", ...corsHeaders },
+        }
+      );
+    }
+
     const { token_hash, email_action_type, redirect_to, site_url } = email_data;
 
-    console.log("=== EMAIL DATA ===");
+    console.log("=== EMAIL DATA DETAILS ===");
     console.log("Email action type:", email_action_type);
     console.log("User email:", user.email);
+    console.log("User ID:", user.id);
+    console.log("Token hash exists:", !!token_hash);
+    console.log("Site URL:", site_url);
+    console.log("Redirect to:", redirect_to);
 
-    // Só processar emails de confirmação de cadastro
+    // Verificar se é um email de confirmação
     if (email_action_type !== 'signup') {
-      console.log(`=== IGNORING EMAIL TYPE: ${email_action_type} - NOT A SIGNUP CONFIRMATION ===`);
+      console.log(`=== IGNORING EMAIL TYPE: ${email_action_type} ===`);
       return new Response(
         JSON.stringify({ success: true, message: `Ignored email type: ${email_action_type}` }),
         {
@@ -61,43 +102,65 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
+    console.log("=== PROCESSING CONFIRMATION EMAIL ===");
+
+    // Verificar se temos a API key do Resend
+    const resendApiKey = Deno.env.get("RESEND_API_KEY");
+    console.log("Resend API key exists:", !!resendApiKey);
+    
+    if (!resendApiKey) {
+      console.error("RESEND_API_KEY not found in environment variables");
+      return new Response(
+        JSON.stringify({ success: false, error: "Email service not configured" }),
+        {
+          status: 500,
+          headers: { "Content-Type": "application/json", ...corsHeaders },
+        }
+      );
+    }
+
     // Construir a URL de confirmação
     const baseUrl = site_url.replace('/auth/v1', '');
-    const confirmUrl = `${baseUrl}/auth/v1/verify?token=${token_hash}&type=${email_action_type}&redirect_to=${redirect_to || 'https://www.ipartybrasil.com'}`;
+    const confirmationUrl = `${baseUrl}/auth/v1/verify?token=${token_hash}&type=${email_action_type}&redirect_to=${redirect_to || 'https://www.ipartybrasil.com'}`;
 
-    console.log("=== SENDING CONFIRMATION EMAIL ===");
-    console.log("Sending to:", user.email);
-    console.log("Confirmation URL:", confirmUrl);
+    console.log("=== URL CONSTRUCTION ===");
+    console.log("Base URL:", baseUrl);
+    console.log("Confirmation URL:", confirmationUrl);
 
     const firstName = user.user_metadata?.first_name || "Usuário";
+    console.log("First name for email:", firstName);
 
-    const emailResponse = await resend.emails.send({
+    console.log("=== SENDING EMAIL VIA RESEND ===");
+    console.log("Sending to:", user.email);
+    console.log("From:", "Suporte iParty <suporte@ipartybrasil.com>");
+
+    const emailPayload = {
       from: "Suporte iParty <suporte@ipartybrasil.com>",
       to: [user.email],
-      subject: "Confirme seu cadastro - iParty",
+      subject: "Confirme sua conta - iParty",
       html: `
         <!DOCTYPE html>
         <html>
         <head>
           <meta charset="utf-8">
           <meta name="viewport" content="width=device-width, initial-scale=1.0">
-          <title>Confirme seu cadastro - iParty</title>
+          <title>Confirme sua conta - iParty</title>
         </head>
         <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
           <div style="text-align: center; margin-bottom: 30px;">
             <img src="https://www.ipartybrasil.com/lovable-uploads/b59e9ab5-1380-47bb-b7f4-95ecfc1fe03c.png" alt="iParty" style="width: 80px; height: auto;">
-            <h1 style="color: #8B5CF6; margin: 20px 0;">Bem-vindo ao iParty!</h1>
+            <h1 style="color: #8B5CF6; margin: 20px 0;">Confirme sua Conta</h1>
           </div>
           
           <div style="background-color: #f9f9f9; padding: 30px; border-radius: 10px; margin-bottom: 30px;">
-            <h2 style="color: #333; margin-bottom: 20px;">Olá, ${firstName}!</h2>
+            <h2 style="color: #333; margin-bottom: 20px;">Bem-vindo, ${firstName}!</h2>
             
             <p style="margin-bottom: 20px;">
-              Obrigado por se cadastrar no iParty! Para completar seu cadastro e começar a usar nossa plataforma, clique no botão abaixo para confirmar seu email.
+              Obrigado por se cadastrar no iParty! Para completar seu cadastro e começar a usar nossa plataforma, confirme seu email clicando no botão abaixo.
             </p>
             
             <div style="text-align: center; margin: 30px 0;">
-              <a href="${confirmUrl}" 
+              <a href="${confirmationUrl}" 
                  style="background-color: #8B5CF6; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block;">
                 Confirmar Email
               </a>
@@ -107,7 +170,7 @@ const handler = async (req: Request): Promise<Response> => {
               Se o botão acima não funcionar, copie e cole o seguinte link em seu navegador:
             </p>
             <p style="word-break: break-all; background-color: #f0f0f0; padding: 10px; border-radius: 5px; font-size: 12px;">
-              ${confirmUrl}
+              ${confirmationUrl}
             </p>
           </div>
           
@@ -120,13 +183,17 @@ const handler = async (req: Request): Promise<Response> => {
         </body>
         </html>
       `,
-    });
+    };
 
-    console.log("=== CONFIRMATION EMAIL SENT SUCCESSFULLY ===");
-    console.log("Resend response:", emailResponse);
+    console.log("Email payload prepared:", JSON.stringify(emailPayload, null, 2));
+
+    const emailResponse = await resend.emails.send(emailPayload);
+
+    console.log("=== EMAIL SENT SUCCESSFULLY ===");
+    console.log("Resend response:", JSON.stringify(emailResponse, null, 2));
 
     return new Response(
-      JSON.stringify({ success: true, message: "Confirmation email sent successfully" }),
+      JSON.stringify({ success: true, message: "Confirmation email sent successfully", emailId: emailResponse.data?.id }),
       {
         status: 200,
         headers: { "Content-Type": "application/json", ...corsHeaders },
@@ -134,12 +201,17 @@ const handler = async (req: Request): Promise<Response> => {
     );
   } catch (error: any) {
     console.error("=== ERROR SENDING CONFIRMATION EMAIL ===");
+    console.error("Error type:", typeof error);
+    console.error("Error constructor:", error.constructor.name);
     console.error("Error details:", error);
+    console.error("Error message:", error.message);
+    console.error("Error stack:", error.stack);
     
     return new Response(
       JSON.stringify({ 
         success: false, 
-        error: error.message || "Failed to send confirmation email" 
+        error: error.message || "Failed to send confirmation email",
+        errorType: error.constructor.name
       }),
       {
         status: 500,
