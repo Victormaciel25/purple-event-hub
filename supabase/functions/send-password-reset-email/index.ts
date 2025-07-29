@@ -30,7 +30,9 @@ interface WebhookPayload {
 }
 
 const handler = async (req: Request): Promise<Response> => {
-  console.log("Password reset email function called");
+  console.log("=== PASSWORD RESET EMAIL FUNCTION CALLED ===");
+  console.log("Request method:", req.method);
+  console.log("Request headers:", Object.fromEntries(req.headers.entries()));
   
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -38,17 +40,34 @@ const handler = async (req: Request): Promise<Response> => {
 
   try {
     const payload: WebhookPayload = await req.json();
-    console.log("Password reset payload received:", JSON.stringify(payload, null, 2));
+    console.log("=== PAYLOAD RECEIVED ===");
+    console.log("Full payload:", JSON.stringify(payload, null, 2));
 
     const { user, email_data } = payload;
+    
+    if (!user || !email_data) {
+      console.error("Missing user or email_data in payload");
+      return new Response(
+        JSON.stringify({ success: false, error: "Invalid payload structure" }),
+        {
+          status: 400,
+          headers: { "Content-Type": "application/json", ...corsHeaders },
+        }
+      );
+    }
+
     const { token_hash, email_action_type, redirect_to, site_url } = email_data;
 
+    console.log("=== EMAIL DATA ===");
     console.log("Email action type:", email_action_type);
     console.log("User email:", user.email);
+    console.log("Token hash:", token_hash);
+    console.log("Site URL:", site_url);
+    console.log("Redirect to:", redirect_to);
 
-    // Only handle recovery emails, ignore signup confirmations
+    // Verificar se é realmente um email de recuperação
     if (email_action_type !== 'recovery') {
-      console.log(`Ignoring email type: ${email_action_type} - not a password recovery`);
+      console.log(`=== IGNORING EMAIL TYPE: ${email_action_type} ===`);
       return new Response(
         JSON.stringify({ success: true, message: `Ignored email type: ${email_action_type}` }),
         {
@@ -58,11 +77,12 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    // Construct the password reset URL
+    // Construir a URL de redefinição de senha
     const baseUrl = site_url.replace('/auth/v1', '');
     const resetUrl = `${baseUrl}/auth/v1/verify?token=${token_hash}&type=${email_action_type}&redirect_to=${redirect_to || 'https://www.ipartybrasil.com/reset-password'}`;
 
-    console.log("Sending password reset email to:", user.email);
+    console.log("=== SENDING PASSWORD RESET EMAIL ===");
+    console.log("Sending to:", user.email);
     console.log("Reset URL:", resetUrl);
 
     const firstName = user.user_metadata?.first_name || "Usuário";
@@ -118,17 +138,21 @@ const handler = async (req: Request): Promise<Response> => {
       `,
     });
 
-    console.log("Password reset email sent successfully:", emailResponse);
+    console.log("=== EMAIL SENT SUCCESSFULLY ===");
+    console.log("Resend response:", emailResponse);
 
     return new Response(
-      JSON.stringify({ success: true, message: "Password reset email sent" }),
+      JSON.stringify({ success: true, message: "Password reset email sent successfully" }),
       {
         status: 200,
         headers: { "Content-Type": "application/json", ...corsHeaders },
       }
     );
   } catch (error: any) {
-    console.error("Error sending password reset email:", error);
+    console.error("=== ERROR SENDING PASSWORD RESET EMAIL ===");
+    console.error("Error details:", error);
+    console.error("Error message:", error.message);
+    console.error("Error stack:", error.stack);
     
     return new Response(
       JSON.stringify({ 
