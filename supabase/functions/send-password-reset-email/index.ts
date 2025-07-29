@@ -178,7 +178,8 @@ const handler = async (req: Request): Promise<Response> => {
       console.log("=== PROCESSING PASSWORD RECOVERY EMAIL ===");
       emailType = "password recovery";
       
-      const resetUrl = `${baseUrl}/auth/v1/verify?token=${token_hash}&type=${email_action_type}&redirect_to=${redirect_to || 'https://www.ipartybrasil.com/reset-password'}`;
+      // CORRIGIR: Usar uma URL específica para redefinição de senha
+      const resetUrl = `${baseUrl}/auth/v1/verify?token=${token_hash}&type=${email_action_type}&redirect_to=https://www.ipartybrasil.com/reset-password`;
       console.log("Reset URL:", resetUrl);
 
       emailPayload = {
