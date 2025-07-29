@@ -24,8 +24,6 @@ import {
   Carousel,
   CarouselContent,
   CarouselItem,
-  CarouselPrevious,
-  CarouselNext,
 } from "@/components/ui/carousel";
 import {
   DropdownMenu,
@@ -34,6 +32,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
 import { useEventSpaceFavorites } from "../hooks/useEventSpaceFavorites";
 import { useUserSpacePhotos } from "../hooks/useUserSpacePhotos";
 import { supabase } from "@/integrations/supabase/client";
@@ -249,7 +249,6 @@ const EventSpaceDetails: React.FC = () => {
     setReportFormOpen(true);
   };
 
-  // Handler for vendor deletion
   const handleDeleteSpace = async () => {
     if (!deleteReason.trim()) {
       toast.error("Por favor, forneça um motivo para a exclusão");
@@ -259,7 +258,6 @@ const EventSpaceDetails: React.FC = () => {
     try {
       setDeletingSpace(true);
       
-      // Call the updated edge function that sends email notifications
       const functionUrl = `${SUPABASE_CONFIG.URL}/functions/v1/delete_space_with_notification`;
       
       console.log("Calling edge function for space deletion:", functionUrl);
@@ -300,11 +298,10 @@ const EventSpaceDetails: React.FC = () => {
     }
   };
 
-  // Determinar quais imagens exibir
   console.log("🖼️ SPACE_DETAILS: Estado das fotos:", {
     photosLoading,
     photoUrlsLength: photoUrls?.length || 0,
-    photoUrls: photoUrls?.slice(0, 2) // Log apenas as primeiras 2 URLs para debug
+    photoUrls: photoUrls?.slice(0, 2)
   });
 
   const displayImages = photoUrls && photoUrls.length > 0 
@@ -325,17 +322,18 @@ const EventSpaceDetails: React.FC = () => {
   };
 
   return (
-    <div className="h-screen w-full overflow-hidden">
+    <div className="h-screen w-full overflow-hidden bg-gradient-to-br from-gray-50 to-gray-100">
       <div className="h-full w-full overflow-y-auto scrollbar-hide">
-        <div className="container px-4 py-6 pb-20 mx-auto">
-          {/* back & actions dropdown at top */}
-          <div className="flex items-center justify-between mb-4">
-            <Button variant="ghost" size="sm" onClick={() => navigate(-1)}>
+        <div className="container px-4 py-6 pb-20 mx-auto max-w-4xl">
+          {/* Header with navigation */}
+          <div className="flex items-center justify-between mb-6 bg-white rounded-xl p-4 shadow-sm border border-gray-200">
+            <Button variant="ghost" size="sm" onClick={() => navigate(-1)} className="hover:bg-gray-100">
               <ChevronLeft size={20} />
+              <span className="ml-2 hidden sm:inline">Voltar</span>
             </Button>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="sm">
+                <Button variant="ghost" size="sm" className="hover:bg-gray-100">
                   <MoreVertical size={20} />
                 </Button>
               </DropdownMenuTrigger>
@@ -359,12 +357,14 @@ const EventSpaceDetails: React.FC = () => {
             </DropdownMenu>
           </div>
 
-          {/* image display - responsive carousel for all screen sizes */}
-          <div className="mb-6">
+          {/* Image Gallery */}
+          <Card className="mb-8 overflow-hidden shadow-lg border-gray-200">
             {photosLoading ? (
-              <div className="h-64 md:h-48 lg:h-56 bg-gray-200 rounded-lg flex items-center justify-center">
-                <Loader2 className="animate-spin h-8 w-8 text-gray-400" />
-                <span className="ml-2 text-gray-500">Carregando fotos...</span>
+              <div className="h-80 bg-gradient-to-r from-gray-200 to-gray-300 flex items-center justify-center">
+                <div className="text-center">
+                  <Loader2 className="animate-spin h-8 w-8 text-gray-400 mx-auto mb-3" />
+                  <span className="text-gray-500">Carregando fotos...</span>
+                </div>
               </div>
             ) : (
               <>
@@ -374,14 +374,14 @@ const EventSpaceDetails: React.FC = () => {
                     <CarouselContent>
                       {displayImages.map((image, i) => (
                         <CarouselItem key={i}>
-                          <div className="relative rounded-lg overflow-hidden h-64 cursor-pointer" onClick={() => handleImageClick(i)}>
+                          <div className="relative h-80 cursor-pointer" onClick={() => handleImageClick(i)}>
                             <OptimizedImage
                               src={image}
                               alt={`${space.name} ${i + 1}`}
-                              className="object-cover w-full h-full hover:scale-105 transition-transform duration-200"
+                              className="object-cover w-full h-full hover:scale-105 transition-transform duration-300"
                             />
-                            <div className="absolute bottom-2 right-2">
-                              <span className="bg-black/70 text-white px-2 py-1 rounded text-xs">
+                            <div className="absolute bottom-4 right-4">
+                              <span className="bg-black/70 text-white px-3 py-1 rounded-full text-sm font-medium">
                                 {i + 1}/{displayImages.length}
                               </span>
                             </div>
@@ -392,20 +392,20 @@ const EventSpaceDetails: React.FC = () => {
                   </Carousel>
                 </div>
 
-                {/* Tablet/Desktop: Horizontal Scrollable Row */}
+                {/* Desktop: Horizontal Grid */}
                 <div className="hidden md:block">
                   <Carousel>
-                    <CarouselContent className="-ml-2 md:-ml-4">
+                    <CarouselContent className="-ml-2">
                       {displayImages.map((image, i) => (
-                        <CarouselItem key={i} className="pl-2 md:pl-4 md:basis-1/3 lg:basis-1/4">
-                          <div className="relative rounded-lg overflow-hidden h-48 lg:h-56 cursor-pointer" onClick={() => handleImageClick(i)}>
+                        <CarouselItem key={i} className="pl-2 md:basis-1/2 lg:basis-1/3">
+                          <div className="relative h-60 lg:h-72 cursor-pointer rounded-lg overflow-hidden" onClick={() => handleImageClick(i)}>
                             <OptimizedImage
                               src={image}
                               alt={`${space.name} ${i + 1}`}
-                              className="object-cover w-full h-full hover:scale-105 transition-transform duration-200"
+                              className="object-cover w-full h-full hover:scale-105 transition-transform duration-300"
                             />
-                            <div className="absolute bottom-2 right-2">
-                              <span className="bg-black/70 text-white px-2 py-1 rounded text-xs">
+                            <div className="absolute bottom-3 right-3">
+                              <span className="bg-black/70 text-white px-2 py-1 rounded-full text-sm">
                                 {i + 1}
                               </span>
                             </div>
@@ -417,132 +417,150 @@ const EventSpaceDetails: React.FC = () => {
                 </div>
               </>
             )}
-          </div>
+          </Card>
 
-          {/* title */}
-          <h1 className="text-2xl font-bold mb-6 truncate">{space.name}</h1>
+          {/* Space Title and Price */}
+          <Card className="mb-6 p-6 shadow-lg border-gray-200 bg-white">
+            <CardContent className="p-0">
+              <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4">
+                <div className="flex-1">
+                  <h1 className="text-3xl font-bold text-gray-900 mb-2 leading-tight">{space.name}</h1>
+                  <div className="flex items-center text-gray-600 mb-3">
+                    <MapPin size={16} className="mr-2 text-gray-400" />
+                    <span className="text-sm">{space.address}, {space.number} – {space.state}</span>
+                  </div>
+                  <p className="text-sm text-gray-500">CEP: {space.zip_code}</p>
+                </div>
+                <div className="text-right">
+                  <div className="text-3xl font-bold text-iparty mb-1">
+                    A partir de {formatPrice(space.price)}
+                  </div>
+                  <Badge variant="secondary" className="bg-iparty/10 text-iparty border-iparty/20">
+                    <Users className="mr-1" size={14} />
+                    Até {space.capacity} pessoas
+                  </Badge>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
 
-          {/* price / details */}
-          <div className="mb-6">
-            <div className="flex justify-between items-center mb-2">
-              <h2 className="text-2xl font-bold">A partir de {formatPrice(space.price)}</h2>
-              <Badge variant="secondary">
-                <Users className="mr-1" size={14} />
-                Até {space.capacity} pessoas
-              </Badge>
-            </div>
-            <p className="text-muted-foreground">
-              {space.address}, {space.number} – {space.state}
-            </p>
-            <p className="text-muted-foreground">CEP: {space.zip_code}</p>
-          </div>
+          {/* Description */}
+          <Card className="mb-6 shadow-lg border-gray-200">
+            <CardContent className="p-6">
+              <h3 className="text-xl font-semibold mb-4 text-gray-900">Sobre o espaço</h3>
+              <p className="text-gray-700 leading-relaxed">{space.description}</p>
+            </CardContent>
+          </Card>
 
-          {/* about */}
-          <div className="mb-6">
-            <h3 className="text-lg font-semibold mb-2">Sobre o espaço</h3>
-            <p className="text-muted-foreground">{space.description}</p>
-          </div>
+          {/* Amenities */}
+          <Card className="mb-6 shadow-lg border-gray-200">
+            <CardContent className="p-6">
+              <h3 className="text-xl font-semibold mb-6 text-gray-900">Comodidades</h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div className={`flex items-center p-3 rounded-lg ${space.parking ? "bg-green-50 text-green-700" : "bg-gray-50 text-gray-400"} transition-colors`}>
+                  <ParkingMeter className="mr-3" size={20} />
+                  <span className="font-medium">{space.parking ? "Estacionamento" : "Sem estacionamento"}</span>
+                </div>
+                <div className={`flex items-center p-3 rounded-lg ${space.wifi ? "bg-green-50 text-green-700" : "bg-gray-50 text-gray-400"} transition-colors`}>
+                  <Wifi className="mr-3" size={20} />
+                  <span className="font-medium">{space.wifi ? "Wi-Fi" : "Sem Wi-Fi"}</span>
+                </div>
+                <div className={`flex items-center p-3 rounded-lg ${space.sound_system ? "bg-green-50 text-green-700" : "bg-gray-50 text-gray-400"} transition-colors`}>
+                  <Speaker className="mr-3" size={20} />
+                  <span className="font-medium">{space.sound_system ? "Sistema de som" : "Sem sistema de som"}</span>
+                </div>
+                <div className={`flex items-center p-3 rounded-lg ${space.air_conditioning ? "bg-green-50 text-green-700" : "bg-gray-50 text-gray-400"} transition-colors`}>
+                  <AirVent className="mr-3" size={20} />
+                  <span className="font-medium">{space.air_conditioning ? "Ar condicionado" : "Sem ar condicionado"}</span>
+                </div>
+                <div className={`flex items-center p-3 rounded-lg ${space.kitchen ? "bg-green-50 text-green-700" : "bg-gray-50 text-gray-400"} transition-colors`}>
+                  <Utensils className="mr-3" size={20} />
+                  <span className="font-medium">{space.kitchen ? "Cozinha" : "Sem cozinha"}</span>
+                </div>
+                <div className={`flex items-center p-3 rounded-lg ${space.pool ? "bg-green-50 text-green-700" : "bg-gray-50 text-gray-400"} transition-colors`}>
+                  <Waves className="mr-3" size={20} />
+                  <span className="font-medium">{space.pool ? "Piscina" : "Sem piscina"}</span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
 
-          {/* location map section */}
-          {space.latitude && space.longitude ? (
-            <div className="mb-6">
-              <h3 className="text-lg font-semibold mb-2 flex items-center">
+          {/* Location */}
+          <Card className="mb-8 shadow-lg border-gray-200">
+            <CardContent className="p-6">
+              <h3 className="text-xl font-semibold mb-4 flex items-center text-gray-900">
                 <MapPin className="mr-2" size={20} />
                 Localização
               </h3>
-              <div className="h-[200px] bg-gray-100 rounded-lg overflow-hidden border">
-                <iframe
-                  width="100%"
-                  height="100%"
-                  frameBorder="0"
-                  src={`https://www.google.com/maps/embed/v1/place?key=AIzaSyDmquKmV6OtKkJCG2eEe4NIPE8MzcrkUyw&q=${space.latitude},${space.longitude}&zoom=15`}
-                  allowFullScreen
-                  title={`Localização de ${space.name}`}
-                ></iframe>
-              </div>
-              <p className="text-xs text-gray-500 mt-2">
-                📍 {space.address}, {space.number} - {space.state}
-              </p>
-            </div>
-          ) : (
-            <div className="mb-6">
-              <h3 className="text-lg font-semibold mb-2 flex items-center">
-                <MapPin className="mr-2" size={20} />
-                Localização
-              </h3>
-              <div className="h-[120px] bg-gray-50 rounded-lg border border-dashed border-gray-300 flex flex-col items-center justify-center">
-                <MapPin size={32} className="text-gray-300 mb-2" />
-                <p className="text-gray-500 text-sm">Localização não definida no mapa</p>
-                <p className="text-xs text-gray-400 mt-1">
-                  📍 {space.address}, {space.number} - {space.state}
-                </p>
-              </div>
-            </div>
-          )}
+              {space.latitude && space.longitude ? (
+                <div>
+                  <div className="h-64 bg-gray-100 rounded-lg overflow-hidden border mb-3">
+                    <iframe
+                      width="100%"
+                      height="100%"
+                      frameBorder="0"
+                      src={`https://www.google.com/maps/embed/v1/place?key=AIzaSyDmquKmV6OtKkJCG2eEe4NIPE8MzcrkUyw&q=${space.latitude},${space.longitude}&zoom=15`}
+                      allowFullScreen
+                      title={`Localização de ${space.name}`}
+                      className="rounded-lg"
+                    ></iframe>
+                  </div>
+                  <p className="text-sm text-gray-500 bg-gray-50 p-3 rounded-lg">
+                    📍 {space.address}, {space.number} - {space.state}
+                  </p>
+                </div>
+              ) : (
+                <div className="h-32 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300 flex flex-col items-center justify-center">
+                  <MapPin size={32} className="text-gray-300 mb-2" />
+                  <p className="text-gray-500 text-sm mb-1">Localização não definida no mapa</p>
+                  <p className="text-xs text-gray-400">
+                    📍 {space.address}, {space.number} - {space.state}
+                  </p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
 
-          {/* amenities */}
-          <div className="mb-8">
-            <h3 className="text-lg font-semibold mb-2">Comodidades</h3>
-            <div className="grid grid-cols-2 gap-4">
-              <div className={`flex items-center ${space.parking ? "" : "text-muted-foreground/50"}`}>
-                <ParkingMeter className="mr-2" size={18} />
-                <span>{space.parking ? "Estacionamento" : "Sem estacionamento"}</span>
-              </div>
-              <div className={`flex items-center ${space.wifi ? "" : "text-muted-foreground/50"}`}>
-                <Wifi className="mr-2" size={18} />
-                <span>{space.wifi ? "Wi-Fi" : "Sem Wi-Fi"}</span>
-              </div>
-              <div className={`flex items-center ${space.sound_system ? "" : "text-muted-foreground/50"}`}>
-                <Speaker className="mr-2" size={18} />
-                <span>{space.sound_system ? "Sistema de som" : "Sem sistema de som"}</span>
-              </div>
-              <div className={`flex items-center ${space.air_conditioning ? "" : "text-muted-foreground/50"}`}>
-                <AirVent className="mr-2" size={18} />
-                <span>{space.air_conditioning ? "Ar condicionado" : "Sem ar condicionado"}</span>
-              </div>
-              <div className={`flex items-center ${space.kitchen ? "" : "text-muted-foreground/50"}`}>
-                <Utensils className="mr-2" size={18} />
-                <span>{space.kitchen ? "Cozinha" : "Sem cozinha"}</span>
-              </div>
-              <div className={`flex items-center ${space.pool ? "" : "text-muted-foreground/50"}`}>
-                <Waves className="mr-2" size={18} />
-                <span>{space.pool ? "Piscina" : "Sem piscina"}</span>
-              </div>
-            </div>
-          </div>
-
-          {/* contact buttons */}
-          <div className="grid grid-cols-2 gap-4 mb-6">
-            <Button className="bg-green-600 hover:bg-green-700" size="lg" onClick={handleWhatsApp}>
-              <Phone className="mr-2" size={18} />
-              Contato
+          {/* Contact Buttons */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+            <Button 
+              className="bg-green-600 hover:bg-green-700 text-white py-6 text-lg font-semibold shadow-lg transition-all duration-200 hover:shadow-xl" 
+              size="lg" 
+              onClick={handleWhatsApp}
+            >
+              <Phone className="mr-3" size={20} />
+              Entrar em Contato
             </Button>
             <Button
-              className="bg-iparty hover:bg-iparty-dark"
+              className="bg-iparty hover:bg-iparty-dark text-white py-6 text-lg font-semibold shadow-lg transition-all duration-200 hover:shadow-xl"
               size="lg"
               onClick={startChat}
               disabled={currentUserId === spaceOwner?.id || processingChat}
             >
               {processingChat ? (
-                <Loader2 className="mr-2 animate-spin" size={18} />
+                <Loader2 className="mr-3 animate-spin" size={20} />
               ) : (
-                <MessageSquare className="mr-2" size={18} />
+                <MessageSquare className="mr-3" size={20} />
               )}
-              Mensagem
+              Enviar Mensagem
             </Button>
           </div>
 
-          {/* delete button for admin */}
+          {/* Admin Delete Button */}
           {isAdmin && (
-            <Button
-              variant="destructive"
-              className="w-full mb-6"
-              size="lg"
-              onClick={() => setDeleteDialogOpen(true)}
-            >
-              <Trash2 className="mr-2" size={18} />
-              Excluir Espaço
-            </Button>
+            <Card className="border-red-200 bg-red-50">
+              <CardContent className="p-4">
+                <Button
+                  variant="destructive"
+                  className="w-full py-4 text-lg font-semibold"
+                  size="lg"
+                  onClick={() => setDeleteDialogOpen(true)}
+                >
+                  <Trash2 className="mr-3" size={20} />
+                  Excluir Espaço
+                </Button>
+              </CardContent>
+            </Card>
           )}
 
           {/* delete confirmation */}
