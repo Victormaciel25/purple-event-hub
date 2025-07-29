@@ -24,6 +24,8 @@ import {
   Carousel,
   CarouselContent,
   CarouselItem,
+  CarouselPrevious,
+  CarouselNext,
 } from "@/components/ui/carousel";
 import {
   DropdownMenu,
@@ -52,7 +54,6 @@ import {
 } from "@/components/ui/alert-dialog";
 import ReportForm from "@/components/ReportForm";
 import { SUPABASE_CONFIG } from "@/config/app-config";
-import { Card } from "@/components/ui/card";
 
 type SpaceDetails = {
   id: string;
@@ -312,11 +313,8 @@ const EventSpaceDetails: React.FC = () => {
 
   if (loading || !space) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="flex items-center space-x-2">
-          <Loader2 className="animate-spin text-primary h-6 w-6" />
-          <span className="text-sm text-muted-foreground">Carregando...</span>
-        </div>
+      <div className="container px-4 py-6 flex items-center justify-center h-[70vh]">
+        <Loader2 className="animate-spin text-iparty h-8 w-8" />
       </div>
     );
   }
@@ -327,17 +325,17 @@ const EventSpaceDetails: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="max-w-4xl mx-auto">
-        {/* Header */}
-        <div className="sticky top-0 z-10 bg-background/80 backdrop-blur-sm border-b border-border/50">
-          <div className="flex items-center justify-between px-4 py-3">
-            <Button variant="ghost" size="sm" onClick={() => navigate(-1)} className="hover:bg-muted/50">
+    <div className="h-screen w-full overflow-hidden">
+      <div className="h-full w-full overflow-y-auto scrollbar-hide">
+        <div className="container px-4 py-6 pb-20 mx-auto">
+          {/* back & actions dropdown at top */}
+          <div className="flex items-center justify-between mb-4">
+            <Button variant="ghost" size="sm" onClick={() => navigate(-1)}>
               <ChevronLeft size={20} />
             </Button>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="sm" className="hover:bg-muted/50">
+                <Button variant="ghost" size="sm">
                   <MoreVertical size={20} />
                 </Button>
               </DropdownMenuTrigger>
@@ -360,213 +358,240 @@ const EventSpaceDetails: React.FC = () => {
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
-        </div>
 
-        {/* Content */}
-        <div className="px-4 pb-20">
-          {/* Images */}
-          <div className="py-4">
+          {/* image display - responsive carousel for all screen sizes */}
+          <div className="mb-6">
             {photosLoading ? (
-              <div className="h-80 bg-muted rounded-xl flex items-center justify-center">
-                <div className="flex items-center space-x-2">
-                  <Loader2 className="animate-spin h-5 w-5 text-muted-foreground" />
-                  <span className="text-sm text-muted-foreground">Carregando fotos...</span>
-                </div>
+              <div className="h-64 md:h-48 lg:h-56 bg-gray-200 rounded-lg flex items-center justify-center">
+                <Loader2 className="animate-spin h-8 w-8 text-gray-400" />
+                <span className="ml-2 text-gray-500">Carregando fotos...</span>
               </div>
             ) : (
-              <Carousel>
-                <CarouselContent>
-                  {displayImages.map((image, i) => (
-                    <CarouselItem key={i}>
-                      <div 
-                        className="relative h-80 rounded-xl overflow-hidden cursor-pointer group" 
-                        onClick={() => handleImageClick(i)}
-                      >
-                        <OptimizedImage
-                          src={image}
-                          alt={`${space.name} ${i + 1}`}
-                          className="object-cover w-full h-full transition-transform duration-300 group-hover:scale-105"
-                        />
-                        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors" />
-                        <div className="absolute bottom-3 right-3">
-                          <Badge variant="secondary" className="bg-black/50 text-white border-0 backdrop-blur-sm">
-                            {i + 1}/{displayImages.length}
-                          </Badge>
-                        </div>
-                      </div>
-                    </CarouselItem>
-                  ))}
-                </CarouselContent>
-              </Carousel>
+              <>
+                {/* Mobile: Carousel */}
+                <div className="block md:hidden">
+                  <Carousel>
+                    <CarouselContent>
+                      {displayImages.map((image, i) => (
+                        <CarouselItem key={i}>
+                          <div className="relative rounded-lg overflow-hidden h-64 cursor-pointer" onClick={() => handleImageClick(i)}>
+                            <OptimizedImage
+                              src={image}
+                              alt={`${space.name} ${i + 1}`}
+                              className="object-cover w-full h-full hover:scale-105 transition-transform duration-200"
+                            />
+                            <div className="absolute bottom-2 right-2">
+                              <span className="bg-black/70 text-white px-2 py-1 rounded text-xs">
+                                {i + 1}/{displayImages.length}
+                              </span>
+                            </div>
+                          </div>
+                        </CarouselItem>
+                      ))}
+                    </CarouselContent>
+                  </Carousel>
+                </div>
+
+                {/* Tablet/Desktop: Horizontal Scrollable Row */}
+                <div className="hidden md:block">
+                  <Carousel>
+                    <CarouselContent className="-ml-2 md:-ml-4">
+                      {displayImages.map((image, i) => (
+                        <CarouselItem key={i} className="pl-2 md:pl-4 md:basis-1/3 lg:basis-1/4">
+                          <div className="relative rounded-lg overflow-hidden h-48 lg:h-56 cursor-pointer" onClick={() => handleImageClick(i)}>
+                            <OptimizedImage
+                              src={image}
+                              alt={`${space.name} ${i + 1}`}
+                              className="object-cover w-full h-full hover:scale-105 transition-transform duration-200"
+                            />
+                            <div className="absolute bottom-2 right-2">
+                              <span className="bg-black/70 text-white px-2 py-1 rounded text-xs">
+                                {i + 1}
+                              </span>
+                            </div>
+                          </div>
+                        </CarouselItem>
+                      ))}
+                    </CarouselContent>
+                  </Carousel>
+                </div>
+              </>
             )}
           </div>
 
-          {/* Title & Basic Info */}
-          <div className="py-6 space-y-4">
-            <div className="space-y-2">
-              <h1 className="text-3xl font-bold tracking-tight">{space.name}</h1>
-              <p className="text-muted-foreground">
-                {space.address}, {space.number} – {space.state} • CEP: {space.zip_code}
-              </p>
-            </div>
-            
-            <div className="flex items-center justify-between">
-              <div className="text-lg font-bold">A partir de {formatPrice(space.price)}</div>
-              <Badge variant="outline" className="flex items-center gap-1">
-                <Users size={14} />
+          {/* title */}
+          <h1 className="text-2xl font-bold mb-6 truncate">{space.name}</h1>
+
+          {/* price / details */}
+          <div className="mb-6">
+            <div className="flex justify-between items-center mb-2">
+              <h2 className="text-2xl font-bold">A partir de {formatPrice(space.price)}</h2>
+              <Badge variant="secondary">
+                <Users className="mr-1" size={14} />
                 Até {space.capacity} pessoas
               </Badge>
             </div>
+            <p className="text-muted-foreground">
+              {space.address}, {space.number} – {space.state}
+            </p>
+            <p className="text-muted-foreground">CEP: {space.zip_code}</p>
           </div>
 
-          {/* Description */}
-          <Card className="p-6 mb-6">
-            <h2 className="text-lg font-semibold mb-3">Sobre o espaço</h2>
-            <p className="text-muted-foreground leading-relaxed">{space.description}</p>
-          </Card>
+          {/* about */}
+          <div className="mb-6">
+            <h3 className="text-lg font-semibold mb-2">Sobre o espaço</h3>
+            <p className="text-muted-foreground">{space.description}</p>
+          </div>
 
-          {/* Location */}
-          <Card className="p-6 mb-6">
-            <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
-              <MapPin size={20} />
-              Localização
-            </h2>
-            {space.latitude && space.longitude ? (
-              <div className="space-y-3">
-                <div className="h-48 rounded-lg overflow-hidden border">
-                  <iframe
-                    width="100%"
-                    height="100%"
-                    frameBorder="0"
-                    src={`https://www.google.com/maps/embed/v1/place?key=AIzaSyDmquKmV6OtKkJCG2eEe4NIPE8MzcrkUyw&q=${space.latitude},${space.longitude}&zoom=15`}
-                    allowFullScreen
-                    title={`Localização de ${space.name}`}
-                    className="transition-all duration-300"
-                  />
-                </div>
-                <p className="text-sm text-muted-foreground">
+          {/* location map section */}
+          {space.latitude && space.longitude ? (
+            <div className="mb-6">
+              <h3 className="text-lg font-semibold mb-2 flex items-center">
+                <MapPin className="mr-2" size={20} />
+                Localização
+              </h3>
+              <div className="h-[200px] bg-gray-100 rounded-lg overflow-hidden border">
+                <iframe
+                  width="100%"
+                  height="100%"
+                  frameBorder="0"
+                  src={`https://www.google.com/maps/embed/v1/place?key=AIzaSyDmquKmV6OtKkJCG2eEe4NIPE8MzcrkUyw&q=${space.latitude},${space.longitude}&zoom=15`}
+                  allowFullScreen
+                  title={`Localização de ${space.name}`}
+                ></iframe>
+              </div>
+              <p className="text-xs text-gray-500 mt-2">
+                📍 {space.address}, {space.number} - {space.state}
+              </p>
+            </div>
+          ) : (
+            <div className="mb-6">
+              <h3 className="text-lg font-semibold mb-2 flex items-center">
+                <MapPin className="mr-2" size={20} />
+                Localização
+              </h3>
+              <div className="h-[120px] bg-gray-50 rounded-lg border border-dashed border-gray-300 flex flex-col items-center justify-center">
+                <MapPin size={32} className="text-gray-300 mb-2" />
+                <p className="text-gray-500 text-sm">Localização não definida no mapa</p>
+                <p className="text-xs text-gray-400 mt-1">
                   📍 {space.address}, {space.number} - {space.state}
                 </p>
               </div>
-            ) : (
-              <div className="h-32 bg-muted rounded-lg flex flex-col items-center justify-center text-center">
-                <MapPin size={24} className="text-muted-foreground mb-2" />
-                <p className="text-sm text-muted-foreground mb-1">Localização não definida no mapa</p>
-                <p className="text-xs text-muted-foreground">
-                  📍 {space.address}, {space.number} - {space.state}
-                </p>
-              </div>
-            )}
-          </Card>
+            </div>
+          )}
 
-          {/* Amenities */}
-          <Card className="p-6 mb-8">
-            <h2 className="text-lg font-semibold mb-4">Comodidades</h2>
+          {/* amenities */}
+          <div className="mb-8">
+            <h3 className="text-lg font-semibold mb-2">Comodidades</h3>
             <div className="grid grid-cols-2 gap-4">
-              {[
-                { icon: ParkingMeter, label: "Estacionamento", available: space.parking },
-                { icon: Wifi, label: "Wi-Fi", available: space.wifi },
-                { icon: Speaker, label: "Sistema de som", available: space.sound_system },
-                { icon: AirVent, label: "Ar condicionado", available: space.air_conditioning },
-                { icon: Utensils, label: "Cozinha", available: space.kitchen },
-                { icon: Waves, label: "Piscina", available: space.pool }
-              ].map((amenity, index) => (
-                <div 
-                  key={index}
-                  className={`flex items-center gap-3 p-3 rounded-lg border transition-colors ${
-                    amenity.available 
-                      ? 'border-green-200 bg-green-50 text-green-800' 
-                      : 'border-border bg-muted/30 text-muted-foreground'
-                  }`}
-                >
-                  <amenity.icon size={18} />
-                  <span className="text-sm font-medium">{amenity.label}</span>
-                </div>
-              ))}
+              <div className={`flex items-center ${space.parking ? "" : "text-muted-foreground/50"}`}>
+                <ParkingMeter className="mr-2" size={18} />
+                <span>{space.parking ? "Estacionamento" : "Sem estacionamento"}</span>
+              </div>
+              <div className={`flex items-center ${space.wifi ? "" : "text-muted-foreground/50"}`}>
+                <Wifi className="mr-2" size={18} />
+                <span>{space.wifi ? "Wi-Fi" : "Sem Wi-Fi"}</span>
+              </div>
+              <div className={`flex items-center ${space.sound_system ? "" : "text-muted-foreground/50"}`}>
+                <Speaker className="mr-2" size={18} />
+                <span>{space.sound_system ? "Sistema de som" : "Sem sistema de som"}</span>
+              </div>
+              <div className={`flex items-center ${space.air_conditioning ? "" : "text-muted-foreground/50"}`}>
+                <AirVent className="mr-2" size={18} />
+                <span>{space.air_conditioning ? "Ar condicionado" : "Sem ar condicionado"}</span>
+              </div>
+              <div className={`flex items-center ${space.kitchen ? "" : "text-muted-foreground/50"}`}>
+                <Utensils className="mr-2" size={18} />
+                <span>{space.kitchen ? "Cozinha" : "Sem cozinha"}</span>
+              </div>
+              <div className={`flex items-center ${space.pool ? "" : "text-muted-foreground/50"}`}>
+                <Waves className="mr-2" size={18} />
+                <span>{space.pool ? "Piscina" : "Sem piscina"}</span>
+              </div>
             </div>
-          </Card>
-
-          {/* Action Buttons */}
-          <div className="space-y-3">
-            <div className="grid grid-cols-2 gap-3">
-              <Button 
-                className="h-12 bg-green-600 hover:bg-green-700 text-white font-medium" 
-                onClick={handleWhatsApp}
-              >
-                <Phone size={18} className="mr-2" />
-                Contato
-              </Button>
-              <Button
-                className="h-12 bg-primary hover:bg-primary/90 font-medium"
-                onClick={startChat}
-                disabled={currentUserId === spaceOwner?.id || processingChat}
-              >
-                {processingChat ? (
-                  <Loader2 className="mr-2 animate-spin" size={18} />
-                ) : (
-                  <MessageSquare className="mr-2" size={18} />
-                )}
-                Mensagem
-              </Button>
-            </div>
-
-            {isAdmin && (
-              <Button
-                variant="destructive"
-                className="w-full h-12 font-medium"
-                onClick={() => setDeleteDialogOpen(true)}
-              >
-                <Trash2 className="mr-2" size={18} />
-                Excluir Espaço
-              </Button>
-            )}
           </div>
+
+          {/* contact buttons */}
+          <div className="grid grid-cols-2 gap-4 mb-6">
+            <Button className="bg-green-600 hover:bg-green-700" size="lg" onClick={handleWhatsApp}>
+              <Phone className="mr-2" size={18} />
+              Contato
+            </Button>
+            <Button
+              className="bg-iparty hover:bg-iparty-dark"
+              size="lg"
+              onClick={startChat}
+              disabled={currentUserId === spaceOwner?.id || processingChat}
+            >
+              {processingChat ? (
+                <Loader2 className="mr-2 animate-spin" size={18} />
+              ) : (
+                <MessageSquare className="mr-2" size={18} />
+              )}
+              Mensagem
+            </Button>
+          </div>
+
+          {/* delete button for admin */}
+          {isAdmin && (
+            <Button
+              variant="destructive"
+              className="w-full mb-6"
+              size="lg"
+              onClick={() => setDeleteDialogOpen(true)}
+            >
+              <Trash2 className="mr-2" size={18} />
+              Excluir Espaço
+            </Button>
+          )}
+
+          {/* delete confirmation */}
+          <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Excluir Espaço</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Tem certeza que deseja excluir este espaço? Esta ação não pode ser
+                  desfeita.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <Textarea
+                placeholder="Motivo da exclusão (obrigatório)"
+                value={deleteReason}
+                onChange={(e) => setDeleteReason(e.target.value)}
+                className="mt-4"
+                rows={3}
+              />
+              <AlertDialogFooter className="mt-4">
+                <AlertDialogCancel disabled={deletingSpace}>Cancelar</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={handleDeleteSpace}
+                  disabled={deletingSpace}
+                  className="bg-red-600 hover:bg-red-700"
+                >
+                  {deletingSpace ? "Excluindo..." : "Excluir"}
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+
+          {/* Report Form */}
+          <ReportForm
+            isOpen={reportFormOpen}
+            onClose={() => setReportFormOpen(false)}
+            reportedItemName={space.name}
+            reportedItemUrl={window.location.href}
+            reportType="space"
+          />
+
+          {/* Image Viewer */}
+          <ImageViewer
+            images={displayImages}
+            isOpen={imageViewerOpen}
+            onClose={() => setImageViewerOpen(false)}
+            initialIndex={selectedImageIndex}
+          />
         </div>
-
-        {/* Modals and Dialogs */}
-        <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Excluir Espaço</AlertDialogTitle>
-              <AlertDialogDescription>
-                Tem certeza que deseja excluir este espaço? Esta ação não pode ser
-                desfeita.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <Textarea
-              placeholder="Motivo da exclusão (obrigatório)"
-              value={deleteReason}
-              onChange={(e) => setDeleteReason(e.target.value)}
-              className="mt-4"
-              rows={3}
-            />
-            <AlertDialogFooter className="mt-4">
-              <AlertDialogCancel disabled={deletingSpace}>Cancelar</AlertDialogCancel>
-              <AlertDialogAction
-                onClick={handleDeleteSpace}
-                disabled={deletingSpace}
-                className="bg-red-600 hover:bg-red-700"
-              >
-                {deletingSpace ? "Excluindo..." : "Excluir"}
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
-
-        <ReportForm
-          isOpen={reportFormOpen}
-          onClose={() => setReportFormOpen(false)}
-          reportedItemName={space.name}
-          reportedItemUrl={window.location.href}
-          reportType="space"
-        />
-
-        <ImageViewer
-          images={displayImages}
-          isOpen={imageViewerOpen}
-          onClose={() => setImageViewerOpen(false)}
-          initialIndex={selectedImageIndex}
-        />
       </div>
     </div>
   );
