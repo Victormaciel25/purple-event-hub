@@ -3,7 +3,7 @@ import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { LogIn, Check, AlertCircle, Eye, EyeOff } from "lucide-react";
+import { LogIn, Check, AlertCircle, Eye, EyeOff, Mail, ArrowRight } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
@@ -21,6 +21,8 @@ const Login = () => {
   const [passwordErrors, setPasswordErrors] = useState<string[]>([]);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [emailError, setEmailError] = useState("");
+  const [showEmailExistsOptions, setShowEmailExistsOptions] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -51,6 +53,44 @@ const Login = () => {
     return errors;
   };
 
+  // Check if error indicates email already exists
+  const isEmailAlreadyExistsError = (errorMessage: string): boolean => {
+    const existingEmailPatterns = [
+      "User already registered",
+      "Email address already registered",
+      "Email already exists",
+      "already registered",
+      "email already in use",
+      "duplicate email",
+      "email exists"
+    ];
+    
+    return existingEmailPatterns.some(pattern => 
+      errorMessage.toLowerCase().includes(pattern.toLowerCase())
+    );
+  };
+
+  // Check if error indicates rate limit exceeded
+  const isRateLimitError = (errorMessage: string): boolean => {
+    const rateLimitPatterns = [
+      "email rate limit exceeded",
+      "too many requests",
+      "rate limit",
+      "try again later"
+    ];
+    
+    return rateLimitPatterns.some(pattern => 
+      errorMessage.toLowerCase().includes(pattern.toLowerCase())
+    );
+  };
+
+  // Handle email change to clear errors
+  const handleEmailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setEmail(e.target.value);
+    setEmailError("");
+    setShowEmailExistsOptions(false);
+  };
+
   // Handle password change with validation
   const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newPassword = e.target.value;
@@ -62,6 +102,21 @@ const Login = () => {
     } else {
       setPasswordErrors([]);
     }
+  };
+
+  // Handle switch to login mode
+  const handleSwitchToLogin = () => {
+    setIsLogin(true);
+    setPassword("");
+    setConfirmPassword("");
+    setPasswordErrors([]);
+    setEmailError("");
+    setShowEmailExistsOptions(false);
+  };
+
+  // Handle forgot password
+  const handleForgotPassword = () => {
+    navigate("/forgot-password");
   };
 
   useEffect(() => {
@@ -79,7 +134,6 @@ const Login = () => {
     
     checkUser();
 
-    // Set up auth state listener
     const { data: authListener } = supabase.auth.onAuthStateChange(
       (event, session) => {
         if (event === 'SIGNED_IN' && session) {
@@ -96,6 +150,8 @@ const Login = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+    setEmailError("");
+    setShowEmailExistsOptions(false);
 
     try {
       if (isLogin) {
@@ -173,11 +229,36 @@ const Login = () => {
         if (error) {
           console.log("Signup error:", error.message);
           
+          // Enhanced error handling for existing email
+          if (isEmailAlreadyExistsError(error.message)) {
+            setEmailError("Este email já está cadastrado");
+            setShowEmailExistsOptions(true);
+            
+            toast({
+              title: "Email já cadastrado",
+              description: "Este email já possui uma conta. Faça login ou use outro email.",
+              variant: "destructive",
+            });
+            
+            setLoading(false);
+            return;
+          }
+          
+          // Handle rate limit error
+          if (isRateLimitError(error.message)) {
+            toast({
+              title: "Muitas tentativas",
+              description: "Limite de envio de emails excedido. Aguarde alguns minutos antes de tentar novamente.",
+              variant: "destructive",
+            });
+            setLoading(false);
+            return;
+          }
+          
+          // Handle other signup errors
           let errorMessage = "Erro ao criar conta";
           
-          if (error.message.includes("User already registered")) {
-            errorMessage = "Este email já está cadastrado. Tente fazer login ou use outro email.";
-          } else if (error.message.includes("Signup is disabled")) {
+          if (error.message.includes("Signup is disabled")) {
             errorMessage = "Cadastro temporariamente desabilitado. Tente novamente mais tarde.";
           } else {
             errorMessage = error.message;
@@ -288,8 +369,47 @@ const Login = () => {
                 placeholder="seu@email.com"
                 required
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={handleEmailChange}
+                className={emailError ? "border-red-500 focus:border-red-500" : ""}
               />
+              {emailError && (
+                <div className="flex items-center gap-2 text-red-500 text-sm">
+                  <AlertCircle size={16} />
+                  <span>{emailError}</span>
+                </div>
+              )}
+              {showEmailExistsOptions && (
+                <div className="bg-red-50 border border-red-200 rounded-lg p-4 space-y-3">
+                  <div className="flex items-center gap-2 text-red-700">
+                    <Mail size={16} />
+                    <span className="font-medium">Este email já possui uma conta</span>
+                  </div>
+                  <p className="text-sm text-red-600">
+                    Você pode fazer login com este email ou usar outro email para criar uma nova conta.
+                  </p>
+                  <div className="flex flex-col gap-2 sm:flex-row">
+                    <Button
+                      type="button"
+                      size="sm"
+                      onClick={handleSwitchToLogin}
+                      className="flex items-center gap-2 bg-iparty hover:bg-iparty-dark"
+                    >
+                      <LogIn size={14} />
+                      Fazer Login
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      onClick={handleForgotPassword}
+                      className="flex items-center gap-2"
+                    >
+                      <ArrowRight size={14} />
+                      Esqueci minha senha
+                    </Button>
+                  </div>
+                </div>
+              )}
             </div>
             
             {!isLogin && (
