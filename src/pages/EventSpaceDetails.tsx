@@ -411,7 +411,7 @@ const EventSpaceDetails: React.FC = () => {
             </div>
             
             <div className="flex items-center justify-between">
-              <div className="text-2xl font-bold">A partir de {formatPrice(space.price)}</div>
+              <div className="text-lg font-bold">A partir de {formatPrice(space.price)}</div>
               <Badge variant="outline" className="flex items-center gap-1">
                 <Users size={14} />
                 Até {space.capacity} pessoas
@@ -441,7 +441,7 @@ const EventSpaceDetails: React.FC = () => {
                     src={`https://www.google.com/maps/embed/v1/place?key=AIzaSyDmquKmV6OtKkJCG2eEe4NIPE8MzcrkUyw&q=${space.latitude},${space.longitude}&zoom=15`}
                     allowFullScreen
                     title={`Localização de ${space.name}`}
-                    className="grayscale hover:grayscale-0 transition-all duration-300"
+                    className="transition-all duration-300"
                   />
                 </div>
                 <p className="text-sm text-muted-foreground">
