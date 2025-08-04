@@ -81,7 +81,7 @@ const UserSpaceCard: React.FC<{ space: UserSpace; onEdit: (id: string) => void; 
           src={photoUrls[0] || ""}
           alt={space.name}
           className="w-full h-full"
-          fallbackSrc="https://images.unsplash.com/photo-1566681855366-282a74153321?q=80&w=600&auto=format&fit=crop"
+          fallbackSrc="/placeholder.svg"
         />
       </div>
       

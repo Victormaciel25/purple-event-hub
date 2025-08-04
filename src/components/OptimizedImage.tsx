@@ -15,7 +15,7 @@ const OptimizedImage: React.FC<OptimizedImageProps> = ({
   alt,
   className = "",
   loadingClassName = "animate-pulse bg-gray-200",
-  fallbackSrc = "https://images.unsplash.com/photo-1566681855366-282a74153321?q=80&w=600&auto=format&fit=crop",
+  fallbackSrc = "/placeholder.svg",
   eager = true,
   ...rest
 }) => {
