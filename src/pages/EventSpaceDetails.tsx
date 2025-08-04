@@ -394,7 +394,7 @@ const EventSpaceDetails: React.FC = () => {
               href={space.instagram.startsWith('http') ? space.instagram : `https://instagram.com/${space.instagram.replace('@', '')}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-blue-600 hover:text-blue-800 mb-4 block"
+              className="text-blue-600 hover:text-blue-800 mb-2 block"
             >
               {space.instagram.startsWith('@') ? space.instagram : `@${space.instagram}`}
             </a>
