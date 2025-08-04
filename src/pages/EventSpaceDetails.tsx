@@ -171,56 +171,22 @@ const EventSpaceDetails: React.FC = () => {
     );
   };
 
-  const startChat = async () => {
+  const startChat = () => {
     if (!space || !spaceOwner) return;
     if (currentUserId === spaceOwner.id) {
       toast.error("Não pode conversar consigo mesmo");
       return;
     }
-    setProcessingChat(true);
-    try {
-      const { data: ud } = await supabase.auth.getUser();
-      if (!ud.user) {
-        toast.error("Faça login");
-        navigate("/login");
-        return;
-      }
-      const { data: exist } = await supabase.functions.invoke(
-        "get_chat_by_users_and_space",
-        {
-          body: JSON.stringify({
-            current_user_id: ud.user.id,
-            space_owner_id: spaceOwner.id,
-            current_space_id: space.id,
-          }),
-        }
-      );
-      let chatId: string;
-      if (Array.isArray(exist) && exist.length) {
-        chatId = exist[0].id;
-      } else {
-        const { data: nc } = await supabase
-          .from("chats")
-          .insert({
-            user_id: ud.user.id,
-            owner_id: spaceOwner.id,
-            space_id: space.id,
-            space_name: space.name,
-            space_image: photoUrls[0] || null,
-            last_message: "",
-            last_message_time: new Date().toISOString(),
-          })
-          .select("id")
-          .single();
-        chatId = nc!.id;
-      }
-      navigate("/messages", { state: { chatId } });
-    } catch (e) {
-      console.error(e);
-      toast.error("Erro ao iniciar conversa");
-    } finally {
-      setProcessingChat(false);
-    }
+    
+    // Navigate to messages page with space info to create chat on first message
+    navigate("/messages", { 
+      state: { 
+        spaceId: space.id,
+        spaceOwnerId: spaceOwner.id,
+        spaceName: space.name,
+        spaceImage: photoUrls[0] || null
+      } 
+    });
   };
 
   const handleShare = () => {

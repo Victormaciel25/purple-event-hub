@@ -658,13 +658,45 @@ const Messages = () => {
   // Function to send a message
   const handleSendMessage = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
-    if (!newMessage.trim() || !selectedChat || !userId) return;
+    if (!newMessage.trim() || !userId) return;
     
     try {
       setSendingMessage(true);
+      let currentChatId = selectedChat;
+      
+      // Check if this is a new chat that needs to be created
+      if (selectedChat === 'new-chat-placeholder') {
+        if (!spaceIdFromState || !spaceOwnerFromState) {
+          toast.error("Erro: informações do espaço não encontradas");
+          setSendingMessage(false);
+          return;
+        }
+        
+        // Create the chat with the first message
+        const newChatId = await createOrFindChat(spaceIdFromState, spaceOwnerFromState);
+        
+        if (!newChatId) {
+          toast.error("Erro ao criar conversa");
+          setSendingMessage(false);
+          return;
+        }
+        
+        // Update the selected chat
+        setSelectedChat(newChatId);
+        currentChatId = newChatId;
+        
+        // Update URL to reflect the new chat
+        navigate(`/messages?chat=${newChatId}`, { replace: true });
+      }
+      
+      if (!currentChatId) {
+        toast.error("Erro: chat não identificado");
+        setSendingMessage(false);
+        return;
+      }
       
       // Check if chat exists and is not deleted before sending
-      const chatStatus = await checkChatExists(selectedChat);
+      const chatStatus = await checkChatExists(currentChatId);
       
       if (!chatStatus.exists || chatStatus.isDeleted) {
         toast.error(chatStatus.isDeleted ? "Esta conversa foi excluída" : "Chat não encontrado");
@@ -682,7 +714,7 @@ const Messages = () => {
       const { error: messageError } = await supabase
         .from("messages")
         .insert({
-          chat_id: selectedChat,
+          chat_id: currentChatId,
           sender_id: userId,
           content: filteredMessage
         });
@@ -698,12 +730,18 @@ const Messages = () => {
           last_message_sender_id: userId,
           has_unread: true
         })
-        .eq("id", selectedChat);
+        .eq("id", currentChatId);
         
       if (chatError) throw chatError;
       
       // Clear message input
       setNewMessage("");
+      
+      // Refresh chats to show the new chat if it was just created
+      if (selectedChat === 'new-chat-placeholder') {
+        await fetchChats(false);
+        await loadChatDetails(currentChatId);
+      }
       
       // Scroll to bottom
       setTimeout(() => {
@@ -752,7 +790,24 @@ const Messages = () => {
   
   // Effect to handle chat selection from navigation params
   useEffect(() => {
-    // Only run after initial data is loaded
+    const locationState = location.state as any;
+    
+    // Check if we have space info to create a new chat (when coming from space details)
+    if (locationState?.spaceId && locationState?.spaceOwnerId && !chatIdFromParams && !chatIdFromState) {
+      console.log("Setting up for new chat creation:", locationState);
+      setSelectedChat('new-chat-placeholder'); // Use placeholder to show new chat interface
+      setChatInfo({
+        id: 'new-chat-placeholder',
+        name: locationState.spaceName || "Conversa",
+        lastMessage: "Digite sua primeira mensagem...",
+        time: "",
+        avatar: locationState.spaceImage || "",
+        space_id: locationState.spaceId
+      });
+      return;
+    }
+    
+    // Only run after initial data is loaded for existing chats
     if (!initialLoadComplete) return;
     
     // Clear URL param but keep the state
@@ -1055,13 +1110,21 @@ const Messages = () => {
                 ))}
                 <div ref={messageEndRef} />
               </>
+            ) : selectedChat === 'new-chat-placeholder' ? (
+              <div className="p-8 text-center">
+                <MessageSquare className="mx-auto h-12 w-12 text-muted-foreground/40" />
+                <p className="mt-2 text-muted-foreground">Nenhuma conversa iniciada</p>
+                <p className="text-sm text-muted-foreground/70">
+                  Digite sua primeira mensagem para iniciar a conversa
+                </p>
+              </div>
             ) : (
               <EmptyState />
             )}
           </div>
           
-          {/* Message input - only show if chat is not deleted */}
-          {!chatDeleted && !chatLoadError && (
+          {/* Message input - only show if chat is not deleted and exists (or is placeholder) */}
+          {!chatDeleted && !chatLoadError && (selectedChat === 'new-chat-placeholder' || selectedChat) && (
             <div className="p-4 pt-2 bg-white border-t">
               <form 
                 className="flex items-end gap-2"
