@@ -1,7 +1,7 @@
 import React from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card } from "@/components/ui/card";
-import { Image, MapPin, Home, User, Phone, DollarSign, Check, X, Tag, RefreshCw, Trash2 } from "lucide-react";
+import { Image, MapPin, Home, User, Phone, DollarSign, Check, X, Tag, RefreshCw, Trash2, Instagram } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { AspectRatio } from "@/components/ui/aspect-ratio";
 import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from "@/components/ui/alert-dialog";
@@ -83,6 +83,25 @@ const SpaceDetailsTabs: React.FC<SpaceDetailsTabsProps> = ({
               </div>
             </div>
           </Card>
+
+          {space.instagram && (
+            <Card className="p-4">
+              <div className="flex items-center">
+                <Instagram className="text-gray-400 mr-3" size={18} />
+                <div>
+                  <p className="text-sm font-medium text-gray-500">Instagram</p>
+                  <a 
+                    href={space.instagram} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="text-sm text-blue-600 hover:underline"
+                  >
+                    {space.instagram}
+                  </a>
+                </div>
+              </div>
+            </Card>
+          )}
 
           <div className="grid grid-cols-2 gap-4">
             <Card className="p-4">
