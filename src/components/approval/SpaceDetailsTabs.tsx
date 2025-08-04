@@ -85,22 +85,20 @@ const SpaceDetailsTabs: React.FC<SpaceDetailsTabsProps> = ({
           </Card>
 
           {space.instagram && (
-            <Card className="p-4">
-              <div className="flex items-center">
-                <Instagram className="text-gray-400 mr-3" size={18} />
-                <div>
-                  <p className="text-sm font-medium text-gray-500">Instagram</p>
-                  <a 
-                    href={space.instagram.startsWith('http') ? space.instagram : `https://www.instagram.com/${space.instagram.replace('@', '')}`} 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    className="text-sm text-blue-600 hover:underline"
-                  >
-                    {space.instagram}
-                  </a>
-                </div>
+            <div className="flex items-center">
+              <Instagram className="text-gray-400 mr-3" size={18} />
+              <div>
+                <p className="text-sm font-medium text-gray-500">Instagram</p>
+                <a 
+                  href={space.instagram.startsWith('http') ? space.instagram : `https://www.instagram.com/${space.instagram.replace('@', '')}`} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="text-sm text-blue-600 hover:underline"
+                >
+                  {space.instagram}
+                </a>
               </div>
-            </Card>
+            </div>
           )}
 
           <div className="grid grid-cols-2 gap-4">
