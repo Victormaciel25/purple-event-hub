@@ -25,6 +25,7 @@ export type SpaceWithProfile = {
   longitude: number | null;
   rejection_reason: string | null;
   categories: string[];
+  instagram: string | null;
   profiles?: {
     first_name: string | null;
     last_name: string | null;
