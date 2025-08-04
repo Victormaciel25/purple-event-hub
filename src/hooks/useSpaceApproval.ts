@@ -39,6 +39,7 @@ export const useSpaceApproval = () => {
           longitude,
           rejection_reason,
           categories,
+          instagram,
           profiles:user_id (
             first_name,
             last_name
