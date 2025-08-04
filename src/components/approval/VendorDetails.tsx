@@ -33,6 +33,7 @@ export type VendorDetailsType = {
   status: 'pending' | 'approved' | 'rejected';
   rejection_reason?: string | null;
   user_id: string;
+  instagram?: string | null;
   profiles?: {
     first_name: string | null;
     last_name: string | null;
@@ -205,6 +206,20 @@ const VendorDetails: React.FC<VendorDetailsProps> = ({
                 </Badge>
               ))}
             </div>
+          </div>
+        )}
+
+        {selectedVendor.instagram && (
+          <div>
+            <div className="font-medium">Instagram</div>
+            <a 
+              href={selectedVendor.instagram} 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="text-blue-600 hover:underline"
+            >
+              {selectedVendor.instagram}
+            </a>
           </div>
         )}
       </div>

@@ -14,7 +14,8 @@ import {
   Phone,
   Image,
   DollarSign,
-  Trash2
+  Trash2,
+  Instagram
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -72,6 +73,7 @@ export type SpaceDetailsType = {
   latitude: number | null;
   longitude: number | null;
   rejection_reason: string | null;
+  instagram: string | null;
   photos?: { id: string; storage_path: string }[];
 };
 
@@ -208,6 +210,25 @@ const SpaceDetails: React.FC<SpaceDetailsProps> = ({
               </div>
             </div>
           </Card>
+
+          {selectedSpace.instagram && (
+            <Card className="p-4">
+              <div className="flex items-center">
+                <Instagram className="text-gray-400 mr-3" size={18} />
+                <div>
+                  <p className="text-sm font-medium text-gray-500">Instagram</p>
+                  <a 
+                    href={selectedSpace.instagram} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="text-sm text-blue-600 hover:underline"
+                  >
+                    {selectedSpace.instagram}
+                  </a>
+                </div>
+              </div>
+            </Card>
+          )}
 
           <Card className="p-4">
             <div className="flex items-center">
