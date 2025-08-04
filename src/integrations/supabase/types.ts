@@ -297,6 +297,7 @@ export type Database = {
           created_at: string | null
           description: string
           id: string
+          instagram: string | null
           kitchen: boolean | null
           latitude: number | null
           longitude: number | null
@@ -322,6 +323,7 @@ export type Database = {
           created_at?: string | null
           description: string
           id?: string
+          instagram?: string | null
           kitchen?: boolean | null
           latitude?: number | null
           longitude?: number | null
@@ -347,6 +349,7 @@ export type Database = {
           created_at?: string | null
           description?: string
           id?: string
+          instagram?: string | null
           kitchen?: boolean | null
           latitude?: number | null
           longitude?: number | null
@@ -482,6 +485,7 @@ export type Database = {
           description: string
           id: string
           images: string[] | null
+          instagram: string | null
           latitude: number | null
           longitude: number | null
           name: string
@@ -499,6 +503,7 @@ export type Database = {
           description: string
           id?: string
           images?: string[] | null
+          instagram?: string | null
           latitude?: number | null
           longitude?: number | null
           name: string
@@ -516,6 +521,7 @@ export type Database = {
           description?: string
           id?: string
           images?: string[] | null
+          instagram?: string | null
           latitude?: number | null
           longitude?: number | null
           name?: string

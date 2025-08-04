@@ -21,6 +21,7 @@ type SpaceData = {
   price: string;
   capacity: string;
   phone: string;
+  instagram: string;
   parking: boolean;
   wifi: boolean;
   sound_system: boolean;
@@ -49,6 +50,7 @@ const EditSpace: React.FC = () => {
     price: "",
     capacity: "",
     phone: "",
+    instagram: "",
     parking: false,
     wifi: false,
     sound_system: false,
@@ -108,6 +110,7 @@ const EditSpace: React.FC = () => {
         price: spaceData.price || "",
         capacity: spaceData.capacity || "",
         phone: spaceData.phone || "",
+        instagram: spaceData.instagram || "",
         parking: spaceData.parking || false,
         wifi: spaceData.wifi || false,
         sound_system: spaceData.sound_system || false,
@@ -385,6 +388,17 @@ const EditSpace: React.FC = () => {
                   value={formData.phone} 
                   onChange={handleInputChange}
                   placeholder="(00) 00000-0000"
+                  required 
+                />
+              </div>
+              <div>
+                <Label htmlFor="instagram">Instagram</Label>
+                <Input 
+                  id="instagram" 
+                  name="instagram" 
+                  value={formData.instagram} 
+                  onChange={handleInputChange}
+                  placeholder="@seuinstagram ou instagram.com/seuinstagram"
                   required 
                 />
               </div>

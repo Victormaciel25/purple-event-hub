@@ -45,6 +45,7 @@ interface Vendor {
   working_hours?: string | null;
   images?: string[] | null;
   available_days?: string[] | null;
+  instagram?: string | null;
   rating?: number; // We'll keep this in the interface for now
 }
 
@@ -116,6 +117,7 @@ const VendorDetails = () => {
           working_hours: data.working_hours,
           images: data.images,
           available_days: data.available_days,
+          instagram: data.instagram,
           rating: 4.8, // Default rating until we implement a rating system
         };
         
@@ -353,6 +355,16 @@ const VendorDetails = () => {
           
           <div className="mb-6">
             <h1 className="text-2xl font-bold mb-2">{vendor.name}</h1>
+            {vendor.instagram && (
+              <a 
+                href={vendor.instagram.startsWith('http') ? vendor.instagram : `https://instagram.com/${vendor.instagram.replace('@', '')}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-blue-600 hover:text-blue-800 mb-2 block"
+              >
+                {vendor.instagram.startsWith('@') ? vendor.instagram : `@${vendor.instagram}`}
+              </a>
+            )}
             <Badge variant="outline" className="mb-4 bg-secondary">
               {vendor.category}
             </Badge>

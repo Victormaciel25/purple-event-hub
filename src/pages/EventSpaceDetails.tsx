@@ -67,6 +67,7 @@ type SpaceDetails = {
   price: string;
   capacity: string;
   phone: string;
+  instagram?: string;
   parking: boolean;
   wifi: boolean;
   sound_system: boolean;
@@ -422,6 +423,16 @@ const EventSpaceDetails: React.FC = () => {
 
           {/* title */}
           <h1 className="text-2xl font-bold mb-6 truncate">{space.name}</h1>
+          {space.instagram && (
+            <a 
+              href={space.instagram.startsWith('http') ? space.instagram : `https://instagram.com/${space.instagram.replace('@', '')}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-blue-600 hover:text-blue-800 mb-4 block"
+            >
+              {space.instagram.startsWith('@') ? space.instagram : `@${space.instagram}`}
+            </a>
+          )}
 
           {/* price / details */}
           <div className="mb-6">

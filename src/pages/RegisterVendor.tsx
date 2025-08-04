@@ -69,6 +69,7 @@ const formSchema = z.object({
   address: z.string().min(5, { message: "Insira um endereço válido" }),
   zipCode: z.string().min(8, { message: "Insira um CEP válido" }),
   workingHours: z.string().optional(),
+  instagram: z.string().min(1, { message: "Insira o Instagram" }),
   availableDays: z.array(z.string()).optional(),
 });
 
@@ -94,6 +95,7 @@ const RegisterVendor = () => {
       address: "",
       zipCode: "",
       workingHours: "",
+      instagram: "",
       availableDays: [],
     },
   });
@@ -210,6 +212,7 @@ const RegisterVendor = () => {
           description: values.description,
           address: values.address,
           working_hours: values.workingHours,
+          instagram: values.instagram,
           images: imageUrls,
           user_id: userId,
           status: 'pending',
@@ -434,6 +437,20 @@ const RegisterVendor = () => {
                     </Badge>
                   ))}
                 </div>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="instagram"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Instagram</FormLabel>
+                <FormControl>
+                  <Input placeholder="@seuinstagram ou instagram.com/seuinstagram" {...field} />
+                </FormControl>
                 <FormMessage />
               </FormItem>
             )}

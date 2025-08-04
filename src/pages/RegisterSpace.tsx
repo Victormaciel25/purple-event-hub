@@ -40,6 +40,7 @@ const formSchema = z.object({
   price: z.string().min(1, { message: "Insira um preço válido" }),
   capacity: z.string().min(1, { message: "Insira uma capacidade válida" }),
   phone: z.string().min(10, { message: "Insira um telefone válido" }),
+  instagram: z.string().min(1, { message: "Insira o Instagram" }),
   parking: z.boolean().default(false),
   wifi: z.boolean().default(false),
   soundSystem: z.boolean().default(false),
@@ -62,23 +63,24 @@ const RegisterSpace = () => {
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
-    defaultValues: {
-      name: "",
-      address: "",
-      number: "",
-      state: "",
-      zipCode: "",
-      description: "",
-      price: "",
-      capacity: "",
-      phone: "",
-      parking: false,
-      wifi: false,
-      soundSystem: false,
-      airConditioning: false,
-      kitchen: false,
-      pool: false,
-    },
+      defaultValues: {
+        name: "",
+        address: "",
+        number: "",
+        state: "",
+        zipCode: "",
+        description: "",
+        price: "",
+        capacity: "",
+        phone: "",
+        instagram: "",
+        parking: false,
+        wifi: false,
+        soundSystem: false,
+        airConditioning: false,
+        kitchen: false,
+        pool: false,
+      },
   });
 
   const handleImageChange = (urls: string[]) => {
@@ -186,28 +188,29 @@ const RegisterSpace = () => {
       const userId = session.session.user.id;
       console.log("✅ SUBMIT DEBUG: Usuário autenticado. ID:", userId);
 
-      const spaceData = {
-        name: values.name,
-        address: values.address,
-        number: values.number,
-        state: values.state,
-        zip_code: values.zipCode,
-        description: values.description,
-        price: values.price,
-        capacity: values.capacity,
-        phone: values.phone,
-        parking: values.parking,
-        wifi: values.wifi,
-        sound_system: values.soundSystem,
-        air_conditioning: values.airConditioning,
-        kitchen: values.kitchen,
-        pool: values.pool,
-        categories: selectedCategories,
-        user_id: userId,
-        status: 'pending' as const,
-        latitude: mapLocation.lat,
-        longitude: mapLocation.lng,
-      };
+        const spaceData = {
+          name: values.name,
+          address: values.address,
+          number: values.number,
+          state: values.state,
+          zip_code: values.zipCode,
+          description: values.description,
+          price: values.price,
+          capacity: values.capacity,
+          phone: values.phone,
+          instagram: values.instagram,
+          parking: values.parking,
+          wifi: values.wifi,
+          sound_system: values.soundSystem,
+          air_conditioning: values.airConditioning,
+          kitchen: values.kitchen,
+          pool: values.pool,
+          categories: selectedCategories,
+          user_id: userId,
+          status: 'pending' as const,
+          latitude: mapLocation.lat,
+          longitude: mapLocation.lng,
+        };
 
       console.log("📝 SUBMIT DEBUG: Dados do espaço para inserir:", spaceData);
       
@@ -471,6 +474,20 @@ const RegisterSpace = () => {
                 <FormLabel>Telefone de contato</FormLabel>
                 <FormControl>
                   <Input placeholder="(11) 99999-8888" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="instagram"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Instagram</FormLabel>
+                <FormControl>
+                  <Input placeholder="@seuinstagram ou instagram.com/seuinstagram" {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>

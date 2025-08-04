@@ -28,6 +28,7 @@ const EditVendor = () => {
     description: "",
     address: "",
     working_hours: "",
+    instagram: "",
     available_days: [] as string[],
     images: [] as string[]
   });
@@ -77,6 +78,7 @@ const EditVendor = () => {
         description: data.description || "",
         address: data.address || "",
         working_hours: data.working_hours || "",
+        instagram: data.instagram || "",
         available_days: data.available_days || [],
         images: data.images || []
       });
@@ -231,6 +233,17 @@ const EditVendor = () => {
                 value={formData.contact_number}
                 onChange={(e) => handleInputChange("contact_number", e.target.value)}
                 placeholder="Digite o telefone de contato"
+                required
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="instagram">Instagram *</Label>
+              <Input
+                id="instagram"
+                value={formData.instagram}
+                onChange={(e) => handleInputChange("instagram", e.target.value)}
+                placeholder="@seuinstagram ou instagram.com/seuinstagram"
                 required
               />
             </div>
