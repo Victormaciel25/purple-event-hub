@@ -388,7 +388,7 @@ const EventSpaceDetails: React.FC = () => {
           </div>
 
           {/* title */}
-          <h1 className="text-2xl font-bold mb-6 truncate">{space.name}</h1>
+          <h1 className="text-2xl font-bold mb-2 truncate">{space.name}</h1>
           {space.instagram && (
             <a 
               href={space.instagram.startsWith('http') ? space.instagram : `https://instagram.com/${space.instagram.replace('@', '')}`}
