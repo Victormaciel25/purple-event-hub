@@ -286,23 +286,31 @@ const Messages = () => {
         .select("id, space_photos(storage_path)")
         .in("id", spaceIds);
       
-      // Get signed URLs for all spaces with photos
+      // Get public URLs for all spaces with photos
       if (spacesData) {
-        await Promise.all(spacesData.map(async (space) => {
+        spacesData.forEach((space) => {
           if (space.space_photos && space.space_photos.length > 0) {
             try {
-              const { data: urlData } = await supabase.storage
-                .from('spaces')
-                .createSignedUrl(space.space_photos[0].storage_path, 3600);
+              const photoPath = space.space_photos[0].storage_path;
+              
+              // Se já é uma URL completa, usar diretamente
+              if (photoPath.startsWith('http')) {
+                localImageMap[space.id] = photoPath;
+              } else {
+                // Criar URL pública a partir do storage path
+                const { data: publicUrlData } = supabase.storage
+                  .from('spaces')
+                  .getPublicUrl(photoPath);
                 
-              if (urlData?.signedUrl) {
-                localImageMap[space.id] = urlData.signedUrl;
+                if (publicUrlData?.publicUrl) {
+                  localImageMap[space.id] = publicUrlData.publicUrl;
+                }
               }
             } catch (err) {
-              console.error("Error getting signed URL for space:", space.id, err);
+              console.error("Error getting public URL for space:", space.id, err);
             }
           }
-        }));
+        });
       }
       
       setSpaceImages(localImageMap);
