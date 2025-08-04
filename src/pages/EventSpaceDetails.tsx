@@ -19,7 +19,8 @@ import {
   MoreVertical,
   Share,
   Flag,
-  MapPin
+  MapPin,
+  Instagram
 } from "lucide-react";
 import {
   Carousel,
@@ -394,8 +395,9 @@ const EventSpaceDetails: React.FC = () => {
               href={space.instagram.startsWith('http') ? space.instagram : `https://instagram.com/${space.instagram.replace('@', '')}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-blue-600 hover:text-blue-800 mb-2 block"
+              className="text-blue-600 hover:text-blue-800 mb-2 block flex items-center"
             >
+              <Instagram className="mr-1" size={16} />
               {space.instagram.startsWith('@') ? space.instagram : `@${space.instagram}`}
             </a>
           )}

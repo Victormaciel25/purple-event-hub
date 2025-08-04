@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { Phone, MapPin, Calendar, Clock, ChevronLeft, MoreVertical, Share, Flag, Heart } from "lucide-react";
+import { Phone, MapPin, Calendar, Clock, ChevronLeft, MoreVertical, Share, Flag, Heart, Instagram } from "lucide-react";
 import OptimizedImage from "@/components/OptimizedImage";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -360,8 +360,9 @@ const VendorDetails = () => {
                 href={vendor.instagram.startsWith('http') ? vendor.instagram : `https://instagram.com/${vendor.instagram.replace('@', '')}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-blue-600 hover:text-blue-800 mb-2 block"
+                className="text-blue-600 hover:text-blue-800 mb-2 block flex items-center"
               >
+                <Instagram className="mr-1" size={16} />
                 {vendor.instagram.startsWith('@') ? vendor.instagram : `@${vendor.instagram}`}
               </a>
             )}
