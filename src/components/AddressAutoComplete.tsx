@@ -1,5 +1,6 @@
 
 import React, { useEffect, useRef } from "react";
+import { Search } from "lucide-react";
 import { Input } from "./ui/input";
 
 type GeocodingResult = {
@@ -83,12 +84,13 @@ const AddressAutoComplete = ({
 
   return (
     <div className={`relative ${className}`}>
+      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" size={18} />
       <Input
         ref={inputRef}
         type="text"
         placeholder={placeholder}
         defaultValue={initialValue}
-        className="w-full"
+        className="w-full pl-10"
       />
     </div>
   );
