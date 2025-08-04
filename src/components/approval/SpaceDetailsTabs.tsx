@@ -91,7 +91,7 @@ const SpaceDetailsTabs: React.FC<SpaceDetailsTabsProps> = ({
                 <div>
                   <p className="text-sm font-medium text-gray-500">Instagram</p>
                   <a 
-                    href={space.instagram} 
+                    href={space.instagram.startsWith('http') ? space.instagram : `https://www.instagram.com/${space.instagram.replace('@', '')}`} 
                     target="_blank" 
                     rel="noopener noreferrer"
                     className="text-sm text-blue-600 hover:underline"
