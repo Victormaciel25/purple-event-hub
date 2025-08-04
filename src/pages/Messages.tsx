@@ -31,6 +31,8 @@ interface ChatProps {
   unread?: boolean;
   space_id?: string;
   deleted?: boolean;
+  user_id?: string;
+  owner_id?: string;
 }
 
 interface MessageProps {
@@ -338,7 +340,9 @@ const Messages = () => {
       space_id: chat.space_id,
       avatar: chat.space_id && localImageMap[chat.space_id] ? localImageMap[chat.space_id] : chat.space_image || "",
       unread: chat.has_unread && chat.last_message_sender_id !== currentUserId,
-      deleted: chat.deleted || false
+      deleted: chat.deleted || false,
+      user_id: chat.user_id,
+      owner_id: chat.owner_id
     }));
     
     setChats(formattedChats);
@@ -943,10 +947,17 @@ const Messages = () => {
             {loading ? (
               <LoadingState />
             ) : filteredChats.length > 0 ? (
-              filteredChats.map((chat, index) => {
-                // Get the corresponding user name for this chat
-                const userNames = Object.values(chatUserNames);
-                const otherUserName = userNames[index] || null;
+              filteredChats.map(chat => {
+                // Find the original chat data to get the correct user IDs
+                const originalChatData = chats.find(c => c.id === chat.id);
+                if (!originalChatData) return null;
+                
+                // Determine which user is the "other" user (not the current user)
+                const otherUserId = originalChatData.user_id === userId 
+                  ? originalChatData.owner_id 
+                  : originalChatData.user_id;
+                
+                const otherUserName = otherUserId ? chatUserNames[otherUserId] : null;
 
                 return (
                   <ChatItem 
@@ -959,7 +970,7 @@ const Messages = () => {
                     }}
                   />
                 );
-              })
+              }).filter(Boolean)
             ) : (
               <EmptyState searchQuery={searchQuery} />
             )}
