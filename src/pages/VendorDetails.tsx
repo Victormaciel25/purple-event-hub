@@ -360,9 +360,9 @@ const VendorDetails = () => {
                 href={vendor.instagram.startsWith('http') ? vendor.instagram : `https://instagram.com/${vendor.instagram.replace('@', '')}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-blue-600 hover:text-blue-800 mb-2 block flex items-center"
+                className="text-iparty hover:text-iparty-dark mb-2 block flex items-center"
               >
-                <Instagram className="mr-1" size={16} />
+                <Instagram className="mr-1 text-iparty" size={16} />
                 {vendor.instagram.startsWith('@') ? vendor.instagram : `@${vendor.instagram}`}
               </a>
             )}
