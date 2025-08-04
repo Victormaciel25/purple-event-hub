@@ -72,7 +72,8 @@ const VendorApproval = () => {
           category,
           created_at,
           status,
-          user_id
+          user_id,
+          instagram
         `)
         .order('created_at', { ascending: false });
 
