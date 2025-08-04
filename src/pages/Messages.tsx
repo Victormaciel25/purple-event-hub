@@ -63,7 +63,7 @@ const ChatItem = ({ chat, onClick, otherUserName }: {
     >
       <div className="h-12 w-12 rounded-full overflow-hidden mr-4">
         <OptimizedImage 
-          src={chat.avatar || ""}
+          src={chat.name === "Espaço excluído" ? "/placeholder.svg" : (chat.avatar || "")}
           alt={chat.name} 
           className="w-full h-full"
           fallbackSrc="https://images.unsplash.com/photo-1566681855366-282a74153321?q=80&w=200&auto=format&fit=crop"
@@ -76,7 +76,7 @@ const ChatItem = ({ chat, onClick, otherUserName }: {
               {otherUserName}
             </h3>
           )}
-          <h4 className="font-normal text-sm text-muted-foreground truncate" title={chat.name}>
+          <h4 className={`font-normal text-sm truncate ${chat.name === "Espaço excluído" ? "text-muted-foreground italic" : "text-muted-foreground"}`} title={chat.name}>
             {chat.name}
           </h4>
           <p className={`text-sm truncate ${chat.unread ? "font-medium text-foreground" : "text-muted-foreground"}`}>
@@ -131,15 +131,19 @@ const ChatHeader = ({
       <div className="flex items-center space-x-3">
         <div className="h-12 w-12 rounded-lg overflow-hidden">
           <OptimizedImage 
-            src={chatInfo.space_id ? spaceImages[chatInfo.space_id] || chatInfo.avatar : chatInfo.avatar}
+            src={chatInfo.name === "Espaço excluído" ? "/placeholder.svg" : (chatInfo.space_id ? spaceImages[chatInfo.space_id] || chatInfo.avatar : chatInfo.avatar)}
             alt={chatInfo.name} 
             className="w-full h-full object-cover"
             fallbackSrc="https://images.unsplash.com/photo-1566681855366-282a74153321?q=80&w=200&auto=format&fit=crop"
           />
         </div>
         <div>
-          <h3 className="font-medium text-base">{chatInfo.name}</h3>
-          <p className="text-sm text-muted-foreground">Espaço para eventos</p>
+          <h3 className={`font-medium text-base ${chatInfo.name === "Espaço excluído" ? "text-muted-foreground italic" : ""}`}>
+            {chatInfo.name}
+          </h3>
+          <p className="text-sm text-muted-foreground">
+            {chatInfo.name === "Espaço excluído" ? "Este espaço foi removido" : "Espaço para eventos"}
+          </p>
         </div>
       </div>
 
