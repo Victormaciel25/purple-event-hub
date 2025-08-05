@@ -37,6 +37,15 @@ const MercadoPagoCheckout: React.FC<CheckoutProps> = ({
   const [initializationAttempted, setInitializationAttempted] = useState(false);
   const [cardFormInstance, setCardFormInstance] = useState<any>(null);
   
+  // Reset states when component is re-mounted or becomes visible again
+  useEffect(() => {
+    setInitializationAttempted(false);
+    setShowCheckoutForm(false);
+    setPaymentStatus(null);
+    setErrorMessage(null);
+    cleanupMercadoPagoElements();
+  }, []);
+  
   // Get user ID and Mercado Pago public key on component mount
   useEffect(() => {
     const initialize = async () => {
