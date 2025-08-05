@@ -52,6 +52,15 @@ const MercadoPagoCheckout: React.FC<CheckoutProps> = ({
       setCardFormInstance(null);
     }
     
+    // Force clear any MercadoPago instances from window object
+    try {
+      if (window.MercadoPago && window.MercadoPago._instances) {
+        window.MercadoPago._instances = {};
+      }
+    } catch (error) {
+      console.log("Could not clear MercadoPago instances:", error);
+    }
+    
     // Remove all Mercado Pago hidden inputs
     const hiddenInputs = document.querySelectorAll('[id^="MPHidden"]');
     hiddenInputs.forEach((element) => {
@@ -241,8 +250,8 @@ const MercadoPagoCheckout: React.FC<CheckoutProps> = ({
   
   const initializePaymentForm = () => {
     if (initializationAttempted) {
-      console.log("Payment form already initialized");
-      return;
+      console.log("Payment form already initialized, forcing cleanup and restart");
+      cleanupMercadoPagoElements();
     }
     
     try {
@@ -260,7 +269,10 @@ const MercadoPagoCheckout: React.FC<CheckoutProps> = ({
       
       setInitializationAttempted(true);
       
-      const mp = new window.MercadoPago(mercadoPagoPublicKey);
+      // Create a completely fresh MercadoPago instance
+      const mp = new window.MercadoPago(mercadoPagoPublicKey, {
+        locale: 'pt-BR'
+      });
       
       // Create styles for the form
       createFormStyles();
@@ -273,48 +285,50 @@ const MercadoPagoCheckout: React.FC<CheckoutProps> = ({
         return;
       }
       
-      paymentFormContainer.innerHTML = createFormHTML();
+      // Generate unique form ID to avoid conflicts
+      const uniqueFormId = `form-checkout-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+      paymentFormContainer.innerHTML = createFormHTML(uniqueFormId);
       
-      // Initialize Mercado Pago card form
+      // Initialize Mercado Pago card form with unique IDs
       const cardForm = mp.cardForm({
         amount: plan.price.toString(),
         iframe: true,
         form: {
-          id: "form-checkout",
+          id: uniqueFormId,
           cardNumber: {
-            id: "form-checkout__cardNumber",
+            id: `${uniqueFormId}__cardNumber`,
             placeholder: "Número do cartão",
           },
           expirationDate: {
-            id: "form-checkout__expirationDate",
+            id: `${uniqueFormId}__expirationDate`,
             placeholder: "MM/YY",
           },
           securityCode: {
-            id: "form-checkout__securityCode",
+            id: `${uniqueFormId}__securityCode`,
             placeholder: "Código de segurança",
           },
           cardholderName: {
-            id: "form-checkout__cardholderName",
+            id: `${uniqueFormId}__cardholderName`,
             placeholder: "Titular do cartão",
           },
           issuer: {
-            id: "form-checkout__issuer",
+            id: `${uniqueFormId}__issuer`,
             placeholder: "Banco emissor",
           },
           installments: {
-            id: "form-checkout__installments",
+            id: `${uniqueFormId}__installments`,
             placeholder: "Parcelas",
           },        
           identificationType: {
-            id: "form-checkout__identificationType",
+            id: `${uniqueFormId}__identificationType`,
             placeholder: "Tipo de documento",
           },
           identificationNumber: {
-            id: "form-checkout__identificationNumber",
+            id: `${uniqueFormId}__identificationNumber`,
             placeholder: "Número do documento",
           },
           cardholderEmail: {
-            id: "form-checkout__cardholderEmail",
+            id: `${uniqueFormId}__cardholderEmail`,
             placeholder: "E-mail",
           },
         },
@@ -499,7 +513,7 @@ const MercadoPagoCheckout: React.FC<CheckoutProps> = ({
     const formStyles = document.createElement('style');
     formStyles.id = 'mp-form-styles';
     formStyles.textContent = `
-      #form-checkout {
+      .form-checkout {
         display: flex;
         flex-direction: column;
         max-width: 600px;
@@ -540,7 +554,7 @@ const MercadoPagoCheckout: React.FC<CheckoutProps> = ({
         color: rgba(0, 0, 0, 0.7);
       }
       
-      #form-checkout__submit {
+      .form-submit {
         background-color: rgb(147, 51, 234);
         color: white;
         font-weight: 500;
@@ -553,11 +567,11 @@ const MercadoPagoCheckout: React.FC<CheckoutProps> = ({
         margin-bottom: 0px;
       }
       
-      #form-checkout__submit:hover:not(:disabled) {
+      .form-submit:hover:not(:disabled) {
         background-color: rgb(126, 34, 206);
       }
       
-      #form-checkout__submit:disabled {
+      .form-submit:disabled {
         opacity: 0.5;
         cursor: not-allowed;
       }
@@ -571,59 +585,59 @@ const MercadoPagoCheckout: React.FC<CheckoutProps> = ({
     document.head.appendChild(formStyles);
   };
 
-  const createFormHTML = () => {
+  const createFormHTML = (formId: string) => {
     return `
-      <form id="form-checkout">
+      <form id="${formId}" class="form-checkout">
         <div class="form-group">
-          <label for="form-checkout__cardNumber">Número do Cartão</label>
-          <div id="form-checkout__cardNumber" class="container"></div>
+          <label for="${formId}__cardNumber">Número do Cartão</label>
+          <div id="${formId}__cardNumber" class="container"></div>
         </div>
         
         <div class="form-group">
-          <label for="form-checkout__cardholderName">Nome Completo do Titular</label>
-          <input type="text" id="form-checkout__cardholderName" class="form-control" placeholder="Nome e sobrenome" />
+          <label for="${formId}__cardholderName">Nome Completo do Titular</label>
+          <input type="text" id="${formId}__cardholderName" class="form-control" placeholder="Nome e sobrenome" />
         </div>
         
         <div class="form-group">
-          <label for="form-checkout__cardholderEmail">E-mail</label>
-          <input type="email" id="form-checkout__cardholderEmail" class="form-control" />
+          <label for="${formId}__cardholderEmail">E-mail</label>
+          <input type="email" id="${formId}__cardholderEmail" class="form-control" />
         </div>
         
         <div style="display: flex; gap: 16px;">
           <div class="form-group" style="flex: 1;">
-            <label for="form-checkout__expirationDate">Data de Validade</label>
-            <div id="form-checkout__expirationDate" class="container"></div>
+            <label for="${formId}__expirationDate">Data de Validade</label>
+            <div id="${formId}__expirationDate" class="container"></div>
           </div>
           
           <div class="form-group" style="flex: 1;">
-            <label for="form-checkout__securityCode">CVV</label>
-            <div id="form-checkout__securityCode" class="container"></div>
+            <label for="${formId}__securityCode">CVV</label>
+            <div id="${formId}__securityCode" class="container"></div>
           </div>
         </div>
         
         <div class="form-group">
-          <label for="form-checkout__issuer">Banco Emissor</label>
-          <select id="form-checkout__issuer" class="form-control"></select>
+          <label for="${formId}__issuer">Banco Emissor</label>
+          <select id="${formId}__issuer" class="form-control"></select>
         </div>
         
         <div class="form-group">
-          <label for="form-checkout__installments">Parcelas</label>
-          <select id="form-checkout__installments" class="form-control"></select>
+          <label for="${formId}__installments">Parcelas</label>
+          <select id="${formId}__installments" class="form-control"></select>
         </div>
         
         <div style="display: flex; gap: 16px;">
           <div class="form-group" style="flex: 1;">
-            <label for="form-checkout__identificationType">Tipo de Documento</label>
-            <select id="form-checkout__identificationType" class="form-control"></select>
+            <label for="${formId}__identificationType">Tipo de Documento</label>
+            <select id="${formId}__identificationType" class="form-control"></select>
           </div>
           
           <div class="form-group" style="flex: 1;">
-            <label for="form-checkout__identificationNumber">Número do Documento</label>
-            <input type="text" id="form-checkout__identificationNumber" class="form-control" />
+            <label for="${formId}__identificationNumber">Número do Documento</label>
+            <input type="text" id="${formId}__identificationNumber" class="form-control" />
           </div>
         </div>
         
-        <button type="submit" id="form-checkout__submit" ${processingPayment ? 'disabled' : ''}>
+        <button type="submit" id="${formId}__submit" class="form-submit" ${processingPayment ? 'disabled' : ''}>
           ${processingPayment ? 'Processando...' : 'Pagar'}
         </button>
         <progress value="0" class="progress-bar" id="payment-progress">Carregando...</progress>
