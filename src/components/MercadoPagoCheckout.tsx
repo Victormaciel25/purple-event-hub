@@ -26,6 +26,7 @@ const MercadoPagoCheckout: React.FC<CheckoutProps> = ({
   onSuccess,
   onError
 }) => {
+  const [componentKey, setComponentKey] = useState(Date.now());
   const [loading, setLoading] = useState(false);
   const [sdkReady, setSdkReady] = useState(false);
   const [showCheckoutForm, setShowCheckoutForm] = useState(false);
@@ -39,12 +40,39 @@ const MercadoPagoCheckout: React.FC<CheckoutProps> = ({
   
   // Reset states when component is re-mounted or becomes visible again
   useEffect(() => {
-    setInitializationAttempted(false);
-    setShowCheckoutForm(false);
-    setPaymentStatus(null);
-    setErrorMessage(null);
-    cleanupMercadoPagoElements();
-  }, []);
+    // Force cleanup of any existing MercadoPago instances
+    const forceCleanup = () => {
+      // Destroy any existing card form instance
+      if (cardFormInstance) {
+        try {
+          cardFormInstance.unmount();
+        } catch (e) {
+          console.log("Error unmounting card form:", e);
+        }
+      }
+      setCardFormInstance(null);
+      
+      // Reset all states
+      setInitializationAttempted(false);
+      setShowCheckoutForm(false);
+      setPaymentStatus(null);
+      setErrorMessage(null);
+      
+      // Clean up DOM elements
+      cleanupMercadoPagoElements();
+      
+      // Force removal of MercadoPago global state
+      if (window.MercadoPago && window.MercadoPago._instances) {
+        try {
+          window.MercadoPago._instances = {};
+        } catch (e) {
+          console.log("Could not clear MP instances:", e);
+        }
+      }
+    };
+    
+    forceCleanup();
+  }, [cardFormInstance]);
   
   // Get user ID and Mercado Pago public key on component mount
   useEffect(() => {
@@ -126,6 +154,9 @@ const MercadoPagoCheckout: React.FC<CheckoutProps> = ({
   const handleShowCheckout = async () => {
     console.log("Show checkout button clicked");
     
+    // Force component re-creation for clean state
+    setComponentKey(Date.now());
+    
     if (!sdkReady) {
       toast({
         title: "Aguarde",
@@ -157,6 +188,11 @@ const MercadoPagoCheckout: React.FC<CheckoutProps> = ({
       }
       setUserId(data.session.user.id);
     }
+    
+    // Force cleanup before initializing
+    cleanupMercadoPagoElements();
+    setInitializationAttempted(false);
+    setShowCheckoutForm(false);
     
     setLoading(true);
     setErrorMessage(null);
@@ -604,7 +640,7 @@ const MercadoPagoCheckout: React.FC<CheckoutProps> = ({
   const canShowButton = sdkReady && mercadoPagoPublicKey && userId && !errorMessage;
 
   return (
-    <div className="flex flex-col w-full">
+    <div key={componentKey} className="flex flex-col w-full">
       {errorMessage && (
         <Alert variant="destructive" className="mb-4">
           <AlertCircle className="h-4 w-4" />
