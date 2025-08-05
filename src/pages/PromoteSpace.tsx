@@ -6,7 +6,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ChevronLeft, Check, CreditCard, QrCode } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { toast } from "@/components/ui/use-toast";
+import { toast } from "@/hooks/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import MercadoPagoCheckout from "@/components/MercadoPagoCheckout";
 import PixPayment from "@/components/PixPayment";
@@ -68,6 +68,7 @@ const PromoteSpace: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [paymentSuccess, setPaymentSuccess] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<"card" | "pix">("card");
+  const [checkoutKey, setCheckoutKey] = useState<number>(Date.now());
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -108,7 +109,11 @@ const PromoteSpace: React.FC = () => {
       const { data: sessionData } = await supabase.auth.getSession();
       
       if (!sessionData.session) {
-        toast.error("Você precisa estar logado para promover um espaço");
+        toast({
+          title: "Erro",
+          description: "Você precisa estar logado para promover um espaço",
+          variant: "destructive"
+        });
         navigate("/");
         return;
       }
@@ -130,7 +135,11 @@ const PromoteSpace: React.FC = () => {
       }
     } catch (error) {
       console.error("Erro ao carregar espaços:", error);
-      toast.error("Erro ao carregar seus espaços");
+      toast({
+        title: "Erro",
+        description: "Erro ao carregar seus espaços",
+        variant: "destructive"
+      });
     } finally {
       setLoading(false);
     }
@@ -180,7 +189,11 @@ const PromoteSpace: React.FC = () => {
           navigate("/profile");
         }, 3000);
       } else {
-        toast.warning("Aguardando confirmação de pagamento do processador");
+        toast({
+          title: "Atenção",
+          description: "Aguardando confirmação de pagamento do processador",
+          variant: "default"
+        });
       }
     } catch (error) {
       console.error("Error validating payment success:", error);
@@ -414,7 +427,13 @@ const PromoteSpace: React.FC = () => {
 
             <Tabs 
               value={paymentMethod} 
-              onValueChange={(value) => setPaymentMethod(value as "card" | "pix")}
+              onValueChange={(value) => {
+                setPaymentMethod(value as "card" | "pix");
+                // Force recreation of MercadoPago component when switching to card
+                if (value === "card") {
+                  setCheckoutKey(Date.now());
+                }
+              }}
               className="w-full"
             >
               <TabsList className="grid w-full grid-cols-2 mb-6 h-12 p-1 bg-secondary/50">
@@ -444,7 +463,7 @@ const PromoteSpace: React.FC = () => {
                       />
                     ) : (
                       <MercadoPagoCheckout 
-                        key={`card-${paymentMethod}-${Date.now()}`}
+                        key={checkoutKey}
                         spaceId={selectedSpace}
                         spaceName={spaces.find(space => space.id === selectedSpace)?.name || ""}
                         plan={plans.find(plan => plan.id === selectedPlan) || plans[0]}

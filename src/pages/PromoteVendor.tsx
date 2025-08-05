@@ -6,7 +6,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ChevronLeft, Check, CreditCard, QrCode } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { toast } from "@/components/ui/use-toast";
+import { toast } from "@/hooks/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import MercadoPagoCheckout from "@/components/MercadoPagoCheckout";
 import VendorPixPayment from "@/components/VendorPixPayment";
@@ -59,6 +59,7 @@ const PromoteVendor: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [paymentSuccess, setPaymentSuccess] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<"card" | "pix">("card");
+  const [checkoutKey, setCheckoutKey] = useState<number>(Date.now());
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -332,7 +333,13 @@ const PromoteVendor: React.FC = () => {
 
             <Tabs 
               value={paymentMethod} 
-              onValueChange={(value) => setPaymentMethod(value as "card" | "pix")}
+              onValueChange={(value) => {
+                setPaymentMethod(value as "card" | "pix");
+                // Force recreation of MercadoPago component when switching to card
+                if (value === "card") {
+                  setCheckoutKey(Date.now());
+                }
+              }}
               className="w-full"
             >
               <TabsList className="grid w-full grid-cols-2 mb-6 h-12 p-1 bg-secondary/50">
@@ -350,7 +357,7 @@ const PromoteVendor: React.FC = () => {
                 <Card className="border-2 border-dashed border-iparty/30 bg-gradient-to-br from-iparty/5 to-transparent">
                   <CardContent className="pt-6">
                     <MercadoPagoCheckout 
-                      key={`card-${paymentMethod}-${Date.now()}`}
+                      key={checkoutKey}
                       spaceId={selectedVendor}
                       spaceName={vendors.find(vendor => vendor.id === selectedVendor)?.name || ""}
                       plan={plans.find(plan => plan.id === selectedPlan) || plans[0]}
