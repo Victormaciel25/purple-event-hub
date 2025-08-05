@@ -38,41 +38,29 @@ const MercadoPagoCheckout: React.FC<CheckoutProps> = ({
   const [initializationAttempted, setInitializationAttempted] = useState(false);
   const [cardFormInstance, setCardFormInstance] = useState<any>(null);
   
-  // Reset states when component is re-mounted or becomes visible again
+  // Reset states when component is re-mounted with new key
   useEffect(() => {
-    // Force cleanup of any existing MercadoPago instances
-    const forceCleanup = () => {
-      // Destroy any existing card form instance
-      if (cardFormInstance) {
-        try {
-          cardFormInstance.unmount();
-        } catch (e) {
-          console.log("Error unmounting card form:", e);
-        }
-      }
-      setCardFormInstance(null);
-      
-      // Reset all states
-      setInitializationAttempted(false);
-      setShowCheckoutForm(false);
-      setPaymentStatus(null);
-      setErrorMessage(null);
-      
-      // Clean up DOM elements
-      cleanupMercadoPagoElements();
-      
-      // Force removal of MercadoPago global state
-      if (window.MercadoPago && window.MercadoPago._instances) {
-        try {
-          window.MercadoPago._instances = {};
-        } catch (e) {
-          console.log("Could not clear MP instances:", e);
-        }
-      }
-    };
+    console.log("MercadoPago component mounted/reset with key:", componentKey);
     
-    forceCleanup();
-  }, [cardFormInstance]);
+    // Reset all states when component key changes
+    setInitializationAttempted(false);
+    setShowCheckoutForm(false);
+    setPaymentStatus(null);
+    setErrorMessage(null);
+    setCardFormInstance(null);
+    
+    // Clean up DOM elements
+    cleanupMercadoPagoElements();
+    
+    // Force removal of MercadoPago global state
+    if (window.MercadoPago && window.MercadoPago._instances) {
+      try {
+        window.MercadoPago._instances = {};
+      } catch (e) {
+        console.log("Could not clear MP instances:", e);
+      }
+    }
+  }, [componentKey]);
   
   // Get user ID and Mercado Pago public key on component mount
   useEffect(() => {
