@@ -350,6 +350,7 @@ const PromoteVendor: React.FC = () => {
                 <Card className="border-2 border-dashed border-iparty/30 bg-gradient-to-br from-iparty/5 to-transparent">
                   <CardContent className="pt-6">
                     <MercadoPagoCheckout 
+                      key={`card-${paymentMethod}-${Date.now()}`}
                       spaceId={selectedVendor}
                       spaceName={vendors.find(vendor => vendor.id === selectedVendor)?.name || ""}
                       plan={plans.find(plan => plan.id === selectedPlan) || plans[0]}

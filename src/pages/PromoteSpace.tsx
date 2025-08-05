@@ -444,6 +444,7 @@ const PromoteSpace: React.FC = () => {
                       />
                     ) : (
                       <MercadoPagoCheckout 
+                        key={`card-${paymentMethod}-${Date.now()}`}
                         spaceId={selectedSpace}
                         spaceName={spaces.find(space => space.id === selectedSpace)?.name || ""}
                         plan={plans.find(plan => plan.id === selectedPlan) || plans[0]}
