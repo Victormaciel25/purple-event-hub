@@ -59,16 +59,7 @@ const PromoteVendor: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [paymentSuccess, setPaymentSuccess] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<"card" | "pix">("card");
-  const [mercadoPagoKey, setMercadoPagoKey] = useState(Date.now());
   const navigate = useNavigate();
-
-  const handlePaymentMethodChange = (value: "card" | "pix") => {
-    setPaymentMethod(value);
-    // Force MercadoPago component re-creation when switching to card
-    if (value === "card") {
-      setMercadoPagoKey(Date.now());
-    }
-  };
 
   useEffect(() => {
     fetchUserVendors();
@@ -341,7 +332,7 @@ const PromoteVendor: React.FC = () => {
 
             <Tabs 
               value={paymentMethod} 
-              onValueChange={handlePaymentMethodChange}
+              onValueChange={(value) => setPaymentMethod(value as "card" | "pix")}
               className="w-full"
             >
               <TabsList className="grid w-full grid-cols-2 mb-6 h-12 p-1 bg-secondary/50">
@@ -359,7 +350,6 @@ const PromoteVendor: React.FC = () => {
                 <Card className="border-2 border-dashed border-iparty/30 bg-gradient-to-br from-iparty/5 to-transparent">
                   <CardContent className="pt-6">
                     <MercadoPagoCheckout 
-                      key={mercadoPagoKey}
                       spaceId={selectedVendor}
                       spaceName={vendors.find(vendor => vendor.id === selectedVendor)?.name || ""}
                       plan={plans.find(plan => plan.id === selectedPlan) || plans[0]}

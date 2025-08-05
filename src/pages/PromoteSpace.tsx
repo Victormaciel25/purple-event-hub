@@ -68,16 +68,7 @@ const PromoteSpace: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [paymentSuccess, setPaymentSuccess] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<"card" | "pix">("card");
-  const [mercadoPagoKey, setMercadoPagoKey] = useState(Date.now());
   const navigate = useNavigate();
-
-  const handlePaymentMethodChange = (value: "card" | "pix") => {
-    setPaymentMethod(value);
-    // Force MercadoPago component re-creation when switching to card
-    if (value === "card") {
-      setMercadoPagoKey(Date.now());
-    }
-  };
 
   useEffect(() => {
     fetchUserSpaces();
@@ -423,7 +414,7 @@ const PromoteSpace: React.FC = () => {
 
             <Tabs 
               value={paymentMethod} 
-              onValueChange={handlePaymentMethodChange}
+              onValueChange={(value) => setPaymentMethod(value as "card" | "pix")}
               className="w-full"
             >
               <TabsList className="grid w-full grid-cols-2 mb-6 h-12 p-1 bg-secondary/50">
@@ -453,7 +444,6 @@ const PromoteSpace: React.FC = () => {
                       />
                     ) : (
                       <MercadoPagoCheckout 
-                        key={mercadoPagoKey}
                         spaceId={selectedSpace}
                         spaceName={spaces.find(space => space.id === selectedSpace)?.name || ""}
                         plan={plans.find(plan => plan.id === selectedPlan) || plans[0]}
