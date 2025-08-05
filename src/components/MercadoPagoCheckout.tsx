@@ -37,6 +37,66 @@ const MercadoPagoCheckout: React.FC<CheckoutProps> = ({
   const [initializationAttempted, setInitializationAttempted] = useState(false);
   const [cardFormInstance, setCardFormInstance] = useState<any>(null);
   
+  // Helper function to clean up Mercado Pago elements
+  const cleanupMercadoPagoElements = () => {
+    // Destroy existing card form instance if it exists
+    if (cardFormInstance) {
+      try {
+        // Try to destroy the card form instance if it has a destroy method
+        if (typeof cardFormInstance.destroy === 'function') {
+          cardFormInstance.destroy();
+        }
+      } catch (error) {
+        console.log("Could not destroy card form instance:", error);
+      }
+      setCardFormInstance(null);
+    }
+    
+    // Remove all Mercado Pago hidden inputs
+    const hiddenInputs = document.querySelectorAll('[id^="MPHidden"]');
+    hiddenInputs.forEach((element) => {
+      element.remove();
+    });
+    
+    // Remove all Mercado Pago iframes
+    const mpIframes = document.querySelectorAll('iframe[src*="mercadopago"]');
+    mpIframes.forEach((iframe) => {
+      iframe.remove();
+    });
+    
+    // Remove any Mercado Pago containers
+    const mpContainers = document.querySelectorAll('[id*="mercadopago"]');
+    mpContainers.forEach((container) => {
+      if (container.id !== 'payment-form-container') {
+        container.remove();
+      }
+    });
+    
+    // Remove form styles
+    const formStyles = document.getElementById('mp-form-styles');
+    if (formStyles) {
+      formStyles.remove();
+    }
+    
+    // Remove overlays
+    const overlays = document.querySelectorAll('.mercadopago-overlay');
+    overlays.forEach((element) => {
+      element.remove();
+    });
+    
+    // Clear form container
+    const formContainer = document.getElementById('payment-form-container');
+    if (formContainer) {
+      formContainer.innerHTML = '';
+    }
+    
+    // Reset component states
+    setInitializationAttempted(false);
+    setShowCheckoutForm(false);
+    setErrorMessage(null);
+    setPaymentStatus(null);
+  };
+  
   // Get user ID and Mercado Pago public key on component mount
   useEffect(() => {
     const initialize = async () => {
@@ -79,9 +139,12 @@ const MercadoPagoCheckout: React.FC<CheckoutProps> = ({
     initialize();
   }, []);
   
-  // Load Mercado Pago SDK
+  // Load Mercado Pago SDK and cleanup on component mount/unmount
   useEffect(() => {
     let script: HTMLScriptElement | null = null;
+    
+    // Cleanup any existing Mercado Pago elements when component mounts
+    cleanupMercadoPagoElements();
     
     const loadSDK = () => {
       if (!window.MercadoPago && !document.querySelector('script[src="https://sdk.mercadopago.com/js/v2"]')) {
@@ -112,7 +175,7 @@ const MercadoPagoCheckout: React.FC<CheckoutProps> = ({
         script.parentNode.removeChild(script);
       }
     };
-  }, []);
+  }, []); // Empty dependency array ensures this only runs on mount/unmount
 
   const handleShowCheckout = async () => {
     console.log("Show checkout button clicked");
@@ -154,6 +217,10 @@ const MercadoPagoCheckout: React.FC<CheckoutProps> = ({
     
     try {
       console.log("Showing payment form...");
+      
+      // Clean up any existing elements before showing the form
+      cleanupMercadoPagoElements();
+      
       setShowCheckoutForm(true);
       
       // Initialize the form after a small delay to ensure DOM is ready
@@ -562,34 +629,6 @@ const MercadoPagoCheckout: React.FC<CheckoutProps> = ({
         <progress value="0" class="progress-bar" id="payment-progress">Carregando...</progress>
       </form>
     `;
-  };
-  
-  // Helper function to clean up Mercado Pago elements
-  const cleanupMercadoPagoElements = () => {
-    const hiddenInputs = document.querySelectorAll('[id^="MPHidden"]');
-    hiddenInputs.forEach((element) => {
-      element.remove();
-    });
-    
-    const mpIframes = document.querySelectorAll('iframe[src*="mercadopago"]');
-    mpIframes.forEach((iframe) => {
-      iframe.remove();
-    });
-    
-    const formStyles = document.getElementById('mp-form-styles');
-    if (formStyles) {
-      formStyles.remove();
-    }
-    
-    const overlays = document.querySelectorAll('.mercadopago-overlay');
-    overlays.forEach((element) => {
-      element.remove();
-    });
-    
-    const formContainer = document.getElementById('payment-form-container');
-    if (formContainer) {
-      formContainer.innerHTML = '';
-    }
   };
 
   const canShowButton = sdkReady && mercadoPagoPublicKey && userId && !errorMessage;
