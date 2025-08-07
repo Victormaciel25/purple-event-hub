@@ -8,7 +8,7 @@ import { ChevronLeft, Check, CreditCard, QrCode } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import MercadoPagoCheckout from "@/components/MercadoPagoCheckout";
+import MercadoPagoCardBrick from "@/components/MercadoPagoCardBrick";
 import VendorPixPayment from "@/components/VendorPixPayment";
 
 type Vendor = {
@@ -356,12 +356,19 @@ const PromoteVendor: React.FC = () => {
               <TabsContent value="card" className="mt-0">
                 <Card className="border-2 border-dashed border-iparty/30 bg-gradient-to-br from-iparty/5 to-transparent">
                   <CardContent className="pt-6">
-                    <MercadoPagoCheckout 
-                      key={checkoutKey}
+                    <MercadoPagoCardBrick 
+                      wrapperKey={checkoutKey}
                       spaceId={selectedVendor}
                       spaceName={vendors.find(vendor => vendor.id === selectedVendor)?.name || ""}
                       plan={plans.find(plan => plan.id === selectedPlan) || plans[0]}
                       onSuccess={handlePaymentSuccess}
+                      onError={() => {
+                        toast({
+                          title: "Erro no pagamento",
+                          description: "Ocorreu um erro durante o processamento. Tente novamente.",
+                          variant: "destructive"
+                        });
+                      }}
                     />
                   </CardContent>
                 </Card>
