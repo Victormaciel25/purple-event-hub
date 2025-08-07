@@ -222,22 +222,40 @@ const MercadoPagoCardBrick: React.FC<Props> = ({
             Finalize o pagamento com segurança pelo Mercado Pago.
           </div>
           {/* Force remount with wrapperKey to guarantee a fresh brick instance */}
-          <CardPayment
-            key={wrapperKey}
-            initialization={paymentInitialization as any}
-            customization={{ paymentMethods: { creditCard: 'all' } } as any}
-            onSubmit={(param: any) => handleSubmit(param?.formData ?? param)}
-            onReady={() => {
-              // Brick ready
-            }}
-            onError={(error: any) => {
-              console.error("Brick error:", error);
-              const msg = error?.message || "Erro ao carregar o formulário";
-              setErrorMessage(msg);
-              toast({ title: "Erro", description: msg, variant: "destructive" });
-              onError?.();
-            }}
-          />
+          <div className="flex justify-center">
+            <div className="w-full max-w-md mx-auto">
+              <CardPayment
+                key={wrapperKey}
+                initialization={paymentInitialization as any}
+                customization={{
+                  paymentMethods: { creditCard: 'all' },
+                  visual: {
+                    texts: {
+                      formTitle: "Cartão de crédito ou débito",
+                      cardNumber: { label: "Número do cartão", placeholder: "1234 1234 1234 1234" },
+                      expirationDate: { label: "Validade", placeholder: "MM/AA" },
+                      securityCode: { label: "Código de segurança", placeholder: "Ex.: 123" },
+                      cardholderName: { label: "Nome impresso no cartão" },
+                      identification: { label: "CPF", placeholder: "000.000.000-00" },
+                      email: { label: "E-mail" },
+                      payButton: "Pagar"
+                    }
+                  }
+                } as any}
+                onSubmit={(param: any) => handleSubmit(param?.formData ?? param)}
+                onReady={() => {
+                  // Brick ready
+                }}
+                onError={(error: any) => {
+                  console.error("Brick error:", error);
+                  const msg = error?.message || "Erro ao carregar o formulário";
+                  setErrorMessage(msg);
+                  toast({ title: "Erro", description: msg, variant: "destructive" });
+                  onError?.();
+                }}
+              />
+            </div>
+          </div>
           {processing && (
             <div className="text-center p-2 text-sm">
               <Loader2 className="inline-block mr-2 h-4 w-4 animate-spin" />
