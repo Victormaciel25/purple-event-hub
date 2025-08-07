@@ -235,7 +235,7 @@ const MercadoPagoCardBrick: React.FC<Props> = ({
                       formTitle: "Cartão de crédito ou débito",
                       // Títulos/agrupadores
                       cardholderIdentification: "Documento do titular",
-                      enterYourDetails: "",
+                      enterYourDetails: "Seus dados",
                       // Campos
                       cardNumber: { label: "Número do cartão", placeholder: "1234 1234 1234 1234" },
                       expirationDate: { label: "Validade", placeholder: "MM/AA" },
