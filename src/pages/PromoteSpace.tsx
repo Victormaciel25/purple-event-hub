@@ -8,7 +8,7 @@ import { ChevronLeft, Check, CreditCard, QrCode } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import MercadoPagoWrapper from "@/components/MercadoPagoWrapper";
+import MercadoPagoCardBrick from "@/components/MercadoPagoCardBrick";
 import PixPayment from "@/components/PixPayment";
 import SubscriptionCheckout from "@/components/SubscriptionCheckout";
 
@@ -462,7 +462,7 @@ const PromoteSpace: React.FC = () => {
                         onSuccess={handlePaymentSuccess}
                       />
                      ) : (
-                       <MercadoPagoWrapper 
+                       <MercadoPagoCardBrick 
                          wrapperKey={checkoutKey}
                          spaceId={selectedSpace}
                          spaceName={spaces.find(space => space.id === selectedSpace)?.name || ""}
