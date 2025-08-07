@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { initMercadoPago, Payment } from "@mercadopago/sdk-react";
+import { initMercadoPago, CardPayment } from "@mercadopago/sdk-react";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Check, Loader2, AlertCircle } from "lucide-react";
@@ -222,11 +222,11 @@ const MercadoPagoCardBrick: React.FC<Props> = ({
             Finalize o pagamento com segurança pelo Mercado Pago.
           </div>
           {/* Force remount with wrapperKey to guarantee a fresh brick instance */}
-          <Payment
+          <CardPayment
             key={wrapperKey}
             initialization={paymentInitialization as any}
-            customization={{} as any}
-            onSubmit={(data: any) => handleSubmit(data)}
+            customization={{ paymentMethods: { creditCard: 'all' } } as any}
+            onSubmit={(param: any) => handleSubmit(param?.formData ?? param)}
             onReady={() => {
               // Brick ready
             }}
