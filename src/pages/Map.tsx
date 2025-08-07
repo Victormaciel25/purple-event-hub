@@ -1,13 +1,13 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import { Loader2 } from "lucide-react";
-import { Wrapper } from "@googlemaps/react-wrapper";
+
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 
 import LocationMap from "@/components/LocationMap";
 import AddressAutoComplete from "@/components/AddressAutoComplete";
-import { GOOGLE_MAPS_API_KEY } from "@/config/app-config";
+
 import { useAppData } from "@/hooks/useAppData";
 
 type Space = {
@@ -231,7 +231,7 @@ const Map: React.FC = () => {
   }
 
   return (
-    <Wrapper apiKey={GOOGLE_MAPS_API_KEY} libraries={["places"]}>
+    
       <div className="container px-4 py-6 max-w-4xl mx-auto h-full">
         <div className="mb-6">
           <AddressAutoComplete
@@ -258,7 +258,7 @@ const Map: React.FC = () => {
           />
         </div>
       </div>
-    </Wrapper>
+    
   );
 };
 
