@@ -226,12 +226,17 @@ const MercadoPagoCardBrick: React.FC<Props> = ({
             <div className="w-full max-w-md mx-auto">
               <CardPayment
                 key={wrapperKey}
+                locale="pt-BR"
                 initialization={paymentInitialization as any}
                 customization={{
                   paymentMethods: { creditCard: 'all' },
                   visual: {
                     texts: {
                       formTitle: "Cartão de crédito ou débito",
+                      // Títulos/agrupadores
+                      cardholderIdentification: "Documento do titular",
+                      enterYourDetails: "Seus dados",
+                      // Campos
                       cardNumber: { label: "Número do cartão", placeholder: "1234 1234 1234 1234" },
                       expirationDate: { label: "Validade", placeholder: "MM/AA" },
                       securityCode: { label: "Código de segurança", placeholder: "Ex.: 123" },
