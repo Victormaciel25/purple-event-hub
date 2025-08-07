@@ -21,6 +21,7 @@ type Props = {
   onSuccess?: () => void;
   onError?: () => void;
   wrapperKey: number; // to force remount if needed
+  isVendor?: boolean; // when true, send vendor_id instead of space_id
 };
 
 const MercadoPagoCardBrick: React.FC<Props> = ({
@@ -30,6 +31,7 @@ const MercadoPagoCardBrick: React.FC<Props> = ({
   onSuccess,
   onError,
   wrapperKey,
+  isVendor = false,
 }) => {
   const [userId, setUserId] = useState<string | null>(null);
   const [publicKey, setPublicKey] = useState<string | null>(null);
@@ -147,10 +149,10 @@ const MercadoPagoCardBrick: React.FC<Props> = ({
             identification,
           },
           // Brick handles device fingerprint internally
-          space_id: spaceId,
+          ...(isVendor ? { vendor_id: spaceId } : { space_id: spaceId }),
           plan_id: plan.id,
           user_id: userId,
-          description: `Promoção do espaço: ${spaceName} - Plano ${plan.name}`,
+          description: `Promoção do ${isVendor ? 'fornecedor' : 'espaço'}: ${spaceName} - Plano ${plan.name}`,
         }),
       });
 

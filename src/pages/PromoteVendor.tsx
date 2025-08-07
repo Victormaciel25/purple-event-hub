@@ -361,6 +361,7 @@ const PromoteVendor: React.FC = () => {
                       spaceId={selectedVendor}
                       spaceName={vendors.find(vendor => vendor.id === selectedVendor)?.name || ""}
                       plan={plans.find(plan => plan.id === selectedPlan) || plans[0]}
+                      isVendor={true}
                       onSuccess={handlePaymentSuccess}
                       onError={() => {
                         toast({
