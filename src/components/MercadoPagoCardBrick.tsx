@@ -232,7 +232,7 @@ const MercadoPagoCardBrick: React.FC<Props> = ({
                   paymentMethods: { creditCard: 'all' },
                   visual: {
                     texts: {
-                      formTitle: "Cartão de crédito ou débito",
+                      formTitle: "Preencha seus dados",
                       // Títulos/agrupadores
                       cardholderIdentification: "Documento do titular",
                       enterYourDetails: "Seus dados",
