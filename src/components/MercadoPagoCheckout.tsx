@@ -33,95 +33,9 @@ const MercadoPagoCheckout: React.FC<CheckoutProps> = ({
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [mercadoPagoPublicKey, setMercadoPagoPublicKey] = useState<string | null>(null);
   const [paymentStatus, setPaymentStatus] = useState<string | null>(null);
-  const [sdkLoadId, setSdkLoadId] = useState<string>('');
-  const containerRef = useRef<HTMLDivElement>(null);
-  const mpInstanceRef = useRef<any>(null);
+  const [iframeReady, setIframeReady] = useState(false);
+  const iframeRef = useRef<HTMLIFrameElement>(null);
   
-  // Generate unique IDs for this instance
-  const instanceId = useRef(`mp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`).current;
-  
-  // Complete cleanup function
-  const completeCleanup = () => {
-    console.log('Starting complete cleanup...');
-    
-    // Clear MP instance reference
-    if (mpInstanceRef.current) {
-      try {
-        if (typeof mpInstanceRef.current.destroy === 'function') {
-          mpInstanceRef.current.destroy();
-        }
-      } catch (e) {
-        console.log('Instance cleanup attempted');
-      }
-      mpInstanceRef.current = null;
-    }
-    
-    // Remove ALL MercadoPago related elements
-    document.querySelectorAll(`
-      [id^="MPHidden"],
-      iframe[src*="mercadopago"],
-      iframe[src*="mercadolibre"],
-      script[src*="mercadopago"],
-      [class*="mercadopago"],
-      [class*="mp-"],
-      [id*="mercadopago"],
-      [id*="mp-"],
-      .mercadopago-overlay
-    `).forEach(el => {
-      el.remove();
-    });
-    
-    // Clear window MercadoPago
-    if (window.MercadoPago) {
-      try {
-        delete window.MercadoPago;
-      } catch (e) {
-        window.MercadoPago = undefined;
-      }
-    }
-    
-    // Clear container
-    if (containerRef.current) {
-      containerRef.current.innerHTML = '';
-    }
-    
-    // Reset states
-    setShowCheckoutForm(false);
-    setErrorMessage(null);
-    setPaymentStatus(null);
-    setProcessingPayment(false);
-    
-    console.log('Complete cleanup finished');
-  };
-
-  // Force reload MercadoPago SDK
-  const forceReloadSDK = () => {
-    return new Promise<void>((resolve, reject) => {
-      completeCleanup();
-      
-      const newLoadId = `sdk-${Date.now()}`;
-      setSdkLoadId(newLoadId);
-      
-      console.log('Force loading fresh MercadoPago SDK...');
-      
-      const script = document.createElement('script');
-      script.src = `https://sdk.mercadopago.com/js/v2?_t=${Date.now()}`;
-      script.id = `mp-sdk-${newLoadId}`;
-      
-      script.onload = () => {
-        console.log('Fresh MercadoPago SDK loaded');
-        setTimeout(() => resolve(), 100);
-      };
-      
-      script.onerror = () => {
-        console.error('Failed to load fresh SDK');
-        reject(new Error('Failed to load payment SDK'));
-      };
-      
-      document.head.appendChild(script);
-    });
-  };
-
   // Initialize data
   useEffect(() => {
     const initialize = async () => {
@@ -152,11 +66,27 @@ const MercadoPagoCheckout: React.FC<CheckoutProps> = ({
     };
     
     initialize();
-    
-    return () => {
-      completeCleanup();
-    };
   }, []);
+
+  // Listen for iframe messages
+  useEffect(() => {
+    const handleMessage = async (event: MessageEvent) => {
+      if (event.origin !== window.location.origin) return;
+      
+      switch (event.data.type) {
+        case 'IFRAME_READY':
+          setIframeReady(true);
+          break;
+          
+        case 'PAYMENT_DATA':
+          await handlePaymentData(event.data.data);
+          break;
+      }
+    };
+    
+    window.addEventListener('message', handleMessage);
+    return () => window.removeEventListener('message', handleMessage);
+  }, [userId, spaceId, plan, spaceName]);
 
   const handleShowCheckout = async () => {
     if (!mercadoPagoPublicKey || !userId) {
@@ -170,186 +100,67 @@ const MercadoPagoCheckout: React.FC<CheckoutProps> = ({
     
     setLoading(true);
     setErrorMessage(null);
+    setShowCheckoutForm(true);
     
-    try {
-      // Force reload SDK and initialize
-      await forceReloadSDK();
-      await initializePaymentForm();
-      setShowCheckoutForm(true);
-    } catch (error) {
-      console.error("Error showing checkout:", error);
-      setErrorMessage("Erro ao carregar formulário de pagamento. Tente novamente.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const initializePaymentForm = async () => {
-    return new Promise<void>((resolve, reject) => {
-      try {
-        if (!window.MercadoPago || !mercadoPagoPublicKey) {
-          reject(new Error("MercadoPago SDK not available"));
-          return;
-        }
+    // Wait for iframe to be ready before sending data
+    const checkIframeReady = () => {
+      if (iframeReady && iframeRef.current) {
+        const paymentData = {
+          publicKey: mercadoPagoPublicKey,
+          amount: plan.price,
+          formattedPrice: plan.price.toLocaleString('pt-BR', { 
+            style: 'currency', 
+            currency: 'BRL' 
+          })
+        };
         
-        console.log('Initializing fresh payment form...');
+        iframeRef.current.contentWindow?.postMessage({
+          type: 'INIT_PAYMENT',
+          data: paymentData
+        }, '*');
         
-        const mp = new window.MercadoPago(mercadoPagoPublicKey, {
-          locale: 'pt-BR'
-        });
-        
-        // Create fresh container
-        const container = containerRef.current;
-        if (!container) {
-          reject(new Error("Container not found"));
-          return;
-        }
-        
-        // Generate unique form ID
-        const formId = `form-checkout-${instanceId}`;
-        
-        container.innerHTML = `
-          <form id="${formId}" class="space-y-4">
-            <div class="grid grid-cols-2 gap-4">
-              <div>
-                <label class="block text-sm font-medium mb-2">Número do cartão</label>
-                <div id="${formId}__cardNumber" class="h-12 border rounded-lg"></div>
-              </div>
-              <div>
-                <label class="block text-sm font-medium mb-2">Validade</label>
-                <div id="${formId}__expirationDate" class="h-12 border rounded-lg"></div>
-              </div>
-            </div>
-            
-            <div class="grid grid-cols-2 gap-4">
-              <div>
-                <label class="block text-sm font-medium mb-2">CVV</label>
-                <div id="${formId}__securityCode" class="h-12 border rounded-lg"></div>
-              </div>
-              <div>
-                <label class="block text-sm font-medium mb-2">Parcelas</label>
-                <div id="${formId}__installments" class="h-12 border rounded-lg"></div>
-              </div>
-            </div>
-            
-            <div>
-              <label class="block text-sm font-medium mb-2">Nome no cartão</label>
-              <div id="${formId}__cardholderName" class="h-12 border rounded-lg"></div>
-            </div>
-            
-            <div class="grid grid-cols-2 gap-4">
-              <div>
-                <label class="block text-sm font-medium mb-2">Tipo de documento</label>
-                <div id="${formId}__identificationType" class="h-12 border rounded-lg"></div>
-              </div>
-              <div>
-                <label class="block text-sm font-medium mb-2">Número do documento</label>
-                <div id="${formId}__identificationNumber" class="h-12 border rounded-lg"></div>
-              </div>
-            </div>
-            
-            <div>
-              <label class="block text-sm font-medium mb-2">E-mail</label>
-              <div id="${formId}__cardholderEmail" class="h-12 border rounded-lg"></div>
-            </div>
-            
-            <div id="${formId}__issuer" style="display: none;"></div>
-            
-            <button type="submit" id="form-checkout__submit" class="w-full h-12 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-lg transition-colors" ${processingPayment ? 'disabled' : ''}>
-              ${processingPayment ? 'Processando...' : `Pagar ${plan.price.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}`}
-            </button>
-          </form>
-        `;
-        
-        // Initialize cardForm
-        setTimeout(() => {
-          try {
-            const cardForm = mp.cardForm({
-              amount: plan.price.toString(),
-              iframe: true,
-              form: {
-                id: formId,
-                cardNumber: { id: `${formId}__cardNumber` },
-                expirationDate: { id: `${formId}__expirationDate` },
-                securityCode: { id: `${formId}__securityCode` },
-                cardholderName: { id: `${formId}__cardholderName` },
-                issuer: { id: `${formId}__issuer` },
-                installments: { id: `${formId}__installments` },
-                identificationType: { id: `${formId}__identificationType` },
-                identificationNumber: { id: `${formId}__identificationNumber` },
-                cardholderEmail: { id: `${formId}__cardholderEmail` },
-              },
-              callbacks: {
-                onFormMounted: error => {
-                  if (error) {
-                    reject(error);
-                    return;
-                  }
-                  console.log("Fresh form mounted successfully");
-                  resolve();
-                },
-                onSubmit: async event => {
-                  event.preventDefault();
-                  await handleFormSubmit(cardForm, mp);
-                },
-              },
-            });
-            
-            mpInstanceRef.current = cardForm;
-          } catch (error) {
-            reject(error);
-          }
-        }, 300);
-        
-      } catch (error) {
-        reject(error);
+        setLoading(false);
+      } else {
+        setTimeout(checkIframeReady, 100);
       }
-    });
+    };
+    
+    checkIframeReady();
   };
 
-  const handleFormSubmit = async (cardForm: any, mp: any) => {
+  const handlePaymentData = async (data: any) => {
     if (processingPayment) return;
     
     setProcessingPayment(true);
-    setErrorMessage(null);
     
     try {
-      const formData = cardForm.getCardFormData();
-      
-      let deviceId = null;
-      try {
-        deviceId = mp.getDeviceFingerprint();
-      } catch (e) {
-        console.warn("Could not get device fingerprint");
-      }
-      
-      const cardholderName = formData.cardholderName || '';
+      const cardholderName = data.cardholderName || '';
       const nameParts = cardholderName.trim().split(' ');
       const firstName = nameParts[0] || '';
       const lastName = nameParts.slice(1).join(' ') || '';
 
-      const { data, error } = await supabase.functions.invoke('process-payment', {
+      const { data: paymentResult, error } = await supabase.functions.invoke('process-payment', {
         body: JSON.stringify({
-          token: formData.token,
-          issuer_id: formData.issuerId,
-          payment_method_id: formData.paymentMethodId,
-          transaction_amount: formData.amount,
-          installments: formData.installments,
-          email: formData.cardholderEmail,
+          token: data.token,
+          issuer_id: data.issuerId,
+          payment_method_id: data.paymentMethodId,
+          transaction_amount: data.amount,
+          installments: data.installments,
+          email: data.cardholderEmail,
           identification: {
-            type: formData.identificationType,
-            number: formData.identificationNumber
+            type: data.identificationType,
+            number: data.identificationNumber
           },
           payer: {
-            email: formData.cardholderEmail,
+            email: data.cardholderEmail,
             first_name: firstName,
             last_name: lastName,
             identification: {
-              type: formData.identificationType,
-              number: formData.identificationNumber
+              type: data.identificationType,
+              number: data.identificationNumber
             }
           },
-          device_id: deviceId,
+          device_id: data.deviceId,
           space_id: spaceId,
           plan_id: plan.id,
           user_id: userId,
@@ -361,37 +172,57 @@ const MercadoPagoCheckout: React.FC<CheckoutProps> = ({
         throw new Error("Erro na comunicação com o servidor de pagamentos");
       }
       
-      if (data && data.success) {
-        setPaymentStatus(data.status);
+      if (paymentResult && paymentResult.success) {
+        setPaymentStatus(paymentResult.status);
         
-        if (data.status === "approved") {
+        // Send result to iframe
+        iframeRef.current?.contentWindow?.postMessage({
+          type: 'PAYMENT_RESULT',
+          success: true
+        }, '*');
+        
+        if (paymentResult.status === "approved") {
           toast({
             title: "Pagamento aprovado!",
             description: "Seu espaço foi promovido com sucesso.",
             variant: "default"
           });
-
-          completeCleanup();
           
           if (onSuccess) {
             onSuccess();
           }
-        } else if (data.status === "in_process" || data.status === "pending") {
+        } else if (paymentResult.status === "in_process" || paymentResult.status === "pending") {
           toast({
             title: "Pagamento em processamento",
             description: "Aguarde a confirmação do pagamento.",
             variant: "default"
           });
         } else {
-          setErrorMessage(`Pagamento registrado com status: ${data.status}`);
+          setErrorMessage(`Pagamento registrado com status: ${paymentResult.status}`);
         }
       } else {
-        const errorMsg = data?.error || "Ocorreu um erro ao processar o pagamento.";
+        const errorMsg = paymentResult?.error || "Ocorreu um erro ao processar o pagamento.";
+        
+        // Send error to iframe
+        iframeRef.current?.contentWindow?.postMessage({
+          type: 'PAYMENT_RESULT',
+          success: false,
+          error: errorMsg
+        }, '*');
+        
         setErrorMessage(errorMsg);
         throw new Error(errorMsg);
       }
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : "Erro ao processar pagamento.";
+      
+      // Send error to iframe
+      iframeRef.current?.contentWindow?.postMessage({
+        type: 'PAYMENT_RESULT',
+        success: false,
+        error: errorMsg
+      }, '*');
+      
       toast({
         title: "Erro no pagamento",
         description: errorMsg,
@@ -408,8 +239,11 @@ const MercadoPagoCheckout: React.FC<CheckoutProps> = ({
   };
 
   const handleReset = () => {
-    completeCleanup();
-    setLoading(false);
+    setShowCheckoutForm(false);
+    setErrorMessage(null);
+    setPaymentStatus(null);
+    setProcessingPayment(false);
+    setIframeReady(false);
   };
 
   if (errorMessage) {
@@ -474,11 +308,24 @@ const MercadoPagoCheckout: React.FC<CheckoutProps> = ({
           Resetar
         </Button>
       </div>
-      <div 
-        ref={containerRef}
-        id={`payment-container-${instanceId}`}
-        className="space-y-4"
-      />
+      
+      <div className="border rounded-lg overflow-hidden">
+        <iframe
+          ref={iframeRef}
+          src="/mercadopago-iframe.html"
+          className="w-full h-[600px] border-0"
+          title="Formulário de Pagamento MercadoPago"
+        />
+      </div>
+      
+      {loading && (
+        <div className="text-center py-4">
+          <Loader2 className="w-6 h-6 animate-spin mx-auto mb-2" />
+          <p className="text-sm text-muted-foreground">
+            Inicializando formulário de pagamento...
+          </p>
+        </div>
+      )}
     </div>
   );
 };
