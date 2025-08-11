@@ -25,7 +25,7 @@ const Vendors = () => {
   const [selectedCategory, setSelectedCategory] = useState("Todos");
   const { vendors, loading } = useAppData();
   const [currentPage, setCurrentPage] = useState(1);
-  const pageSize = 10;
+  const pageSize = 15;
 
   const filteredVendors = React.useMemo(() => {
     console.log('🔍 VENDORS: Filtering vendors...', { total: vendors.length, searchTerm, selectedCategory });
