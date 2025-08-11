@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Search, ChefHat, Camera, Video, FileText, Shirt, Palette, Cookie, Cake, Sparkles, Clipboard } from "lucide-react";
 import { useAppData } from "@/hooks/useAppData";
 import { VendorsPageSkeleton } from "@/components/LoadingSkeleton";
-
+import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from "@/components/ui/pagination";
 const predefinedCategories = [
   { name: "Todos", icon: Sparkles },
   { name: "Buffet", icon: ChefHat },
@@ -24,6 +24,8 @@ const Vendors = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("Todos");
   const { vendors, loading } = useAppData();
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 10;
 
   const filteredVendors = React.useMemo(() => {
     console.log('🔍 VENDORS: Filtering vendors...', { total: vendors.length, searchTerm, selectedCategory });
@@ -52,12 +54,22 @@ const Vendors = () => {
     return filtered;
   }, [vendors, searchTerm, selectedCategory]);
 
+  const totalPages = Math.ceil(filteredVendors.length / pageSize);
+  const paginatedVendors = React.useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return filteredVendors.slice(start, start + pageSize);
+  }, [filteredVendors, currentPage]);
+
+  React.useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, selectedCategory]);
+
   if (loading) {
     return <VendorsPageSkeleton />;
   }
 
   return (
-    <div className="container px-4 py-6 max-w-4xl mx-auto">
+    <div className="container px-4 pt-6 pb-16 max-w-4xl mx-auto flex min-h-screen flex-col">
       <div className="relative mb-4">
         <Search
           className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground"
@@ -109,30 +121,64 @@ const Vendors = () => {
         </div>
       </div>
 
-      <div className="space-y-4">
-        {filteredVendors.length > 0 ? (
-          filteredVendors.map((vendor) => (
-            <VendorCard
-              key={`${vendor.id}-${Date.now()}`}
-              id={vendor.id}
-              name={vendor.name}
-              category={vendor.category}
-              rating={0}
-              contactNumber={vendor.contact_number}
-              image={vendor.images[0] || "https://images.unsplash.com/photo-1566681855366-282a74153321?q=80&w=600&auto=format&fit=crop"}
-              isPromoted={vendor.isPromoted}
-              address={vendor.address}
-            />
-          ))
-        ) : (
-          <div className="text-center py-8 text-muted-foreground">
-            {vendors.length === 0 
-              ? "Nenhum fornecedor aprovado encontrado."
-              : `Nenhum fornecedor encontrado${selectedCategory !== "Todos" ? ` na categoria "${selectedCategory}"` : ""}`
-            }
-          </div>
-        )}
+      <div className="flex-1">
+        <div className="space-y-4">
+          {paginatedVendors.length > 0 ? (
+            paginatedVendors.map((vendor) => (
+              <VendorCard
+                key={`${vendor.id}-${Date.now()}`}
+                id={vendor.id}
+                name={vendor.name}
+                category={vendor.category}
+                rating={0}
+                contactNumber={vendor.contact_number}
+                image={vendor.images[0] || "https://images.unsplash.com/photo-1566681855366-282a74153321?q=80&w=600&auto=format&fit=crop"}
+                isPromoted={vendor.isPromoted}
+                address={vendor.address}
+              />
+            ))
+          ) : (
+            <div className="text-center py-8 text-muted-foreground">
+              {vendors.length === 0 
+                ? "Nenhum fornecedor aprovado encontrado."
+                : `Nenhum fornecedor encontrado${selectedCategory !== "Todos" ? ` na categoria "${selectedCategory}"` : ""}`
+              }
+            </div>
+          )}
+        </div>
       </div>
+
+      {totalPages > 1 && (
+        <Pagination className="mt-2 mb-1">
+          <PaginationContent>
+            <PaginationItem>
+              <PaginationPrevious
+                href="#"
+                onClick={(e) => { e.preventDefault(); setCurrentPage((p) => Math.max(1, p - 1)); }}
+              />
+            </PaginationItem>
+
+            {Array.from({ length: totalPages }, (_, i) => (
+              <PaginationItem key={i}>
+                <PaginationLink
+                  href="#"
+                  isActive={currentPage === i + 1}
+                  onClick={(e) => { e.preventDefault(); setCurrentPage(i + 1); }}
+                >
+                  {i + 1}
+                </PaginationLink>
+              </PaginationItem>
+            ))}
+
+            <PaginationItem>
+              <PaginationNext
+                href="#"
+                onClick={(e) => { e.preventDefault(); setCurrentPage((p) => Math.min(totalPages, p + 1)); }}
+              />
+            </PaginationItem>
+          </PaginationContent>
+        </Pagination>
+      )}
     </div>
   );
 };
