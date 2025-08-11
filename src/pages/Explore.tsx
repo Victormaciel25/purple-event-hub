@@ -38,8 +38,18 @@ const Explore = () => {
         space.price.toLowerCase().includes(term)
       );
     }
+
+    // Ordenar por proximidade (distância crescente). Espaços sem distância vão para o final
+    filtered = [...filtered].sort((a, b) => {
+      const da = typeof a.distanceKm === 'number' ? a.distanceKm : null;
+      const db = typeof b.distanceKm === 'number' ? b.distanceKm : null;
+      if (da === null && db === null) return 0;
+      if (da === null) return 1;
+      if (db === null) return -1;
+      return da - db;
+    });
     
-    console.log(`🔍 EXPLORE: Filtered to ${filtered.length} spaces`);
+    console.log(`🔍 EXPLORE: Filtered to ${filtered.length} spaces (sorted by distance)`);
     return filtered;
   }, [spaces, activeCategory, searchTerm]);
 
