@@ -6,11 +6,14 @@ import { Search, Circle, Heart, Briefcase, Cake, GraduationCap } from "lucide-re
 import { SPACE_CATEGORIES } from "@/config/app-config";
 import { useAppData } from "@/hooks/useAppData";
 import { ExplorePageSkeleton } from "@/components/LoadingSkeleton";
+import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from "@/components/ui/pagination";
 
 const Explore = () => {
   const { spaces, loading, userLocation } = useAppData();
   const [searchTerm, setSearchTerm] = useState("");
   const [activeCategory, setActiveCategory] = useState(SPACE_CATEGORIES.ALL);
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 10;
   
   // Filtrar espaços com base na busca e categoria
   const filteredSpaces = React.useMemo(() => {
@@ -39,19 +42,34 @@ const Explore = () => {
       );
     }
 
-    // Ordenar por proximidade (distância crescente). Espaços sem distância vão para o final
-    filtered = [...filtered].sort((a, b) => {
+    // Ordenar: patrocinados primeiro e, dentro de cada grupo, por proximidade (distância crescente).
+    const sortByDistance = (a: any, b: any) => {
       const da = typeof a.distanceKm === 'number' ? a.distanceKm : null;
       const db = typeof b.distanceKm === 'number' ? b.distanceKm : null;
       if (da === null && db === null) return 0;
       if (da === null) return 1;
       if (db === null) return -1;
       return da - db;
-    });
+    };
+
+    const promoted = filtered.filter((s: any) => s.isPromoted);
+    const regular = filtered.filter((s: any) => !s.isPromoted);
+
+    filtered = [...promoted.sort(sortByDistance), ...regular.sort(sortByDistance)];
     
-    console.log(`🔍 EXPLORE: Filtered to ${filtered.length} spaces (sorted by distance)`);
+    console.log(`🔍 EXPLORE: Filtered to ${filtered.length} spaces (promoted-first, sorted by distance)`);
     return filtered;
   }, [spaces, activeCategory, searchTerm]);
+
+  const totalPages = Math.ceil(filteredSpaces.length / pageSize);
+  const paginatedSpaces = React.useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return filteredSpaces.slice(start, start + pageSize);
+  }, [filteredSpaces, currentPage]);
+
+  React.useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, activeCategory]);
 
   const categories = [
     { key: SPACE_CATEGORIES.ALL, label: "Todos", icon: Circle },
@@ -73,7 +91,7 @@ const Explore = () => {
           placeholder="Buscar espaços de eventos..." 
           className="pl-10"
           value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
+          onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
         />
       </div>
 
@@ -95,7 +113,7 @@ const Explore = () => {
                       : 'bg-white border border-gray-200 text-gray-600 hover:border-gray-300 hover:bg-gray-50'
                     }
                   `}
-                  onClick={() => setActiveCategory(category.key)}
+                  onClick={() => { setActiveCategory(category.key); setCurrentPage(1); }}
                 >
                   <Icon 
                     size={20} 
@@ -125,27 +143,61 @@ const Explore = () => {
           </p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pb-20">
-          {filteredSpaces.map((space) => (
-            <div key={space.id} className="relative">
-              <PromotedSpaceCard 
-                id={space.id}
-                name={space.name}
-                address={`${space.address}, ${space.number} - ${space.state}`}
-                price={parseFloat(space.price)}
-                image={space.photo_url || ""}
-                isPromoted={space.isPromoted}
-                promotionExpiresAt={space.promotionExpiresAt}
-                showTimer={false}
-              />
-              {space.distanceKm && (
-                <div className="absolute top-2 left-2 bg-black/70 text-white px-2 py-1 rounded-md text-xs font-medium">
-                  {space.distanceKm.toFixed(1)} km
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
+        <>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pb-20">
+            {paginatedSpaces.map((space) => (
+              <div key={space.id} className="relative">
+                <PromotedSpaceCard 
+                  id={space.id}
+                  name={space.name}
+                  address={`${space.address}, ${space.number} - ${space.state}`}
+                  price={parseFloat(space.price)}
+                  image={space.photo_url || ""}
+                  isPromoted={space.isPromoted}
+                  promotionExpiresAt={space.promotionExpiresAt}
+                  showTimer={false}
+                />
+                {space.distanceKm && (
+                  <div className="absolute top-2 left-2 bg-black/70 text-white px-2 py-1 rounded-md text-xs font-medium">
+                    {space.distanceKm.toFixed(1)} km
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+
+          {totalPages > 1 && (
+            <Pagination className="mt-2 mb-8">
+              <PaginationContent>
+                <PaginationItem>
+                  <PaginationPrevious
+                    href="#"
+                    onClick={(e) => { e.preventDefault(); setCurrentPage((p) => Math.max(1, p - 1)); }}
+                  />
+                </PaginationItem>
+
+                {Array.from({ length: totalPages }, (_, i) => (
+                  <PaginationItem key={i}>
+                    <PaginationLink
+                      href="#"
+                      isActive={currentPage === i + 1}
+                      onClick={(e) => { e.preventDefault(); setCurrentPage(i + 1); }}
+                    >
+                      {i + 1}
+                    </PaginationLink>
+                  </PaginationItem>
+                ))}
+
+                <PaginationItem>
+                  <PaginationNext
+                    href="#"
+                    onClick={(e) => { e.preventDefault(); setCurrentPage((p) => Math.min(totalPages, p + 1)); }}
+                  />
+                </PaginationItem>
+              </PaginationContent>
+            </Pagination>
+          )}
+        </>
       )}
     </div>
   );
