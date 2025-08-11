@@ -84,7 +84,7 @@ const Explore = () => {
   }
 
   return (
-    <div className="container px-4 pt-6 pb-16 max-w-4xl mx-auto">
+    <div className="container px-4 pt-6 pb-16 max-w-4xl mx-auto flex min-h-screen flex-col">
       <div className="relative mb-4">
         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" size={18} />
         <Input 
@@ -133,17 +133,17 @@ const Explore = () => {
         </div>
       </div>
 
-      {filteredSpaces.length === 0 ? (
-        <div className="py-12 text-center">
-          <p className="text-gray-500">
-            {spaces.length === 0 
-              ? "Nenhum espaço encontrado." 
-              : `Nenhum espaço encontrado${activeCategory !== SPACE_CATEGORIES.ALL ? ` na categoria selecionada` : ""}.`
-            }
-          </p>
-        </div>
-      ) : (
-        <>
+      <div className="flex-1">
+        {filteredSpaces.length === 0 ? (
+          <div className="py-12 text-center">
+            <p className="text-gray-500">
+              {spaces.length === 0 
+                ? "Nenhum espaço encontrado." 
+                : `Nenhum espaço encontrado${activeCategory !== SPACE_CATEGORIES.ALL ? ` na categoria selecionada` : ""}.`
+              }
+            </p>
+          </div>
+        ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {paginatedSpaces.map((space) => (
               <div key={space.id} className="relative">
@@ -165,39 +165,39 @@ const Explore = () => {
               </div>
             ))}
           </div>
+        )}
+      </div>
 
-          {totalPages > 1 && (
-            <Pagination className="mt-2 mb-2">
-              <PaginationContent>
-                <PaginationItem>
-                  <PaginationPrevious
-                    href="#"
-                    onClick={(e) => { e.preventDefault(); setCurrentPage((p) => Math.max(1, p - 1)); }}
-                  />
-                </PaginationItem>
+      {totalPages > 1 && (
+        <Pagination className="mt-2 mb-1">
+          <PaginationContent>
+            <PaginationItem>
+              <PaginationPrevious
+                href="#"
+                onClick={(e) => { e.preventDefault(); setCurrentPage((p) => Math.max(1, p - 1)); }}
+              />
+            </PaginationItem>
 
-                {Array.from({ length: totalPages }, (_, i) => (
-                  <PaginationItem key={i}>
-                    <PaginationLink
-                      href="#"
-                      isActive={currentPage === i + 1}
-                      onClick={(e) => { e.preventDefault(); setCurrentPage(i + 1); }}
-                    >
-                      {i + 1}
-                    </PaginationLink>
-                  </PaginationItem>
-                ))}
+            {Array.from({ length: totalPages }, (_, i) => (
+              <PaginationItem key={i}>
+                <PaginationLink
+                  href="#"
+                  isActive={currentPage === i + 1}
+                  onClick={(e) => { e.preventDefault(); setCurrentPage(i + 1); }}
+                >
+                  {i + 1}
+                </PaginationLink>
+              </PaginationItem>
+            ))}
 
-                <PaginationItem>
-                  <PaginationNext
-                    href="#"
-                    onClick={(e) => { e.preventDefault(); setCurrentPage((p) => Math.min(totalPages, p + 1)); }}
-                  />
-                </PaginationItem>
-              </PaginationContent>
-            </Pagination>
-          )}
-        </>
+            <PaginationItem>
+              <PaginationNext
+                href="#"
+                onClick={(e) => { e.preventDefault(); setCurrentPage((p) => Math.min(totalPages, p + 1)); }}
+              />
+            </PaginationItem>
+          </PaginationContent>
+        </Pagination>
       )}
     </div>
   );
