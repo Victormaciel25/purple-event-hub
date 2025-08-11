@@ -84,7 +84,7 @@ const Explore = () => {
   }
 
   return (
-    <div className="container px-4 pt-6 pb-24 max-w-4xl mx-auto">
+    <div className="container px-4 pt-6 pb-16 max-w-4xl mx-auto">
       <div className="relative mb-4">
         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" size={18} />
         <Input 
@@ -167,7 +167,7 @@ const Explore = () => {
           </div>
 
           {totalPages > 1 && (
-            <Pagination className="mt-2 mb-4">
+            <Pagination className="mt-2 mb-2">
               <PaginationContent>
                 <PaginationItem>
                   <PaginationPrevious
