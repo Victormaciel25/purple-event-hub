@@ -141,7 +141,7 @@ const UserVendors = () => {
                   image={vendor.images?.[0] ?? "/placeholder.svg"}
                   status={vendor.status}
                   showEditButton={true}
-                  address={vendor.address}
+                  instagram={vendor.instagram}
                 />
               ))}
             </div>

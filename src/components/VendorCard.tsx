@@ -2,7 +2,7 @@
 import React from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Edit, Star } from "lucide-react";
+import { Edit, Star, Instagram } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import OptimizedImage from "./OptimizedImage";
 import { useNavigate } from "react-router-dom";
@@ -17,7 +17,7 @@ interface VendorProps {
   status?: 'pending' | 'approved' | 'rejected';
   showEditButton?: boolean;
   isPromoted?: boolean;
-  address?: string;
+  instagram?: string | null;
 }
 
 const VendorCard: React.FC<VendorProps> = ({
@@ -30,6 +30,7 @@ const VendorCard: React.FC<VendorProps> = ({
   status,
   showEditButton = false,
   isPromoted = false,
+  instagram,
 }) => {
   const navigate = useNavigate();
 
@@ -77,6 +78,9 @@ const VendorCard: React.FC<VendorProps> = ({
     originalImage: image 
   });
 
+  const displayInstagram = instagram
+    ? (instagram.startsWith('@') ? instagram : `@${instagram.replace(/^@/, '')}`)
+    : undefined;
   return (
     <Card 
       className={`overflow-hidden border-0 card-shadow cursor-pointer transition-transform hover:scale-[1.01] ${
@@ -128,6 +132,13 @@ const VendorCard: React.FC<VendorProps> = ({
               )}
             </div>
           </div>
+
+          {displayInstagram && (
+            <div className="flex items-center text-sm text-muted-foreground mt-2 min-w-0">
+              <Instagram size={14} className="mr-1 text-iparty flex-shrink-0" />
+              <span className="truncate">{displayInstagram}</span>
+            </div>
+          )}
         </CardContent>
       </div>
     </Card>

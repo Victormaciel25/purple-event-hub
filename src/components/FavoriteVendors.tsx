@@ -46,7 +46,6 @@ const FavoriteVendors = () => {
           rating={0}
           contactNumber={vendor.contact_number}
           image={vendor.images?.[0] || "/placeholder.svg"}
-          address={vendor.address}
         />
       ))}
     </div>

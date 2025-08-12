@@ -134,7 +134,7 @@ const Vendors = () => {
                 contactNumber={vendor.contact_number}
                 image={vendor.images[0] || "https://images.unsplash.com/photo-1566681855366-282a74153321?q=80&w=600&auto=format&fit=crop"}
                 isPromoted={vendor.isPromoted}
-                address={vendor.address}
+                instagram={(vendor as any).instagram}
               />
             ))
           ) : (
