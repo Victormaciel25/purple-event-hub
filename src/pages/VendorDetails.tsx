@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { Phone, MapPin, Calendar, Clock, ChevronLeft, MoreVertical, Share, Flag, Heart, Instagram } from "lucide-react";
+import { Phone, Calendar, Clock, ChevronLeft, MoreVertical, Share, Flag, Heart, Instagram } from "lucide-react";
 import OptimizedImage from "@/components/OptimizedImage";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -381,15 +381,6 @@ const VendorDetails = () => {
                 </div>
               </div>
               
-              {vendor.address && (
-                <div className="flex items-start">
-                  <MapPin size={20} className="text-iparty mr-3 mt-1" />
-                  <div>
-                    <h3 className="font-semibold mb-1">Endereço</h3>
-                    <p className="text-gray-700">{vendor.address}</p>
-                  </div>
-                </div>
-              )}
               
               {vendor.working_hours && (
                 <div className="flex items-start">

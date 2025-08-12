@@ -2,7 +2,7 @@
 import React from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { MapPin, Edit, Star } from "lucide-react";
+import { Edit, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import OptimizedImage from "./OptimizedImage";
 import { useNavigate } from "react-router-dom";
@@ -30,7 +30,6 @@ const VendorCard: React.FC<VendorProps> = ({
   status,
   showEditButton = false,
   isPromoted = false,
-  address,
 }) => {
   const navigate = useNavigate();
 
@@ -43,9 +42,6 @@ const VendorCard: React.FC<VendorProps> = ({
     }
   };
 
-  const handleAddressClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-  };
 
   const handleEditClick = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -132,15 +128,6 @@ const VendorCard: React.FC<VendorProps> = ({
               )}
             </div>
           </div>
-          {address && (
-            <button 
-              className="flex items-center text-iparty text-sm mt-2 min-w-0 w-full"
-              onClick={handleAddressClick}
-            >
-              <MapPin size={14} className="mr-1 flex-shrink-0" />
-              <span className="truncate">{address}</span>
-            </button>
-          )}
         </CardContent>
       </div>
     </Card>
