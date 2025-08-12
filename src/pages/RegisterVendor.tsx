@@ -35,7 +35,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { cn } from "@/lib/utils";
+import { cn, formatWorkingHours } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 
 const dayOptions = [
@@ -180,6 +180,9 @@ const RegisterVendor = () => {
     try {
       const { data: session } = await supabase.auth.getSession();
       
+      // Normalize working hours to HH:mm pattern
+      const workingHoursFormatted = formatWorkingHours(values.workingHours || "");
+      
       if (!session.session) {
         toast.error("Você precisa estar logado para cadastrar um fornecedor");
         navigate("/login");
@@ -194,7 +197,7 @@ const RegisterVendor = () => {
         contact_number: values.contactNumber,
         description: values.description,
         address: values.address,
-        working_hours: values.workingHours,
+        working_hours: workingHoursFormatted,
         images: imageUrls,
         user_id: userId,
         status: 'pending',
@@ -211,7 +214,7 @@ const RegisterVendor = () => {
           contact_number: values.contactNumber,
           description: values.description,
           address: values.address,
-          working_hours: values.workingHours,
+          working_hours: workingHoursFormatted,
           instagram: values.instagram,
           images: imageUrls,
           user_id: userId,
@@ -409,7 +412,14 @@ const RegisterVendor = () => {
               <FormItem>
                 <FormLabel>Horário de Funcionamento</FormLabel>
                 <FormControl>
-                  <Input placeholder="Ex: 09:00 - 18:00" {...field} />
+                  <Input 
+                    placeholder="Ex: 09:00 às 18:00" 
+                    {...field}
+                    onBlur={(e) => { 
+                      field.onBlur(); 
+                      form.setValue('workingHours', formatWorkingHours(e.target.value));
+                    }}
+                  />
                 </FormControl>
                 <FormMessage />
               </FormItem>

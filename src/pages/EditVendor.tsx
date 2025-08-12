@@ -13,6 +13,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import SingleImageUpload from "@/components/SingleImageUpload";
 import AddressAutoComplete from "@/components/AddressAutoComplete";
+import { formatWorkingHours } from "@/lib/utils";
 
 const EditVendor = () => {
   const { id } = useParams();
@@ -141,6 +142,7 @@ const EditVendor = () => {
         .from("vendors")
         .update({
           ...formData,
+          working_hours: formatWorkingHours(formData.working_hours),
           status: 'pending', // Volta para aprovação após edição
           rejection_reason: null // Limpa motivo de rejeição anterior
         })
@@ -289,6 +291,7 @@ const EditVendor = () => {
                 id="working_hours"
                 value={formData.working_hours}
                 onChange={(e) => handleInputChange("working_hours", e.target.value)}
+                onBlur={(e) => handleInputChange("working_hours", formatWorkingHours(e.target.value))}
                 placeholder="Ex: 08:00 às 18:00"
               />
             </div>

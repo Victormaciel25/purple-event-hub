@@ -34,6 +34,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Trash2 } from "lucide-react";
 import { SUPABASE_CONFIG } from "@/config/app-config";
 import ImageViewer from "@/components/ImageViewer";
+import { formatWorkingHours } from "@/lib/utils";
 
 interface Vendor {
   id: string;
@@ -387,7 +388,7 @@ const VendorDetails = () => {
                   <Clock size={20} className="text-iparty mr-3 mt-1" />
                   <div>
                     <h3 className="font-semibold mb-1">Horário de Atendimento</h3>
-                    <p className="text-gray-700">{vendor.working_hours}</p>
+                    <p className="text-gray-700">{formatWorkingHours(vendor.working_hours || "")}</p>
                   </div>
                 </div>
               )}

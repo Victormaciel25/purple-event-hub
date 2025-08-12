@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { SUPABASE_CONFIG } from "@/config/app-config";
 import { toast } from "sonner";
+import { formatWorkingHours } from "@/lib/utils";
 
 export type VendorDetailsType = {
   id: string;
@@ -192,7 +193,7 @@ const VendorDetails: React.FC<VendorDetailsProps> = ({
         {selectedVendor.working_hours && (
           <div>
             <div className="font-medium">Horário de Funcionamento</div>
-            <div>{selectedVendor.working_hours}</div>
+            <div>{formatWorkingHours(selectedVendor.working_hours || "")}</div>
           </div>
         )}
 
