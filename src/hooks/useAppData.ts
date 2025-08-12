@@ -32,6 +32,7 @@ type OptimizedVendor = {
   isPromoted: boolean;
   promotionExpiresAt?: string;
   distanceKm?: number;
+  instagram?: string | null;
 };
 
 type AppData = {
@@ -98,14 +99,19 @@ export const useAppData = () => {
     // Verificar cache válido
     if (globalCache.spaces.length > 0 && globalCache.vendors.length > 0 && 
         now - globalCache.lastFetch < CACHE_DURATION) {
-      console.log('🎯 APP_DATA: Using valid cache');
-      setState({
-        spaces: globalCache.spaces,
-        vendors: globalCache.vendors,
-        loading: false,
-        error: null
-      });
-      return;
+      const cacheMissingInstagram = globalCache.vendors.some((v: any) => v.instagram === undefined);
+      if (!cacheMissingInstagram) {
+        console.log('🎯 APP_DATA: Using valid cache');
+        setState({
+          spaces: globalCache.spaces,
+          vendors: globalCache.vendors,
+          loading: false,
+          error: null
+        });
+        return;
+      } else {
+        console.log('♻️ APP_DATA: Cache missing instagram; refetching vendors.');
+      }
     }
 
     // Evitar múltiplas requisições simultâneas
@@ -163,6 +169,7 @@ export const useAppData = () => {
               images,
               latitude,
               longitude,
+              instagram,
               vendor_promotions!left (
                 expires_at,
                 active,
@@ -257,6 +264,7 @@ export const useAppData = () => {
             isPromoted: !!activePromotion,
             promotionExpiresAt: activePromotion?.expires_at,
             distanceKm,
+            instagram: vendor.instagram ?? null,
           };
         });
 
