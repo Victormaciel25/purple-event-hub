@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import PromotedSpaceCard from "@/components/PromotedSpaceCard";
 import { Input } from "@/components/ui/input";
@@ -73,10 +72,10 @@ const Explore = () => {
 
   const categories = [
     { key: SPACE_CATEGORIES.ALL, label: "Todos", icon: Circle },
-    { key: SPACE_CATEGORIES.WEDDINGS, label: "Casamentos", icon: Heart },
+    { key: SPACE_CATEGORIES.WEDDINGS, label: "Casamento", icon: Heart },
     { key: SPACE_CATEGORIES.CORPORATE, label: "Corporativo", icon: Briefcase },
-    { key: SPACE_CATEGORIES.BIRTHDAYS, label: "Aniversários", icon: Cake },
-    { key: SPACE_CATEGORIES.GRADUATIONS, label: "Formaturas", icon: GraduationCap }
+    { key: SPACE_CATEGORIES.BIRTHDAYS, label: "Aniversário", icon: Cake },
+    { key: SPACE_CATEGORIES.GRADUATIONS, label: "Formatura", icon: GraduationCap }
   ];
 
   if (loading) {
