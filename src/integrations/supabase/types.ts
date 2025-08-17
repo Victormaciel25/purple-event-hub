@@ -7,7 +7,7 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instanciate createClient with right options
+  // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
     PostgrestVersion: "12.2.3 (519615d)"
@@ -540,26 +540,26 @@ export type Database = {
       admin_get_all_spaces: {
         Args: Record<PropertyKey, never>
         Returns: {
+          created_at: string
           id: string
           name: string
-          created_at: string
-          status: Database["public"]["Enums"]["space_approval_status"]
-          user_id: string
           price: string
           profiles: Json
+          status: Database["public"]["Enums"]["space_approval_status"]
+          user_id: string
         }[]
       }
       admin_get_space_photos: {
         Args: { space_id_param: string }
         Returns: {
+          created_at: string
           id: string
           space_id: string
           storage_path: string
-          created_at: string
         }[]
       }
       check_user_role: {
-        Args: { user_id: string; requested_role: string }
+        Args: { requested_role: string; user_id: string }
         Returns: boolean
       }
       delete_space_with_photos: {
