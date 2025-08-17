@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from "sonner";
@@ -7,8 +6,8 @@ import { useUserLocation } from './useUserLocation';
 type OptimizedSpace = {
   id: string;
   name: string;
-  address: string;
-  number: string;
+  address?: string; // Only for authenticated users
+  number?: string; // Only for authenticated users
   state: string;
   description: string;
   price: string;
@@ -128,10 +127,15 @@ export const useAppData = () => {
 
     activePromise = (async () => {
       try {
-        // QUERY ÚNICA SUPER OTIMIZADA - buscar spaces e vendors em paralelo
-        const [spacesResult, vendorsResult] = await Promise.all([
-          // Spaces com JOIN otimizado
-          supabase
+        // Check if user is authenticated to determine data access level
+        const { data: { user } } = await supabase.auth.getUser();
+        const isAuthenticated = !!user;
+
+        let spacesQuery;
+        
+        if (isAuthenticated) {
+          // Authenticated users get full access to spaces table
+          spacesQuery = supabase
             .from('spaces')
             .select(`
               id,
@@ -155,8 +159,30 @@ export const useAppData = () => {
               )
             `)
             .eq('status', 'approved')
-            .order('created_at', { ascending: false }),
+            .order('created_at', { ascending: false });
+        } else {
+          // Anonymous users get limited public data
+          spacesQuery = supabase
+            .from('spaces_public')
+            .select(`
+              id,
+              name,
+              state,
+              description,
+              price,
+              capacity,
+              categories,
+              latitude,
+              longitude,
+              created_at
+            `)
+            .order('created_at', { ascending: false });
+        }
 
+        // QUERY ÚNICA SUPER OTIMIZADA - buscar spaces e vendors em paralelo
+        const [spacesResult, vendorsResult, promotionsResult, photosResult] = await Promise.all([
+          spacesQuery,
+          
           // Vendors com JOIN otimizado
           supabase
             .from('vendors')
@@ -177,7 +203,21 @@ export const useAppData = () => {
               )
             `)
             .eq('status', 'approved')
-            .order('created_at', { ascending: false })
+            .order('created_at', { ascending: false }),
+            
+          // For anonymous users, fetch space promotions separately
+          !isAuthenticated ? supabase
+            .from("space_promotions")
+            .select("space_id, expires_at")
+            .eq("active", true)
+            .eq("payment_status", "approved")
+            .gte("expires_at", new Date().toISOString()) : Promise.resolve({ data: [] }),
+            
+          // For anonymous users, fetch space photos separately  
+          !isAuthenticated ? supabase
+            .from("space_photos")
+            .select("space_id, storage_path")
+            .order('created_at', { ascending: true }) : Promise.resolve({ data: [] })
         ]);
 
         const queryTime = performance.now();
@@ -186,17 +226,43 @@ export const useAppData = () => {
         if (spacesResult.error) throw spacesResult.error;
         if (vendorsResult.error) throw vendorsResult.error;
 
+        // Create promotion and photos maps for anonymous users
+        const promotionMap = new Map();
+        const photosMap = new Map();
+        
+        if (!isAuthenticated) {
+          promotionsResult.data?.forEach(p => {
+            promotionMap.set(p.space_id, p.expires_at);
+          });
+          
+          photosResult.data?.forEach(p => {
+            if (!photosMap.has(p.space_id)) {
+              photosMap.set(p.space_id, []);
+            }
+            photosMap.get(p.space_id).push({ storage_path: p.storage_path });
+          });
+        }
+
         // Processar spaces
         const processedSpaces: OptimizedSpace[] = (spacesResult.data || []).map((space: any) => {
-          const activePromotion = space.space_promotions?.find((p: any) => 
-            p.active && 
-            p.payment_status === 'approved' && 
-            new Date(p.expires_at) > new Date()
-          );
+          let activePromotion;
+          let spacePhotos;
+          
+          if (isAuthenticated) {
+            activePromotion = space.space_promotions?.find((p: any) => 
+              p.active && 
+              p.payment_status === 'approved' && 
+              new Date(p.expires_at) > new Date()
+            );
+            spacePhotos = space.space_photos || [];
+          } else {
+            activePromotion = promotionMap.has(space.id) ? { expires_at: promotionMap.get(space.id) } : null;
+            spacePhotos = photosMap.get(space.id) || [];
+          }
           
           let photoUrl = "";
-          if (space.space_photos?.length > 0) {
-            const firstPhoto = space.space_photos[0];
+          if (spacePhotos.length > 0) {
+            const firstPhoto = spacePhotos[0];
             if (firstPhoto.storage_path?.startsWith('http')) {
               photoUrl = firstPhoto.storage_path;
             } else {
@@ -220,8 +286,8 @@ export const useAppData = () => {
           return {
             id: space.id,
             name: space.name,
-            address: space.address,
-            number: space.number,
+            address: space.address, // Will be undefined for anonymous users
+            number: space.number,   // Will be undefined for anonymous users
             state: space.state,
             description: space.description,
             price: space.price,
@@ -264,62 +330,78 @@ export const useAppData = () => {
             isPromoted: !!activePromotion,
             promotionExpiresAt: activePromotion?.expires_at,
             distanceKm,
-            instagram: vendor.instagram ?? null,
+            instagram: vendor.instagram,
           };
         });
 
-        // Ordenar por promoção e proximidade
-        const sortByPromotionAndDistance = <T extends { isPromoted: boolean; distanceKm?: number }>(items: T[]): T[] => {
-          const promoted = items.filter(item => item.isPromoted);
-          const regular = items.filter(item => !item.isPromoted);
+        // ORDENAÇÃO INTELIGENTE POR PROXIMIDADE
+        if (userLocation) {
+          processedSpaces.sort((a, b) => {
+            // Primeiro por promoção
+            if (a.isPromoted && !b.isPromoted) return -1;
+            if (!a.isPromoted && b.isPromoted) return 1;
+            
+            // Depois por proximidade
+            if (a.distanceKm === undefined && b.distanceKm === undefined) return 0;
+            if (a.distanceKm === undefined) return 1;
+            if (b.distanceKm === undefined) return -1;
+            return a.distanceKm - b.distanceKm;
+          });
 
-          if (userLocation) {
-            promoted.sort((a, b) => {
-              if (a.distanceKm === undefined && b.distanceKm === undefined) return 0;
-              if (a.distanceKm === undefined) return 1;
-              if (b.distanceKm === undefined) return -1;
-              return a.distanceKm - b.distanceKm;
-            });
+          processedVendors.sort((a, b) => {
+            // Primeiro por promoção
+            if (a.isPromoted && !b.isPromoted) return -1;
+            if (!a.isPromoted && b.isPromoted) return 1;
+            
+            // Depois por proximidade
+            if (a.distanceKm === undefined && b.distanceKm === undefined) return 0;
+            if (a.distanceKm === undefined) return 1;
+            if (b.distanceKm === undefined) return -1;
+            return a.distanceKm - b.distanceKm;
+          });
+        } else {
+          // Sem localização: apenas ordenar por promoção
+          processedSpaces.sort((a, b) => {
+            if (a.isPromoted && !b.isPromoted) return -1;
+            if (!a.isPromoted && b.isPromoted) return 1;
+            return 0;
+          });
 
-            regular.sort((a, b) => {
-              if (a.distanceKm === undefined && b.distanceKm === undefined) return 0;
-              if (a.distanceKm === undefined) return 1;
-              if (b.distanceKm === undefined) return -1;
-              return a.distanceKm - b.distanceKm;
-            });
-          }
-
-          return [...promoted, ...regular];
-        };
-
-        const finalSpaces = sortByPromotionAndDistance(processedSpaces);
-        const finalVendors = sortByPromotionAndDistance(processedVendors);
+          processedVendors.sort((a, b) => {
+            if (a.isPromoted && !b.isPromoted) return -1;
+            if (!a.isPromoted && b.isPromoted) return 1;
+            return 0;
+          });
+        }
 
         // Atualizar cache global
-        globalCache.spaces = finalSpaces;
-        globalCache.vendors = finalVendors;
+        globalCache.spaces = processedSpaces;
+        globalCache.vendors = processedVendors;
         globalCache.lastFetch = now;
 
+        const endTime = performance.now();
+        console.log(`✅ APP_DATA: Complete fetch in ${(endTime - startTime).toFixed(0)}ms - Spaces: ${processedSpaces.length}, Vendors: ${processedVendors.length}`);
+
         setState({
-          spaces: finalSpaces,
-          vendors: finalVendors,
+          spaces: processedSpaces,
+          vendors: processedVendors,
           loading: false,
           error: null
         });
 
-        const endTime = performance.now();
-        console.log(`🎉 APP_DATA: Total processing time: ${(endTime - startTime).toFixed(0)}ms - Spaces: ${finalSpaces.length}, Vendors: ${finalVendors.length}`);
-
-      } catch (err) {
-        console.error('💥 APP_DATA: Error:', err);
-        const errorMessage = 'Erro ao carregar dados';
-        setState({
-          spaces: [],
-          vendors: [],
+      } catch (error: any) {
+        console.error('❌ APP_DATA: Error fetching data:', error);
+        const errorMessage = error?.message || 'Erro ao carregar dados';
+        
+        setState(prev => ({
+          ...prev,
           loading: false,
           error: errorMessage
-        });
-        toast.error(errorMessage);
+        }));
+        
+        if (!errorMessage.includes('timeout')) {
+          toast.error(errorMessage);
+        }
       } finally {
         globalCache.isLoading = false;
         activePromise = null;
@@ -331,54 +413,19 @@ export const useAppData = () => {
 
   useEffect(() => {
     fetchAllData();
-  }, []); // Executar apenas uma vez
-
-  // Recalcular distâncias quando localização mudar (sem nova query)
-  useEffect(() => {
-    if (userLocation && (globalCache.spaces.length > 0 || globalCache.vendors.length > 0)) {
-      console.log('📍 APP_DATA: Recalculating distances...');
-      
-      const updatedSpaces = globalCache.spaces.map(space => {
-        if (space.latitude && space.longitude) {
-          const distanceKm = calculateDistance(
-            userLocation.latitude,
-            userLocation.longitude,
-            space.latitude,
-            space.longitude
-          );
-          return { ...space, distanceKm };
-        }
-        return space;
-      });
-
-      const updatedVendors = globalCache.vendors.map(vendor => {
-        if (vendor.distanceKm !== undefined) {
-          // Assumir que vendors têm coordenadas para cálculo
-          return vendor;
-        }
-        return vendor;
-      });
-
-      // Atualizar cache
-      globalCache.spaces = updatedSpaces;
-      globalCache.vendors = updatedVendors;
-      
-      setState(prev => ({
-        ...prev,
-        spaces: updatedSpaces,
-        vendors: updatedVendors
-      }));
-    }
   }, [userLocation]);
 
+  const refetch = () => {
+    // Limpar cache para forçar nova busca
+    globalCache.spaces = [];
+    globalCache.vendors = [];
+    globalCache.lastFetch = 0;
+    fetchAllData();
+  };
+
   return {
-    spaces: state.spaces,
-    vendors: state.vendors,
-    loading: state.loading,
-    error: state.error,
-    refetch: fetchAllData,
-    userLocation: userLocation 
-      ? { lat: userLocation.latitude, lng: userLocation.longitude }
-      : null,
+    ...state,
+    refetch,
+    userLocation
   };
 };
