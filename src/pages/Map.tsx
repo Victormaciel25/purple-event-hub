@@ -32,7 +32,9 @@ const LAST_MAP_POSITION_KEY = 'last_map_position';
 const SAO_PAULO_CENTER = { lat: -23.5505, lng: -46.6333 };
 
 // Helper para validar localização
-const isValidLocation = (lat: number, lng: number): boolean => {
+const isValidLocation = (location: { lat: number; lng: number } | null): boolean => {
+  if (!location) return false;
+  const { lat, lng } = location;
   return (
     typeof lat === 'number' && 
     typeof lng === 'number' && 
@@ -44,11 +46,6 @@ const isValidLocation = (lat: number, lng: number): boolean => {
     lng <= 180 &&
     !(lat === 0 && lng === 0)
   );
-};
-
-const isValidLocationObject = (location: { lat: number; lng: number } | null): boolean => {
-  if (!location) return false;
-  return isValidLocation(location.lat, location.lng);
 };
 
 const Map: React.FC = () => {
@@ -67,14 +64,14 @@ const Map: React.FC = () => {
     try {
       const saved = localStorage.getItem(LAST_MAP_POSITION_KEY);
       const parsed = saved ? JSON.parse(saved) : null;
-      return parsed && isValidLocation(parsed.lat, parsed.lng) ? parsed : null;
+      return isValidLocation(parsed) ? parsed : null;
     } catch {
       return null;
     }
   };
 
   const saveMapPosition = (position: { lat: number; lng: number }) => {
-    if (isValidLocation(position.lat, position.lng)) {
+    if (isValidLocation(position)) {
       localStorage.setItem(LAST_MAP_POSITION_KEY, JSON.stringify(position));
     }
   };
@@ -110,9 +107,9 @@ const Map: React.FC = () => {
     let initialCenter: { lat: number; lng: number };
 
     // PRIORIDADE 1: Localização do usuário (SE VÁLIDA)
-    if (userLocation && isValidLocation(userLocation.latitude, userLocation.longitude)) {
+    if (userLocation && isValidLocation(userLocation)) {
       console.log('📍 MAP: Using VALID user location:', userLocation);
-      initialCenter = { lat: userLocation.latitude, lng: userLocation.longitude };
+      initialCenter = userLocation;
     } else {
       if (userLocation) {
         console.warn('⚠️ MAP: User location is INVALID:', userLocation);
@@ -180,7 +177,7 @@ const Map: React.FC = () => {
   // Handlers
   const handleLocationSelected = (loc: GeocodingResult) => {
     const newPosition = { lat: loc.lat, lng: loc.lng };
-    if (isValidLocation(newPosition.lat, newPosition.lng)) {
+    if (isValidLocation(newPosition)) {
       setMapCenter(newPosition);
       saveMapPosition(newPosition);
       toast.success("Localização encontrada!");
@@ -195,7 +192,7 @@ const Map: React.FC = () => {
       const center = mapRef.current.getCenter();
       if (center) {
         const newPosition = { lat: center.lat(), lng: center.lng() };
-        if (isValidLocation(newPosition.lat, newPosition.lng)) {
+        if (isValidLocation(newPosition)) {
           saveMapPosition(newPosition);
         }
       }
@@ -208,7 +205,7 @@ const Map: React.FC = () => {
 
   // Estados de carregamento mais precisos
   const isDataLoading = dataLoading;
-  const isMapReady = mapCenter && isValidLocation(mapCenter.lat, mapCenter.lng);
+  const isMapReady = mapCenter && isValidLocation(mapCenter);
   const showLoader = isDataLoading || !isMapReady;
 
   if (showLoader) {
