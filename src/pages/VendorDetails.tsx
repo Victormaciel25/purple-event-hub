@@ -269,9 +269,9 @@ const VendorDetails = () => {
   const isVendorFavorited = isFavorite(vendor.id);
 
   return (
-    <div className="h-screen w-full overflow-hidden">
-      <div className="h-full w-full overflow-y-auto scrollbar-hide">
-        <div className="container px-4 py-6 max-w-4xl mx-auto">
+    <div className="min-h-screen w-full">
+      <div className="w-full">
+        <div className="container px-4 py-6 pb-20 max-w-4xl mx-auto">
           <div className="flex items-center justify-between mb-4">
             <Button variant="ghost" size="sm" onClick={() => navigate(-1)}>
               <ChevronLeft size={20} />
