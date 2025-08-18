@@ -158,117 +158,86 @@ const LocationMap = ({
     setIsAnimating(true);
     
     if (mapRef.current) {
-      const currentZoom = mapRef.current.getZoom();
+      const currentCenter = mapRef.current.getCenter();
       const targetPosition = { lat: space.latitude, lng: space.longitude };
+      const currentZoom = mapRef.current.getZoom() || 15;
       
-      // Função para processar o movimento e offset após o zoom estar correto
-      const processMarkerClick = () => {
-        if (!mapRef.current) return;
-        
-        const currentCenter = mapRef.current.getCenter();
-        const isAlreadyAtPosition = currentCenter && 
-          Math.abs(currentCenter.lat() - targetPosition.lat) < 0.0001 && 
-          Math.abs(currentCenter.lng() - targetPosition.lng) < 0.0001;
+      const isAlreadyAtPosition = currentCenter && 
+        Math.abs(currentCenter.lat() - targetPosition.lat) < 0.0001 && 
+        Math.abs(currentCenter.lng() - targetPosition.lng) < 0.0001;
 
-        if (offsetPositions[space.id]) {
-          const targetOffsetPosition = offsetPositions[space.id];
-          const isAlreadyAtOffsetPosition = currentCenter &&
-            Math.abs(currentCenter.lat() - targetOffsetPosition.lat) < 0.0001 &&
-            Math.abs(currentCenter.lng() - targetOffsetPosition.lng) < 0.0001;
+      if (offsetPositions[space.id]) {
+        const targetOffsetPosition = offsetPositions[space.id];
+        const isAlreadyAtOffsetPosition = currentCenter &&
+          Math.abs(currentCenter.lat() - targetOffsetPosition.lat) < 0.0001 &&
+          Math.abs(currentCenter.lng() - targetOffsetPosition.lng) < 0.0001;
 
-          if (isAlreadyAtOffsetPosition) {
+        if (isAlreadyAtOffsetPosition) {
+          setShowContainer(true);
+          setIsAnimating(false);
+        } else {
+          mapRef.current.panTo(targetOffsetPosition);
+          setTimeout(() => {
             setShowContainer(true);
             setIsAnimating(false);
-          } else {
-            mapRef.current.panTo(targetOffsetPosition);
-            setTimeout(() => {
-              setShowContainer(true);
-              setIsAnimating(false);
-            }, 750);
-          }
-        } else if (isAlreadyAtPosition) {
-          const projection = mapRef.current.getProjection();
-          if (projection) {
-            const point = projection.fromLatLngToPoint(new google.maps.LatLng(targetPosition.lat, targetPosition.lng));
-            // Usar offset fixo para zoom 15
-            point.y -= 220 / Math.pow(2, 15);
-            const newLatLng = projection.fromPointToLatLng(point);
-            
-            setOffsetPositions(prev => ({
-              ...prev,
-              [space.id]: {lat: newLatLng.lat(), lng: newLatLng.lng()}
-            }));
-            
-            mapRef.current.panTo(newLatLng);
-            
-            setMovedSpaces(prev => ({
-              ...prev,
-              [space.id]: true
-            }));
-            
-            setTimeout(() => {
-              setShowContainer(true);
-              setIsAnimating(false);
-            }, 750);
-          }
-        } else {
-          mapRef.current.panTo(targetPosition);
+          }, 750);
+        }
+      } else if (isAlreadyAtPosition) {
+        const projection = mapRef.current.getProjection();
+        if (projection) {
+          const point = projection.fromLatLngToPoint(new google.maps.LatLng(targetPosition.lat, targetPosition.lng));
+          // Calcular offset baseado no zoom atual
+          point.y -= 220 / Math.pow(2, currentZoom);
+          const newLatLng = projection.fromPointToLatLng(point);
+          
+          setOffsetPositions(prev => ({
+            ...prev,
+            [space.id]: {lat: newLatLng.lat(), lng: newLatLng.lng()}
+          }));
+          
+          mapRef.current.panTo(newLatLng);
+          
+          setMovedSpaces(prev => ({
+            ...prev,
+            [space.id]: true
+          }));
           
           setTimeout(() => {
-            if (mapRef.current) {
-              const projection = mapRef.current.getProjection();
-              if (projection) {
-                const point = projection.fromLatLngToPoint(new google.maps.LatLng(targetPosition.lat, targetPosition.lng));
-                // Usar offset fixo para zoom 15
-                point.y -= 220 / Math.pow(2, 15);
-                const newLatLng = projection.fromPointToLatLng(point);
-                
-                setOffsetPositions(prev => ({
-                  ...prev,
-                  [space.id]: {lat: newLatLng.lat(), lng: newLatLng.lng()}
-                }));
-                
-                mapRef.current.panTo(newLatLng);
-                
-                setMovedSpaces(prev => ({
-                  ...prev,
-                  [space.id]: true
-                }));
-                
-                setTimeout(() => {
-                  setShowContainer(true);
-                  setIsAnimating(false);
-                }, 750);
-              }
-            }
-          }, 50);
+            setShowContainer(true);
+            setIsAnimating(false);
+          }, 750);
         }
-      };
-
-      // Se o zoom não for 15, ajustar primeiro
-      if (currentZoom !== 15) {
-        mapRef.current.setZoom(15);
-        
-        // Aguardar a animação de zoom terminar
-        const zoomListener = mapRef.current.addListener('zoom_changed', () => {
-          const newZoom = mapRef.current?.getZoom();
-          if (newZoom === 15) {
-            google.maps.event.removeListener(zoomListener);
-            // Aguardar um pouco mais para garantir que a animação terminou
-            setTimeout(() => {
-              processMarkerClick();
-            }, 300);
-          }
-        });
-        
-        // Fallback timeout caso o listener não funcione
-        setTimeout(() => {
-          google.maps.event.removeListener(zoomListener);
-          processMarkerClick();
-        }, 1000);
       } else {
-        // Zoom já está em 15, processar diretamente
-        processMarkerClick();
+        mapRef.current.panTo(targetPosition);
+        
+        setTimeout(() => {
+          if (mapRef.current) {
+            const projection = mapRef.current.getProjection();
+            if (projection) {
+              const point = projection.fromLatLngToPoint(new google.maps.LatLng(targetPosition.lat, targetPosition.lng));
+              // Calcular offset baseado no zoom atual
+              point.y -= 220 / Math.pow(2, currentZoom);
+              const newLatLng = projection.fromPointToLatLng(point);
+              
+              setOffsetPositions(prev => ({
+                ...prev,
+                [space.id]: {lat: newLatLng.lat(), lng: newLatLng.lng()}
+              }));
+              
+              mapRef.current.panTo(newLatLng);
+              
+              setMovedSpaces(prev => ({
+                ...prev,
+                [space.id]: true
+              }));
+              
+              setTimeout(() => {
+                setShowContainer(true);
+                setIsAnimating(false);
+              }, 750);
+            }
+          }
+        }, 50);
       }
     }
   };
