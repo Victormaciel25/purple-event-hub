@@ -10,6 +10,7 @@ import { toast } from "@/hooks/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import MercadoPagoCardBrick from "@/components/MercadoPagoCardBrick";
 import VendorPixPayment from "@/components/VendorPixPayment";
+import { useStatePersistence } from "@/hooks/useStatePersistence";
 
 type Vendor = {
   id: string;
@@ -62,9 +63,26 @@ const PromoteVendor: React.FC = () => {
   const [checkoutKey, setCheckoutKey] = useState<number>(Date.now());
   const navigate = useNavigate();
 
+  // Hook para persistência de dados
+  const { saveToStorage, loadFromStorage, clearStorage } = useStatePersistence<{
+    selectedVendor: string;
+    selectedPlan: string;
+    paymentMethod: "card" | "pix";
+  }>({
+    storageKey: "promote-vendor-data"
+  });
+
   useEffect(() => {
     fetchUserVendors();
-  }, []);
+    
+    // Carregar dados salvos
+    const savedData = loadFromStorage();
+    if (savedData) {
+      if (savedData.selectedVendor) setSelectedVendor(savedData.selectedVendor);
+      if (savedData.selectedPlan) setSelectedPlan(savedData.selectedPlan);
+      if (savedData.paymentMethod) setPaymentMethod(savedData.paymentMethod);
+    }
+  }, [loadFromStorage]);
 
   const fetchUserVendors = async () => {
     try {
@@ -109,8 +127,22 @@ const PromoteVendor: React.FC = () => {
     }
   };
 
+  // Salvar dados quando mudarem
+  useEffect(() => {
+    if (!loading) {
+      saveToStorage({
+        selectedVendor,
+        selectedPlan,
+        paymentMethod
+      });
+    }
+  }, [selectedVendor, selectedPlan, paymentMethod, loading, saveToStorage]);
+
   const handlePaymentSuccess = async () => {
     try {
+      // Limpar dados persistidos após sucesso
+      clearStorage();
+      
       setPaymentSuccess(true);
       
       toast({

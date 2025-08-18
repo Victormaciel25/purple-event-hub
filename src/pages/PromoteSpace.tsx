@@ -11,6 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import MercadoPagoCardBrick from "@/components/MercadoPagoCardBrick";
 import PixPayment from "@/components/PixPayment";
 import SubscriptionCheckout from "@/components/SubscriptionCheckout";
+import { useStatePersistence } from "@/hooks/useStatePersistence";
 
 type Space = {
   id: string;
@@ -71,8 +72,25 @@ const PromoteSpace: React.FC = () => {
   const [checkoutKey, setCheckoutKey] = useState<number>(Date.now());
   const navigate = useNavigate();
 
+  // Hook para persistência de dados
+  const { saveToStorage, loadFromStorage, clearStorage } = useStatePersistence<{
+    selectedSpace: string;
+    selectedPlan: string;
+    paymentMethod: "card" | "pix";
+  }>({
+    storageKey: "promote-space-data"
+  });
+
   useEffect(() => {
     fetchUserSpaces();
+    
+    // Carregar dados salvos
+    const savedData = loadFromStorage();
+    if (savedData) {
+      if (savedData.selectedSpace) setSelectedSpace(savedData.selectedSpace);
+      if (savedData.selectedPlan) setSelectedPlan(savedData.selectedPlan);
+      if (savedData.paymentMethod) setPaymentMethod(savedData.paymentMethod);
+    }
     
     // Cleanup function for when component unmounts
     return () => {
@@ -100,7 +118,7 @@ const PromoteSpace: React.FC = () => {
         element.remove();
       });
     };
-  }, []);
+  }, [loadFromStorage]);
 
   const fetchUserSpaces = async () => {
     try {
@@ -152,8 +170,22 @@ const PromoteSpace: React.FC = () => {
     }
   }, [selectedPlan]);
 
+  // Salvar dados quando mudarem
+  useEffect(() => {
+    if (!loading) {
+      saveToStorage({
+        selectedSpace,
+        selectedPlan,
+        paymentMethod
+      });
+    }
+  }, [selectedSpace, selectedPlan, paymentMethod, loading, saveToStorage]);
+
   // This will only be called when payment is confirmed and approved by Mercado Pago
   const handlePaymentSuccess = async () => {
+    // Limpar dados persistidos após sucesso
+    clearStorage();
+    
     // Verify payment status in database before showing success screen
     try {
       // Check for an approved payment in the database to confirm
