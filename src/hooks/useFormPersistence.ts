@@ -1,4 +1,4 @@
-import { useEffect, useCallback } from 'react';
+import { useEffect, useCallback, useRef } from 'react';
 import { UseFormReturn } from 'react-hook-form';
 
 interface UseFormPersistenceOptions<T = any> {
@@ -17,99 +17,123 @@ export function useFormPersistence<T = any>({
   debounceTime = 500
 }: UseFormPersistenceOptions<T>) {
   
-  // Salvar dados no localStorage com debounce
-  const saveToStorage = useCallback(() => {
+  const isLoadingRef = useRef(false);
+  
+  // Salvar apenas dados do formulário
+  const saveFormDataToStorage = useCallback(() => {
+    if (isLoadingRef.current) return; // Evitar salvar durante o carregamento
+    
     try {
       const formData = form.getValues();
       const dataToSave = {
         formData,
-        additionalData,
         timestamp: Date.now()
       };
-      localStorage.setItem(storageKey, JSON.stringify(dataToSave));
+      localStorage.setItem(`${storageKey}_form`, JSON.stringify(dataToSave));
     } catch (error) {
-      console.error('Erro ao salvar dados no localStorage:', error);
+      console.error('Erro ao salvar dados do formulário:', error);
     }
-  }, [form, storageKey, additionalData]);
+  }, [form, storageKey]);
+
+  // Salvar dados adicionais separadamente
+  const saveAdditionalDataToStorage = useCallback(() => {
+    if (isLoadingRef.current) return;
+    
+    try {
+      if (Object.keys(additionalData).length > 0) {
+        localStorage.setItem(`${storageKey}_additional`, JSON.stringify(additionalData));
+      }
+    } catch (error) {
+      console.error('Erro ao salvar dados adicionais:', error);
+    }
+  }, [storageKey, additionalData]);
 
   // Recuperar dados do localStorage
   const loadFromStorage = useCallback(() => {
     try {
-      const savedData = localStorage.getItem(storageKey);
-      if (savedData) {
-        const parsedData = JSON.parse(savedData);
-        
-        // Aplicar dados do formulário
-        if (parsedData.formData) {
-          Object.keys(parsedData.formData).forEach((key) => {
-            form.setValue(key as any, parsedData.formData[key]);
+      isLoadingRef.current = true;
+      
+      // Carregar dados do formulário
+      const savedFormData = localStorage.getItem(`${storageKey}_form`);
+      if (savedFormData) {
+        const parsedFormData = JSON.parse(savedFormData);
+        if (parsedFormData.formData) {
+          Object.keys(parsedFormData.formData).forEach((key) => {
+            form.setValue(key as any, parsedFormData.formData[key], { shouldDirty: false });
           });
         }
-
-        // Chamar callback com dados adicionais se fornecido
-        if (onDataRecovered && parsedData.additionalData) {
-          onDataRecovered(parsedData.additionalData);
-        }
-
-        return parsedData;
       }
+
+      // Carregar dados adicionais
+      const savedAdditionalData = localStorage.getItem(`${storageKey}_additional`);
+      if (savedAdditionalData && onDataRecovered) {
+        const parsedAdditionalData = JSON.parse(savedAdditionalData);
+        onDataRecovered(parsedAdditionalData);
+      }
+
+      setTimeout(() => {
+        isLoadingRef.current = false;
+      }, 100);
     } catch (error) {
       console.error('Erro ao recuperar dados do localStorage:', error);
+      isLoadingRef.current = false;
     }
-    return null;
   }, [form, storageKey, onDataRecovered]);
 
   // Limpar dados do localStorage
   const clearStorage = useCallback(() => {
     try {
-      localStorage.removeItem(storageKey);
+      localStorage.removeItem(`${storageKey}_form`);
+      localStorage.removeItem(`${storageKey}_additional`);
     } catch (error) {
       console.error('Erro ao limpar dados do localStorage:', error);
     }
   }, [storageKey]);
 
-  // Debounced save function
+  // Observar mudanças no formulário
   useEffect(() => {
     let timeoutId: NodeJS.Timeout;
 
     const debouncedSave = () => {
       clearTimeout(timeoutId);
-      timeoutId = setTimeout(saveToStorage, debounceTime);
+      timeoutId = setTimeout(saveFormDataToStorage, debounceTime);
     };
 
-    // Observar mudanças no formulário
     const subscription = form.watch(debouncedSave);
 
     return () => {
       subscription.unsubscribe();
       clearTimeout(timeoutId);
     };
-  }, [form, saveToStorage, debounceTime]);
+  }, [form, saveFormDataToStorage, debounceTime]);
 
-  // Observar mudanças nos dados adicionais
+  // Salvar dados adicionais quando mudarem
   useEffect(() => {
     let timeoutId: NodeJS.Timeout;
     
     const debouncedSave = () => {
       clearTimeout(timeoutId);
-      timeoutId = setTimeout(saveToStorage, debounceTime);
+      timeoutId = setTimeout(saveAdditionalDataToStorage, debounceTime);
     };
 
-    debouncedSave();
+    if (!isLoadingRef.current) {
+      debouncedSave();
+    }
 
     return () => {
       clearTimeout(timeoutId);
     };
-  }, [additionalData, saveToStorage, debounceTime]);
+  }, [saveAdditionalDataToStorage, debounceTime]);
 
-  // Carregar dados na inicialização
+  // Carregar dados na inicialização (apenas uma vez)
   useEffect(() => {
     loadFromStorage();
-  }, [loadFromStorage]);
+  }, []);
 
   return {
     loadFromStorage,
     clearStorage,
-    saveToStorage
+    saveFormDataToStorage,
+    saveAdditionalDataToStorage
   };
 }
