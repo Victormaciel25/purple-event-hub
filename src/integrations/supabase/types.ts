@@ -534,21 +534,7 @@ export type Database = {
       }
     }
     Views: {
-      spaces_public: {
-        Row: {
-          capacity: string | null
-          categories: string[] | null
-          created_at: string | null
-          description: string | null
-          id: string | null
-          latitude: number | null
-          longitude: number | null
-          name: string | null
-          price: string | null
-          state: string | null
-        }
-        Relationships: []
-      }
+      [_ in never]: never
     }
     Functions: {
       admin_get_all_spaces: {
@@ -579,21 +565,6 @@ export type Database = {
       delete_space_with_photos: {
         Args: { space_id_param: string }
         Returns: undefined
-      }
-      get_public_spaces: {
-        Args: Record<PropertyKey, never>
-        Returns: {
-          capacity: string
-          categories: string[]
-          created_at: string
-          description: string
-          id: string
-          latitude: number
-          longitude: number
-          name: string
-          price: string
-          state: string
-        }[]
       }
       get_user_id_by_email: {
         Args: { email_input: string }
