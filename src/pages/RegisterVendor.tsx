@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
@@ -37,7 +37,6 @@ import {
 } from "@/components/ui/popover";
 import { cn, formatWorkingHours } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
-import { useFormPersistence } from "@/hooks/useFormPersistence";
 
 const dayOptions = [
   { label: 'Segunda', value: 'monday' },
@@ -100,68 +99,6 @@ const RegisterVendor = () => {
       availableDays: [],
     },
   });
-
-  // Auto-save form data and additional states
-  const { clearSavedData, hasSavedData } = useFormPersistence({
-    key: 'register-vendor',
-    form,
-    excludeFields: [], // Salvar todos os campos
-  });
-
-  // Save additional states (selectedDays, images, map location)
-  useEffect(() => {
-    const additionalData = {
-      selectedDays,
-      imageUrls,
-      mapLocation,
-      mapCenter,
-    };
-    
-    if (selectedDays.length > 0 || imageUrls.length > 0 || mapLocation || mapCenter) {
-      localStorage.setItem('register-vendor-additional', JSON.stringify(additionalData));
-    }
-  }, [selectedDays, imageUrls, mapLocation, mapCenter]);
-
-  // Load additional states on mount
-  useEffect(() => {
-    try {
-      const savedAdditional = localStorage.getItem('register-vendor-additional');
-      if (savedAdditional) {
-        const parsed = JSON.parse(savedAdditional);
-        if (parsed.selectedDays) setSelectedDays(parsed.selectedDays);
-        if (parsed.imageUrls) setImageUrls(parsed.imageUrls);
-        if (parsed.mapLocation) setMapLocation(parsed.mapLocation);
-        if (parsed.mapCenter) setMapCenter(parsed.mapCenter);
-      }
-    } catch (error) {
-      console.error('Erro ao carregar dados adicionais salvos:', error);
-    }
-  }, []);
-
-  // Clear additional data on success
-  const clearAllSavedData = () => {
-    clearSavedData();
-    localStorage.removeItem('register-vendor-additional');
-    
-    // Reset all form fields
-    form.reset();
-    
-    // Reset additional states
-    setSelectedDays([]);
-    setImageUrls([]);
-    setMapLocation(null);
-    setMapCenter(null);
-    setShowCategoryError(false);
-    
-    toast.success("Formulário limpo com sucesso!");
-  };
-
-  // Show notification if there's saved data
-  useEffect(() => {
-    if (hasSavedData()) {
-      toast.info("Dados anteriores foram recuperados automaticamente");
-    }
-  }, [hasSavedData]);
 
   const handleImageChange = (urls: string[]) => {
     setImageUrls(urls);
@@ -294,7 +231,6 @@ const RegisterVendor = () => {
       }
       
       toast.success("Fornecedor cadastrado com sucesso!");
-      clearAllSavedData(); // Limpar todos os dados salvos após sucesso
       navigate(-1);
     } catch (error) {
       console.error("Error submitting vendor:", error);
@@ -316,22 +252,6 @@ const RegisterVendor = () => {
       </Button>
 
       <h1 className="text-2xl font-bold mb-6">Cadastrar Fornecedor</h1>
-      
-      {hasSavedData() && (
-        <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-          <p className="text-sm text-blue-700">
-            Dados de um cadastro anterior foram recuperados automaticamente.
-          </p>
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={clearAllSavedData}
-            className="mt-2"
-          >
-            Começar com formulário limpo
-          </Button>
-        </div>
-      )}
       
       <div className="mb-6">
         <p className="text-muted-foreground text-sm mb-2">Imagens do fornecedor</p>

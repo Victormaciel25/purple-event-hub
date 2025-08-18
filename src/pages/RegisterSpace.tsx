@@ -22,7 +22,6 @@ import { supabase } from "@/integrations/supabase/client";
 import SingleImageUpload from "@/components/SingleImageUpload";
 import AddressAutoComplete from "@/components/AddressAutoComplete";
 import LocationMap from "@/components/LocationMap";
-import { useFormPersistence } from "@/hooks/useFormPersistence";
 
 const categories = [
   "casamentos",
@@ -83,68 +82,6 @@ const RegisterSpace = () => {
         pool: false,
       },
   });
-
-  // Auto-save form data and additional states
-  const { clearSavedData, hasSavedData } = useFormPersistence({
-    key: 'register-space',
-    form,
-    excludeFields: [], // Salvar todos os campos
-  });
-
-  // Save additional states (categories, images, map location)
-  useEffect(() => {
-    const additionalData = {
-      selectedCategories,
-      imageUrls,
-      mapLocation,
-      mapCenter,
-    };
-    
-    if (selectedCategories.length > 0 || imageUrls.length > 0 || mapLocation || mapCenter) {
-      localStorage.setItem('register-space-additional', JSON.stringify(additionalData));
-    }
-  }, [selectedCategories, imageUrls, mapLocation, mapCenter]);
-
-  // Load additional states on mount
-  useEffect(() => {
-    try {
-      const savedAdditional = localStorage.getItem('register-space-additional');
-      if (savedAdditional) {
-        const parsed = JSON.parse(savedAdditional);
-        if (parsed.selectedCategories) setSelectedCategories(parsed.selectedCategories);
-        if (parsed.imageUrls) setImageUrls(parsed.imageUrls);
-        if (parsed.mapLocation) setMapLocation(parsed.mapLocation);
-        if (parsed.mapCenter) setMapCenter(parsed.mapCenter);
-      }
-    } catch (error) {
-      console.error('Erro ao carregar dados adicionais salvos:', error);
-    }
-  }, []);
-
-  // Clear additional data on success
-  const clearAllSavedData = () => {
-    clearSavedData();
-    localStorage.removeItem('register-space-additional');
-    
-    // Reset all form fields
-    form.reset();
-    
-    // Reset additional states
-    setSelectedCategories([]);
-    setImageUrls([]);
-    setMapLocation(null);
-    setMapCenter(null);
-    setShowCategoryError(false);
-    
-    toast.success("Formulário limpo com sucesso!");
-  };
-
-  // Show notification if there's saved data
-  useEffect(() => {
-    if (hasSavedData()) {
-      toast.info("Dados anteriores foram recuperados automaticamente");
-    }
-  }, [hasSavedData]);
 
   const handleImageChange = (urls: string[]) => {
     setImageUrls(urls);
@@ -317,7 +254,6 @@ const RegisterSpace = () => {
       }
 
       toast.success("Espaço cadastrado com sucesso!");
-      clearAllSavedData(); // Limpar todos os dados salvos após sucesso
       navigate("/user-spaces");
     } catch (error) {
       console.error("💥 SUBMIT DEBUG: Erro geral na submissão:", error);
@@ -339,22 +275,6 @@ const RegisterSpace = () => {
       </Button>
 
       <h1 className="text-2xl font-bold mb-6">Cadastrar Espaço</h1>
-
-      {hasSavedData() && (
-        <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-          <p className="text-sm text-blue-700">
-            Dados de um cadastro anterior foram recuperados automaticamente.
-          </p>
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={clearAllSavedData}
-            className="mt-2"
-          >
-            Começar com formulário limpo
-          </Button>
-        </div>
-      )}
 
       <div className="mb-6">
         <p className="text-muted-foreground text-sm mb-2">Imagens do espaço</p>
