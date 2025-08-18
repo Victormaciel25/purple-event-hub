@@ -58,6 +58,10 @@ export default {
 					dark: '#6e61b8',
 					light: '#bdb1f8',
 					foreground: '#FFFFFF'
+				},
+				promoted: {
+					DEFAULT: 'hsl(var(--promoted))',
+					foreground: 'hsl(var(--promoted-foreground))'
 				}
 			},
 			borderRadius: {
