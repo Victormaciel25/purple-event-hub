@@ -367,6 +367,10 @@ const PromoteVendor: React.FC = () => {
               value={paymentMethod} 
               onValueChange={(value) => {
                 setPaymentMethod(value as "card" | "pix");
+                // Force recreation of MercadoPago component when switching to card
+                if (value === "card") {
+                  setCheckoutKey(Date.now());
+                }
               }}
               className="w-full"
             >
@@ -384,23 +388,21 @@ const PromoteVendor: React.FC = () => {
               <TabsContent value="card" className="mt-0">
                 <Card className="border-2 border-dashed border-iparty/30 bg-gradient-to-br from-iparty/5 to-transparent">
                   <CardContent className="pt-6">
-                    {paymentMethod === "card" && (
-                      <MercadoPagoCardBrick 
-                        wrapperKey={checkoutKey}
-                        spaceId={selectedVendor}
-                        spaceName={vendors.find(vendor => vendor.id === selectedVendor)?.name || ""}
-                        plan={plans.find(plan => plan.id === selectedPlan) || plans[0]}
-                        isVendor={true}
-                        onSuccess={handlePaymentSuccess}
-                        onError={() => {
-                          toast({
-                            title: "Erro no pagamento",
-                            description: "Ocorreu um erro durante o processamento. Tente novamente.",
-                            variant: "destructive"
-                          });
-                        }}
-                      />
-                    )}
+                    <MercadoPagoCardBrick 
+                      wrapperKey={checkoutKey}
+                      spaceId={selectedVendor}
+                      spaceName={vendors.find(vendor => vendor.id === selectedVendor)?.name || ""}
+                      plan={plans.find(plan => plan.id === selectedPlan) || plans[0]}
+                      isVendor={true}
+                      onSuccess={handlePaymentSuccess}
+                      onError={() => {
+                        toast({
+                          title: "Erro no pagamento",
+                          description: "Ocorreu um erro durante o processamento. Tente novamente.",
+                          variant: "destructive"
+                        });
+                      }}
+                    />
                   </CardContent>
                 </Card>
               </TabsContent>
@@ -408,14 +410,12 @@ const PromoteVendor: React.FC = () => {
               <TabsContent value="pix" className="mt-0">
                 <Card className="border-2 border-dashed border-green-300 bg-gradient-to-br from-green-50/50 to-transparent">
                   <CardContent className="pt-6">
-                    {paymentMethod === "pix" && (
-                      <VendorPixPayment
-                        vendorId={selectedVendor}
-                        vendorName={vendors.find(vendor => vendor.id === selectedVendor)?.name || ""}
-                        plan={plans.find(plan => plan.id === selectedPlan) || plans[0]}
-                        onSuccess={handlePaymentSuccess}
-                      />
-                    )}
+                    <VendorPixPayment
+                      vendorId={selectedVendor}
+                      vendorName={vendors.find(vendor => vendor.id === selectedVendor)?.name || ""}
+                      plan={plans.find(plan => plan.id === selectedPlan) || plans[0]}
+                      onSuccess={handlePaymentSuccess}
+                    />
                   </CardContent>
                 </Card>
               </TabsContent>

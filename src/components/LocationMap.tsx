@@ -14,7 +14,6 @@ interface Space {
   longitude: number;
   imageUrl?: string;
   zipCode?: string;
-  isPromoted?: boolean;
 }
 
 interface LocationMapProps {
@@ -290,26 +289,21 @@ const LocationMap = ({
           onLoad={handleMapLoad}
         >
           {/* Espaços */}
-          {showPins && spaces.map(space => {
-            const fillColor = space.isPromoted ? '#eab308' : '#9b87f5'; // yellow-500 for promoted, iparty default for regular
-            const strokeColor = space.isPromoted ? '#ca8a04' : '#6e61b8'; // yellow-600 for promoted, iparty-dark for regular
-            
-            return (
-              <Marker
-                key={space.id}
-                position={{ lat: space.latitude, lng: space.longitude }}
-                onClick={() => handleMarkerClick(space)}
-                animation={google.maps.Animation.DROP}
-                icon={{
-                  url: `data:image/svg+xml;utf8,${encodeURIComponent(
-                    `<svg xmlns="http://www.w3.org/2000/svg" width="40" height="46" viewBox="0 0 24 24" fill="${fillColor}" stroke="${strokeColor}" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"></path><circle cx="12" cy="10" r="3" fill="white"></circle></svg>`
-                  )}`,
-                  scaledSize: new google.maps.Size(40, 46),
-                  anchor: new google.maps.Point(20, 46),
-                }}
-              />
-            );
-          })}
+          {showPins && spaces.map(space => (
+            <Marker
+              key={space.id}
+              position={{ lat: space.latitude, lng: space.longitude }}
+              onClick={() => handleMarkerClick(space)}
+              animation={google.maps.Animation.DROP}
+              icon={{
+                url: `data:image/svg+xml;utf8,${encodeURIComponent(
+                  '<svg xmlns="http://www.w3.org/2000/svg" width="40" height="46" viewBox="0 0 24 24" fill="#9b87f5" stroke="#6e61b8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"></path><circle cx="12" cy="10" r="3" fill="white"></circle></svg>'
+                )}`,
+                scaledSize: new google.maps.Size(40, 46),
+                anchor: new google.maps.Point(20, 46),
+              }}
+            />
+          ))}
 
           {selectedSpace && showContainer && !isAnimating && (
             <OverlayView
