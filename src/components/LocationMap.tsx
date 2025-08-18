@@ -115,12 +115,17 @@ const LocationMap = ({
 
   // Calcular offset dinâmico baseado no tamanho da tela
   const calculateDynamicOffset = () => {
-    // Posicionar o marcador a 25% da altura da tela a partir da parte inferior
-    // Isso significa 75% a partir do topo
-    const baseOffset = screenDimensions.height * 0.25;
+    // Posicionar o marcador a aproximadamente 30% da altura da tela a partir da parte inferior
+    // Baseado na posição da bolinha rosa na imagem
+    const viewportHeight = screenDimensions.height;
+    const targetPosition = 0.3; // 30% da parte inferior da tela
     
-    // Ajustar para mobile se necessário
-    return isMobile ? baseOffset * 0.8 : baseOffset;
+    const pixelOffset = viewportHeight * targetPosition;
+    
+    console.log('📍 MAP_OFFSET: Viewport height:', viewportHeight, 'Target offset:', pixelOffset, 'Is mobile:', isMobile);
+    
+    // Ajustar para mobile - usar um offset ligeiramente menor
+    return isMobile ? pixelOffset * 0.9 : pixelOffset;
   };
 
   // VALIDAÇÃO INICIAL DE LOCALIZAÇÃO
@@ -217,6 +222,7 @@ const LocationMap = ({
           const point = projection.fromLatLngToPoint(new google.maps.LatLng(targetPosition.lat, targetPosition.lng));
           // Calcular offset dinâmico baseado no tamanho da tela e zoom
           const dynamicOffset = calculateDynamicOffset();
+          console.log('📍 MAP_OFFSET: Dynamic offset calculated:', dynamicOffset, 'Current zoom:', currentZoom);
           point.y -= dynamicOffset / Math.pow(2, currentZoom);
           const newLatLng = projection.fromPointToLatLng(point);
           
@@ -247,6 +253,7 @@ const LocationMap = ({
               const point = projection.fromLatLngToPoint(new google.maps.LatLng(targetPosition.lat, targetPosition.lng));
               // Calcular offset dinâmico baseado no tamanho da tela e zoom
               const dynamicOffset = calculateDynamicOffset();
+              console.log('📍 MAP_OFFSET: Dynamic offset calculated:', dynamicOffset, 'Current zoom:', currentZoom);
               point.y -= dynamicOffset / Math.pow(2, currentZoom);
               const newLatLng = projection.fromPointToLatLng(point);
               
