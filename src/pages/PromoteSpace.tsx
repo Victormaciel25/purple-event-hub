@@ -461,10 +461,6 @@ const PromoteSpace: React.FC = () => {
               value={paymentMethod} 
               onValueChange={(value) => {
                 setPaymentMethod(value as "card" | "pix");
-                // Force recreation of MercadoPago component when switching to card
-                if (value === "card") {
-                  setCheckoutKey(Date.now());
-                }
               }}
               className="w-full"
             >
@@ -516,12 +512,14 @@ const PromoteSpace: React.FC = () => {
               <TabsContent value="pix" className="mt-0">
                 <Card className="border-2 border-dashed border-green-300 bg-gradient-to-br from-green-50/50 to-transparent">
                   <CardContent className="pt-6">
-                    <PixPayment
-                      spaceId={selectedSpace}
-                      spaceName={spaces.find(space => space.id === selectedSpace)?.name || ""}
-                      plan={plans.find(plan => plan.id === selectedPlan) || plans[0]}
-                      onSuccess={handlePaymentSuccess}
-                    />
+                    {paymentMethod === "pix" && (
+                      <PixPayment
+                        spaceId={selectedSpace}
+                        spaceName={spaces.find(space => space.id === selectedSpace)?.name || ""}
+                        plan={plans.find(plan => plan.id === selectedPlan) || plans[0]}
+                        onSuccess={handlePaymentSuccess}
+                      />
+                    )}
                   </CardContent>
                 </Card>
               </TabsContent>
