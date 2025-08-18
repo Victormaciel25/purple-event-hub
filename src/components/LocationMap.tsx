@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { Loader2, X } from "lucide-react";
 import { GoogleMap, useJsApiLoader, Marker, OverlayView } from "@react-google-maps/api";
 import { GOOGLE_MAPS_API_KEY } from "@/config/app-config";
+import { useIsMobile } from "@/hooks/use-mobile";
 import OptimizedImage from "./OptimizedImage";
 
 interface Space {
@@ -83,7 +84,12 @@ const LocationMap = ({
   const [showPins, setShowPins] = useState<boolean>(true);
   const [showContainer, setShowContainer] = useState<boolean>(false);
   const [isAnimating, setIsAnimating] = useState<boolean>(false);
+  const [screenDimensions, setScreenDimensions] = useState({
+    width: window.innerWidth,
+    height: window.innerHeight
+  });
   const mapRef = useRef<google.maps.Map | null>(null);
+  const isMobile = useIsMobile();
   
   const [movedSpaces, setMovedSpaces] = useState<Record<string, boolean>>({});
   const [offsetPositions, setOffsetPositions] = useState<Record<string, {lat: number, lng: number}>>({});
@@ -93,6 +99,29 @@ const LocationMap = ({
     googleMapsApiKey: GOOGLE_MAPS_API_KEY,
     libraries
   });
+
+  // Monitorar mudanças no tamanho da tela
+  useEffect(() => {
+    const handleResize = () => {
+      setScreenDimensions({
+        width: window.innerWidth,
+        height: window.innerHeight
+      });
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  // Calcular offset dinâmico baseado no tamanho da tela
+  const calculateDynamicOffset = () => {
+    // Posicionar o marcador a 25% da altura da tela a partir da parte inferior
+    // Isso significa 75% a partir do topo
+    const baseOffset = screenDimensions.height * 0.25;
+    
+    // Ajustar para mobile se necessário
+    return isMobile ? baseOffset * 0.8 : baseOffset;
+  };
 
   // VALIDAÇÃO INICIAL DE LOCALIZAÇÃO
   useEffect(() => {
@@ -186,8 +215,9 @@ const LocationMap = ({
         const projection = mapRef.current.getProjection();
         if (projection) {
           const point = projection.fromLatLngToPoint(new google.maps.LatLng(targetPosition.lat, targetPosition.lng));
-          // Calcular offset baseado no zoom atual
-          point.y -= 220 / Math.pow(2, currentZoom);
+          // Calcular offset dinâmico baseado no tamanho da tela e zoom
+          const dynamicOffset = calculateDynamicOffset();
+          point.y -= dynamicOffset / Math.pow(2, currentZoom);
           const newLatLng = projection.fromPointToLatLng(point);
           
           setOffsetPositions(prev => ({
@@ -215,8 +245,9 @@ const LocationMap = ({
             const projection = mapRef.current.getProjection();
             if (projection) {
               const point = projection.fromLatLngToPoint(new google.maps.LatLng(targetPosition.lat, targetPosition.lng));
-              // Calcular offset baseado no zoom atual
-              point.y -= 220 / Math.pow(2, currentZoom);
+              // Calcular offset dinâmico baseado no tamanho da tela e zoom
+              const dynamicOffset = calculateDynamicOffset();
+              point.y -= dynamicOffset / Math.pow(2, currentZoom);
               const newLatLng = projection.fromPointToLatLng(point);
               
               setOffsetPositions(prev => ({
