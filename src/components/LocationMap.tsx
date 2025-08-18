@@ -115,10 +115,10 @@ const LocationMap = ({
 
   // Calcular offset dinâmico baseado no tamanho da tela
   const calculateDynamicOffset = () => {
-    // Posicionar o marcador a aproximadamente 30% da altura da tela a partir da parte inferior
+    // Posicionar o marcador a aproximadamente 20% da altura da tela a partir da parte inferior
     // Baseado na posição da bolinha rosa na imagem
     const viewportHeight = screenDimensions.height;
-    const targetPosition = 0.3; // 30% da parte inferior da tela
+    const targetPosition = 0.2; // 20% da parte inferior da tela
     
     const pixelOffset = viewportHeight * targetPosition;
     
