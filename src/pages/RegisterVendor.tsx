@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useFormPersistence } from "@/hooks/useFormPersistence";
 import { ArrowLeft, Calendar as CalendarIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -98,6 +99,24 @@ const RegisterVendor = () => {
       instagram: "",
       availableDays: [],
     },
+  });
+
+  // Configurar persistência do formulário
+  const { clearStorage } = useFormPersistence({
+    form,
+    storageKey: 'registerVendor_form',
+    additionalData: {
+      imageUrls,
+      mapLocation,
+      mapCenter,
+      selectedDays
+    },
+    onDataRecovered: (data) => {
+      if (data.imageUrls) setImageUrls(data.imageUrls);
+      if (data.mapLocation) setMapLocation(data.mapLocation);
+      if (data.mapCenter) setMapCenter(data.mapCenter);
+      if (data.selectedDays) setSelectedDays(data.selectedDays);
+    }
   });
 
   const handleImageChange = (urls: string[]) => {
@@ -231,6 +250,7 @@ const RegisterVendor = () => {
       }
       
       toast.success("Fornecedor cadastrado com sucesso!");
+      clearStorage(); // Limpar dados salvos após sucesso
       navigate(-1);
     } catch (error) {
       console.error("Error submitting vendor:", error);

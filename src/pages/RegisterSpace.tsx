@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useFormPersistence } from "@/hooks/useFormPersistence";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -81,6 +82,24 @@ const RegisterSpace = () => {
         kitchen: false,
         pool: false,
       },
+  });
+
+  // Configurar persistência do formulário
+  const { clearStorage } = useFormPersistence({
+    form,
+    storageKey: 'registerSpace_form',
+    additionalData: {
+      imageUrls,
+      mapLocation,
+      mapCenter,
+      selectedCategories
+    },
+    onDataRecovered: (data) => {
+      if (data.imageUrls) setImageUrls(data.imageUrls);
+      if (data.mapLocation) setMapLocation(data.mapLocation);
+      if (data.mapCenter) setMapCenter(data.mapCenter);
+      if (data.selectedCategories) setSelectedCategories(data.selectedCategories);
+    }
   });
 
   const handleImageChange = (urls: string[]) => {
@@ -254,6 +273,7 @@ const RegisterSpace = () => {
       }
 
       toast.success("Espaço cadastrado com sucesso!");
+      clearStorage(); // Limpar dados salvos após sucesso
       navigate("/user-spaces");
     } catch (error) {
       console.error("💥 SUBMIT DEBUG: Erro geral na submissão:", error);
