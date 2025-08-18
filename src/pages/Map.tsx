@@ -20,6 +20,7 @@ type Space = {
   longitude: number;
   imageUrl?: string;
   zipCode?: string;
+  isPromoted?: boolean;
 };
 
 type GeocodingResult = {
@@ -91,7 +92,8 @@ const Map: React.FC = () => {
         latitude: space.latitude!,
         longitude: space.longitude!,
         imageUrl: space.photo_url || undefined,
-        zipCode: undefined
+        zipCode: undefined,
+        isPromoted: space.isPromoted
       }));
 
     setFilteredSpaces(processedSpaces);
@@ -135,7 +137,7 @@ const Map: React.FC = () => {
   // Filtrar espaços por busca
   useEffect(() => {
     if (!searchValue.trim()) {
-      const processedSpaces: Space[] = spaces
+    const processedSpaces: Space[] = spaces
         .filter(space => space.latitude && space.longitude)
         .map(space => ({
           id: space.id,
@@ -146,7 +148,8 @@ const Map: React.FC = () => {
           latitude: space.latitude!,
           longitude: space.longitude!,
           imageUrl: space.photo_url || undefined,
-          zipCode: undefined
+          zipCode: undefined,
+          isPromoted: space.isPromoted
         }));
       setFilteredSpaces(processedSpaces);
       return;
@@ -168,7 +171,8 @@ const Map: React.FC = () => {
         latitude: space.latitude!,
         longitude: space.longitude!,
         imageUrl: space.photo_url || undefined,
-        zipCode: undefined
+        zipCode: undefined,
+        isPromoted: space.isPromoted
       }));
     
     setFilteredSpaces(filtered);
