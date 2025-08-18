@@ -168,7 +168,7 @@ const VendorDetails: React.FC<VendorDetailsProps> = ({
   };
 
   return (
-    <div className="mt-4 space-y-4">
+    <div className="mt-4 space-y-4 max-h-[80vh] overflow-y-auto">
       <div className="grid grid-cols-1 gap-4">
         <div>
           <div className="font-medium">Categoria</div>

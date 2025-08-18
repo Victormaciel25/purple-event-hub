@@ -239,69 +239,71 @@ const SpaceDetailsTabs: React.FC<SpaceDetailsTabsProps> = ({
               )}
             </div>
             
-            {photosLoading ? (
-              <div className="text-center py-8">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto mb-2"></div>
-                <p className="text-gray-500">Carregando fotos...</p>
-              </div>
-            ) : !photoUrls || photoUrls.length === 0 ? (
-              <div className="text-center py-8">
-                <Image size={48} className="mx-auto text-gray-300 mb-2" />
-                <p className="text-gray-500">Nenhuma foto disponível</p>
-                <p className="text-xs text-gray-400 mt-1">
-                  Verifique se as fotos foram enviadas corretamente
-                </p>
-                {onRefreshPhotos && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={onRefreshPhotos}
-                    className="mt-3"
-                  >
-                    <RefreshCw size={16} className="mr-2" />
-                    Tentar Recarregar
-                  </Button>
-                )}
-              </div>
-            ) : (
-              <>
-                <div className="space-y-6">
-                  {photoUrls.map((url, index) => (
-                    <div key={`photo-${index}`} className="relative bg-gray-50 rounded-lg overflow-hidden">
-                      <AspectRatio ratio={16 / 9} className="bg-muted">
-                        <img 
-                          src={url} 
-                          alt={`${space.name} ${index + 1}`}
-                          className="w-full h-full object-contain"
-                          onLoad={() => {
-                            console.log(`✓ Foto ${index + 1} carregada com sucesso:`, url);
-                          }}
-                          onError={(e) => {
-                            console.error(`✗ Erro ao carregar foto ${index + 1}:`, url);
-                            e.currentTarget.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZGRkIi8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxNCIgZmlsbD0iIzk5OSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPkVycm8gYW8gY2FycmVnYXIgaW1hZ2VtPC90ZXh0Pjwvc3ZnPg==';
-                          }}
-                        />
-                      </AspectRatio>
-                      <div className="absolute bottom-2 right-2 bg-black/75 text-white text-xs px-2 py-1 rounded">
-                        📸 {index + 1}/{photoUrls.length}
-                      </div>
-                      <div className="p-3 bg-white border-t">
-                        <p className="text-sm text-gray-600">
-                          Foto {index + 1} de {photoUrls.length}
-                        </p>
-                      </div>
-                    </div>
-                  ))}
+            <div className="max-h-[60vh] overflow-y-auto">
+              {photosLoading ? (
+                <div className="text-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto mb-2"></div>
+                  <p className="text-gray-500">Carregando fotos...</p>
                 </div>
-
-                <div className="mt-6 text-center border-t pt-4">
-                  <h3 className="text-lg font-medium">{space.name}</h3>
-                  <p className="text-sm text-gray-500 mt-2">
-                    📸 {totalPhotos} foto{totalPhotos !== 1 ? 's' : ''} para análise
+              ) : !photoUrls || photoUrls.length === 0 ? (
+                <div className="text-center py-8">
+                  <Image size={48} className="mx-auto text-gray-300 mb-2" />
+                  <p className="text-gray-500">Nenhuma foto disponível</p>
+                  <p className="text-xs text-gray-400 mt-1">
+                    Verifique se as fotos foram enviadas corretamente
                   </p>
+                  {onRefreshPhotos && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={onRefreshPhotos}
+                      className="mt-3"
+                    >
+                      <RefreshCw size={16} className="mr-2" />
+                      Tentar Recarregar
+                    </Button>
+                  )}
                 </div>
-              </>
-            )}
+              ) : (
+                <>
+                  <div className="space-y-6">
+                    {photoUrls.map((url, index) => (
+                      <div key={`photo-${index}`} className="relative bg-gray-50 rounded-lg overflow-hidden">
+                        <AspectRatio ratio={16 / 9} className="bg-muted">
+                          <img 
+                            src={url} 
+                            alt={`${space.name} ${index + 1}`}
+                            className="w-full h-full object-contain"
+                            onLoad={() => {
+                              console.log(`✓ Foto ${index + 1} carregada com sucesso:`, url);
+                            }}
+                            onError={(e) => {
+                              console.error(`✗ Erro ao carregar foto ${index + 1}:`, url);
+                              e.currentTarget.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZGRkIi8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxNCIgZmlsbD0iIzk5OSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPkVycm8gYW8gY2FycmVnYXIgaW1hZ2VtPC90ZXh0Pjwvc3ZnPg==';
+                            }}
+                          />
+                        </AspectRatio>
+                        <div className="absolute bottom-2 right-2 bg-black/75 text-white text-xs px-2 py-1 rounded">
+                          📸 {index + 1}/{photoUrls.length}
+                        </div>
+                        <div className="p-3 bg-white border-t">
+                          <p className="text-sm text-gray-600">
+                            Foto {index + 1} de {photoUrls.length}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="mt-6 text-center border-t pt-4">
+                    <h3 className="text-lg font-medium">{space.name}</h3>
+                    <p className="text-sm text-gray-500 mt-2">
+                      📸 {totalPhotos} foto{totalPhotos !== 1 ? 's' : ''} para análise
+                    </p>
+                  </div>
+                </>
+              )}
+            </div>
           </Card>
         </TabsContent>
         

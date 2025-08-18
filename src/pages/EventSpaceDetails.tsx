@@ -294,8 +294,8 @@ const EventSpaceDetails: React.FC = () => {
   };
 
   return (
-    <div className="h-screen w-full overflow-hidden">
-      <div className="h-full w-full overflow-y-auto scrollbar-hide">
+    <div className="min-h-screen w-full">
+      <div className="w-full">
         <div className="container px-4 py-6 pb-20 mx-auto">
           {/* back & actions dropdown at top */}
           <div className="flex items-center justify-between mb-4">
