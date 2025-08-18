@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { X, Images, Upload } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -38,6 +38,22 @@ const SingleImageUpload: React.FC<SingleImageUploadProps> = ({
   const [uploadedUrls, setUploadedUrls] = useState<string[]>(initialImages);
   const [localPreviews, setLocalPreviews] = useState<LocalPreview[]>([]);
   const inputId = `image-upload-${Math.random().toString(36).substring(2, 15)}`;
+
+  // Sincronizar estado interno quando initialImages mudar
+  useEffect(() => {
+    // Comparar arrays para detectar mudanças reais
+    const arraysAreEqual = (a: string[], b: string[]) => {
+      return a.length === b.length && a.every((val, i) => val === b[i]);
+    };
+    
+    if (!arraysAreEqual(uploadedUrls, initialImages)) {
+      setUploadedUrls(initialImages);
+      // Notificar componente pai da sincronização
+      if (initialImages.length !== uploadedUrls.length) {
+        onImageChange(initialImages);
+      }
+    }
+  }, [initialImages, uploadedUrls, onImageChange]);
 
   // Detectar se está no Android/Capacitor
   const isAndroidCapacitor = () => {
