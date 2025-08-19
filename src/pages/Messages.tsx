@@ -753,9 +753,15 @@ if (chatError) throw chatError;
       // Trigger AI auto-reply (non-blocking)
       try {
         if (insertedMessage?.id) {
-          await supabase.functions.invoke('ai-chat-response', {
-            body: { chat_id: currentChatId, message_id: insertedMessage.id }
-          });
+          const { data: { session } } = await supabase.auth.getSession();
+          if (session?.access_token) {
+            await supabase.functions.invoke('ai-chat-response', {
+              body: { chat_id: currentChatId, message_id: insertedMessage.id },
+              headers: {
+                Authorization: `Bearer ${session.access_token}`
+              }
+            });
+          }
         }
       } catch (err) {
         console.warn("AI reply invocation failed:", err);
