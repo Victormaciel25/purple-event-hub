@@ -116,7 +116,8 @@ const RegisterVendor = () => {
       if (data.mapLocation) setMapLocation(data.mapLocation);
       if (data.mapCenter) setMapCenter(data.mapCenter);
       if (data.selectedDays) setSelectedDays(data.selectedDays);
-    }
+    },
+    clearOnInternalNavigation: true
   });
 
   const handleImageChange = (urls: string[]) => {
@@ -264,7 +265,10 @@ const RegisterVendor = () => {
     <div className="container px-4 py-6 max-w-4xl mx-auto">
       <Button 
         variant="ghost" 
-        onClick={() => navigate(-1)} 
+        onClick={() => {
+          clearStorage();
+          navigate(-1);
+        }} 
         className="mb-4 pl-0 flex items-center text-gray-600"
       >
         <ArrowLeft size={20} className="mr-1" />

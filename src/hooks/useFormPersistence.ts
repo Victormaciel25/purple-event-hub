@@ -7,6 +7,7 @@ interface UseFormPersistenceOptions<T = any> {
   additionalData?: Record<string, any>;
   onDataRecovered?: (data: any) => void;
   debounceTime?: number;
+  clearOnInternalNavigation?: boolean;
 }
 
 export function useFormPersistence<T = any>({
@@ -14,7 +15,8 @@ export function useFormPersistence<T = any>({
   storageKey,
   additionalData = {},
   onDataRecovered,
-  debounceTime = 500
+  debounceTime = 500,
+  clearOnInternalNavigation = false
 }: UseFormPersistenceOptions<T>) {
   
   const isLoadingRef = useRef(false);
@@ -129,6 +131,38 @@ export function useFormPersistence<T = any>({
   useEffect(() => {
     loadFromStorage();
   }, []);
+
+  // Limpar dados na navegação interna (se habilitado)
+  useEffect(() => {
+    if (!clearOnInternalNavigation) return;
+
+    let isAppMinimized = false;
+
+    // Detectar quando o app é minimizado vs navegação interna
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        isAppMinimized = true;
+      } else {
+        isAppMinimized = false;
+      }
+    };
+
+    // Detectar antes da página ser descarregada
+    const handleBeforeUnload = () => {
+      // Se não foi minimização, é navegação interna - limpar dados
+      if (!isAppMinimized && !document.hidden) {
+        clearStorage();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('beforeunload', handleBeforeUnload);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, [clearOnInternalNavigation, clearStorage]);
 
   return {
     loadFromStorage,
