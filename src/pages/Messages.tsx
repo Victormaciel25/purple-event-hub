@@ -98,11 +98,13 @@ const ChatItem = ({ chat, onClick, otherUserName }: {
 const ChatHeader = ({ 
   chatInfo, 
   spaceImages, 
-  chatCreatedAt 
+  chatCreatedAt,
+  vendorCategory 
 }: { 
   chatInfo: ChatProps | null;
   spaceImages: Record<string, string>;
   chatCreatedAt: string | null;
+  vendorCategory?: string;
 }) => {
   const formatChatDate = (isoString: string): string => {
     const date = new Date(isoString);
@@ -144,7 +146,8 @@ const ChatHeader = ({
           </h3>
           <p className="text-sm text-muted-foreground">
             {chatInfo.name === "Espaço excluído" ? "Este espaço foi removido" : 
-             chatInfo.space_id ? "Espaço para eventos" : "Fornecedor de serviços"}
+             chatInfo.space_id ? "Espaço para eventos" : 
+             vendorCategory || "Fornecedor de serviços"}
           </p>
         </div>
       </div>
@@ -267,6 +270,7 @@ const Messages = () => {
   const [chatCreatedAt, setChatCreatedAt] = useState<string | null>(null);
   const [chatUserNames, setChatUserNames] = useState<Record<string, string>>({});
   const [chatFilter, setChatFilter] = useState<'spaces' | 'vendors'>('spaces');
+  const [vendorCategory, setVendorCategory] = useState<string | null>(null);
 
   // Function to get user display name
   const getUserDisplayName = (): string => {
@@ -638,14 +642,13 @@ const Messages = () => {
       // Set chat created date
       setChatCreatedAt(chatData.created_at);
       
-      // Get the other user's profile (the one we're chatting with)
+      // Get other user ID (the user we're chatting with)
       const otherUserId = chatData.user_id === userId ? chatData.owner_id : chatData.user_id;
-      console.log("Current userId:", userId);
-      console.log("Chat user_id:", chatData.user_id);
-      console.log("Chat owner_id:", chatData.owner_id);
-      console.log("Other user ID to fetch profile for:", otherUserId);
-
-      // First check if there's a profile for this user
+      
+      console.log("Other user ID:", otherUserId);
+      console.log("Current user ID:", userId);
+      
+      // Query the profiles table for the other user
       const { data: profilesData, error: profileError } = await supabase
         .from("profiles")
         .select("id, first_name, last_name, avatar_url")
@@ -670,9 +673,38 @@ const Messages = () => {
             });
           
           console.log("User data from edge function:", userData, "Error:", userError);
+          
+          if (userData && userData.email) {
+            setOtherUserProfile({
+              id: otherUserId,
+              first_name: userData.email.split('@')[0],
+              last_name: null,
+              avatar_url: null
+            });
+          }
         } catch (error) {
-          console.log("Could not fetch user data:", error);
+          console.error("Error getting user by email:", error);
         }
+      }
+      
+      // If this is a vendor chat, fetch vendor category
+      if (chatData.vendor_id) {
+        console.log("Fetching vendor category for vendor_id:", chatData.vendor_id);
+        const { data: vendorData, error: vendorError } = await supabase
+          .from('vendors')
+          .select('category')
+          .eq('id', chatData.vendor_id)
+          .single();
+          
+        if (vendorData && !vendorError) {
+          console.log("Setting vendor category:", vendorData.category);
+          setVendorCategory(vendorData.category);
+        } else {
+          console.error("Error fetching vendor category:", vendorError);
+          setVendorCategory(null);
+        }
+      } else {
+        setVendorCategory(null);
       }
       
       // Find chat info in the existing list or create a new entry
@@ -684,11 +716,11 @@ const Messages = () => {
       } else {
         const newChatInfo = {
           id: chatData.id,
-          name: chatData.space_name || "Conversa",
+          name: chatData.space_name || chatData.vendor_name || "Conversa",
           lastMessage: chatData.last_message || "Iniciar conversa...",
           time: formatTime(chatData.last_message_time),
           space_id: chatData.space_id,
-          avatar: chatData.space_image || "",
+          avatar: chatData.space_image || chatData.vendor_image || "",
           unread: chatData.has_unread && chatData.last_message_sender_id !== userId,
           deleted: chatData.deleted || false
         };
@@ -1104,6 +1136,7 @@ if (chatError) throw chatError;
     setChatDeleted(false);
     setOtherUserProfile(null);
     setChatCreatedAt(null);
+    setVendorCategory(null);
     // Re-fetch non-deleted chats
     fetchChats(false);
   }, [fetchChats]);
@@ -1238,6 +1271,7 @@ if (chatError) throw chatError;
             chatInfo={chatInfo}
             spaceImages={spaceImages}
             chatCreatedAt={chatCreatedAt}
+            vendorCategory={vendorCategory}
           />
           
           {/* Messages area */}
