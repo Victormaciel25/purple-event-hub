@@ -885,18 +885,36 @@ if (chatError) throw chatError;
       // Trigger AI auto-reply (non-blocking)
       try {
         if (insertedMessage?.id) {
-          const { data: { session } } = await supabase.auth.getSession();
+          const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+          if (sessionError) {
+            console.error("Session error:", sessionError);
+            return;
+          }
+          
           if (session?.access_token) {
-            await supabase.functions.invoke('ai-chat-response', {
-              body: { chat_id: currentChatId, message_id: insertedMessage.id },
+            console.log("Triggering AI response for message:", insertedMessage.id);
+            const aiResponse = await supabase.functions.invoke('ai-chat-response', {
+              body: { 
+                chat_id: currentChatId, 
+                message_id: insertedMessage.id 
+              },
               headers: {
-                Authorization: `Bearer ${session.access_token}`
+                'Authorization': `Bearer ${session.access_token}`,
+                'Content-Type': 'application/json'
               }
             });
+            
+            if (aiResponse.error) {
+              console.error("AI response error:", aiResponse.error);
+            } else {
+              console.log("AI response success:", aiResponse.data);
+            }
+          } else {
+            console.warn("No access token available for AI request");
           }
         }
       } catch (err) {
-        console.warn("AI reply invocation failed:", err);
+        console.error("AI reply invocation failed:", err);
       }
       
       // Clear message input
