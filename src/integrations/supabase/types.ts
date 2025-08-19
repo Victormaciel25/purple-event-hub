@@ -28,6 +28,9 @@ export type Database = {
           space_image: string | null
           space_name: string | null
           user_id: string
+          vendor_id: string | null
+          vendor_image: string | null
+          vendor_name: string | null
         }
         Insert: {
           created_at?: string | null
@@ -42,6 +45,9 @@ export type Database = {
           space_image?: string | null
           space_name?: string | null
           user_id: string
+          vendor_id?: string | null
+          vendor_image?: string | null
+          vendor_name?: string | null
         }
         Update: {
           created_at?: string | null
@@ -56,6 +62,9 @@ export type Database = {
           space_image?: string | null
           space_name?: string | null
           user_id?: string
+          vendor_id?: string | null
+          vendor_image?: string | null
+          vendor_name?: string | null
         }
         Relationships: [
           {

@@ -143,7 +143,8 @@ const ChatHeader = ({
             {chatInfo.name}
           </h3>
           <p className="text-sm text-muted-foreground">
-            {chatInfo.name === "Espaço excluído" ? "Este espaço foi removido" : "Espaço para eventos"}
+            {chatInfo.name === "Espaço excluído" ? "Este espaço foi removido" : 
+             chatInfo.space_id ? "Espaço para eventos" : "Fornecedor de serviços"}
           </p>
         </div>
       </div>
@@ -160,14 +161,14 @@ const ChatHeader = ({
   );
 };
 
-const EmptyState = ({ searchQuery = "", onBack }: { searchQuery?: string; onBack?: () => void }) => (
+const EmptyState = ({ searchQuery = "", chatFilter = 'spaces', onBack }: { searchQuery?: string; chatFilter?: 'spaces' | 'vendors'; onBack?: () => void }) => (
   <div className="p-8 text-center">
     <MessageSquare className="mx-auto h-12 w-12 text-muted-foreground/40" />
     <p className="mt-2 text-muted-foreground">
       {searchQuery ? 'Nenhuma conversa encontrada' : 'Nenhuma conversa iniciada'}
     </p>
     <p className="text-sm text-muted-foreground/70">
-      {searchQuery ? 'Tente outro termo de busca' : 'Visite um espaço e clique no botão de mensagem para começar'}
+      {searchQuery ? 'Tente outro termo de busca' : `Visite um ${chatFilter === 'spaces' ? 'espaço' : 'fornecedor'} e clique no botão de mensagem para começar`}
     </p>
     {onBack && (
       <Button 
@@ -242,6 +243,8 @@ const Messages = () => {
   const chatIdFromState = location.state?.chatId;
   const spaceIdFromState = location.state?.spaceId;
   const spaceOwnerFromState = location.state?.spaceOwnerId;
+  const vendorIdFromState = location.state?.vendorId;
+  const vendorOwnerFromState = location.state?.vendorOwnerId;
   
   // State
   const [chats, setChats] = useState<ChatProps[]>([]);
@@ -263,6 +266,7 @@ const Messages = () => {
   const [otherUserProfile, setOtherUserProfile] = useState<UserProfile | null>(null);
   const [chatCreatedAt, setChatCreatedAt] = useState<string | null>(null);
   const [chatUserNames, setChatUserNames] = useState<Record<string, string>>({});
+  const [chatFilter, setChatFilter] = useState<'spaces' | 'vendors'>('spaces');
 
   // Function to get user display name
   const getUserDisplayName = (): string => {
@@ -347,11 +351,11 @@ const Messages = () => {
     
     const formattedChats = chatsData.map(chat => ({
       id: chat.id,
-      name: chat.space_name || "Conversa",
+      name: chat.space_name || chat.vendor_name || "Conversa",
       lastMessage: chat.last_message || "Iniciar conversa...",
       time: formatTime(chat.last_message_time),
       space_id: chat.space_id,
-      avatar: chat.space_id && localImageMap[chat.space_id] ? localImageMap[chat.space_id] : chat.space_image || "",
+      avatar: chat.space_id && localImageMap[chat.space_id] ? localImageMap[chat.space_id] : chat.space_image || chat.vendor_image || "",
       unread: chat.has_unread && chat.last_message_sender_id !== currentUserId,
       deleted: chat.deleted || false,
       user_id: chat.user_id,
@@ -459,9 +463,15 @@ const Messages = () => {
     }
   }, [processChatsData]);
 
-  // Function to create a new chat for the same space
-  const createOrFindChat = useCallback(async (spaceId: string, spaceOwnerId: string) => {
-    if (!userId || !spaceId || !spaceOwnerId) {
+  // Function to create a new chat for the same space or vendor
+  const createOrFindChat = useCallback(async (spaceId: string | null, spaceOwnerId: string | null, vendorId?: string, vendorOwnerId?: string) => {
+    if (!userId) {
+      console.error("Missing userId for creating chat");
+      return null;
+    }
+
+    // Validate that we have either space or vendor info
+    if ((!spaceId || !spaceOwnerId) && (!vendorId || !vendorOwnerId)) {
       console.error("Missing required parameters for creating chat");
       return null;
     }
@@ -469,28 +479,86 @@ const Messages = () => {
     try {
       setCreatingNewChat(true);
       
-      // Check if there's an existing chat or create a new one using edge function
-      console.log("Creating or finding chat for space:", spaceId);
-      const { data: chatData, error } = await supabase.functions
-        .invoke('get_chat_by_users_and_space', {
-          body: { 
-            current_user_id: userId, 
-            space_owner_id: spaceOwnerId, 
-            current_space_id: spaceId
-          }
-        });
-      
-      if (error) {
-        console.error("Error creating/finding chat:", error);
-        toast.error("Erro ao criar nova conversa");
-        return null;
+      // For space chats, use existing logic
+      if (spaceId && spaceOwnerId) {
+        console.log("Creating or finding chat for space:", spaceId);
+        const { data: chatData, error } = await supabase.functions
+          .invoke('get_chat_by_users_and_space', {
+            body: { 
+              current_user_id: userId, 
+              space_owner_id: spaceOwnerId, 
+              current_space_id: spaceId
+            }
+          });
+        
+        if (error) {
+          console.error("Error creating/finding space chat:", error);
+          toast.error("Erro ao criar nova conversa");
+          return null;
+        }
+        
+        if (chatData && chatData.length > 0) {
+          return chatData[0].id;
+        }
       }
       
-      console.log("Chat creation/lookup result:", chatData);
-      
-      if (chatData && chatData.length > 0) {
-        // Return the first chat ID without triggering another fetch first
-        return chatData[0].id;
+      // For vendor chats, create directly in the database
+      if (vendorId && vendorOwnerId) {
+        console.log("Creating or finding chat for vendor:", vendorId);
+        
+        // Check if chat already exists
+        const { data: existingChat, error: searchError } = await supabase
+          .from('chats')
+          .select('*')
+          .eq('vendor_id', vendorId)
+          .or(`user_id.eq.${userId},owner_id.eq.${userId}`)
+          .or(`user_id.eq.${vendorOwnerId},owner_id.eq.${vendorOwnerId}`)
+          .eq('deleted', false)
+          .maybeSingle();
+
+        if (searchError) {
+          console.error("Error searching for existing vendor chat:", searchError);
+        }
+
+        if (existingChat) {
+          return existingChat.id;
+        }
+
+        // Get vendor details for chat creation
+        const { data: vendorData, error: vendorError } = await supabase
+          .from('vendors')
+          .select('name, images')
+          .eq('id', vendorId)
+          .single();
+
+        if (vendorError) {
+          console.error("Error fetching vendor data:", vendorError);
+          toast.error("Erro ao buscar dados do fornecedor");
+          return null;
+        }
+
+        // Create new vendor chat
+        const { data: newChat, error: createError } = await supabase
+          .from('chats')
+          .insert({
+            user_id: userId,
+            owner_id: vendorOwnerId,
+            vendor_id: vendorId,
+            vendor_name: vendorData.name,
+            vendor_image: vendorData.images?.[0] || null,
+            last_message_time: new Date().toISOString(),
+            has_unread: false
+          })
+          .select('*')
+          .single();
+
+        if (createError) {
+          console.error("Error creating vendor chat:", createError);
+          toast.error("Erro ao criar conversa com fornecedor");
+          return null;
+        }
+
+        return newChat.id;
       }
       
       return null;
@@ -526,8 +594,24 @@ const Messages = () => {
         
         // If we have space details, try to create a new chat
         if (spaceIdFromState && spaceOwnerFromState) {
-          console.log("Attempting to create new chat for deleted chat");
+          console.log("Attempting to create new chat for deleted space chat");
           const newChatId = await createOrFindChat(spaceIdFromState, spaceOwnerFromState);
+          
+          if (newChatId) {
+            // Update the selected chat and navigate to it
+            setSelectedChat(newChatId);
+            navigate(`/messages?chat=${newChatId}`, { replace: true });
+            
+            // Load the new chat details
+            await loadChatDetails(newChatId);
+            return;
+          }
+        }
+        
+        // If we have vendor details, try to create a new chat
+        if (vendorIdFromState && vendorOwnerFromState) {
+          console.log("Attempting to create new chat for deleted vendor chat");
+          const newChatId = await createOrFindChat(null, null, vendorIdFromState, vendorOwnerFromState);
           
           if (newChatId) {
             // Update the selected chat and navigate to it
@@ -667,7 +751,7 @@ const formattedMessages = messagesData.map(msg => ({
       setChatErrorMessage("Erro ao carregar detalhes do chat");
       toast.error("Erro ao carregar detalhes do chat");
     }
-  }, [chats, userId, checkChatExists, createOrFindChat, navigate, spaceIdFromState, spaceOwnerFromState]);
+  }, [chats, userId, checkChatExists, createOrFindChat, navigate, spaceIdFromState, spaceOwnerFromState, vendorIdFromState, vendorOwnerFromState]);
 
   // Function to send a message
   const handleSendMessage = async (e?: React.FormEvent) => {
@@ -680,27 +764,43 @@ const formattedMessages = messagesData.map(msg => ({
       
       // Check if this is a new chat that needs to be created
       if (selectedChat === 'new-chat-placeholder') {
-        if (!spaceIdFromState || !spaceOwnerFromState) {
-          toast.error("Erro: informações do espaço não encontradas");
+        if (spaceIdFromState && spaceOwnerFromState) {
+          // Create the chat for space
+          const newChatId = await createOrFindChat(spaceIdFromState, spaceOwnerFromState);
+          
+          if (!newChatId) {
+            toast.error("Erro ao criar conversa");
+            setSendingMessage(false);
+            return;
+          }
+          
+          // Update the selected chat
+          setSelectedChat(newChatId);
+          currentChatId = newChatId;
+          
+          // Update URL to reflect the new chat
+          navigate(`/messages?chat=${newChatId}`, { replace: true });
+        } else if (vendorIdFromState && vendorOwnerFromState) {
+          // Create the chat for vendor
+          const newChatId = await createOrFindChat(null, null, vendorIdFromState, vendorOwnerFromState);
+          
+          if (!newChatId) {
+            toast.error("Erro ao criar conversa");
+            setSendingMessage(false);
+            return;
+          }
+          
+          // Update the selected chat
+          setSelectedChat(newChatId);
+          currentChatId = newChatId;
+          
+          // Update URL to reflect the new chat
+          navigate(`/messages?chat=${newChatId}`, { replace: true });
+        } else {
+          toast.error("Erro: informações não encontradas");
           setSendingMessage(false);
           return;
         }
-        
-        // Create the chat with the first message
-        const newChatId = await createOrFindChat(spaceIdFromState, spaceOwnerFromState);
-        
-        if (!newChatId) {
-          toast.error("Erro ao criar conversa");
-          setSendingMessage(false);
-          return;
-        }
-        
-        // Update the selected chat
-        setSelectedChat(newChatId);
-        currentChatId = newChatId;
-        
-        // Update URL to reflect the new chat
-        navigate(`/messages?chat=${newChatId}`, { replace: true });
       }
       
       if (!currentChatId) {
@@ -827,8 +927,8 @@ if (chatError) throw chatError;
     
     // Check if we have space info to create a new chat (when coming from space details)
     if (locationState?.spaceId && locationState?.spaceOwnerId && !chatIdFromParams && !chatIdFromState) {
-      console.log("Setting up for new chat creation:", locationState);
-      setSelectedChat('new-chat-placeholder'); // Use placeholder to show new chat interface
+      console.log("Setting up for new space chat creation:", locationState);
+      setSelectedChat('new-chat-placeholder');
       setChatInfo({
         id: 'new-chat-placeholder',
         name: locationState.spaceName || "Conversa",
@@ -836,6 +936,20 @@ if (chatError) throw chatError;
         time: "",
         avatar: locationState.spaceImage || "",
         space_id: locationState.spaceId
+      });
+      return;
+    }
+    
+    // Check if we have vendor info to create a new chat (when coming from vendor details)
+    if (locationState?.vendorId && locationState?.vendorOwnerId && !chatIdFromParams && !chatIdFromState) {
+      console.log("Setting up for new vendor chat creation:", locationState);
+      setSelectedChat('new-chat-placeholder');
+      setChatInfo({
+        id: 'new-chat-placeholder',
+        name: locationState.vendorName || "Conversa",
+        lastMessage: "Digite sua primeira mensagem...",
+        time: "",
+        avatar: locationState.vendorImage || ""
       });
       return;
     }
@@ -994,16 +1108,19 @@ if (chatError) throw chatError;
     fetchChats(false);
   }, [fetchChats]);
   
-  // Filter chats by search query and exclude deleted chats
-  // Enhanced search that includes both space names and user names
+  // Filter chats by search query, exclude deleted chats, and filter by type
   const filteredChats = chats.filter(chat => {
     if (chat.deleted) return false;
+    
+    // Filter by type (spaces vs vendors)
+    const isSpaceChat = !!chat.space_id;
+    if (chatFilter === 'spaces' && !isSpaceChat) return false;
+    if (chatFilter === 'vendors' && isSpaceChat) return false;
     
     const searchLower = searchQuery.toLowerCase();
     const chatNameMatch = chat.name.toLowerCase().includes(searchLower);
     
     // Find the other user ID for this chat by looking up the original chat data
-    // We need to map each chat to its corresponding user name
     const chatIndex = chats.findIndex(c => c.id === chat.id);
     const userNames = Object.values(chatUserNames);
     const otherUserName = userNames[chatIndex] || '';
@@ -1023,6 +1140,26 @@ if (chatError) throw chatError;
         // Chat list view
         <>
           <div className="relative mb-6 mt-6">
+            <div className="flex items-center gap-4 mb-4">
+              <div className="flex bg-gray-100 rounded-lg p-1">
+                <Button 
+                  variant={chatFilter === 'spaces' ? 'default' : 'ghost'}
+                  size="sm"
+                  onClick={() => setChatFilter('spaces')}
+                  className={chatFilter === 'spaces' ? 'bg-white shadow-sm' : ''}
+                >
+                  Espaços
+                </Button>
+                <Button 
+                  variant={chatFilter === 'vendors' ? 'default' : 'ghost'}
+                  size="sm"
+                  onClick={() => setChatFilter('vendors')}
+                  className={chatFilter === 'vendors' ? 'bg-white shadow-sm' : ''}
+                >
+                  Fornecedores
+                </Button>
+              </div>
+            </div>
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" size={18} />
             <Input 
               placeholder="Buscar mensagens..." 
@@ -1061,7 +1198,7 @@ if (chatError) throw chatError;
                 );
               }).filter(Boolean)
             ) : (
-              <EmptyState searchQuery={searchQuery} />
+              <EmptyState searchQuery={searchQuery} chatFilter={chatFilter} />
             )}
           </div>
         </>

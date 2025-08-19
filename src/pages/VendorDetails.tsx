@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { Phone, Calendar, Clock, ChevronLeft, MoreVertical, Share, Flag, Heart, Instagram } from "lucide-react";
+import { Phone, Calendar, Clock, ChevronLeft, MoreVertical, Share, Flag, Heart, Instagram, MessageSquare, Loader2 } from "lucide-react";
 import OptimizedImage from "@/components/OptimizedImage";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -48,6 +48,7 @@ interface Vendor {
   available_days?: string[] | null;
   instagram?: string | null;
   rating?: number; // We'll keep this in the interface for now
+  user_id?: string;
 }
 
 const dayTranslations: Record<string, string> = {
@@ -79,7 +80,17 @@ const VendorDetails = () => {
   const [imageViewerOpen, setImageViewerOpen] = useState(false);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
 
+  // Chat related state
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [processingChat, setProcessingChat] = useState(false);
+  const [vendorOwner, setVendorOwner] = useState<{ id: string; name: string } | null>(null);
+
   useEffect(() => {
+    (async () => {
+      const { data } = await supabase.auth.getUser();
+      if (data.user) setCurrentUserId(data.user.id);
+    })();
+    
     const fetchVendorDetails = async () => {
       if (!id) return;
 
@@ -120,9 +131,30 @@ const VendorDetails = () => {
           available_days: data.available_days,
           instagram: data.instagram,
           rating: 4.8, // Default rating until we implement a rating system
+          user_id: data.user_id,
         };
         
         setVendor(vendorData);
+
+        // Fetch vendor owner profile
+        if (data.user_id) {
+          const { data: profileData } = await supabase
+            .from("profiles")
+            .select("id, first_name, last_name")
+            .eq("id", data.user_id)
+            .single();
+          
+          if (profileData) {
+            setVendorOwner({
+              id: profileData.id,
+              name: profileData.first_name && profileData.last_name
+                ? `${profileData.first_name} ${profileData.last_name}`
+                : "Proprietário"
+            });
+          } else {
+            setVendorOwner({ id: data.user_id, name: "Proprietário" });
+          }
+        }
       } catch (error) {
         console.error("Failed to fetch vendor details:", error);
         toast.error("Erro ao carregar detalhes do fornecedor");
@@ -238,6 +270,24 @@ const VendorDetails = () => {
   const handleImageClick = (index: number) => {
     setSelectedImageIndex(index);
     setImageViewerOpen(true);
+  };
+
+  const startChat = () => {
+    if (!vendor || !vendorOwner) return;
+    if (currentUserId === vendorOwner.id) {
+      toast.error("Não pode conversar consigo mesmo");
+      return;
+    }
+    
+    // Navigate to messages page with vendor info to create chat on first message
+    navigate("/messages", { 
+      state: { 
+        vendorId: vendor.id,
+        vendorOwnerId: vendorOwner.id,
+        vendorName: vendor.name,
+        vendorImage: vendor.images?.[0] || null
+      } 
+    });
   };
 
   if (loading) {
@@ -411,13 +461,30 @@ const VendorDetails = () => {
             </div>
           </div>
           
-          <Button 
-            className="w-full mb-4 bg-green-600 text-white hover:bg-green-700" 
-            onClick={handleWhatsApp}
-          >
-            <Phone className="mr-2" size={18} />
-            Contato
-          </Button>
+          {/* contact buttons */}
+          <div className="grid grid-cols-2 gap-4 mb-6">
+            <Button 
+              className="bg-green-600 hover:bg-green-700" 
+              size="lg"
+              onClick={handleWhatsApp}
+            >
+              <Phone className="mr-2" size={18} />
+              Contato
+            </Button>
+            <Button
+              className="bg-iparty hover:bg-iparty-dark"
+              size="lg"
+              onClick={startChat}
+              disabled={currentUserId === vendorOwner?.id || processingChat}
+            >
+              {processingChat ? (
+                <Loader2 className="mr-2 animate-spin" size={18} />
+              ) : (
+                <MessageSquare className="mr-2" size={18} />
+              )}
+              Mensagem
+            </Button>
+          </div>
 
           {/* Admin Delete Button */}
           {(isAdmin || isSuperAdmin) && (
