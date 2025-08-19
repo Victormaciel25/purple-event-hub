@@ -36,8 +36,7 @@ import DeleteAccount from "./pages/DeleteAccount";
 import Index from "./pages/Index";
 import VendorPendingApproval from "./components/VendorPendingApproval";
 import SplashScreen from "./components/SplashScreen";
-import { useSpaceDeletionNotifications } from "./hooks/useSpaceDeletionNotifications";
-import { useVendorDeletionNotifications } from "./hooks/useVendorDeletionNotifications";
+import { NotificationProvider } from "./components/NotificationProvider";
 import { Geolocation } from "@capacitor/geolocation"; 
 
 import "./index.css";
@@ -50,8 +49,6 @@ const App: React.FC = () => {
   const [showSplash, setShowSplash] = useState(true);
   const [isPasswordRecovery, setIsPasswordRecovery] = useState(false);
 
-  useSpaceDeletionNotifications();
-  useVendorDeletionNotifications();
 
   useEffect(() => {
     // Splash screen timer
@@ -112,7 +109,8 @@ const App: React.FC = () => {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
+      <NotificationProvider>
+        <TooltipProvider>
         <Toaster />
         <Sonner position="top-right" closeButton={false} className="opacity-0 invisible" />
         <BrowserRouter>
@@ -174,6 +172,7 @@ const App: React.FC = () => {
           </Routes>
         </BrowserRouter>
       </TooltipProvider>
+      </NotificationProvider>
     </QueryClientProvider>
   );
 };
