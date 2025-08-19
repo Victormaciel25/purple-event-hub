@@ -1172,33 +1172,7 @@ if (chatError) throw chatError;
       ) : !selectedChat ? (
         // Chat list view
         <>
-          <div className="relative mb-6 mt-6">
-            <div className="flex items-center gap-4 mb-4">
-              <div className="flex bg-muted/30 rounded-lg p-1 border">
-                <Button 
-                  variant={chatFilter === 'spaces' ? 'default' : 'ghost'}
-                  size="sm"
-                  onClick={() => setChatFilter('spaces')}
-                  className={chatFilter === 'spaces' ? 
-                    'bg-primary text-primary-foreground shadow-sm hover:bg-primary/90' : 
-                    'text-muted-foreground hover:text-foreground hover:bg-muted/50'
-                  }
-                >
-                  Espaços
-                </Button>
-                <Button 
-                  variant={chatFilter === 'vendors' ? 'default' : 'ghost'}
-                  size="sm"
-                  onClick={() => setChatFilter('vendors')}
-                  className={chatFilter === 'vendors' ? 
-                    'bg-primary text-primary-foreground shadow-sm hover:bg-primary/90' : 
-                    'text-muted-foreground hover:text-foreground hover:bg-muted/50'
-                  }
-                >
-                  Fornecedores
-                </Button>
-              </div>
-            </div>
+          <div className="relative mb-4 mt-6">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" size={18} />
             <Input 
               placeholder="Buscar mensagens..." 
@@ -1206,6 +1180,32 @@ if (chatError) throw chatError;
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
+          </div>
+          <div className="flex items-center gap-4 mb-4">
+            <div className="flex bg-muted/30 rounded-lg p-1 border">
+              <Button 
+                variant={chatFilter === 'spaces' ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => setChatFilter('spaces')}
+                className={chatFilter === 'spaces' ? 
+                  'bg-primary text-primary-foreground shadow-sm hover:bg-primary/90' : 
+                  'text-muted-foreground hover:text-foreground hover:bg-muted/50'
+                }
+              >
+                Espaços
+              </Button>
+              <Button 
+                variant={chatFilter === 'vendors' ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => setChatFilter('vendors')}
+                className={chatFilter === 'vendors' ? 
+                  'bg-primary text-primary-foreground shadow-sm hover:bg-primary/90' : 
+                  'text-muted-foreground hover:text-foreground hover:bg-muted/50'
+                }
+              >
+                Fornecedores
+              </Button>
+            </div>
           </div>
 
           <div className="bg-white rounded-xl shadow-sm overflow-hidden">
