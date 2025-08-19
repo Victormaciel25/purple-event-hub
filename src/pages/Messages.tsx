@@ -1174,12 +1174,15 @@ if (chatError) throw chatError;
         <>
           <div className="relative mb-6 mt-6">
             <div className="flex items-center gap-4 mb-4">
-              <div className="flex bg-gray-100 rounded-lg p-1">
+              <div className="flex bg-muted/30 rounded-lg p-1 border">
                 <Button 
                   variant={chatFilter === 'spaces' ? 'default' : 'ghost'}
                   size="sm"
                   onClick={() => setChatFilter('spaces')}
-                  className={chatFilter === 'spaces' ? 'bg-white shadow-sm' : ''}
+                  className={chatFilter === 'spaces' ? 
+                    'bg-primary text-primary-foreground shadow-sm hover:bg-primary/90' : 
+                    'text-muted-foreground hover:text-foreground hover:bg-muted/50'
+                  }
                 >
                   Espaços
                 </Button>
@@ -1187,7 +1190,10 @@ if (chatError) throw chatError;
                   variant={chatFilter === 'vendors' ? 'default' : 'ghost'}
                   size="sm"
                   onClick={() => setChatFilter('vendors')}
-                  className={chatFilter === 'vendors' ? 'bg-white shadow-sm' : ''}
+                  className={chatFilter === 'vendors' ? 
+                    'bg-primary text-primary-foreground shadow-sm hover:bg-primary/90' : 
+                    'text-muted-foreground hover:text-foreground hover:bg-muted/50'
+                  }
                 >
                   Fornecedores
                 </Button>
