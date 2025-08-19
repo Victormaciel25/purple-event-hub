@@ -73,6 +73,7 @@ export type Database = {
           content: string
           created_at: string | null
           id: string
+          is_ai_response: boolean | null
           sender_id: string
         }
         Insert: {
@@ -80,6 +81,7 @@ export type Database = {
           content: string
           created_at?: string | null
           id?: string
+          is_ai_response?: boolean | null
           sender_id: string
         }
         Update: {
@@ -87,6 +89,7 @@ export type Database = {
           content?: string
           created_at?: string | null
           id?: string
+          is_ai_response?: boolean | null
           sender_id?: string
         }
         Relationships: [
@@ -291,6 +294,7 @@ export type Database = {
       spaces: {
         Row: {
           address: string
+          ai_enabled: boolean | null
           air_conditioning: boolean | null
           capacity: string
           categories: string[] | null
@@ -317,6 +321,7 @@ export type Database = {
         }
         Insert: {
           address: string
+          ai_enabled?: boolean | null
           air_conditioning?: boolean | null
           capacity: string
           categories?: string[] | null
@@ -343,6 +348,7 @@ export type Database = {
         }
         Update: {
           address?: string
+          ai_enabled?: boolean | null
           air_conditioning?: boolean | null
           capacity?: string
           categories?: string[] | null
@@ -478,6 +484,7 @@ export type Database = {
       vendors: {
         Row: {
           address: string
+          ai_enabled: boolean | null
           available_days: string[] | null
           category: string
           contact_number: string
@@ -496,6 +503,7 @@ export type Database = {
         }
         Insert: {
           address: string
+          ai_enabled?: boolean | null
           available_days?: string[] | null
           category: string
           contact_number: string
@@ -514,6 +522,7 @@ export type Database = {
         }
         Update: {
           address?: string
+          ai_enabled?: boolean | null
           available_days?: string[] | null
           category?: string
           contact_number?: string

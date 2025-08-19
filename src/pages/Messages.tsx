@@ -41,6 +41,7 @@ interface MessageProps {
   sender_id: string;
   timestamp: string;
   is_mine: boolean;
+  is_ai_response?: boolean;
 }
 
 interface UserProfile {
@@ -642,13 +643,14 @@ const Messages = () => {
       }
       
       if (messagesData) {
-        const formattedMessages = messagesData.map(msg => ({
-          id: msg.id,
-          content: msg.content,
-          sender_id: msg.sender_id,
-          timestamp: msg.created_at,
-          is_mine: msg.sender_id === userId
-        }));
+const formattedMessages = messagesData.map(msg => ({
+  id: msg.id,
+  content: msg.content,
+  sender_id: msg.sender_id,
+  timestamp: msg.created_at,
+  is_mine: msg.sender_id === userId,
+  is_ai_response: msg.is_ai_response === true,
+}));
         
         setMessages(formattedMessages);
         console.log("Loaded messages:", formattedMessages.length);
@@ -723,13 +725,15 @@ const Messages = () => {
       const filteredMessage = filterOffensiveContent(newMessage);
       
       // Insert new message with filtered content
-      const { error: messageError } = await supabase
-        .from("messages")
-        .insert({
-          chat_id: currentChatId,
-          sender_id: userId,
-          content: filteredMessage
-        });
+const { data: insertedMessage, error: messageError } = await supabase
+  .from("messages")
+  .insert({
+    chat_id: currentChatId,
+    sender_id: userId,
+    content: filteredMessage
+  })
+  .select("*")
+  .single();
         
       if (messageError) throw messageError;
       
@@ -744,7 +748,18 @@ const Messages = () => {
         })
         .eq("id", currentChatId);
         
-      if (chatError) throw chatError;
+if (chatError) throw chatError;
+      
+      // Trigger AI auto-reply (non-blocking)
+      try {
+        if (insertedMessage?.id) {
+          await supabase.functions.invoke('ai-chat-response', {
+            body: { chat_id: currentChatId, message_id: insertedMessage.id }
+          });
+        }
+      } catch (err) {
+        console.warn("AI reply invocation failed:", err);
+      }
       
       // Clear message input
       setNewMessage("");
@@ -937,13 +952,14 @@ const Messages = () => {
             // Add new message
             setMessages(currentMsgs => [
               ...currentMsgs, 
-              {
-                id: newMsg.id,
-                content: newMsg.content,
-                sender_id: newMsg.sender_id,
-                timestamp: newMsg.created_at,
-                is_mine: newMsg.sender_id === userId
-              }
+{
+  id: newMsg.id,
+  content: newMsg.content,
+  sender_id: newMsg.sender_id,
+  timestamp: newMsg.created_at,
+  is_mine: newMsg.sender_id === userId,
+  is_ai_response: newMsg.is_ai_response === true,
+}
             ]);
             
             // Scroll to bottom
@@ -1109,14 +1125,16 @@ const Messages = () => {
                       >
                         {filterOffensiveContent(message.content)}
                       </div>
-                      <div 
-                        className={cn(
-                          "text-xs mt-1 text-muted-foreground",
-                          message.is_mine ? "text-right" : ""
-                        )}
-                      >
-                        {formatTime(message.timestamp)}
-                      </div>
+<div 
+  className={cn(
+    "text-xs mt-1 text-muted-foreground",
+    message.is_mine ? "text-right" : ""
+  )}
+>
+  {formatTime(message.timestamp)}{message.is_ai_response && !message.is_mine ? (
+    <span className="ml-2 text-[10px] uppercase tracking-wide text-muted-foreground">IA</span>
+  ) : null}
+</div>
                     </div>
                   </div>
                 ))}
