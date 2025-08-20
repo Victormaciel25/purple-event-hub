@@ -883,16 +883,20 @@ const { data: insertedMessage, error: messageError } = await supabase
 if (chatError) throw chatError;
       
       // Trigger AI auto-reply (non-blocking)
+      console.log("🔵 Starting AI trigger process for inserted message:", insertedMessage?.id);
       try {
         if (insertedMessage?.id) {
+          console.log("🔵 Message ID exists, getting session...");
           const { data: { session }, error: sessionError } = await supabase.auth.getSession();
           if (sessionError) {
-            console.error("Session error:", sessionError);
+            console.error("🔴 Session error:", sessionError);
             return;
           }
           
+          console.log("🔵 Session status:", { hasSession: !!session, hasToken: !!session?.access_token });
+          
           if (session?.access_token) {
-            console.log("Triggering AI response for message:", insertedMessage.id);
+            console.log("🔵 Triggering AI response for message:", insertedMessage.id, "chat:", currentChatId);
             const aiResponse = await supabase.functions.invoke('ai-chat-response', {
               body: {
                 chat_id: currentChatId,
@@ -905,17 +909,21 @@ if (chatError) throw chatError;
               }
             });
             
+            console.log("🔵 AI response result:", aiResponse);
+            
             if (aiResponse.error) {
-              console.error("AI response error:", aiResponse.error);
+              console.error("🔴 AI response error:", aiResponse.error);
             } else {
-              console.log("AI response success:", aiResponse.data);
+              console.log("🟢 AI response success:", aiResponse.data);
             }
           } else {
-            console.warn("No access token available for AI request");
+            console.warn("🟡 No access token available for AI request");
           }
+        } else {
+          console.warn("🟡 No inserted message ID available");
         }
       } catch (err) {
-        console.error("AI reply invocation failed:", err);
+        console.error("🔴 AI reply invocation failed:", err);
       }
       
       // Clear message input
