@@ -15,18 +15,27 @@ serve(async (req) => {
   console.log("=== AI CHAT RESPONSE START ===");
   
   try {
-    // Parse request body
-    const body = await req.json().catch((e) => {
-      console.error("Failed to parse JSON body:", e);
-      return {};
-    });
-    
-    console.log("Request body:", body);
-    
-    const { chat_id, message_id } = body as { chat_id?: string; message_id?: string };
+    // Try to parse JSON body but also support query params and headers as fallback
+    let body: any = {};
+    try {
+      body = await req.json();
+    } catch (e) {
+      console.warn("JSON body missing or invalid, will try fallbacks:", e);
+    }
+
+    const url = new URL(req.url);
+    const qpChat = url.searchParams.get("chat_id") || undefined;
+    const qpMsg = url.searchParams.get("message_id") || undefined;
+    const hdrChat = req.headers.get("x-chat-id") || undefined;
+    const hdrMsg = req.headers.get("x-message-id") || undefined;
+
+    const chat_id = (body?.chat_id as string) || qpChat || hdrChat;
+    const message_id = (body?.message_id as string) || qpMsg || hdrMsg;
+
+    console.log("Resolved params:", { chat_id, message_id, hasBody: !!body?.chat_id || !!body?.message_id, qp: { qpChat, qpMsg }, hdr: { hdrChat, hdrMsg } });
 
     if (!chat_id || !message_id) {
-      console.error("Missing required parameters:", { chat_id, message_id });
+      console.error("Missing required parameters after fallbacks");
       return new Response(JSON.stringify({ error: "chat_id and message_id are required" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },

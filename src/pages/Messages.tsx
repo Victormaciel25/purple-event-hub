@@ -894,13 +894,14 @@ if (chatError) throw chatError;
           if (session?.access_token) {
             console.log("Triggering AI response for message:", insertedMessage.id);
             const aiResponse = await supabase.functions.invoke('ai-chat-response', {
-              body: { 
-                chat_id: currentChatId, 
-                message_id: insertedMessage.id 
+              body: {
+                chat_id: currentChatId,
+                message_id: insertedMessage.id,
               },
               headers: {
-                'Authorization': `Bearer ${session.access_token}`,
-                'Content-Type': 'application/json'
+                // Fallback IDs in headers in case body is stripped by any intermediary
+                'x-chat-id': String(currentChatId || ''),
+                'x-message-id': String(insertedMessage.id || ''),
               }
             });
             
