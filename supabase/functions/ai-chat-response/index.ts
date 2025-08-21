@@ -75,10 +75,33 @@ serve(async (req) => {
       });
     }
 
-    // Parse JWT to get user ID (simplified approach)
+    // Parse JWT to get user ID with proper base64url decoding
     const token = authHeader.replace("Bearer ", "");
-    const payload = JSON.parse(atob(token.split('.')[1]));
-    const userId = payload.sub;
+    
+    // Helper function for base64url decoding
+    function base64urlDecode(str: string): string {
+      // Convert base64url to base64 by replacing URL-safe characters and adding padding
+      let base64 = str.replace(/-/g, '+').replace(/_/g, '/');
+      // Add padding if necessary
+      while (base64.length % 4) {
+        base64 += '=';
+      }
+      return atob(base64);
+    }
+    
+    let userId: string;
+    try {
+      const payloadStr = base64urlDecode(token.split('.')[1]);
+      const payload = JSON.parse(payloadStr);
+      userId = payload.sub;
+      console.log("✅ JWT decoded successfully, user ID:", userId);
+    } catch (jwtError) {
+      console.error("🔴 JWT decode error:", jwtError);
+      return new Response(JSON.stringify({ error: "Invalid JWT token" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
     
     console.log("User ID from token:", userId);
 
@@ -121,7 +144,7 @@ serve(async (req) => {
     console.log("Loading message:", message_id);
     const { data: msg, error: msgErr } = await supabase
       .from("messages")
-      .select("id, sender_id, content, created_at")
+      .select("id, sender_id, content, created_at, chat_id")
       .eq("id", message_id)
       .maybeSingle();
       
@@ -135,13 +158,26 @@ serve(async (req) => {
       });
     }
 
+    // Verify message belongs to the specified chat (additional security check)
+    if (msg.chat_id !== chat_id) {
+      console.error("🔴 Message/chat ID mismatch:", { msgChatId: msg.chat_id, expectedChatId: chat_id });
+      return new Response(JSON.stringify({ error: "Message does not belong to specified chat" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     // Only respond to messages sent by the non-owner (inquirer)
     const isFromOwner = msg.sender_id === chat.owner_id;
-    console.log("Message sender check:", { senderID: msg.sender_id, ownerID: chat.owner_id, isFromOwner });
+    console.log("📋 Message sender check:", { senderID: msg.sender_id, ownerID: chat.owner_id, isFromOwner });
     
     if (isFromOwner) {
-      console.log("Skipping - message from owner");
-      return new Response(JSON.stringify({ skipped: true, reason: "Owner message" }), {
+      console.log("⏭️ SKIPPED - Message from owner (AI only responds to inquirers)");
+      return new Response(JSON.stringify({ 
+        skipped: true, 
+        reason: "Owner message - AI only responds to customer inquiries",
+        details: { sender_id: msg.sender_id, owner_id: chat.owner_id }
+      }), {
         status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -159,8 +195,12 @@ serve(async (req) => {
     console.log("Existing AI responses:", existingAi);
     
     if (existingAi && existingAi.length > 0) {
-      console.log("Skipping - already replied");
-      return new Response(JSON.stringify({ skipped: true, reason: "Already replied" }), {
+      console.log("⏭️ SKIPPED - AI already replied to this message");
+      return new Response(JSON.stringify({ 
+        skipped: true, 
+        reason: "Already replied", 
+        existing_responses: existingAi.length 
+      }), {
         status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -223,8 +263,12 @@ serve(async (req) => {
     console.log("AI enabled check:", aiEnabled);
     
     if (!aiEnabled) {
-      console.log("Skipping - AI disabled");
-      return new Response(JSON.stringify({ skipped: true, reason: "AI disabled" }), {
+      console.log("⏭️ SKIPPED - AI disabled for this space/vendor");
+      return new Response(JSON.stringify({ 
+        skipped: true, 
+        reason: "AI disabled for this space/vendor",
+        context: contextTitle
+      }), {
         status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -282,8 +326,12 @@ ${contextDetails || "(sem detalhes disponíveis)"}`;
     console.log("AI response received:", { hasResponse: !!aiText, length: aiText.length });
     
     if (!aiText) {
-      console.log("Skipping - empty AI response");
-      return new Response(JSON.stringify({ skipped: true, reason: "Empty AI response" }), {
+      console.log("⏭️ SKIPPED - Empty AI response from OpenAI");
+      return new Response(JSON.stringify({ 
+        skipped: true, 
+        reason: "Empty AI response",
+        openai_response: aiJson
+      }), {
         status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
