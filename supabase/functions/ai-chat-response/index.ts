@@ -43,20 +43,26 @@ serve(async (req) => {
       });
     }
 
-    // Get environment variables
-    const supabaseUrl = Deno.env.get("SUPABASE_URL");
+    // Get environment variables (with safe fallback for Supabase URL)
+    const supabaseUrl = Deno.env.get("SUPABASE_URL") || "https://kfqorqjwbkxzrqhuvnyh.supabase.co";
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
     const openAIApiKey = Deno.env.get("OPENAI_API_KEY");
 
-    console.log("Environment check:", {
+    const envReport = {
       hasSupabaseUrl: !!supabaseUrl,
       hasServiceRoleKey: !!serviceRoleKey,
-      hasOpenAIKey: !!openAIApiKey
-    });
+      hasOpenAIKey: !!openAIApiKey,
+      effectiveSupabaseUrl: supabaseUrl,
+    };
+    console.log("Environment check:", envReport);
 
-    if (!supabaseUrl || !serviceRoleKey || !openAIApiKey) {
-      console.error("Missing environment variables");
-      return new Response(JSON.stringify({ error: "Server configuration error" }), {
+    const missing: string[] = [];
+    if (!serviceRoleKey) missing.push("SUPABASE_SERVICE_ROLE_KEY");
+    if (!openAIApiKey) missing.push("OPENAI_API_KEY");
+
+    if (missing.length > 0) {
+      console.error("Missing environment variables", { missing, envReport });
+      return new Response(JSON.stringify({ error: "Server configuration error", missing }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
