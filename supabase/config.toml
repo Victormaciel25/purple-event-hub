@@ -1,4 +1,3 @@
-
 project_id = "kfqorqjwbkxzrqhuvnyh"
 
 [auth]
@@ -35,3 +34,6 @@ verify_jwt = false
 
 [functions.ai-chat-response]
 verify_jwt = true
+
+[functions.env-check]
+verify_jwt = false

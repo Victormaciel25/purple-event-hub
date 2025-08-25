@@ -46,7 +46,7 @@ serve(async (req) => {
     // Get environment variables (with safe fallback for Supabase URL)
     const supabaseUrl = Deno.env.get("SUPABASE_URL") || "https://kfqorqjwbkxzrqhuvnyh.supabase.co";
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-    const openAIApiKey = Deno.env.get("OPENAI_API_KEY");
+    const openAIApiKey = Deno.env.get("OPENAI_API_KEY") || Deno.env.get("OPENAI_KEY");
 
     const envReport = {
       hasSupabaseUrl: !!supabaseUrl,
@@ -56,13 +56,18 @@ serve(async (req) => {
     };
     console.log("Environment check:", envReport);
 
-    const missing: string[] = [];
-    if (!serviceRoleKey) missing.push("SUPABASE_SERVICE_ROLE_KEY");
-    if (!openAIApiKey) missing.push("OPENAI_API_KEY");
+    // If OpenAI key is missing, do not error – gracefully skip AI generation
+    if (!openAIApiKey) {
+      console.warn("⏭️ Skipping AI: OPENAI_API_KEY not set");
+      return new Response(JSON.stringify({ skipped: true, reason: "Missing OPENAI_API_KEY", env: envReport }), {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
-    if (missing.length > 0) {
-      console.error("Missing environment variables", { missing, envReport });
-      return new Response(JSON.stringify({ error: "Server configuration error", missing }), {
+    if (!serviceRoleKey) {
+      console.error("Missing environment variables", { missing: ["SUPABASE_SERVICE_ROLE_KEY"], envReport });
+      return new Response(JSON.stringify({ error: "Server configuration error", missing: ["SUPABASE_SERVICE_ROLE_KEY"] }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
