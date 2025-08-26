@@ -288,6 +288,11 @@ const Profile = () => {
       onClick: () => navigate("/user-vendors") 
     },
     { 
+      icon: CheckSquare, 
+      label: "Minha Agenda",
+      onClick: () => navigate("/my-resources")
+    },
+    { 
       icon: Shield, 
       label: "Promover",
       onClick: () => navigate("/promote")

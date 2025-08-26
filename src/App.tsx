@@ -33,6 +33,7 @@ import PromoteSpace from "./pages/PromoteSpace";
 import PromoteVendor from "./pages/PromoteVendor";
 import SubscriptionsManagement from "./pages/SubscriptionsManagement";
 import DeleteAccount from "./pages/DeleteAccount";
+import MyResources from "./pages/MyResources";
 import Index from "./pages/Index";
 import VendorPendingApproval from "./components/VendorPendingApproval";
 import SplashScreen from "./components/SplashScreen";
@@ -166,6 +167,7 @@ const App: React.FC = () => {
               <Route path="/promote" element={<Promote />} />
               <Route path="/promote-space" element={<PromoteSpace />} />
               <Route path="/promote-vendor" element={<PromoteVendor />} />
+              <Route path="/my-resources" element={<MyResources />} />
             </Route>
 
             <Route path="*" element={<NotFound />} />

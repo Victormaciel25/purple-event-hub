@@ -44,6 +44,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useUserRoles } from "@/hooks/useUserRoles";
 import OptimizedImage from "@/components/OptimizedImage";
 import ImageViewer from "@/components/ImageViewer";
+import { EventSpaceTabs } from "@/components/EventSpaceTabs";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -388,145 +389,18 @@ const EventSpaceDetails: React.FC = () => {
             )}
           </div>
 
-          {/* title */}
-          <h1 className="text-2xl font-bold mb-2 truncate">{space.name}</h1>
-          {space.instagram && (
-            <a 
-              href={space.instagram.startsWith('http') ? space.instagram : `https://instagram.com/${space.instagram.replace('@', '')}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-iparty hover:text-iparty-dark mb-2 block flex items-center"
-            >
-              <Instagram className="mr-1 text-iparty" size={16} />
-              {space.instagram.startsWith('@') ? space.instagram : `@${space.instagram}`}
-            </a>
-          )}
-
-          {/* price / details */}
-          <div className="mb-6">
-            <div className="flex justify-between items-end mb-2">
-              <div>
-                <p className="text-sm text-muted-foreground mb-1">A partir de</p>
-                <h2 className="text-xl font-bold">{formatPrice(space.price)}</h2>
-              </div>
-              <Badge variant="secondary">
-                <Users className="mr-1" size={14} />
-                Até {space.capacity} pessoas
-              </Badge>
-            </div>
-            <p className="text-muted-foreground">
-              {space.address}, {space.number} – {space.state}
-            </p>
-            <p className="text-muted-foreground">CEP: {space.zip_code}</p>
-          </div>
-
-          {/* about */}
-          <div className="mb-6">
-            <h3 className="text-lg font-semibold mb-2">Sobre o espaço</h3>
-            <p className="text-muted-foreground">{space.description}</p>
-          </div>
-
-          {/* location map section */}
-          {space.latitude && space.longitude ? (
-            <div className="mb-6">
-              <h3 className="text-lg font-semibold mb-2 flex items-center">
-                <MapPin className="mr-2" size={20} />
-                Localização
-              </h3>
-              <div className="h-[200px] bg-gray-100 rounded-lg overflow-hidden border">
-                <iframe
-                  width="100%"
-                  height="100%"
-                  frameBorder="0"
-                  src={`https://www.google.com/maps/embed/v1/place?key=AIzaSyDmquKmV6OtKkJCG2eEe4NIPE8MzcrkUyw&q=${space.latitude},${space.longitude}&zoom=15`}
-                  allowFullScreen
-                  title={`Localização de ${space.name}`}
-                ></iframe>
-              </div>
-              <p className="text-xs text-gray-500 mt-2">
-                📍 {space.address}, {space.number} - {space.state}
-              </p>
-            </div>
-          ) : (
-            <div className="mb-6">
-              <h3 className="text-lg font-semibold mb-2 flex items-center">
-                <MapPin className="mr-2" size={20} />
-                Localização
-              </h3>
-              <div className="h-[120px] bg-gray-50 rounded-lg border border-dashed border-gray-300 flex flex-col items-center justify-center">
-                <MapPin size={32} className="text-gray-300 mb-2" />
-                <p className="text-gray-500 text-sm">Localização não definida no mapa</p>
-                <p className="text-xs text-gray-400 mt-1">
-                  📍 {space.address}, {space.number} - {space.state}
-                </p>
-              </div>
-            </div>
-          )}
-
-          {/* amenities */}
-          <div className="mb-8">
-            <h3 className="text-lg font-semibold mb-2">Comodidades</h3>
-            <div className="grid grid-cols-2 gap-4">
-              <div className={`flex items-center ${space.parking ? "" : "text-muted-foreground/50"}`}>
-                <ParkingMeter className="mr-2" size={18} />
-                <span>{space.parking ? "Estacionamento" : "Sem estacionamento"}</span>
-              </div>
-              <div className={`flex items-center ${space.wifi ? "" : "text-muted-foreground/50"}`}>
-                <Wifi className="mr-2" size={18} />
-                <span>{space.wifi ? "Wi-Fi" : "Sem Wi-Fi"}</span>
-              </div>
-              <div className={`flex items-center ${space.sound_system ? "" : "text-muted-foreground/50"}`}>
-                <Speaker className="mr-2" size={18} />
-                <span>{space.sound_system ? "Sistema de som" : "Sem sistema de som"}</span>
-              </div>
-              <div className={`flex items-center ${space.air_conditioning ? "" : "text-muted-foreground/50"}`}>
-                <AirVent className="mr-2" size={18} />
-                <span>{space.air_conditioning ? "Ar condicionado" : "Sem ar condicionado"}</span>
-              </div>
-              <div className={`flex items-center ${space.kitchen ? "" : "text-muted-foreground/50"}`}>
-                <Utensils className="mr-2" size={18} />
-                <span>{space.kitchen ? "Cozinha" : "Sem cozinha"}</span>
-              </div>
-              <div className={`flex items-center ${space.pool ? "" : "text-muted-foreground/50"}`}>
-                <Waves className="mr-2" size={18} />
-                <span>{space.pool ? "Piscina" : "Sem piscina"}</span>
-              </div>
-            </div>
-          </div>
-
-          {/* contact buttons */}
-          <div className="grid grid-cols-2 gap-4 mb-6">
-            <Button className="bg-green-600 hover:bg-green-700" size="lg" onClick={handleWhatsApp}>
-              <Phone className="mr-2" size={18} />
-              Contato
-            </Button>
-            <Button
-              className="bg-iparty hover:bg-iparty-dark"
-              size="lg"
-              onClick={startChat}
-              disabled={currentUserId === spaceOwner?.id || processingChat}
-            >
-              {processingChat ? (
-                <Loader2 className="mr-2 animate-spin" size={18} />
-              ) : (
-                <MessageSquare className="mr-2" size={18} />
-              )}
-              Mensagem
-            </Button>
-          </div>
-
-          {/* delete button for admin */}
-          {isAdmin && (
-            <Button
-              variant="destructive"
-              className="w-full mb-6"
-              size="lg"
-              onClick={() => setDeleteDialogOpen(true)}
-            >
-              <Trash2 className="mr-2" size={18} />
-              Excluir Espaço
-            </Button>
-          )}
+          {/* Tabs Content */}
+          <EventSpaceTabs
+            space={space}
+            currentUserId={currentUserId}
+            spaceOwner={spaceOwner}
+            isAdmin={isAdmin}
+            processingChat={processingChat}
+            onWhatsApp={handleWhatsApp}
+            onStartChat={startChat}
+            onDeleteSpace={() => setDeleteDialogOpen(true)}
+            formatPrice={formatPrice}
+          />
 
           {/* delete confirmation */}
           <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
