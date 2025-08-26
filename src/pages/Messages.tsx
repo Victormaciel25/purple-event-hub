@@ -903,6 +903,8 @@ if (chatError) throw chatError;
                 message_id: insertedMessage.id,
               },
               headers: {
+                // Ensure auth header is forwarded along with fallback IDs
+                'Authorization': `Bearer ${session.access_token}`,
                 // Fallback IDs in headers in case body is stripped by any intermediary
                 'x-chat-id': String(currentChatId || ''),
                 'x-message-id': String(insertedMessage.id || ''),
@@ -915,6 +917,20 @@ if (chatError) throw chatError;
               console.error("🔴 AI response error:", aiResponse.error);
             } else {
               console.log("🟢 AI response success:", aiResponse.data);
+              // Append AI message immediately if returned
+              if (aiResponse.data?.content && aiResponse.data?.message_id) {
+                setMessages(currentMsgs => [
+                  ...currentMsgs,
+                  {
+                    id: aiResponse.data.message_id,
+                    content: aiResponse.data.content,
+                    sender_id: chatInfo?.owner_id || '',
+                    timestamp: new Date().toISOString(),
+                    is_mine: false,
+                    is_ai_response: true,
+                  },
+                ]);
+              }
             }
           } else {
             console.warn("🟡 No access token available for AI request");
