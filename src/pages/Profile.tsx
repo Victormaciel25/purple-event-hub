@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { Heart, HelpCircle, Plus, Home, Shield, CheckSquare, Users, Briefcase, Clipboard, FileText, CreditCard, Bot } from "lucide-react";
-import AISettings from "./AISettings";
+import { Heart, HelpCircle, Plus, Home, Shield, CheckSquare, Users, Briefcase, Clipboard, FileText, CreditCard } from "lucide-react";
+
 import { supabase } from "@/integrations/supabase/client";
 import { useUserRoles } from "@/hooks/useUserRoles";
 import FavoriteTabs from "../components/FavoriteTabs";
@@ -15,7 +15,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 const Profile = () => {
   const [showFavorites, setShowFavorites] = useState(false);
   const [showRegistration, setShowRegistration] = useState(false);
-  const [showAISettings, setShowAISettings] = useState(false);
+  
   const [loading, setLoading] = useState(true);
   const [signingOut, setSigningOut] = useState(false);
   const [profile, setProfile] = useState<any>(null);
@@ -329,11 +329,6 @@ const Profile = () => {
 
   const userItems = [
     { 
-      icon: Bot, 
-      label: "Chat IA", 
-      onClick: () => setShowAISettings(true) 
-    },
-    { 
       icon: Heart, 
       label: "Favoritos", 
       onClick: () => setShowFavorites(true) 
@@ -398,9 +393,7 @@ const Profile = () => {
           </div>
           <FavoriteTabs />
         </>
-      ) : showAISettings ? (
-        <AISettings onBack={() => setShowAISettings(false)} />
-      ) : showRegistration ? (
+) : showRegistration ? (
         <RegistrationOptions onBack={() => setShowRegistration(false)} />
       ) : (
         <>

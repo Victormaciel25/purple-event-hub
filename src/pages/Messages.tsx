@@ -882,65 +882,6 @@ const { data: insertedMessage, error: messageError } = await supabase
         
 if (chatError) throw chatError;
       
-      // Trigger AI auto-reply (non-blocking)
-      console.log("🔵 Starting AI trigger process for inserted message:", insertedMessage?.id);
-      try {
-        if (insertedMessage?.id) {
-          console.log("🔵 Message ID exists, getting session...");
-          const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-          if (sessionError) {
-            console.error("🔴 Session error:", sessionError);
-            return;
-          }
-          
-          console.log("🔵 Session status:", { hasSession: !!session, hasToken: !!session?.access_token });
-          
-          if (session?.access_token) {
-            console.log("🔵 Triggering AI response for message:", insertedMessage.id, "chat:", currentChatId);
-            const aiResponse = await supabase.functions.invoke('ai-chat-response', {
-              body: {
-                chat_id: currentChatId,
-                message_id: insertedMessage.id,
-              },
-              headers: {
-                // Ensure auth header is forwarded along with fallback IDs
-                'Authorization': `Bearer ${session.access_token}`,
-                // Fallback IDs in headers in case body is stripped by any intermediary
-                'x-chat-id': String(currentChatId || ''),
-                'x-message-id': String(insertedMessage.id || ''),
-              }
-            });
-            
-            console.log("🔵 AI response result:", aiResponse);
-            
-            if (aiResponse.error) {
-              console.error("🔴 AI response error:", aiResponse.error);
-            } else {
-              console.log("🟢 AI response success:", aiResponse.data);
-              // Append AI message immediately if returned
-              if (aiResponse.data?.content && aiResponse.data?.message_id) {
-                setMessages(currentMsgs => [
-                  ...currentMsgs,
-                  {
-                    id: aiResponse.data.message_id,
-                    content: aiResponse.data.content,
-                    sender_id: chatInfo?.owner_id || '',
-                    timestamp: new Date().toISOString(),
-                    is_mine: false,
-                    is_ai_response: true,
-                  },
-                ]);
-              }
-            }
-          } else {
-            console.warn("🟡 No access token available for AI request");
-          }
-        } else {
-          console.warn("🟡 No inserted message ID available");
-        }
-      } catch (err) {
-        console.error("🔴 AI reply invocation failed:", err);
-      }
       
       // Clear message input
       setNewMessage("");
@@ -1357,9 +1298,7 @@ if (chatError) throw chatError;
     message.is_mine ? "text-right" : ""
   )}
 >
-  {formatTime(message.timestamp)}{message.is_ai_response && !message.is_mine ? (
-    <span className="ml-2 text-[10px] uppercase tracking-wide text-muted-foreground">IA</span>
-  ) : null}
+  {formatTime(message.timestamp)}
 </div>
                     </div>
                   </div>
