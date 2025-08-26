@@ -403,10 +403,13 @@ ${relevantContext || contextDetails || "(sem detalhes disponíveis)"}`;
     }
 
     console.log("=== AI CHAT RESPONSE SUCCESS ===");
-    return new Response(JSON.stringify({ ok: true, message_id: inserted?.id }), {
-      status: 200,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return new Response(
+      JSON.stringify({ ok: true, message_id: inserted?.id, content: aiText }),
+      {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      }
+    );
   } catch (error: any) {
     console.error("=== AI CHAT RESPONSE ERROR ===", error?.message || error);
     return new Response(JSON.stringify({ error: "Internal error" }), {
