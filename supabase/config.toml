@@ -32,17 +32,8 @@ verify_jwt = false
 [functions.delete-user-account]
 verify_jwt = false
 
+[functions.ai-chat-response]
+verify_jwt = true
+
 [functions.env-check]
-verify_jwt = false
-
-[functions.get-availability]
-verify_jwt = false
-
-[functions.create-hold]
-verify_jwt = true
-
-[functions.confirm-booking]
-verify_jwt = true
-
-[functions.cleanup-expired-holds]
 verify_jwt = false
