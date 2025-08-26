@@ -14,6 +14,71 @@ export type Database = {
   }
   public: {
     Tables: {
+      bookings: {
+        Row: {
+          created_at: string
+          created_by: string
+          customer_email: string | null
+          customer_name: string | null
+          customer_phone: string | null
+          end_t: string
+          external_id: string | null
+          id: string
+          notes: string | null
+          payment_status: string | null
+          resource_id: string | null
+          source: string
+          start_t: string
+          status: string
+          total_amount: number | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          customer_email?: string | null
+          customer_name?: string | null
+          customer_phone?: string | null
+          end_t: string
+          external_id?: string | null
+          id?: string
+          notes?: string | null
+          payment_status?: string | null
+          resource_id?: string | null
+          source?: string
+          start_t: string
+          status?: string
+          total_amount?: number | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          customer_email?: string | null
+          customer_name?: string | null
+          customer_phone?: string | null
+          end_t?: string
+          external_id?: string | null
+          id?: string
+          notes?: string | null
+          payment_status?: string | null
+          resource_id?: string | null
+          source?: string
+          start_t?: string
+          status?: string
+          total_amount?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bookings_resource_id_fkey"
+            columns: ["resource_id"]
+            isOneToOne: false
+            referencedRelation: "resources"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       chats: {
         Row: {
           created_at: string | null
@@ -72,6 +137,121 @@ export type Database = {
             columns: ["space_id"]
             isOneToOne: false
             referencedRelation: "spaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      external_calendar_accounts: {
+        Row: {
+          access_token: string
+          connected_at: string
+          id: string
+          is_active: boolean
+          owner_id: string
+          provider: string
+          refresh_token: string
+          token_expires_at: string
+        }
+        Insert: {
+          access_token: string
+          connected_at?: string
+          id?: string
+          is_active?: boolean
+          owner_id: string
+          provider: string
+          refresh_token: string
+          token_expires_at: string
+        }
+        Update: {
+          access_token?: string
+          connected_at?: string
+          id?: string
+          is_active?: boolean
+          owner_id?: string
+          provider?: string
+          refresh_token?: string
+          token_expires_at?: string
+        }
+        Relationships: []
+      }
+      external_events: {
+        Row: {
+          end_t: string
+          external_id: string
+          id: string
+          last_synced_at: string
+          provider: string
+          resource_id: string | null
+          start_t: string
+          title: string | null
+        }
+        Insert: {
+          end_t: string
+          external_id: string
+          id?: string
+          last_synced_at?: string
+          provider: string
+          resource_id?: string | null
+          start_t: string
+          title?: string | null
+        }
+        Update: {
+          end_t?: string
+          external_id?: string
+          id?: string
+          last_synced_at?: string
+          provider?: string
+          resource_id?: string | null
+          start_t?: string
+          title?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "external_events_resource_id_fkey"
+            columns: ["resource_id"]
+            isOneToOne: false
+            referencedRelation: "resources"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      holds: {
+        Row: {
+          created_at: string
+          created_by: string
+          end_t: string
+          expires_at: string
+          id: string
+          resource_id: string | null
+          start_t: string
+          status: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          end_t: string
+          expires_at: string
+          id?: string
+          resource_id?: string | null
+          start_t: string
+          status?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          end_t?: string
+          expires_at?: string
+          id?: string
+          resource_id?: string | null
+          start_t?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "holds_resource_id_fkey"
+            columns: ["resource_id"]
+            isOneToOne: false
+            referencedRelation: "resources"
             referencedColumns: ["id"]
           },
         ]
@@ -135,6 +315,139 @@ export type Database = {
           last_name?: string | null
           phone?: string | null
           updated_at?: string | null
+        }
+        Relationships: []
+      }
+      resource_exceptions: {
+        Row: {
+          created_at: string
+          date_from: string
+          date_to: string
+          end_time: string | null
+          id: string
+          kind: string
+          resource_id: string | null
+          start_time: string | null
+        }
+        Insert: {
+          created_at?: string
+          date_from: string
+          date_to: string
+          end_time?: string | null
+          id?: string
+          kind: string
+          resource_id?: string | null
+          start_time?: string | null
+        }
+        Update: {
+          created_at?: string
+          date_from?: string
+          date_to?: string
+          end_time?: string | null
+          id?: string
+          kind?: string
+          resource_id?: string | null
+          start_time?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "resource_exceptions_resource_id_fkey"
+            columns: ["resource_id"]
+            isOneToOne: false
+            referencedRelation: "resources"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      resource_working_hours: {
+        Row: {
+          created_at: string
+          end_time: string
+          id: number
+          resource_id: string | null
+          start_time: string
+          weekday: number
+        }
+        Insert: {
+          created_at?: string
+          end_time: string
+          id?: number
+          resource_id?: string | null
+          start_time: string
+          weekday: number
+        }
+        Update: {
+          created_at?: string
+          end_time?: string
+          id?: number
+          resource_id?: string | null
+          start_time?: string
+          weekday?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "resource_working_hours_resource_id_fkey"
+            columns: ["resource_id"]
+            isOneToOne: false
+            referencedRelation: "resources"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      resources: {
+        Row: {
+          booking_window_days: number
+          buffer_after_minutes: number
+          buffer_before_minutes: number
+          concurrent_capacity: number
+          created_at: string
+          daily_capacity: number
+          duration_minutes: number
+          id: string
+          is_active: boolean
+          min_notice_hours: number
+          name: string
+          owner_id: string
+          slot_granularity_minutes: number
+          type: string
+          tz: string
+          updated_at: string
+        }
+        Insert: {
+          booking_window_days?: number
+          buffer_after_minutes?: number
+          buffer_before_minutes?: number
+          concurrent_capacity?: number
+          created_at?: string
+          daily_capacity?: number
+          duration_minutes?: number
+          id?: string
+          is_active?: boolean
+          min_notice_hours?: number
+          name: string
+          owner_id: string
+          slot_granularity_minutes?: number
+          type: string
+          tz?: string
+          updated_at?: string
+        }
+        Update: {
+          booking_window_days?: number
+          buffer_after_minutes?: number
+          buffer_before_minutes?: number
+          concurrent_capacity?: number
+          created_at?: string
+          daily_capacity?: number
+          duration_minutes?: number
+          id?: string
+          is_active?: boolean
+          min_notice_hours?: number
+          name?: string
+          owner_id?: string
+          slot_granularity_minutes?: number
+          type?: string
+          tz?: string
+          updated_at?: string
         }
         Relationships: []
       }
@@ -579,6 +892,10 @@ export type Database = {
       check_user_role: {
         Args: { requested_role: string; user_id: string }
         Returns: boolean
+      }
+      cleanup_expired_holds: {
+        Args: Record<PropertyKey, never>
+        Returns: number
       }
       delete_space_with_photos: {
         Args: { space_id_param: string }
