@@ -785,6 +785,57 @@ const formattedMessages = messagesData.map(msg => ({
     }
   }, [chats, userId, checkChatExists, createOrFindChat, navigate, spaceIdFromState, spaceOwnerFromState, vendorIdFromState, vendorOwnerFromState]);
 
+  const triggerAiResponse = useCallback(
+    async (chatId: string, messageId: string) => {
+      console.log("🔵 Triggering AI response for message:", messageId, "chat:", chatId);
+      try {
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+        if (sessionError) {
+          console.error("🔴 Session error:", sessionError);
+          return;
+        }
+        const token = session?.access_token;
+        if (!token) {
+          console.warn("🟡 No access token available for AI request");
+          return;
+        }
+
+        const { data, error } = await supabase.functions.invoke('ai-chat-response', {
+          body: { chat_id: chatId, message_id: messageId },
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'x-chat-id': chatId,
+            'x-message-id': messageId,
+            'Content-Type': 'application/json',
+          },
+        });
+
+        console.log("🔵 AI response result:", { data, error });
+        if (error) {
+          console.error("🔴 AI response error:", error);
+          return;
+        }
+
+        if (data?.content && data?.message_id) {
+          setMessages((currentMsgs) => [
+            ...currentMsgs,
+            {
+              id: data.message_id,
+              content: data.content,
+              sender_id: chatInfo?.owner_id || '',
+              timestamp: new Date().toISOString(),
+              is_mine: false,
+              is_ai_response: true,
+            },
+          ]);
+        }
+      } catch (err) {
+        console.error("🔴 AI reply invocation failed:", err);
+      }
+    },
+    [chatInfo?.owner_id]
+  );
+
   // Function to send a message
   const handleSendMessage = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
@@ -883,47 +934,8 @@ const { data: insertedMessage, error: messageError } = await supabase
 if (chatError) throw chatError;
       
       // Trigger AI auto-reply (non-blocking)
-      console.log("🔵 Starting AI trigger process for inserted message:", insertedMessage?.id);
-      try {
-        if (insertedMessage?.id) {
-          console.log("🔵 Message ID exists, getting session...");
-          const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-          if (sessionError) {
-            console.error("🔴 Session error:", sessionError);
-            return;
-          }
-          
-          console.log("🔵 Session status:", { hasSession: !!session, hasToken: !!session?.access_token });
-          
-          if (session?.access_token) {
-            console.log("🔵 Triggering AI response for message:", insertedMessage.id, "chat:", currentChatId);
-            const aiResponse = await supabase.functions.invoke('ai-chat-response', {
-              body: {
-                chat_id: currentChatId,
-                message_id: insertedMessage.id,
-              },
-              headers: {
-                // Fallback IDs in headers in case body is stripped by any intermediary
-                'x-chat-id': String(currentChatId || ''),
-                'x-message-id': String(insertedMessage.id || ''),
-              }
-            });
-            
-            console.log("🔵 AI response result:", aiResponse);
-            
-            if (aiResponse.error) {
-              console.error("🔴 AI response error:", aiResponse.error);
-            } else {
-              console.log("🟢 AI response success:", aiResponse.data);
-            }
-          } else {
-            console.warn("🟡 No access token available for AI request");
-          }
-        } else {
-          console.warn("🟡 No inserted message ID available");
-        }
-      } catch (err) {
-        console.error("🔴 AI reply invocation failed:", err);
+      if (insertedMessage?.id) {
+        triggerAiResponse(currentChatId, insertedMessage.id);
       }
       
       // Clear message input

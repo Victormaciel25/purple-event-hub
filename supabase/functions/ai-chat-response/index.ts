@@ -2,6 +2,19 @@ import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.7.1";
 
+function extractRelevantContext(question: string, context: string): string {
+  const keywords = question
+    .toLowerCase()
+    .split(/\W+/)
+    .filter((k) => k.length > 3);
+  const lines = context.split("\n");
+  const matched = lines.filter((line) => {
+    const lower = line.toLowerCase();
+    return keywords.some((k) => lower.includes(k));
+  });
+  return matched.join("\n");
+}
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-chat-id, x-message-id",
@@ -56,13 +69,13 @@ serve(async (req) => {
     };
     console.log("Environment check:", envReport);
 
-    // If OpenAI key is missing, do not error – gracefully skip AI generation
+    // OpenAI key is required to generate responses
     if (!openAIApiKey) {
-      console.warn("⏭️ Skipping AI: OPENAI_API_KEY not set");
-      return new Response(JSON.stringify({ skipped: true, reason: "Missing OPENAI_API_KEY", env: envReport }), {
-        status: 200,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      console.error("Missing OPENAI_API_KEY");
+      return new Response(
+        JSON.stringify({ error: "Missing OPENAI_API_KEY", env: envReport }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
     }
 
     if (!serviceRoleKey) {
@@ -296,10 +309,11 @@ Nunca compartilhe dados sensíveis. Evite prometer disponibilidade exata: peça 
 Se perguntarem sobre valores, responda com a faixa/valor do contexto quando existir e ofereça detalhamento.
 Se o usuário pedir contato, forneça o telefone/Instagram do contexto quando disponível.`;
 
+    const relevantContext = extractRelevantContext(msg.content, contextDetails);
     const userPrompt = `Mensagem do cliente: "${msg.content}"
 
 Contexto do espaço/fornecedor:
-${contextDetails || "(sem detalhes disponíveis)"}`;
+${relevantContext || contextDetails || "(sem detalhes disponíveis)"}`;
 
     console.log("Calling OpenAI API...");
     
@@ -389,10 +403,13 @@ ${contextDetails || "(sem detalhes disponíveis)"}`;
     }
 
     console.log("=== AI CHAT RESPONSE SUCCESS ===");
-    return new Response(JSON.stringify({ ok: true, message_id: inserted?.id }), {
-      status: 200,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return new Response(
+      JSON.stringify({ ok: true, message_id: inserted?.id, content: aiText }),
+      {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      }
+    );
   } catch (error: any) {
     console.error("=== AI CHAT RESPONSE ERROR ===", error?.message || error);
     return new Response(JSON.stringify({ error: "Internal error" }), {
